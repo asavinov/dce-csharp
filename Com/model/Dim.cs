@@ -8,12 +8,12 @@ namespace Com.model
     /// <summary>
     /// Integer cells.
     /// </summary>
-    public class Dim : DimAbstract
+    public class Dim : Dimension
     {
 	    private int[] _cells;
         private int[] _offsets;
 
-	    public Dim(string name, Concept lesserSet, Concept greaterSet) 
+	    public Dim(string name, Set lesserSet, Set greaterSet) 
             : base(name, lesserSet, greaterSet)
         {
             // TODO: Check if output is of correct type

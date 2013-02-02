@@ -12,7 +12,7 @@ namespace Com.model
     public abstract class Conn
     {
         string name;
-        public abstract List<Concept> getSets();
-        public abstract List<DimAbstract> getDims();
+        public abstract List<Set> getSets();
+        public abstract List<Dimension> getDims();
     }
 }

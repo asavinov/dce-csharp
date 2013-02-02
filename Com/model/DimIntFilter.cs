@@ -12,12 +12,12 @@ namespace Com.model
     /// - projection has the same size as input 
     /// - de-projection are smaller because not all elements are referenced 
     /// </summary>
-    public class DimIntFilter : DimAbstract
+    public class DimIntFilter : Dimension
     {
         private int[] _cells; // Index is offset in the input set. Cell is the offset in the output set. If two filtered elements: _cells[0]=2000, _cells[1]=1000
         private int[] _offsets; // Index is offset in the output set. Cell is the offset in the input set. If two filtered elements: _offsets[0]=1, _offsets[0]=0
 
-	    public DimIntFilter(string name, Concept lesserSet, Concept greaterSet)
+	    public DimIntFilter(string name, Set lesserSet, Set greaterSet)
             : base(name, lesserSet, greaterSet)
         {
             // TODO: Check if output is of correct type

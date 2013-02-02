@@ -8,12 +8,12 @@ namespace Com.model
     /// <summary>
     /// Primitive dimension with double values (dictionary with all double values used which are identified by _offsets). 
     /// </summary>
-    public class DimDouble : DimAbstract
+    public class DimDouble : Dimension
     {
         private double[] _cells;
         private int[] _offsets;
 
-	    public DimDouble(string name, Concept lesserSet, Concept greaterSet) 
+	    public DimDouble(string name, Set lesserSet, Set greaterSet) 
             : base(name, lesserSet, greaterSet)
         {
             // TODO: Check if output is of correct type

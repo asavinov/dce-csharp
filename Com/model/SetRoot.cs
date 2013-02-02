@@ -6,12 +6,13 @@ using System.Text;
 namespace Com.model
 {
     /// <summary>
-    /// The root set does not have instances and does not have a superset but it has a number of predefined (primitive) subsets which do not have greater sets. 
+    /// The root set is a predefined primitive set with no instances and no superset. 
+    /// It has a number of predefined (primitive) subsets which do not have greater sets. 
     /// 
     /// The root is normally used to represent a database, connection, data source or mash up. 
     /// It may also describe how its instances are loaded (populated) in terms of source databases. It is not clear where it is described (for each set or dimension).
     /// </summary>
-    public class SetRoot : Concept
+    public class SetRoot : Set
     {
         public override int InstanceSize
         {

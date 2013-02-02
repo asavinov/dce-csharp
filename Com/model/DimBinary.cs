@@ -5,12 +5,12 @@ using System.Text;
 
 namespace Com.model
 {
-    public class DimBinary : DimAbstract
+    public class DimBinary : Dimension
     {
 	    private bool[] _cells;
 	    private int[] _offsets;
 
-	    public DimBinary(string name, Concept lesserSet, Concept greaterSet) 
+	    public DimBinary(string name, Set lesserSet, Set greaterSet) 
             : base(name, lesserSet, greaterSet)
         {
             // TODO: Check if output is of correct type

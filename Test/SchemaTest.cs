@@ -12,24 +12,24 @@ namespace Test
         [TestMethod]
         public void ConceptSchemaTest()
         {
-            Concept root = new Concept("Root");
+            Set root = new Set("Root");
 
-            Concept c1 = new Concept("c1");
+            Set c1 = new Set("c1");
             c1.SuperDim = new Dimension("super", c1, root);
 
-            Concept c2 = new Concept("c2");
+            Set c2 = new Set("c2");
             c2.SuperDim = new Dimension("super", c2, root);
 
-            Concept c11 = new Concept("c11");
+            Set c11 = new Set("c11");
             c11.SuperDim = new Dimension("super", c11, c1);
 
-            Concept c12 = new Concept("c12");
+            Set c12 = new Set("c12");
             c12.SuperDim = new Dimension("super", c12, c1);
 
             // Test if the schema correct
-            Assert.AreEqual(2, root.SubConceptCount);
-            Assert.AreEqual(2, c1.SubConceptCount);
-            Assert.AreEqual(0, c2.SubConceptCount);
+            Assert.AreEqual(2, root.SubSetCount);
+            Assert.AreEqual(2, c1.SubSetCount);
+            Assert.AreEqual(0, c2.SubSetCount);
 
             // TODO: Delete leaf and intermediate element
             // TODO: Test if the schema correct

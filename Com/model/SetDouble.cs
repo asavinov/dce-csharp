@@ -6,9 +6,10 @@ using System.Text;
 namespace Com.model
 {
     /// <summary>
-    /// Formal (virtual) set of all doubles. It does not store real instance and has one formal super-dimension. 
+    /// A primitive, virtual or predefined set of all elements. 
+    /// It does not store real instance and has one formal super-dimension and no greater dimensions.
     /// </summary>
-    class SetDouble : ConceptWithInstances
+    class SetDouble : Set
     {
         public override int InstanceCount
         {
