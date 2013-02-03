@@ -21,14 +21,17 @@ namespace Com.model
         private int _id;
         public int Id { get { return _id; } }
 
+        /// <summary>
+        /// This name is unique within the lesser set.
+        /// </summary>
         private string _name;
-        public string Name { get; set; }
+        public string Name { get { return _name; } }
 
         /// <summary>
         /// Is identity dimension.
         /// </summary>
         private bool _identity;
-        public bool Identity { get; set; }
+        public bool Identity { get { return _identity; } }
 
         /// <summary>
         /// Reversed dimension has the opposite semantic interpretation (direction). It is used to resolve semantic cycles. 
@@ -36,15 +39,16 @@ namespace Com.model
         /// One use is when deciding +how to interpret input and output dimensions of sets and lesser/greater sets of dimensions.
         /// </summary>
         private bool _reversed;
-        public bool Reversed { get; set; }
+        public bool Reversed { get { return _reversed; } }
 
         /// <summary>
         /// Whether this dimension is supposed (able) to have instances. Some dimensions are used for conceptual purposes. 
         /// It is not about having zero instances - it is about the ability to have instances (essentially supporting the corresponding interface for working with instances).
         /// This flag is true for extensions which implement data-related methods (and in this sense it is reduntant because duplicates 'instance of').
+        /// Different interpretations: the power of the domain can increase; the power of the domain is not 0; 
         /// </summary>
         private bool _instantiable;
-        public bool Instantiable { get { return _instantiable; } }
+        public bool Instantiable { get { return _lesserSet.Instantiable; } }
 
         /// <summary>
         /// Whether this dimension to take no values.
@@ -144,9 +148,6 @@ namespace Com.model
          * Since our implementations are made for each system type, the size is fixed. 
          */
 
-        #endregion
-
-        #region Constructors and initializers.
         /**
          * If instances cannot be represented as objects with built-in functions (record-oriented representation), 
          * then the parent can return an object which (efficiently) implements the mapping for one function (column-oriented representation).
@@ -158,6 +159,10 @@ namespace Com.model
          *  Currently not needed. Earlier we assumed that complex manipulations will be done by functions and reverse functions as special objects.
          */
         //	public Object getFunc(boolean isReversed) { return null; }
+
+        #endregion
+
+        #region Constructors and initializers.
 
         public Dimension(string name)
             : this(name, null, null)
@@ -180,6 +185,9 @@ namespace Com.model
 
             LesserSet = lesserSet;
             GreaterSet = greaterSet;
+
+            // Parameterize depending on the reserved names: super
+            // Parameterize depending on the greater and lesser set type. For example, dimension type must correspond to its greater set type (SetInteger <- DimInteger etc.)
         }
 
         #endregion

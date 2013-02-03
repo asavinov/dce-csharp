@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Com.model;
 
@@ -10,55 +12,47 @@ namespace Test
     public class SchemaTest
     {
         [TestMethod]
-        public void ConceptSchemaTest()
+        public void InclusionTest()
         {
-            Set root = new Set("Root");
+            SetRoot root = new SetRoot("Root");
 
             Set c1 = new Set("c1");
-            c1.SuperDim = new Dimension("super", c1, root);
+            c1.SuperDim = new DimRoot("super", c1, root);
 
             Set c2 = new Set("c2");
-            c2.SuperDim = new Dimension("super", c2, root);
+            c2.SuperDim = new DimRoot("super", c2, root);
 
             Set c11 = new Set("c11");
-            c11.SuperDim = new Dimension("super", c11, c1);
+            c11.SuperDim = new DimSuper("super", c11, c1);
 
             Set c12 = new Set("c12");
-            c12.SuperDim = new Dimension("super", c12, c1);
+            c12.SuperDim = new DimSuper("super", c12, c1);
 
             // Test if the schema correct
-            Assert.AreEqual(2, root.SubSetCount);
+            Assert.AreEqual(2, root.SubDims.Count(x => x.LesserSet.Instantiable));
             Assert.AreEqual(2, c1.SubSetCount);
             Assert.AreEqual(0, c2.SubSetCount);
 
             // TODO: Delete leaf and intermediate element
+
             // TODO: Test if the schema correct
+
         }
 
         [TestMethod]
         public void TableSchemaTest()
         {
-/*
-            // Define table
-            Set t = new Set(10, root);
-            t.idDims.Add(new Dim(1, t, c1));
-            t.enDims.Add(new Dim(2, t, c2));
-            t.enDims.Add(new Dim(3, t, c3));
+            SetRoot root = new SetRoot("Root");
+            Set setDouble = root.SubDims.First(x => x.LesserSet.Name == "double").LesserSet;
 
+            Set t1 = new Set("t1");
+            t1.SuperDim = new DimRoot("super", t1, setDouble);
 
-            // Define primitive domains: what are their dimensions?
-            // Primitive domains store real values (double, string etc.) the only _id dimension.
-            // Also complex domains can be parameterized to store real values rather than _offsets from other domains (so their greater domains are defined but do not store separate members - members are derived as projection from all lesser domains) 
-            Set c1 = new Set(1, root);
-            Set c2 = new Set(2, root);
-            Set c3 = new Set(3, root);
+            Dimension sales = new DimDouble("sales", t1, setDouble);
+            t1.AddGreaterDimension(sales); // Alternative: t1.GreaterDimensions.Add(sales);
 
-            // Define table
-            Set t = new Set(10, root);
-            t.idDims.Add(new Dim(1, t, c1));
-            t.enDims.Add(new Dim(2, t, c2));
-            t.enDims.Add(new Dim(3, t, c3));
-*/
+            Assert.AreEqual(1, t1.GreaterDimensions.Count(x => x.Name == "sales"));
+            Assert.AreEqual(1, t1.GreaterDimensions.Count);
         }
 
         [TestMethod]

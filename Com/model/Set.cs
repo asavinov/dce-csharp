@@ -24,15 +24,15 @@ namespace Com.model
         /// <summary>
         /// A set name. Note that in the general case a set has an associated structure (concept, type) which may have its own name. 
         /// </summary>
-        private string _name;
-        public string Name { get; set; }
+        protected string _name;
+        public string Name { get { return _name; } }
 
         /// <summary>
         /// Whether this set is supposed (able) to have instances. Some sets are used for conceptual purposes. 
         /// It is not about having zero instances - it is about the ability to have instances (essentially supporting the corresponding interface for working with instances).
         /// This flag is true for extensions which implement data-related methods (and in this sense it is reduntant because duplicates 'instance of').
         /// </summary>
-        private bool _instantiable;
+        protected bool _instantiable;
         public bool Instantiable { get { return _instantiable; } }
 
         #region Schema methods. Inclusion (subset) hierarchy.
@@ -199,16 +199,13 @@ namespace Com.model
 
         #region Constructors and initializers.
 
-        public Set()
+        public Set(string name)
         {
             _id = uniqueId++;
-        }
+            _name = name;
 
-        public Set(string name)
-            : this()
-        {
-            Name = name;
             // TODO: Parameterize depending on the reserved names: Integer, Double etc. (or exclude these names)
+            _instantiable = true;
         }
 
         #endregion

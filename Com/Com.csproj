@@ -44,6 +44,8 @@
     <Compile Include="model\DimDouble.cs" />
     <Compile Include="model\Dim.cs" />
     <Compile Include="model\DimIntFilter.cs" />
+    <Compile Include="model\DimRoot.cs" />
+    <Compile Include="model\DimSuper.cs" />
     <Compile Include="model\Set.cs" />
     <Compile Include="model\Dimension.cs" />
     <Compile Include="model\SetDouble.cs" />

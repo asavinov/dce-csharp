@@ -19,6 +19,11 @@ namespace Com.model
             get { return 0; }
         }
 
+        public override int InstanceCount
+        {
+            get { return 0; }
+        }
+
         /// <summary>
         /// Connection to the location where this schema is persistently stored, that is, original database.
         /// It is a way to lower level of physical representation and serialization.  
@@ -30,10 +35,17 @@ namespace Com.model
         /// </summary>
         List<Conn> inputDbs;
 
-        public SetRoot(string id)
-            : base(id)
+        public SetRoot(string name)
+            : base(name) // C#: If nothing specified, then base() will always be called by default
         {
-            // TODO: Generate all predefined primitive sets as subsets
+            _instantiable = false;
+
+            //
+            // Generate all predefined primitive sets as subsets
+            //
+            SetDouble setDouble = new SetDouble("double");
+            setDouble.SuperDim = new DimRoot("super", setDouble, this);
+
         }
     }
 }

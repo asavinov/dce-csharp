@@ -23,6 +23,14 @@ namespace Com.model
 
         #region Constructors and initializers.
 
+        public SetDouble(string name)
+            : base(name)
+        {
+            // TODO: Parameterize this instance as double virtual set. Important: isPrimitive
+            _name = "double";
+            _instantiable = false;
+        }
+
         #endregion
     }
 }
