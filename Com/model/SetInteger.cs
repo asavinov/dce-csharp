@@ -9,25 +9,25 @@ namespace Com.model
     /// A primitive, virtual or predefined set of all elements. 
     /// It does not store real instance and has one formal super-dimension and no greater dimensions.
     /// </summary>
-    class SetDouble : Set
+    class SetInteger : Set
     {
         public override int InstanceCount
         {
-            get { return int.MaxValue; } // In fact, it has to be the number of all doubles
+            get { return int.MaxValue; } // It is the number of all integers
         }
 
         public override int InstanceSize
         {
-            get { return sizeof(double); }
+            get { return sizeof(int); } // It is not absolutely true because there can be integers of different length like Int32 and Int64
         }
 
         #region Constructors and initializers.
 
-        public SetDouble(string name)
+        public SetInteger(string name)
             : base(name)
         {
             // TODO: Parameterize this instance as double virtual set. Important: isPrimitive
-            _name = "Double"; // So the parameter is ignored
+            _name = "Integer"; // So the parameter is ignored
             _instantiable = false;
         }
 

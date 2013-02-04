@@ -41,15 +41,17 @@
   <ItemGroup>
     <Compile Include="model\Conn.cs" />
     <Compile Include="model\DimBinary.cs" />
-    <Compile Include="model\DimDouble.cs" />
     <Compile Include="model\Dim.cs" />
     <Compile Include="model\DimIntFilter.cs" />
+    <Compile Include="model\DimPrimitive.cs" />
     <Compile Include="model\DimRoot.cs" />
     <Compile Include="model\DimSuper.cs" />
     <Compile Include="model\Set.cs" />
     <Compile Include="model\Dimension.cs" />
     <Compile Include="model\SetDouble.cs" />
+    <Compile Include="model\SetInteger.cs" />
     <Compile Include="model\SetRoot.cs" />
+    <Compile Include="model\SetString.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="query\Query.cs" />
     <Compile Include="query\QueryOperation.cs" />

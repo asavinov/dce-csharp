@@ -195,7 +195,7 @@ namespace Com.model
         {
             // TODO: Insert integer. Delegate to the dimension.
         }
-        public void SetInstance(DimDouble dimension, int offset, double value)
+        public void SetInstance(DimPrimitive<double> dimension, int offset, double value)
         {
             // TODO: Insert double. Delegate to the dimension.
         }
