@@ -24,6 +24,21 @@ namespace Com.model
             get { return 0; }
         }
 
+        public List<Set> PrimitiveSets
+        {
+            get { return SubDims.Where(x => !x.LesserSet.Instantiable).Select(x => x.LesserSet).ToList(); }
+        }
+
+        public List<Set> NonPrimitiveSets
+        {
+            get { return SubDims.Where(x => x.LesserSet.Instantiable).Select(x => x.LesserSet).ToList(); }
+        }
+
+        public Set GetPrimitiveSet(string name)
+        {
+            return SubDims.First(x => !x.LesserSet.Instantiable && x.LesserSet.Name == name).LesserSet;
+        }
+
         /// <summary>
         /// Connection to the location where this schema is persistently stored, that is, original database.
         /// It is a way to lower level of physical representation and serialization.  

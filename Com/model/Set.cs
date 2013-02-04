@@ -75,13 +75,26 @@ namespace Com.model
         private List<Dimension> _subDims = new List<Dimension>();
         public List<Dimension> SubDims { get { return _subDims; } }
 
-        public List<Set> getSubSets()
+        public List<Set> SubSets
         {
-            return (List<Set>)_subDims.Select(x => x.LesserSet);
+            get { return _subDims.Select(x => x.LesserSet).ToList(); }
         }
-        public int SubSetCount
+
+        public Set FindSubset(string name)
         {
-            get { return _subDims != null ? _subDims.Count : 0; }
+            Set set = null;
+            if (_name == name)
+            {
+                set = this;
+            }
+
+            foreach (Dimension d in _subDims)
+            {
+                if (set != null) break;
+                set = d.LesserSet.FindSubset(name);
+            }
+
+            return set;
         }
 
         #endregion
@@ -120,13 +133,9 @@ namespace Com.model
         {
             return _greaterDimensions.FirstOrDefault(d => d.Name == name);
         }
-        public List<Set> GetGreaterSet()
+        public List<Set> GetGreaterSets()
         {
-            return (List<Set>)_greaterDimensions.Select(x => x.LesserSet);
-        }
-        public int GreaterSetCount
-        {
-            get { return _greaterDimensions != null ? _greaterDimensions.Count : 0; }
+            return _greaterDimensions.Select(x => x.GreaterSet).ToList();
         }
 
         public List<Dimension> _lesserDimensions = new List<Dimension>();
@@ -135,13 +144,9 @@ namespace Com.model
             get { return _lesserDimensions; }
             set { _lesserDimensions = value; }
         }
-        public List<Set> getLesserSets()
+        public List<Set> GetLesserSets()
         {
-            return (List<Set>)_lesserDimensions.Select(x => x.GreaterSet);
-        }
-        public int LesserSetCount
-        {
-            get { return _lesserDimensions != null ? _lesserDimensions.Count : 0; }
+            return _lesserDimensions.Select(x => x.LesserSet).ToList();
         }
 
         #endregion

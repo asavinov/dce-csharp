@@ -16,6 +16,9 @@ namespace Test
         {
             SetRoot root = new SetRoot("Root");
 
+            // Test root structure
+            Assert.IsTrue("double" == root.GetPrimitiveSet("double").Name);
+
             Set c1 = new Set("c1");
             c1.SuperDim = new DimRoot("super", c1, root);
 
@@ -28,31 +31,42 @@ namespace Test
             Set c12 = new Set("c12");
             c12.SuperDim = new DimSuper("super", c12, c1);
 
-            // Test if the schema correct
-            Assert.AreEqual(2, root.SubDims.Count(x => x.LesserSet.Instantiable));
-            Assert.AreEqual(2, c1.SubSetCount);
-            Assert.AreEqual(0, c2.SubSetCount);
+            // Test quantities
+            Assert.AreEqual(2, root.NonPrimitiveSets.Count);
+            Assert.AreEqual(2, c1.SubSets.Count);
+            Assert.AreEqual(0, c2.SubSets.Count);
+
+            // Test existence
+            Assert.IsTrue(c1 == root.FindSubset("c1"));
+            Assert.IsTrue(c2 == root.FindSubset("c2"));
+            Assert.IsTrue(c11 == root.FindSubset("c11"));
+            Assert.IsTrue(c12 == root.FindSubset("c12"));
 
             // TODO: Delete leaf and intermediate element
-
-            // TODO: Test if the schema correct
-
         }
 
         [TestMethod]
         public void TableSchemaTest()
         {
             SetRoot root = new SetRoot("Root");
-            Set setDouble = root.SubDims.First(x => x.LesserSet.Name == "double").LesserSet;
+            Set setDouble = root.GetPrimitiveSet("double");
 
+            // Insert table
             Set t1 = new Set("t1");
             t1.SuperDim = new DimRoot("super", t1, setDouble);
 
             Dimension sales = new DimDouble("sales", t1, setDouble);
-            t1.AddGreaterDimension(sales); // Alternative: t1.GreaterDimensions.Add(sales);
+            t1.AddGreaterDimension(sales);
+
+            Dimension revenue = new DimDouble("revenue", t1, setDouble);
+            t1.AddGreaterDimension(revenue);
 
             Assert.AreEqual(1, t1.GreaterDimensions.Count(x => x.Name == "sales"));
-            Assert.AreEqual(1, t1.GreaterDimensions.Count);
+            Assert.AreEqual(1, t1.GreaterDimensions.Count(x => x.Name == "revenue"));
+            Assert.AreEqual(2, t1.GreaterDimensions.Count);
+
+            Assert.AreEqual(2, t1.GetGreaterSets().Count);
+            Assert.AreEqual(2, setDouble.GetLesserSets().Count);
         }
 
         [TestMethod]
