@@ -24,17 +24,59 @@ namespace Com.model
             _offsets = new int[allocatedSize];
         }
 
-        //
-        // Manipulate function: add, edit, delete, update etc.
-        //
+        // Memory management parameters for instances (used by extensions and in future will be removed from this class).
+        protected static int initialSize = 1024 * 8; // In elements
+        protected static int incrementSize = 1024; // In elements
 
-        public int AddOutput(T output)
+        protected int allocatedSize; // How many elements (maximum) fit into the allocated memory
+
+        public override int Size // sizeof(T) does not work for generic classes (even if constrained by value types)
+        {
+            get 
+            { 
+                Type tt = typeof(T);
+                int size;
+                if (tt.IsValueType)
+                    if (tt.IsGenericType)
+                    {
+                        var t = default(T);
+                        size = System.Runtime.InteropServices.Marshal.SizeOf(t);
+                    }
+                    else
+                    {
+                        size = System.Runtime.InteropServices.Marshal.SizeOf(tt);
+                    }
+                else
+                {
+                    size = IntPtr.Size;
+                }
+                return size;
+            }
+        }
+
+        #region Manipulate function: add, edit, delete, update values etc.
+
+        public T GetValue(int offset)
+        {
+            return _cells[offset]; // We do not check the range of offset - the caller must guarantee its validity
+        }
+
+        public void SetValue(int offset, T value)
+        {
+            // Update direct function by setting output value for the input offset
+            _cells[offset] = value; // We do not check the range of offset - the caller must guarantee its validity
+
+            // TODO: Update reverse function (reindex)
+            _offsets[offset] = offset;
+        }
+
+        public int AddValue(T value)
         {
             // In fact, an element can be added only to all dimensions of the lesser set and dimensions do not deal with set elements. 
             // A dimension is a function, so we need to implement it as a function, that is, set an output to some specific input. Allocating new elements in the domain (and in the function) is already another method. 
             
             // Ensure that there is enough memory
-            if (LesserSet.InstanceCount == allocatedSize)
+            if (allocatedSize == Count)
             {
                 allocatedSize += incrementSize;
 
@@ -48,30 +90,26 @@ namespace Com.model
             }
 
             // Assign the value to the new offset
-            _cells[LesserSet.InstanceCount] = output;
+            _cells[Count] = value;
+
+            // TODO: Update reverse function (reindex)
+            _offsets[Count] = Count;
 
             // Return the new offset
-            return LesserSet.InstanceCount + 1;
+            return Count + 1;
         }
 
-        public int AddOutput(int[] output)
+        public int AddOutput(T[] values)
         {
-            return _cells.Length + output.Length;
+            return _cells.Length + values.Length;
         }
 
-        public void SetOutput(int input, T output)
+        #endregion
+
+        #region Project and de-project
+
+        public T project(int offset)
         {
-            // Update direct function
-            _cells[input] = output;
-
-            // Update reverse function
-            _offsets[input] = input;
-        }
-        //
-	    // Project
-	    //
-
-	    public T project(int offset) {
 		    return _cells[offset];
 	    }
 
@@ -101,10 +139,6 @@ namespace Com.model
             return null; // Arrays.copyOf(result, resultSize);
 	    }
 	
-	    //
-	    // De-project
-	    //
-
 	    public int[] deproject(T cell) {
 		    // Binary search on _offsets
 		    // Inefficient approach by simply scanning
@@ -127,5 +161,6 @@ namespace Com.model
 		    return null;
 	    }
 
+        #endregion
     }
 }

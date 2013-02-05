@@ -41,10 +41,10 @@
   <ItemGroup>
     <Compile Include="model\Conn.cs" />
     <Compile Include="model\DimBool.cs" />
-    <Compile Include="model\DimIntFilter.cs" />
     <Compile Include="model\DimPrimitive.cs" />
     <Compile Include="model\DimRoot.cs" />
     <Compile Include="model\DimSet.cs" />
+    <Compile Include="model\DimSubset.cs" />
     <Compile Include="model\DimSuper.cs" />
     <Compile Include="model\Set.cs" />
     <Compile Include="model\Dimension.cs" />

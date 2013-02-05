@@ -88,18 +88,12 @@ namespace Com.model
 
         #region Instance (function) methods.
 
-        // Memory management parameters for instances (used by extensions and in future will be removed from this class).
-        protected static int initialSize = 1024 * 8; // In elements
-        protected static int incrementSize = 1024; // In elements
-
-        protected int allocatedSize; // How many elements (maximum) fit into the allocated memory
-
-        public int Count // How many instances. It is the same for all dimensions of the lesser set. 
+        public virtual int Count // How many instances. It is the same for all dimensions of the lesser set. 
         {
             get { return _lesserSet != null ? _lesserSet.InstanceCount : 0; }
         }
 
-        public int Size // Width of instances. It is the same for all dimensions of the greater set. 
+        public virtual int Size // Width of instances. It depends on the implementation (and might not be the same for all dimensions of the greater set). 
         {
             get { return _greaterSet != null ? _greaterSet.InstanceSize : 0; }
         }
