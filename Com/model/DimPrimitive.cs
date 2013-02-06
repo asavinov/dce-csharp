@@ -69,7 +69,7 @@ namespace Com.model
             _cells[offset] = value; // We do not check the range of offset - the caller must guarantee its validity
 
             // TODO: Update reverse function (reindex)
-            Sort(); // Alternative: update only the changed element
+            FullSort(); // Alternative: update only the changed element
         }
 
         public void AppendValue(T value)
@@ -85,7 +85,7 @@ namespace Com.model
             _cells[_count - 1] = value; // Assign the value to the new offset
             _offsets[_count - 1] = _count - 1; // This element has to be moved to correct position in this array during sorting
 
-            Sort(); // Alternative: UpdateSortLast()
+            FullSort(); // Alternative: UpdateSortLast()
         }
 
         #endregion
@@ -149,7 +149,7 @@ namespace Com.model
 
         #region Sorting methods
 
-        private void Sort()
+        private void FullSort()
         {
             // We need it because the sorting method will change the cells. 
             // Optimization: use one global large array for that purpose
@@ -163,6 +163,13 @@ namespace Com.model
 
             Array.Sort<T, int>(tempCells, _offsets, 0, _count); 
             // Now offsets are sorted
+        }
+
+        private void FullSort_2()
+        {
+            // Source: http://stackoverflow.com/questions/659866/is-there-c-sharp-support-for-an-index-based-sort
+            Comparer<T> comparer = Comparer<T>.Default;
+            Array.Sort(_offsets, /* 0, _count, */ (a, b) => comparer.Compare(_cells[a], _cells[b]));
         }
 
         private void UpdateSortLast()
@@ -183,7 +190,7 @@ namespace Com.model
             // int index = Array.BinarySearch<T>(mynumbers, target);
             // BinarySearch<T>(T[], Int32, Int32, T) - search in range 
 
-            // Algorithm here: http://stackoverflow.com/questions/8067643/binary-search-of-a-sorted-array
+            // Source: http://stackoverflow.com/questions/8067643/binary-search-of-a-sorted-array
 
             int mid = -1, first = 0, last = _count - 1;
             bool found = false;
@@ -209,6 +216,18 @@ namespace Com.model
                     found = true;
                 }
             }
+
+            return mid;
+        }
+
+        private int BinarySearch_2(T target)
+        {
+            int mid = -1;
+            // Comparer<T> comparer = Comparer<T>.Default;
+            // mid = Array.BinarySearch(_offsets, 0, _count, target, (a, b) => comparer.Compare(_cells[a], _cells[b]));
+
+            //IComparer<T> comparer = new IndexComparer<T>(this);
+            //mid = Array.BinarySearch(_offsets, 0, _count, target, comparer);
 
             return mid;
         }
