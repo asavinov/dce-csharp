@@ -154,14 +154,6 @@ namespace Com.model
         #region Set characteristics
 
         /// <summary>
-        /// Size of values or cells (physical identities) in bytes.
-        /// </summary>
-        public virtual int InstanceSize
-        {
-            get { return sizeof(int); }
-        }
-
-        /// <summary>
         /// How many _instances this set has. Cardinality. Set power. Length (height) of instance set.
         /// If instances are identified by integer offsets, then size also represents offset range.
         /// </summary>
@@ -169,6 +161,14 @@ namespace Com.model
         public virtual int InstanceCount
         {
             get { return _instanceCount; }
+        }
+
+        /// <summary>
+        /// Size of values or cells (physical identities) in bytes.
+        /// </summary>
+        public virtual int InstanceSize
+        {
+            get { return sizeof(int); }
         }
 
         #endregion

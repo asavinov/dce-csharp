@@ -10,8 +10,15 @@ namespace Com.model
     /// </summary>
     public class DimPrimitive<T> : Dimension
     {
+        // Alternative: keep values always sorted while the iondex will store the original positions of these sorted values. Advantage: use of the build-in sort, search and other algorithms
         private T[] _cells; // Each cell contains a T value in arbitrary order
         private int[] _offsets; // Each cell contains an offset to an element in cells in ascending or descending order
+
+        // Memory management parameters for instances (used by extensions and in future will be removed from this class).
+        protected static int initialSize = 1024 * 8; // In elements
+        protected static int incrementSize = 1024; // In elements
+
+        protected int allocatedSize; // How many elements (maximum) fit into the allocated memory
 
         public DimPrimitive(string name, Set lesserSet, Set greaterSet)
             : base(name, lesserSet, greaterSet)
@@ -19,16 +26,11 @@ namespace Com.model
             // TODO: Check if output (greater) set is of correct type
 
             // In fact, we know the input set size and hence can allocate the exact number of elements in the array
-            allocatedSize = lesserSet.InstanceCount;
+            _count = 0;
+            allocatedSize = initialSize;
             _cells = new T[allocatedSize];
             _offsets = new int[allocatedSize];
         }
-
-        // Memory management parameters for instances (used by extensions and in future will be removed from this class).
-        protected static int initialSize = 1024 * 8; // In elements
-        protected static int incrementSize = 1024; // In elements
-
-        protected int allocatedSize; // How many elements (maximum) fit into the allocated memory
 
         public override int Size // sizeof(T) does not work for generic classes (even if constrained by value types)
         {
@@ -67,41 +69,23 @@ namespace Com.model
             _cells[offset] = value; // We do not check the range of offset - the caller must guarantee its validity
 
             // TODO: Update reverse function (reindex)
-            _offsets[offset] = offset;
+            Sort(); // Alternative: update only the changed element
         }
 
-        public int AddValue(T value)
+        public void AppendValue(T value)
         {
-            // In fact, an element can be added only to all dimensions of the lesser set and dimensions do not deal with set elements. 
-            // A dimension is a function, so we need to implement it as a function, that is, set an output to some specific input. Allocating new elements in the domain (and in the function) is already another method. 
-            
             // Ensure that there is enough memory
-            if (allocatedSize == Count)
+            if (allocatedSize == Count) // Not enough storage for the new element
             {
                 allocatedSize += incrementSize;
-
-                T[] newCells = new T[allocatedSize];
-//                System.arraycopy(_cells, 0, newCells, 0, _cells.Length); // Alternatively, Arrays.copyOf(result, resultSize);
-                _cells = newCells;
-
-                int[] newOffsets = new int[allocatedSize];
-//                System.arraycopy(_offsets, 0, newOffsets, 0, _offsets.Length); // Alternatively, Arrays.copyOf(result, resultSize);
-//                _offsets = newOffsets;
+                System.Array.Resize<T>(ref _cells, allocatedSize); // Resize the storage for values
+                System.Array.Resize(ref _offsets, allocatedSize); // Resize the indeex
             }
 
-            // Assign the value to the new offset
-            _cells[Count] = value;
+            _cells[_count - 1] = value; // Assign the value to the new offset
+            _offsets[_count - 1] = _count - 1; // This element has to be moved to correct position in this array during sorting
 
-            // TODO: Update reverse function (reindex)
-            _offsets[Count] = Count;
-
-            // Return the new offset
-            return Count + 1;
-        }
-
-        public int AddOutput(T[] values)
-        {
-            return _cells.Length + values.Length;
+            Sort(); // Alternative: UpdateSortLast()
         }
 
         #endregion
@@ -160,6 +144,74 @@ namespace Com.model
 	    public int[] deproject(String expression) {
 		    return null;
 	    }
+
+        #endregion
+
+        #region Sorting methods
+
+        private void Sort()
+        {
+            // We need it because the sorting method will change the cells. 
+            // Optimization: use one global large array for that purpose
+            T[] tempCells = (T[])_cells.Clone();
+
+            // Reset offsets befroe sorting (so it will be completely new sort)
+            for (int i = 0; i < _count; i++)
+            {
+                _offsets[i] = i; // Now each offset represents (references) an element of the function (from domain) but they are unsorted
+            }
+
+            Array.Sort<T, int>(tempCells, _offsets, 0, _count); 
+            // Now offsets are sorted
+        }
+
+        private void UpdateSortLast()
+        {
+            T target = _cells[_count-1];
+
+            int pos = BinarySearch(target);
+            Array.Copy(_offsets, pos, _offsets, pos + 1, _count - pos - 1); // Free an index element by shifting other elements
+
+            _offsets[pos] = _count - 1;
+        }
+
+        private int BinarySearch(T target)
+        {
+            // Essentially, it is deproject one value
+
+            // C# bionary search works directly with value array. 
+            // int index = Array.BinarySearch<T>(mynumbers, target);
+            // BinarySearch<T>(T[], Int32, Int32, T) - search in range 
+
+            // Algorithm here: http://stackoverflow.com/questions/8067643/binary-search-of-a-sorted-array
+
+            int mid = -1, first = 0, last = _count - 1;
+            bool found = false;
+
+            //for a sorted array with descending values
+            while (!found && first <= last)
+            {
+                mid = (first + last) / 2;
+
+                if (Comparer<T>.Default.Compare(target, _cells[_offsets[mid]]) < 0) // Less: target < mid
+                {
+                    first = mid + 1;
+                }
+
+                if (Comparer<T>.Default.Compare(target, _cells[_offsets[mid]]) > 0) // Greater: target > mynumbers[mid]
+                {
+                    last = mid - 1;
+                }
+
+                else
+                {
+                    // You need to stop here once found or it's an infinite loop once it finds it.
+                    found = true;
+                }
+            }
+
+            return mid;
+        }
 
         #endregion
     }

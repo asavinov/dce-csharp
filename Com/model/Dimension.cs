@@ -88,14 +88,15 @@ namespace Com.model
 
         #region Instance (function) methods.
 
-        public virtual int Count // How many instances. It is the same for all dimensions of the lesser set. 
-        {
-            get { return _lesserSet != null ? _lesserSet.InstanceCount : 0; }
-        }
-
         public virtual int Size // Width of instances. It depends on the implementation (and might not be the same for all dimensions of the greater set). 
         {
             get { return _greaterSet != null ? _greaterSet.InstanceSize : 0; }
+        }
+
+        protected int _count;
+        public virtual int Count // How many instances. It is the same for all dimensions of the lesser set. 
+        {
+            get { return _count; }
         }
 
         // TODO: Add such methods as getValueType() returing what the real class says and getValue overriden by the real class
