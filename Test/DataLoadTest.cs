@@ -1,5 +1,6 @@
 ﻿using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Com.model;
 
 namespace Test
 {
@@ -19,25 +20,36 @@ namespace Test
             //  - Use this set of table rows and project it by returning a new subset of the target attribute _instances
 
             //
-            // Add members into sets according to the schema
+            // Prepare table schema
             //
-/*
-            // Add a new complex member 
-            int t_1 = t.appendEmptyInstance(); // All functions are nulls (only _id functions must exist but in this model _id is offset)
-            // int t_1 = t.addMember(new int[] {c1_1, c2_1, c3_1});
+            SetRoot root = new SetRoot("Root");
+            Set setInteger = root.GetPrimitiveSet("Integer");
+            Set setDouble = root.GetPrimitiveSet("Double");
+            Set setString = root.GetPrimitiveSet("String");
 
-            // Define all functions of this member by appending or updating the mappings between set _instances
-            t.idDims.get(0).setOutput(t_1, c1_1);
-            t.enDims.get(0).setOutput(t_1, c2_1);
-            t.enDims.get(1).setOutput(t_1, c3_1);
-            // t.set(t_1, new int[] {c1_1, c2_1, c3_1});
+            // Insert table
+            Set t1 = new Set("t1");
+            t1.SuperDim = new DimRoot("super", t1, root);
 
-            // Add (or use existing) primitive values and get their _offsets
-            int c1_1 = c1.appendEmptyInstances(2.2);
-            int c2_1 = c2.appendEmptyInstances(4.4);
-            int c3_1 = c3.appendEmptyInstances(6.6);
-*/
-            // Read and test
+            Dimension orders = new DimPrimitive<int>("orders", t1, setInteger);
+            t1.AddGreaterDimension(orders);
+
+            Dimension revenue = new DimPrimitive<double>("revenue", t1, setDouble);
+            t1.AddGreaterDimension(revenue);
+
+            Dimension name = new DimPrimitive<string>("name", t1, setString);
+            t1.AddGreaterDimension(name);
+
+            //
+            // Insert new data
+            //
+            t1.Append(); // Append a new record. An overloaded method could take an array/list/map of values - check how TableSet works
+            t1.SetValue("orders", t1.Length-1, 10);
+            t1.SetValue("revenue", t1.Length - 1, 2000);
+            t1.SetValue("name", t1.Length - 1, "Smith");
+
+            // Test
+
         }
 
         [TestMethod]

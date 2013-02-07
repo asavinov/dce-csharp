@@ -56,8 +56,9 @@ namespace Test
 
             // Insert table
             Set t1 = new Set("t1");
-            t1.SuperDim = new DimRoot("super", t1, setDouble);
+            t1.SuperDim = new DimRoot("super", t1, root);
 
+            // Insert attributes
             Dimension orders = new DimPrimitive<int>("orders", t1, setInteger);
             t1.AddGreaterDimension(orders);
 
@@ -69,8 +70,9 @@ namespace Test
 
             Assert.AreEqual(1, t1.GreaterDimensions.Count(x => x.Name == "orders"));
             Assert.AreEqual(1, t1.GreaterDimensions.Count(x => x.Name == "revenue"));
-            Assert.AreEqual(3, t1.GreaterDimensions.Count);
+            Assert.AreEqual(1, t1.GreaterDimensions.Count(x => x.Name == "name"));
 
+            Assert.AreEqual(3, t1.GreaterDimensions.Count);
             Assert.AreEqual(3, t1.GetGreaterSets().Count);
         }
 

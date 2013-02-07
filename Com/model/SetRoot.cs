@@ -14,12 +14,12 @@ namespace Com.model
     /// </summary>
     public class SetRoot : Set
     {
-        public override int InstanceSize
+        public override int Width
         {
             get { return 0; }
         }
 
-        public override int InstanceCount
+        public override int Length
         {
             get { return 0; }
         }

@@ -11,12 +11,12 @@ namespace Com.model
     /// </summary>
     class SetInteger : Set
     {
-        public override int InstanceCount
+        public override int Length
         {
             get { return int.MaxValue; } // It is the number of all integers
         }
 
-        public override int InstanceSize
+        public override int Width
         {
             get { return sizeof(int); } // It is not absolutely true because there can be integers of different length like Int32 and Int64
         }

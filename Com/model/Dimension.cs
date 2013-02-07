@@ -86,74 +86,28 @@ namespace Com.model
 
         #endregion
 
-        #region Instance (function) methods.
+        #region Properties of the function
 
-        public virtual int Size // Width of instances. It depends on the implementation (and might not be the same for all dimensions of the greater set). 
+        public virtual int Width // Width of instances. It depends on the implementation (and might not be the same for all dimensions of the greater set). 
         {
-            get { return _greaterSet != null ? _greaterSet.InstanceSize : 0; }
+            get { return _greaterSet != null ? _greaterSet.Width : 0; }
         }
 
-        protected int _count;
-        public virtual int Count // How many instances. It is the same for all dimensions of the lesser set. 
+        protected int _length;
+        public virtual int Length // How many instances. It is the same for all dimensions of the lesser set. 
         {
-            get { return _count; }
+            get { return _length; }
         }
 
-        // TODO: Add such methods as getValueType() returing what the real class says and getValue overriden by the real class
-        // These methods are convenient because we can check what kind of function work with
+        #endregion
 
-        /// <summary>
-        /// A boolean dimension can be used as a selector and then we can specify a condition. 
-        /// This condition can be then used to populate this dimension given some other dimension of the same type.  
-        /// </summary>
-//        private String predicate;
+        #region Function methods (abstract)
 
-        /// <summary>
-        /// Dimension can store default physical sorting of its elements (the order they are stored). 
-        /// It is either primitive (local) ascending/descending/no or more complex query involving also other sets.
-        /// </summary>
-//        private String sorting;
+        public virtual void Append(object value) { }
 
-        /**
-         * On one hand, a function is able to map inputs to outputs but on the other hand it is simply a set of existing _instances identified by their references, that is, a domain.
-         * A function is not only a domain (a set of existing _instances) but also the definition of the entity part for one or a few its properties.
-         *
-         * It is one possible implementation of a function. 
-         * Input values are only integers (or long?).
-         * Output values may have arbitrary size (number of bytes). This means that non-long output values can be used only in primitive domains.
-         * Theoretically, output values could contain several values which is useful for row-store. 
-         * Here we use physical value types only. The real domain-specific type of values is determined by the schema.
-         * Any (edge) implementation must support both direct and reverse functions. However, it can be done using two representations/implementations or one (not efficient). Therefore, we have to distinguish between edge (dimension) implementation and lower-level storages and indexes.
-         * 
-         * Other implementations: SparseArray, CompressedArray
-         * 
-         * An array of values where index of the array is offset (input, reference) while cell stores the output of the function.
-         * In the general case, it should be an interface with different implementations of the direct function. 
-         */
-        //	int[] _cells; // Implemented in extensions
-        /**
-         * It is a sorted array of _offsets (sort is by the value in cell at the offset).
-         * Here is how to sort indexes: http://stackoverflow.com/questions/951848/java-array-sort-quick-way-to-get-a-sorted-list-of-indices-of-an-array
-         * In the general case, it should be an interface with different implementations of the reverse function. 
-         */
-        //	int[] _offsets; // Implemented in extensions
-        /**
-         * Each value has some size as the number of bytes, for example, 4 bytes.
-         * It is a parameter of each object which must be taken into account by the users of this object.
-         * Since our implementations are made for each system type, the size is fixed. 
-         */
+        public virtual object GetValue(int offset) { return null;  }
 
-        /**
-         * If instances cannot be represented as objects with built-in functions (record-oriented representation), 
-         * then the parent can return an object which (efficiently) implements the mapping for one function (column-oriented representation).
-         * For example, it can be an in-memory array. Or it can be a key-value mapping  with an interface for getting output values for input values.
-         * Important is only that it is efficient and is an independent representation.
-         * The return object can be then used to get outputs given inputs according to its common interface. 
-         * If fact, this method can be viewed as returning a special representation of some direct function.
-         * 
-         *  Currently not needed. Earlier we assumed that complex manipulations will be done by functions and reverse functions as special objects.
-         */
-        //	public Object getFunc(boolean isReversed) { return null; }
+        public virtual void SetValue(int offset, object value) { }
 
         #endregion
 

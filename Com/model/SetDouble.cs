@@ -11,12 +11,12 @@ namespace Com.model
     /// </summary>
     class SetDouble : Set
     {
-        public override int InstanceCount
+        public override int Length
         {
             get { return int.MaxValue; } // In fact, it has to be the number of all doubles
         }
 
-        public override int InstanceSize
+        public override int Width
         {
             get { return sizeof(double); }
         }

@@ -157,16 +157,16 @@ namespace Com.model
         /// How many _instances this set has. Cardinality. Set power. Length (height) of instance set.
         /// If instances are identified by integer offsets, then size also represents offset range.
         /// </summary>
-        protected int _instanceCount;
-        public virtual int InstanceCount
+        protected int _length;
+        public virtual int Length
         {
-            get { return _instanceCount; }
+            get { return _length; }
         }
 
         /// <summary>
         /// Size of values or cells (physical identities) in bytes.
         /// </summary>
-        public virtual int InstanceSize
+        public virtual int Width
         {
             get { return sizeof(int); }
         }
@@ -177,29 +177,44 @@ namespace Com.model
 
         // TODO: Here we need an interface like ResultSet in JDBC with all possible types
 
-        public void AddInstance()
+        public void Append()
         {
-            InsertInstance(InstanceCount);
-        }
-        public void InsertInstance(int offset)
-        {
-            _instanceCount++;
-            // TODO: Append all dimensions in loop including super-dim and special dims
-        }
-        public void RemoveInstance(int offset)
-        {
-            _instanceCount--;
-            // TODO: Remove it from all dimensions in loop including super-dim and special dims
-        }
-        public void SetInstance(Dimension dimension, int offset, int value)
-        {
-            // TODO: Insert integer. Delegate to the dimension.
-        }
-        public void SetInstance(DimPrimitive<double> dimension, int offset, double value)
-        {
-            // TODO: Insert double. Delegate to the dimension.
+            // Delegate to all dimensions
+            foreach(Dimension d in _greaterDimensions)
+            {
+                d.Append(0); // Can 0 be casted to string?
+            }
+
+            _length++;
         }
 
+        public void SetValue(string name, int offset, object value)
+        {
+            Dimension dim = GetGreaterDimension(name);
+            dim.SetValue(offset, value);
+        }
+
+        public void Remove(int offset)
+        {
+            _length--;
+            // TODO: Remove it from all dimensions in loop including super-dim and special dims
+            // PROBLEM: should be propagate this removal to all lesser dimensions? We need a flag for this property. 
+        }
+
+        #endregion
+
+        #region Predicates, sorting, selectors etc. 
+        /// <summary>
+        /// A boolean dimension can be used as a selector and then we can specify a condition. 
+        /// This condition can be then used to populate this dimension given some other dimension of the same type.  
+        /// </summary>
+        //        private String predicate;
+
+        /// <summary>
+        /// Dimension can store default physical sorting of its elements (the order they are stored). 
+        /// It is either primitive (local) ascending/descending/no or more complex query involving also other sets.
+        /// </summary>
+        //        private String sorting;
         #endregion
 
         #region Constructors and initializers.

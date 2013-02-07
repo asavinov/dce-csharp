@@ -26,13 +26,13 @@ namespace Com.model
             // TODO: Check if output (greater) set is of correct type
 
             // In fact, we know the input set size and hence can allocate the exact number of elements in the array
-            _count = 0;
+            _length = 0;
             allocatedSize = initialSize;
             _cells = new T[allocatedSize];
             _offsets = new int[allocatedSize];
         }
 
-        public override int Size // sizeof(T) does not work for generic classes (even if constrained by value types)
+        public override int Width // sizeof(T) does not work for generic classes (even if constrained by value types)
         {
             get 
             { 
@@ -56,36 +56,55 @@ namespace Com.model
             }
         }
 
-        #region Manipulate function: add, edit, delete, update values etc.
+        #region Manipulate function (slow). Inherited interface. 
 
-        public T GetValue(int offset)
+        public override void Append(object value)
         {
-            return _cells[offset]; // We do not check the range of offset - the caller must guarantee its validity
+            FuncAppend((T)value);
         }
 
-        public void SetValue(int offset, T value)
+        public override object GetValue(int offset)
         {
-            // Update direct function by setting output value for the input offset
-            _cells[offset] = value; // We do not check the range of offset - the caller must guarantee its validity
-
-            // TODO: Update reverse function (reindex)
-            FullSort(); // Alternative: update only the changed element
+            return (T) FuncGetValue(offset);
         }
 
-        public void AppendValue(T value)
+        public override void SetValue(int offset, object value)
+        {
+            FuncSetValue(offset, (T) value);
+        }
+
+        #endregion
+
+        #region Manipulate function: add, edit, delete, update values etc. (fast)
+
+        private void FuncAppend(T value)
         {
             // Ensure that there is enough memory
-            if (allocatedSize == Count) // Not enough storage for the new element
+            if (allocatedSize == Length) // Not enough storage for the new element
             {
                 allocatedSize += incrementSize;
                 System.Array.Resize<T>(ref _cells, allocatedSize); // Resize the storage for values
                 System.Array.Resize(ref _offsets, allocatedSize); // Resize the indeex
             }
 
-            _cells[_count - 1] = value; // Assign the value to the new offset
-            _offsets[_count - 1] = _count - 1; // This element has to be moved to correct position in this array during sorting
+            _cells[_length - 1] = value; // Assign the value to the new offset
+            _offsets[_length - 1] = _length - 1; // This element has to be moved to correct position in this array during sorting
 
             FullSort(); // Alternative: UpdateSortLast()
+        }
+
+        private T FuncGetValue(int offset)
+        {
+            return _cells[offset]; // We do not check the range of offset - the caller must guarantee its validity
+        }
+
+        private void FuncSetValue(int offset, T value)
+        {
+            // Update direct function by setting output value for the input offset
+            _cells[offset] = value; // We do not check the range of offset - the caller must guarantee its validity
+
+            // TODO: Update reverse function (reindex)
+            FullSort(); // Alternative: update only the changed element
         }
 
         #endregion
@@ -151,17 +170,18 @@ namespace Com.model
 
         private void FullSort()
         {
+            // Index sort in Java: http://stackoverflow.com/questions/951848/java-array-sort-quick-way-to-get-a-sorted-list-of-indices-of-an-array
             // We need it because the sorting method will change the cells. 
             // Optimization: use one global large array for that purpose
             T[] tempCells = (T[])_cells.Clone();
 
             // Reset offsets befroe sorting (so it will be completely new sort)
-            for (int i = 0; i < _count; i++)
+            for (int i = 0; i < _length; i++)
             {
                 _offsets[i] = i; // Now each offset represents (references) an element of the function (from domain) but they are unsorted
             }
 
-            Array.Sort<T, int>(tempCells, _offsets, 0, _count); 
+            Array.Sort<T, int>(tempCells, _offsets, 0, _length); 
             // Now offsets are sorted
         }
 
@@ -174,12 +194,12 @@ namespace Com.model
 
         private void UpdateSortLast()
         {
-            T target = _cells[_count-1];
+            T target = _cells[_length-1];
 
             int pos = BinarySearch(target);
-            Array.Copy(_offsets, pos, _offsets, pos + 1, _count - pos - 1); // Free an index element by shifting other elements
+            Array.Copy(_offsets, pos, _offsets, pos + 1, _length - pos - 1); // Free an index element by shifting other elements
 
-            _offsets[pos] = _count - 1;
+            _offsets[pos] = _length - 1;
         }
 
         private int BinarySearch(T target)
@@ -192,7 +212,7 @@ namespace Com.model
 
             // Source: http://stackoverflow.com/questions/8067643/binary-search-of-a-sorted-array
 
-            int mid = -1, first = 0, last = _count - 1;
+            int mid = -1, first = 0, last = _length - 1;
             bool found = false;
 
             //for a sorted array with descending values

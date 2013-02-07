@@ -11,12 +11,12 @@ namespace Com.model
     /// </summary>
     class SetBool : Set
     {
-        public override int InstanceCount
+        public override int Length
         {
             get { return 2; } // It is the number of all boolean values, that is, 0 and 1
         }
 
-        public override int InstanceSize
+        public override int Width
         {
             get { return sizeof(bool); } // It actually depends on how it is represented and depends on the dimension.
         }

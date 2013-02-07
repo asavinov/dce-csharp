@@ -11,12 +11,12 @@ namespace Com.model
     /// </summary>
     class SetString : Set
     {
-        public override int InstanceCount
+        public override int Length
         {
             get { return int.MaxValue; } // It is the number of all strings
         }
 
-        public override int InstanceSize
+        public override int Width
         {
             get { return int.MaxValue; } // We assume that a string may have any length (unlimited)
         }
