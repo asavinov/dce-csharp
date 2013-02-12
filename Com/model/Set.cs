@@ -177,7 +177,7 @@ namespace Com.model
 
         // TODO: Here we need an interface like ResultSet in JDBC with all possible types
 
-        public void Append()
+        public void Append() // An overloaded method could take an array/list/map of values - check how TableSet works
         {
             // Delegate to all dimensions
             foreach(Dimension d in _greaterDimensions)
@@ -186,6 +186,12 @@ namespace Com.model
             }
 
             _length++;
+        }
+
+        public object GetValue(string name, int offset)
+        {
+            Dimension dim = GetGreaterDimension(name);
+            return dim.GetValue(offset);
         }
 
         public void SetValue(string name, int offset, object value)

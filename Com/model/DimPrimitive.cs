@@ -6,12 +6,14 @@ using System.Text;
 namespace Com.model
 {
     /// <summary>
-    /// Primitive dimension with double values (dictionary with all double values used which are identified by _offsets). 
+    /// Primitive dimension. 
+    /// 
+    /// One array of type T stores elements in their original order without sorting. 
+    /// Second array stores indexes (offsets) of elements in the first array in sorted order.
     /// </summary>
     public class DimPrimitive<T> : Dimension
     {
-        // Alternative: keep values always sorted while the iondex will store the original positions of these sorted values. Advantage: use of the build-in sort, search and other algorithms
-        private T[] _cells; // Each cell contains a T value in arbitrary order
+        private T[] _cells; // Each cell contains a T value in arbitrary original order
         private int[] _offsets; // Each cell contains an offset to an element in cells in ascending or descending order
 
         // Memory management parameters for instances (used by extensions and in future will be removed from this class).
@@ -60,25 +62,6 @@ namespace Com.model
 
         public override void Append(object value)
         {
-            FuncAppend((T)value);
-        }
-
-        public override object GetValue(int offset)
-        {
-            return (T) FuncGetValue(offset);
-        }
-
-        public override void SetValue(int offset, object value)
-        {
-            FuncSetValue(offset, (T) value);
-        }
-
-        #endregion
-
-        #region Manipulate function: add, edit, delete, update values etc. (fast)
-
-        private void FuncAppend(T value)
-        {
             // Ensure that there is enough memory
             if (allocatedSize == Length) // Not enough storage for the new element
             {
@@ -87,86 +70,134 @@ namespace Com.model
                 System.Array.Resize(ref _offsets, allocatedSize); // Resize the indeex
             }
 
-            _cells[_length - 1] = value; // Assign the value to the new offset
-            _offsets[_length - 1] = _length - 1; // This element has to be moved to correct position in this array during sorting
-
-            FullSort(); // Alternative: UpdateSortLast()
+            AppendIndex(ObjectToGeneric(value));
         }
 
-        private T FuncGetValue(int offset)
+        public override object GetValue(int offset)
         {
             return _cells[offset]; // We do not check the range of offset - the caller must guarantee its validity
         }
 
-        private void FuncSetValue(int offset, T value)
+        public override void SetValue(int offset, object value)
         {
-            // Update direct function by setting output value for the input offset
-            _cells[offset] = value; // We do not check the range of offset - the caller must guarantee its validity
-
-            // TODO: Update reverse function (reindex)
-            FullSort(); // Alternative: update only the changed element
+            UpdateIndex(offset, ObjectToGeneric(value));
         }
 
         #endregion
 
-        #region Project and de-project
+        #region Index methods
 
-        public T project(int offset)
+        private void AppendIndex(T value)
         {
-		    return _cells[offset];
-	    }
+            // Append the specified element to the index. The index and the storage must have enough memory. 
 
-	    public T[] project(int[] offsets) {
-		    int[] result = new int[offsets.Length];
-		    int resultSize = 0;
-		    for(int i=0; i<offsets.Length; i++) {
-			    // Check if it exists already 
-			    // Optimization is needed: 
-			    // 1. Sorting during projection (and hence easy to find duplicates), 
-			    // 2. Maintain own (local) index (e.g., sorted elements but separate from projection buing built) 
-			    // 3. Use de-projection
-			    // 4. In many cases the _offsets can be already sorted (if selected from a sorted list)
-			    int cell = offsets[i];
-			    bool found=false;
-			    for(int j=0; j<resultSize; j++) {
-				    if(result[j] == cell) {
-					    found = true;
-					    break; // Found 
-				    }
-			    }
-			    if(found) break;
-			    // Append new cell
-			    offsets[resultSize] = cell;
-			    resultSize++;
-		    }
-            return null; // Arrays.copyOf(result, resultSize);
-	    }
-	
-	    public int[] deproject(T cell) {
-		    // Binary search on _offsets
-		    // Inefficient approach by simply scanning
-		    int[] result = new int[_cells.Length];
-		    int resultSize = 0;
-		    for(int i=0; i<_cells.Length; i++) {
-			    if(!_cells[i].Equals(cell)) continue;
-			    result[resultSize] = i;
-			    resultSize++;
-		    }
+            // The last element contains garbadge and is not referenced from index. 
+            // The last element of index is also free and contains garbadge.
 
-            return null; // Arrays.copyOf(result, resultSize);
-	    }
+            int pos = FindIndexes(value).Item2;
+            Array.Copy(_offsets, pos, _offsets, pos + 1, _length - pos); // Free an index element by shifting other elements forward
 
-	    public int[] deproject(T[] values) {
-		    return null;
-	    }
+            _offsets[pos] = _length;
+            _cells[_length] = value;
 
-	    public int[] deproject(String expression) {
-		    return null;
-	    }
+            _length++;
+        }
 
-        #endregion
+        private void UpdateIndex(int offset, T value)
+        {
+            // Update index when changing a single value at one offset
 
-        #region Sorting methods
+            // Replace an existing value with the new value and update the index. 
+            int oldPos = FindIndex(offset); // Old sorted position of the cell we are going to change
+            int pos = FindIndexes(value).Item2; // The new sorted position for this cell (after the last element with this same value)
+
+            if (pos > oldPos)
+            {
+                Array.Copy(_offsets, oldPos+1, _offsets, oldPos, (pos-1) - oldPos); // Shift backward by overwriting old
+                _offsets[pos-1] = offset;
+            }
+            else if (pos < oldPos)
+            {
+                Array.Copy(_offsets, pos, _offsets, pos + 1, oldPos - pos); // Shift forward by overwriting old pos
+                _offsets[pos] = offset;
+            }
+
+            _cells[offset] = value;
+        }
+
+        private Tuple<int,int> FindIndexes(T target)
+        {
+            // Returns an interval of indexes which all reference the specified value
+            // min is inclusive and max is exclusive
+            // min<max - the value is found between [min,max)
+            // min=max - the value is not found, min=max is the position where it has to be inserted
+            // min=length - the value has to be appended (and is not found, so min=max) 
+
+            // C# bionary search works directly with value array. 
+            // int index = Array.BinarySearch<T>(mynumbers, target);
+            // BinarySearch<T>(T[], Int32, Int32, T) - search in range 
+
+            // Implemented as binary search
+            // Source: http://stackoverflow.com/questions/8067643/binary-search-of-a-sorted-array
+
+            int mid = 0, first = 0, last = _length;
+
+            //for a sorted array with ascending values
+            while (first < last)
+            {
+                mid = (first + last) / 2;
+
+                if (Comparer<T>.Default.Compare(target, _cells[_offsets[mid]]) > 0) // Less: target > mid
+                {
+                    first = mid+1;
+                }
+                else if (Comparer<T>.Default.Compare(target, _cells[_offsets[mid]]) < 0) // Greater: target < mynumbers[mid]
+                {
+                    last = mid;
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            if (first == last) // Not found
+            {
+                return new Tuple<int, int>(first, last);
+            }
+
+            // Now find min and max positions for the interval of equal values
+            for (first = mid; first >= 0 && _cells[_offsets[first]].Equals(target); first--) ;
+
+            for (last = mid; last < _length && _cells[_offsets[last]].Equals(target); last++) ;
+
+            return new Tuple<int, int>(first+1, last);
+        }
+
+        private int FindIndex(int offset)
+        {
+            // Find an index for an offset (rather than a value in this offset).
+            // A value can be stored at many different offsets while one offset has always one index and therefore a single valueis returned rather than an interval.
+            Tuple<int,int> interval = FindIndexes(_cells[offset]);
+            for (int i = interval.Item1; i < interval.Item2; i++)
+            {
+                if (_offsets[i] == offset) return i;
+            }
+
+            return -1;
+        }
+
+        private int FindIndex_2(T target)
+        {
+            int mid = -1;
+            // Comparer<T> comparer = Comparer<T>.Default;
+            // mid = Array.BinarySearch(_offsets, 0, _count, target, (a, b) => comparer.Compare(_cells[a], _cells[b]));
+
+            //IComparer<T> comparer = new IndexComparer<T>(this);
+            //mid = Array.BinarySearch(_offsets, 0, _count, target, comparer);
+
+            return mid;
+        }
 
         private void FullSort()
         {
@@ -181,77 +212,117 @@ namespace Com.model
                 _offsets[i] = i; // Now each offset represents (references) an element of the function (from domain) but they are unsorted
             }
 
-            Array.Sort<T, int>(tempCells, _offsets, 0, _length); 
-            // Now offsets are sorted
+            Array.Sort<T, int>(tempCells, _offsets, 0, _length);
+            // Now offsets are sorted and temp array can be deleted
         }
 
         private void FullSort_2()
         {
+            // Here the idea is to sort the index (that is, precisely what we need) by defining a custom comparare via cells referenced by the index elements
             // Source: http://stackoverflow.com/questions/659866/is-there-c-sharp-support-for-an-index-based-sort
+            // http://www.csharp-examples.net/sort-array/
             Comparer<T> comparer = Comparer<T>.Default;
             Array.Sort(_offsets, /* 0, _count, */ (a, b) => comparer.Compare(_cells[a], _cells[b]));
         }
 
-        private void UpdateSortLast()
+        #endregion
+
+        #region Project and de-project
+
+        public T project(int offset)
         {
-            T target = _cells[_length-1];
-
-            int pos = BinarySearch(target);
-            Array.Copy(_offsets, pos, _offsets, pos + 1, _length - pos - 1); // Free an index element by shifting other elements
-
-            _offsets[pos] = _length - 1;
+            return _cells[offset];
         }
 
-        private int BinarySearch(T target)
+        public T[] project(int[] offsets)
         {
-            // Essentially, it is deproject one value
-
-            // C# bionary search works directly with value array. 
-            // int index = Array.BinarySearch<T>(mynumbers, target);
-            // BinarySearch<T>(T[], Int32, Int32, T) - search in range 
-
-            // Source: http://stackoverflow.com/questions/8067643/binary-search-of-a-sorted-array
-
-            int mid = -1, first = 0, last = _length - 1;
-            bool found = false;
-
-            //for a sorted array with descending values
-            while (!found && first <= last)
+            int[] result = new int[offsets.Length];
+            int resultSize = 0;
+            for (int i = 0; i < offsets.Length; i++)
             {
-                mid = (first + last) / 2;
-
-                if (Comparer<T>.Default.Compare(target, _cells[_offsets[mid]]) < 0) // Less: target < mid
+                // Check if it exists already 
+                // Optimization is needed: 
+                // 1. Sorting during projection (and hence easy to find duplicates), 
+                // 2. Maintain own (local) index (e.g., sorted elements but separate from projection buing built) 
+                // 3. Use de-projection
+                // 4. In many cases the _offsets can be already sorted (if selected from a sorted list)
+                int cell = offsets[i];
+                bool found = false;
+                for (int j = 0; j < resultSize; j++)
                 {
-                    first = mid + 1;
+                    if (result[j] == cell)
+                    {
+                        found = true;
+                        break; // Found 
+                    }
                 }
+                if (found) break;
+                // Append new cell
+                offsets[resultSize] = cell;
+                resultSize++;
+            }
+            return null; // Arrays.copyOf(result, resultSize);
+        }
 
-                if (Comparer<T>.Default.Compare(target, _cells[_offsets[mid]]) > 0) // Greater: target > mynumbers[mid]
-                {
-                    last = mid - 1;
-                }
-
-                else
-                {
-                    // You need to stop here once found or it's an infinite loop once it finds it.
-                    found = true;
-                }
+        public int[] deproject(T cell)
+        {
+            // Binary search on _offsets
+            // Inefficient approach by simply scanning
+            int[] result = new int[_cells.Length];
+            int resultSize = 0;
+            for (int i = 0; i < _cells.Length; i++)
+            {
+                if (!_cells[i].Equals(cell)) continue;
+                result[resultSize] = i;
+                resultSize++;
             }
 
-            return mid;
+            return null; // Arrays.copyOf(result, resultSize);
         }
 
-        private int BinarySearch_2(T target)
+        public int[] deproject(T[] values)
         {
-            int mid = -1;
-            // Comparer<T> comparer = Comparer<T>.Default;
-            // mid = Array.BinarySearch(_offsets, 0, _count, target, (a, b) => comparer.Compare(_cells[a], _cells[b]));
+            return null;
+        }
 
-            //IComparer<T> comparer = new IndexComparer<T>(this);
-            //mid = Array.BinarySearch(_offsets, 0, _count, target, comparer);
-
-            return mid;
+        public int[] deproject(String expression)
+        {
+            return null;
         }
 
         #endregion
+
+        protected T ObjectToGeneric(object value)
+        {
+            // You can use Convert.ChangeType method, if the types you use implement IConvertible (all primitive types do):
+            // Convert.ChangeType(value, targetType);
+            // Returns an object of the specified type and whose value is equivalent to the specified object.
+            // Double d = -2.345;
+            // int i = (int)Convert.ChangeType(d, typeof(int));
+            // string s = "12/12/98";
+            // DateTime dt = (DateTime)Convert.ChangeType(s, typeof(DateTime));
+
+            // object readData = reader.ReadContentAsObject();
+            // int outInt;
+            // if (int.TryParse(readData, out outInt))
+            //    return outInt;
+
+            if (value is T)
+            {
+                return (T)value;
+            }
+            else
+            {
+                try
+                {
+                    return (T)Convert.ChangeType(value, typeof(T));
+                }
+                catch (InvalidCastException)
+                {
+                    return default(T);
+                }
+            }
+        }
+
     }
 }
