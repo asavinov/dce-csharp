@@ -56,6 +56,14 @@ namespace Com.model
         private bool _nullable;
         public bool Nullable { get { return _nullable; } }
 
+        /// <summary>
+        /// Temporary dimension is discarded after it has been used for computing other dimensions.
+        /// It is normally invisible (private) dimension. 
+        /// It can be created in the scope of some other dimension, expression or query, and then it is automatically deleted when the process exits this scope.
+        /// </summary>
+        private bool _temporary
+        public bool Temporary { get { return _temporary; } }
+
         #region Schema methods.
 
         /// <summary>

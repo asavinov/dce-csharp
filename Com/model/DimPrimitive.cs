@@ -109,7 +109,12 @@ namespace Com.model
 
             // Replace an existing value with the new value and update the index. 
             int oldPos = FindIndex(offset); // Old sorted position of the cell we are going to change
-            int pos = FindIndexes(value).Item2; // The new sorted position for this cell (after the last element with this same value)
+            int pos = FindIndexes(value).Item2; // The new sorted position for this cell
+
+            // Optimization: Instead of inserting after the last element with this same value, it is a good idea to position it within this interval by preserving the order of offsets (as a kind of secondary criterion). 
+            // In this case all elements with the same value will have growing index in the sorted array like [3, 25, 153]. 
+            // It will make some operations (with several dimensions) much more efficient by allowing for binary search for a given index (among the same value).
+            // To find such a new position, we need to make binary search among indexes within the returned interval.
 
             if (pos > oldPos)
             {
@@ -167,9 +172,11 @@ namespace Com.model
             }
 
             // Now find min and max positions for the interval of equal values
-            for (first = mid; first >= 0 && _cells[_offsets[first]].Equals(target); first--) ;
-
-            for (last = mid; last < _length && _cells[_offsets[last]].Equals(target); last++) ;
+            // Optimization: such search is not efficient - it is simple scan. One option would be use binary serach within interval [first, mid] and [mid, last]
+            for (first = mid; first >= 0 && _cells[_offsets[first]].Equals(target); first--) 
+                ;
+            for (last = mid; last < _length && _cells[_offsets[last]].Equals(target); last++) 
+                ;
 
             return new Tuple<int, int>(first+1, last);
         }
@@ -178,8 +185,8 @@ namespace Com.model
         {
             // Find an index for an offset (rather than a value in this offset).
             // A value can be stored at many different offsets while one offset has always one index and therefore a single valueis returned rather than an interval.
-            Tuple<int,int> interval = FindIndexes(_cells[offset]);
-            for (int i = interval.Item1; i < interval.Item2; i++)
+            Tuple<int,int> indexes = FindIndexes(_cells[offset]);
+            for (int i = indexes.Item1; i < indexes.Item2; i++)
             {
                 if (_offsets[i] == offset) return i;
             }
@@ -225,6 +232,13 @@ namespace Com.model
             Array.Sort(_offsets, /* 0, _count, */ (a, b) => comparer.Compare(_cells[a], _cells[b]));
         }
 
+        private int[] FindOffsets(Dictionary<string, object> values)
+        {
+            // Return an array of offsets of elements which have the specified values
+
+            return null;
+        }
+
         #endregion
 
         #region Project and de-project
@@ -236,6 +250,9 @@ namespace Com.model
 
         public T[] project(int[] offsets)
         {
+            // Question: possible sorting of output: ascending, according to input offsets specified, preserve the original order of offsets or do not guarantee anything
+            // Question: will it be easier to compute if input offsets are somehow sorted?
+
             int[] result = new int[offsets.Length];
             int resultSize = 0;
             for (int i = 0; i < offsets.Length; i++)
@@ -264,30 +281,48 @@ namespace Com.model
             return null; // Arrays.copyOf(result, resultSize);
         }
 
-        public int[] deproject(T cell)
+        public int[] deproject(T value)
         {
-            // Binary search on _offsets
-            // Inefficient approach by simply scanning
-            int[] result = new int[_cells.Length];
-            int resultSize = 0;
-            for (int i = 0; i < _cells.Length; i++)
+            Tuple<int,int> indexes = FindIndexes(value);
+
+            if (indexes.Item1 == indexes.Item2)
             {
-                if (!_cells[i].Equals(cell)) continue;
-                result[resultSize] = i;
-                resultSize++;
+                return null; // Not found
             }
 
-            return null; // Arrays.copyOf(result, resultSize);
+            int[] result = new int[indexes.Item2 - indexes.Item1];
+
+            for (int i = 0; i < result.Length; i++)
+            {
+                result[i] = _offsets[indexes.Item1 + i];
+            }
+
+            return result;
         }
 
         public int[] deproject(T[] values)
         {
-            return null;
-        }
+            // Assumption: values are unique
 
-        public int[] deproject(String expression)
-        {
-            return null;
+            Tuple<int, int>[] intervals = new Tuple<int, int>[values.Length];
+            int totalLength = 0;
+            for (int i = 0; i < values.Length; i++)
+            {
+                intervals[i] = FindIndexes(values[i]);
+                totalLength += intervals[i].Item2 - intervals[i].Item1;
+            }
+
+            int[] result = new int[totalLength];
+            int pos = 0;
+            for (int i = 0; i < intervals.Length; i++)
+            {
+                for (int j = intervals[i].Item1; j < intervals[i].Item2; j++, pos++)
+                {
+                    result[pos] = _offsets[j];
+                }
+            }
+
+            return result;
         }
 
         #endregion

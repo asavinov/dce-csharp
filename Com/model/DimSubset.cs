@@ -16,7 +16,7 @@ namespace Com.model
     /// - projection has the same size as input 
     /// - de-projection are smaller because not all elements are referenced 
     /// </summary>
-    public class DimIntFilter : DimSuper
+    public class DimSubset : DimSuper
     {
 
 	    public DimIntFilter(string name, Set lesserSet, Set greaterSet)
