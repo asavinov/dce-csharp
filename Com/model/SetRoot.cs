@@ -14,6 +14,13 @@ namespace Com.model
     /// </summary>
     public class SetRoot : Set
     {
+        private DataSourceType _type=DataSourceType.LOCAL; // Where data is stored and processed (engine)
+        public DataSourceType DataSourceType
+        {
+            get { return _type; }
+        }
+
+
         public override int Width
         {
             get { return 0; }
@@ -39,17 +46,6 @@ namespace Com.model
             return SubDims.First(x => !x.LesserSet.Instantiable && x.LesserSet.Name == name).LesserSet;
         }
 
-        /// <summary>
-        /// Connection to the location where this schema is persistently stored, that is, original database.
-        /// It is a way to lower level of physical representation and serialization.  
-        /// </summary>
-        string conn;
-
-        /// <summary>
-        /// Input schemas used to define this schema elements and build its _instances.
-        /// </summary>
-        List<Conn> inputDbs;
-
         public SetRoot(string name)
             : base(name) // C#: If nothing specified, then base() will always be called by default
         {
@@ -68,4 +64,5 @@ namespace Com.model
             setString.SuperDim = new DimRoot("super", setString, this);
         }
     }
+
 }

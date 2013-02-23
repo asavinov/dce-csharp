@@ -35,6 +35,12 @@ namespace Com.model
         protected bool _instantiable;
         public bool Instantiable { get { return _instantiable; } }
 
+        /// <summary>
+        /// If this set generates all possible elements (satisfying the constraints). 
+        /// </summary>
+        protected bool _autoPopulatedSet;
+        public bool IsAutoPopulatedSet { get { return _autoPopulatedSet; } }
+
         #region Schema methods. Inclusion (subset) hierarchy.
 
         /// <summary>
@@ -69,6 +75,25 @@ namespace Com.model
                 // Add new dimension
                 _superDim = value;
                 _superDim.GreaterSet._subDims.Add(_superDim);
+            }
+        }
+
+        public Set SuperSet
+        {
+            get { return _superDim != null ? _superDim.GreaterSet : null; }
+        }
+
+        public SetRoot Root
+        {
+            get
+            {
+                Set root = this;
+                while (this != null)
+                {
+                    root = root.SuperSet;
+                }
+
+                return (SetRoot)root;
             }
         }
 
@@ -176,51 +201,83 @@ namespace Com.model
         #region Instance manipulation (function) methods
 
         // TODO: Here we need an interface like ResultSet in JDBC with all possible types
+		// Alternative: maybe define these methos in the SetRemote class where we will have one class for manually entering elements
 
-        public void Append() // An overloaded method could take an array/list/map of values - check how TableSet works
+        public virtual void Append() // An overloaded method could take an array/list/map of values - check how TableSet works
         {
             // Delegate to all dimensions
             foreach(Dimension d in _greaterDimensions)
             {
-                d.Append(0); // Can 0 be casted to string?
+                d.Append(0); // Append default value for this dimension
             }
 
             _length++;
         }
 
-        public object GetValue(string name, int offset)
+        public virtual void Insert(int offset)
+        {
+            // Delegate to all dimensions
+            foreach(Dimension d in _greaterDimensions)
+            {
+                d.Insert(offset, 0);
+            }
+
+            _length++;
+        }
+
+        public virtual void Remove(int offset)
+        {
+            _length--;
+            // TODO: Remove it from all dimensions in loop including super-dim and special dims
+            // PROBLEM: should we propagate this removal to all lesser dimensions? We need a flag for this property. 
+        }
+
+        public virtual object GetValue(string name, int offset)
         {
             Dimension dim = GetGreaterDimension(name);
             return dim.GetValue(offset);
         }
 
-        public void SetValue(string name, int offset, object value)
+        public virtual void SetValue(string name, int offset, object value)
         {
             Dimension dim = GetGreaterDimension(name);
             dim.SetValue(offset, value);
         }
 
-        public void Remove(int offset)
+        public virtual void Populate()
         {
-            _length--;
-            // TODO: Remove it from all dimensions in loop including super-dim and special dims
-            // PROBLEM: should be propagate this removal to all lesser dimensions? We need a flag for this property. 
+            // Generate the set by instantiating all its elements. They way of population depends on the set properties (importing, autogeneration etc.)
+            if (Root.DataSourceType != DataSourceType.LOCAL)
+            {
+                // Load and then iterate by appending values to dimensions depending the dimension properties and expression
+            }
+
+            // Iterate through all created elements in the set and compute all locally defined dimensions in appropriate sequence determined by their dependency graph
+        }
+
+        public virtual void Unpopulate()
+        {
+            // Free all elements if they were stored somewhere (cache, dimensions etc.)
+            if (Root.DataSourceType != DataSourceType.LOCAL)
+            {
+                // Load and then iterate by appending values to dimensions depending the dimension properties and expression
+            }
+
+            // Iterate through all created elements in the set and compute all locally defined dimensions in appropriate sequence determined by their dependency graph
         }
 
         #endregion
 
-        #region Predicates, sorting, selectors etc. 
+        #region Expressions: WHERE (filter), ORDER BY (sorting), WHERE (composition) 
         /// <summary>
-        /// A boolean dimension can be used as a selector and then we can specify a condition. 
-        /// This condition can be then used to populate this dimension given some other dimension of the same type.  
+        /// Logical expression which is used to select a subset of element during auto-population. 
         /// </summary>
-        //        private String predicate;
+        public Expression WhereExpression  { get; set; }
 
         /// <summary>
-        /// Dimension can store default physical sorting of its elements (the order they are stored). 
-        /// It is either primitive (local) ascending/descending/no or more complex query involving also other sets.
+        /// Two-place predicate for comparison of values or a complex type where primitive types use natural ordering. 
         /// </summary>
-        //        private String sorting;
+        public Expression OrderbyExpression  { get; set; }
         #endregion
 
         #region Constructors and initializers.
@@ -235,5 +292,13 @@ namespace Com.model
         }
 
         #endregion
+    }
+
+    public enum DataSourceType
+    {
+        LOCAL, // This database
+        CSV,
+        SQL, // Generic (standard) SQL
+        EXCEL
     }
 }

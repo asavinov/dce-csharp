@@ -61,8 +61,15 @@ namespace Com.model
         /// It is normally invisible (private) dimension. 
         /// It can be created in the scope of some other dimension, expression or query, and then it is automatically deleted when the process exits this scope.
         /// </summary>
-        private bool _temporary
+        private bool _temporary;
         public bool Temporary { get { return _temporary; } }
+
+        /// <summary>
+        /// Here we store an intensional (computable) definition of the function. 
+        /// It represents a mapping from input set to output set in terms of other already defined functions (local or remote).
+        /// Note that it does not define sorting (ORDER BY), filter predicate (WHERE), or composition (FROM) - it only defines mapping and can be evaluated for one input value.
+        /// </summary>
+        public Expression FunctionExpression { get; set; }
 
         #region Schema methods.
 
@@ -113,7 +120,9 @@ namespace Com.model
 
         public virtual void Append(object value) { }
 
-        public virtual object GetValue(int offset) { return null;  }
+        public virtual void Insert(int offset, object value) { }
+
+        public virtual object GetValue(int offset) { return null; }
 
         public virtual void SetValue(int offset, object value) { }
 

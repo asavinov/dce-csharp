@@ -19,7 +19,7 @@ namespace Com.model
     public class DimSubset : DimSuper
     {
 
-	    public DimIntFilter(string name, Set lesserSet, Set greaterSet)
+        public DimSubset(string name, Set lesserSet, Set greaterSet)
             : base(name, lesserSet, greaterSet)
         {
             // TODO: Check if output is of correct type

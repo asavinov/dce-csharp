@@ -73,6 +73,11 @@ namespace Com.model
             AppendIndex(ObjectToGeneric(value));
         }
 
+        public override void Insert(int offset, object value)
+        {
+            // TODO
+        }
+
         public override object GetValue(int offset)
         {
             return _cells[offset]; // We do not check the range of offset - the caller must guarantee its validity
