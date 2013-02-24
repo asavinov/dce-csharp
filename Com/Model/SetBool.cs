@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Com.model
+namespace Com.Model
 {
     /// <summary>
     /// A primitive, virtual or predefined set of all elements. 
@@ -19,6 +19,11 @@ namespace Com.model
         public override int Width
         {
             get { return sizeof(bool); } // It actually depends on how it is represented and depends on the dimension.
+        }
+
+        public virtual Dimension CreateDefaultLesserDimension(string name, Set lesserSet)
+        {
+            return new DimPrimitive<bool>(name, lesserSet, this);
         }
 
         #region Constructors and initializers.

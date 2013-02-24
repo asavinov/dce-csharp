@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Com.model
+namespace Com.Model
 {
     /// <summary>
     /// A description of a set which may have subsets, geater or lesser sets, and instances. 
@@ -122,6 +122,28 @@ namespace Com.model
             return set;
         }
 
+        public List<Set> GetSubsets()
+        {
+            if(SubSets.Count == 0) 
+            {
+                return null;
+            }
+
+            List<Set> sets = new List<Set>();
+            int count = sets.Count;
+            for(int i=0; i<count; i++)
+            {
+                List<Set> subsets = sets[i].GetSubsets();
+                if (subsets == null)
+                {
+                    continue;
+                }
+                sets.AddRange(subsets);
+            }
+
+            return sets;
+        }
+
         #endregion
 
         #region Schema methods. Dimension structure.
@@ -172,6 +194,67 @@ namespace Com.model
         public List<Set> GetLesserSets()
         {
             return _lesserDimensions.Select(x => x.LesserSet).ToList();
+        }
+
+        public virtual Dimension CreateDefaultLesserDimension(string name, Set lesserSet)
+        {
+            return new DimSet(name, lesserSet, this);
+        }
+
+        /// <summary>
+        /// Attribute is a named primitive path leading from this set to primitive set along dimensions.
+        /// </summary>
+        public List<Attribute> Attributes { get; set; }
+
+        public void UpdateDimensions() // Use attribute structure to create/update dimension structure
+        {
+            // It is assumed that the attribute structrue is initialized and is correct
+
+            Dimension dim;
+            Set greaterSet;
+            foreach(Attribute att in Attributes) 
+            {
+                if (String.IsNullOrEmpty(att.FkName)) // No FK - primitive dimension
+                {
+                    // Get primitive set corresonding to this data type (overwritten by root set and specific to the data source). For example, it can return SetDouble
+                    greaterSet = Root.GetPrimitiveSet(att);
+                    // Create a new primitive dimension
+                    dim = greaterSet.CreateDefaultLesserDimension(att.FkName, this); // The primitive set knows what dimension type to use (by default), say, DimPrimitive<double> (overwritten)
+                    // Set dimension properties
+                    this.AddGreaterDimension(dim); // Add the new dimension to the schema
+                }
+                else // Complex dimension
+                {
+                    // Check if a dimension with this FK-name already exists
+                    dim = GetGreaterDimension(att.FkName);
+                    if (dim == null)
+                    {
+                        // Find greater set using FK target table name
+                        greaterSet = Root.FindSubset(att.FkTargetTableName);
+                        // Create a new complex dimension
+                        dim = greaterSet.CreateDefaultLesserDimension(att.FkName, this);// Say, DimSet
+                        // Set dimension properties
+                        this.AddGreaterDimension(dim); // Add the new dimension to the schema
+                    }
+                    else
+                    {
+                        // Update existing complex dimension (or check consistency of this attribute with this dimension)
+                    }
+                }
+                // Update attribute path adding the first segment referencing this new dimension
+            }
+
+            // Generate complex dimensions from primitive attributes (it should belong to Set if Attribute is independent of data source)
+            // For each FK create one dimension referencing a target set. For each FK attribute add the first segment as this dimension. 
+            // For non-FK attributes create primitive dimension and add a single segment in the attribute path
+
+            // Generate complete paths for all attributes. If the first segment points to a non-primitive set then find continuation
+
+            // First, define PKs
+        }
+
+        public void UpdateAttributes() // Use dimension structure to create/update attribute structure
+        {
         }
 
         #endregion

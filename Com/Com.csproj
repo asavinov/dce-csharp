@@ -7,7 +7,7 @@
     <ProjectGuid>{DC3924C8-D2E2-4BAE-B9CC-BF6BE5F85DF8}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Samm</RootNamespace>
+    <RootNamespace>Com</RootNamespace>
     <AssemblyName>Com</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
@@ -39,22 +39,23 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="model\DimBool.cs" />
-    <Compile Include="model\DimPrimitive.cs" />
-    <Compile Include="model\DimRoot.cs" />
-    <Compile Include="model\DimSet.cs" />
-    <Compile Include="model\DimSubset.cs" />
-    <Compile Include="model\DimSuper.cs" />
-    <Compile Include="model\Expression.cs" />
-    <Compile Include="model\Set.cs" />
-    <Compile Include="model\Dimension.cs" />
-    <Compile Include="model\SetBool.cs" />
-    <Compile Include="model\SetDouble.cs" />
-    <Compile Include="model\SetInteger.cs" />
-    <Compile Include="model\SetRoot.cs" />
-    <Compile Include="model\SetRootCsv.cs" />
-    <Compile Include="model\SetRootOledb.cs" />
-    <Compile Include="model\SetString.cs" />
+    <Compile Include="Model\Attribute.cs" />
+    <Compile Include="Model\DimBool.cs" />
+    <Compile Include="Model\DimPrimitive.cs" />
+    <Compile Include="Model\DimRoot.cs" />
+    <Compile Include="Model\DimSet.cs" />
+    <Compile Include="Model\DimSubset.cs" />
+    <Compile Include="Model\DimSuper.cs" />
+    <Compile Include="Model\Expression.cs" />
+    <Compile Include="Model\Set.cs" />
+    <Compile Include="Model\Dimension.cs" />
+    <Compile Include="Model\SetBool.cs" />
+    <Compile Include="Model\SetDouble.cs" />
+    <Compile Include="Model\SetInteger.cs" />
+    <Compile Include="Model\SetRoot.cs" />
+    <Compile Include="Model\SetRootCsv.cs" />
+    <Compile Include="Model\SetRootOledb.cs" />
+    <Compile Include="Model\SetString.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="query\Query.cs" />
     <Compile Include="query\QueryOperation.cs" />

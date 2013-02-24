@@ -3,14 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Com.model
+namespace Com.Model
 {
     /// <summary>
-    /// This dimension leads from a normal set to a boolean set which consists of two elements 0 (false) and 1 (true).
+    /// This super dimension leads to an empty set (root) and does not store any elements. 
     /// </summary>
-    public class DimBool : DimPrimitive<bool>
+    public class DimRoot : Dimension
     {
-        public DimBool(string name, Set lesserSet, Set greaterSet) 
+        public DimRoot(string name, Set lesserSet, Set greaterSet) 
             : base(name, lesserSet, greaterSet)
         {
             // TODO: Check if sets are of correct type.

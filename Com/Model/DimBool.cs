@@ -3,14 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Com.model
+namespace Com.Model
 {
     /// <summary>
-    /// This dimension leads from a normal set to a normal set.
+    /// This dimension leads from a normal set to a boolean set which consists of two elements 0 (false) and 1 (true).
     /// </summary>
-    public class DimSet : DimPrimitive<int>
+    public class DimBool : DimPrimitive<bool>
     {
-        public DimSet(string name, Set lesserSet, Set greaterSet) 
+        public DimBool(string name, Set lesserSet, Set greaterSet) 
             : base(name, lesserSet, greaterSet)
         {
             // TODO: Check if sets are of correct type.

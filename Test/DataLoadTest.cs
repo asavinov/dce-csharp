@@ -1,6 +1,6 @@
 ﻿using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Com.model;
+using Com.Model;
 
 namespace Test
 {
@@ -64,6 +64,11 @@ namespace Test
             Assert.AreEqual(10, t1.GetValue("orders", 0));
             Assert.AreEqual(12345.67, t1.GetValue("revenue", 0));
             Assert.AreEqual("Smith", t1.GetValue("name", 0));
+        }
+
+        [TestMethod]
+        public void OledbTest()
+        {
         }
 
         [TestMethod]

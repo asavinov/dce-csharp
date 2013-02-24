@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Com.model;
+using Com.Model;
 
 // http://msdn.microsoft.com/en-us/library/ms182517.aspx
 

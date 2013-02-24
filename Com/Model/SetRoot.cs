@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Com.model
+namespace Com.Model
 {
     /// <summary>
     /// The root set is a predefined primitive set with no instances and no superset. 
@@ -41,9 +41,14 @@ namespace Com.model
             get { return SubDims.Where(x => x.LesserSet.Instantiable).Select(x => x.LesserSet).ToList(); }
         }
 
-        public Set GetPrimitiveSet(string name)
+        public virtual Set GetPrimitiveSet(string name)
         {
             return SubDims.First(x => !x.LesserSet.Instantiable && x.LesserSet.Name == name).LesserSet;
+        }
+
+        public virtual Set GetPrimitiveSet(Attribute attribute)
+        {
+            return null; // For local database (without remote data source) types are not mapped (identity mapping)
         }
 
         public SetRoot(string name)
@@ -65,4 +70,15 @@ namespace Com.model
         }
     }
 
+    /// <summary>
+    /// Primitive data types used in our database system. 
+    /// See also OleDb types: System.Data.OleDb.OleDbType.*
+    /// </summary>
+    public enum DataType 
+    {
+        Double,
+        Integer,
+        String, 
+        Boolean
+    }
 }
