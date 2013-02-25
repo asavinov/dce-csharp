@@ -33,17 +33,17 @@ namespace Com.Model
 
         public List<Set> PrimitiveSets
         {
-            get { return SubDims.Where(x => !x.LesserSet.Instantiable).Select(x => x.LesserSet).ToList(); }
+            get { return SubDims.Where(x => x.LesserSet.Primitive).Select(x => x.LesserSet).ToList(); }
         }
 
         public List<Set> NonPrimitiveSets
         {
-            get { return SubDims.Where(x => x.LesserSet.Instantiable).Select(x => x.LesserSet).ToList(); }
+            get { return SubDims.Where(x => !x.LesserSet.Primitive).Select(x => x.LesserSet).ToList(); }
         }
 
         public virtual Set GetPrimitiveSet(string name)
         {
-            return SubDims.First(x => !x.LesserSet.Instantiable && x.LesserSet.Name == name).LesserSet;
+            return SubDims.FirstOrDefault(x => x.LesserSet.Primitive && x.LesserSet.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase)).LesserSet;
         }
 
         public virtual Set GetPrimitiveSet(Attribute attribute)
@@ -54,7 +54,7 @@ namespace Com.Model
         public SetRoot(string name)
             : base(name) // C#: If nothing specified, then base() will always be called by default
         {
-            _instantiable = false;
+            Instantiable = false;
 
             //
             // Generate all predefined primitive sets as subsets

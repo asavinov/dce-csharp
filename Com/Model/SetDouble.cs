@@ -32,8 +32,9 @@ namespace Com.Model
             : base(name)
         {
             // TODO: Parameterize this instance as double virtual set. Important: isPrimitive
-            _name = "Double"; // So the parameter is ignored
-            _instantiable = false;
+            Name = "Double"; // So the parameter is ignored
+            Instantiable = false;
+            Primitive = true;
         }
 
         #endregion

@@ -67,8 +67,19 @@ namespace Test
         }
 
         [TestMethod]
-        public void OledbTest()
+        public void OledbSchemaLoadTest()
         {
+            // Create Oldedb root set
+            SetRootOledb root = new SetRootOledb("Root");
+
+            root.ConnectionString = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\\Users\\savinov\\git\\comcsharp\\Test\\Northwind.accdb";
+            // Another provider: "Provider=Microsoft.Jet.OLEDB.4.0;"
+
+            root.Open();
+
+            root.LoadSchema();
+
+            // Check validity of the schema
         }
 
         [TestMethod]

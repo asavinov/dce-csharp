@@ -13,8 +13,10 @@ namespace Com.Model
     /// A provider exposes a specific format using standard OleDb API.
     /// OleDb tutorial: http://msdn.microsoft.com/en-us/library/aa288452(v=vs.71).aspx
     /// Read schema: http://support.microsoft.com/kb/309681
+    /// Connection string example: "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\\Test\\Northwind.accdb"
+    /// Provider example: "Provider=Microsoft.Jet.OLEDB.4.0;"
     /// </summary>
-    public abstract class SetRootOleDb : SetRoot
+    public class SetRootOledb : SetRoot
     {
         /// <summary>
         /// Connection string.
@@ -23,7 +25,7 @@ namespace Com.Model
 
         private OleDbConnection _connection;
 
-        public virtual Set GetPrimitiveSet(Attribute attribute)
+        public override Set GetPrimitiveSet(Attribute attribute)
         {
             string typeName = null;
 
@@ -31,24 +33,71 @@ namespace Com.Model
             switch (attribute.DataType)
             {
                 case "Double": // System.Data.OleDb.OleDbType.Double
-                    typeName = "double";
+                    typeName = "Double";
                     break;
                 case "Inteer": // System.Data.OleDb.OleDbType.Integer
-                    typeName = "int";
+                    typeName = "Integer";
                     break;
                 case "Char": // System.Data.OleDb.OleDbType.Char
                 case "VarChar": // System.Data.OleDb.OleDbType.VarChar
                 case "VarWChar": // System.Data.OleDb.OleDbType.VarWChar
                 case "WChar": // System.Data.OleDb.OleDbType.WChar
-                    typeName = "string";
+                    typeName = "String";
                     break;
                 default:
-                    // All the rest of types or error in the case we have enumerated all of them
+                    typeName = "String"; // All the rest of types or error
                     break;
             }
 
             Set set = GetPrimitiveSet(typeName); // Find primitive set with this type
             return set;
+        }
+
+        public void Open()
+        {
+            if (String.IsNullOrEmpty(ConnectionString))
+            {
+                return; 
+            }
+
+            try
+            {
+                _connection = new OleDbConnection(ConnectionString);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error: Failed to create a database connection. \n{0}", ex.Message);
+            }
+
+            try
+            {
+                _connection.Open();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error: Failed to open the DataBase.\n{0}", ex.Message);
+            }
+        }
+
+        public void Close()
+        {
+            if (_connection == null)
+            {
+                return;
+            }
+
+            try
+            {
+                _connection.Close();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error: Failed to close the DataBase.\n{0}", ex.Message);
+            }
+            finally
+            {
+                _connection = null;
+            }
         }
 
         private List<string> ReadTables()
@@ -118,20 +167,20 @@ namespace Com.Model
             return attributes;
         }
 
-        private void LoadSchema()
+        public void LoadSchema()
         {
             List<string> tableNames = ReadTables();
             foreach(string tableName in tableNames) 
             {
-                List<Attribute> attributes = ReadAttributes(tableName);
-
                 Set set = new Set(tableName); // Create a set 
-                set.Attributes = attributes;
-
                 set.SuperDim = new DimRoot("super", set, this); // Add the new set to the schema by setting its super dimension
+
+                List<Attribute> attributes = ReadAttributes(tableName);
+                set.Attributes = attributes;
             }
 
-            foreach (Set set in GetSubsets())
+            List<Set> sets = GetAllSubsets();
+            foreach (Set set in sets)
             {
                 set.UpdateDimensions(); // Create dimensions from attributes
             }
@@ -152,33 +201,9 @@ namespace Com.Model
         {
 	    }
 
-        public SetRootOleDb(string name)
+        public SetRootOledb(string name)
             : base(name) // C#: If nothing specified, then base() will always be called by default
         {
-            ConnectionString = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\\Users\\savinov\\git\\samm\\Northwind.accdb";
-            // Another provider: "Provider=Microsoft.Jet.OLEDB.4.0;"
-
-            try
-            {
-                _connection = new OleDbConnection(ConnectionString);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error: Failed to create a database connection. \n{0}", ex.Message);
-            }
-
-            try
-            {
-                _connection.Open();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error: Failed to open the DataBase.\n{0}", ex.Message);
-            }
-            finally
-            {
-                _connection.Close();
-            }
         }
     }
 

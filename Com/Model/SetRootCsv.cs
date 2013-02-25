@@ -21,7 +21,7 @@ namespace Com.Model
         private string[] _columnNames; // A list of column names
         private string _fieldSeparator;
 
-        public virtual Set GetPrimitiveSet(Attribute attribute)
+        public override Set GetPrimitiveSet(Attribute attribute)
         {
             string typeName = "string";
 

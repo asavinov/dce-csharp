@@ -24,22 +24,25 @@ namespace Com.Model
         /// <summary>
         /// A set name. Note that in the general case a set has an associated structure (concept, type) which may have its own name. 
         /// </summary>
-        protected string _name;
-        public string Name { get { return _name; } }
+        public string Name { get; set; }
 
         /// <summary>
         /// Whether this set is supposed (able) to have instances. Some sets are used for conceptual purposes. 
         /// It is not about having zero instances - it is about the ability to have instances (essentially supporting the corresponding interface for working with instances).
         /// This flag is true for extensions which implement data-related methods (and in this sense it is reduntant because duplicates 'instance of').
         /// </summary>
-        protected bool _instantiable;
-        public bool Instantiable { get { return _instantiable; } }
+        public bool Instantiable { get; set; }
+
+        /// <summary>
+        /// Whether it is a primitive set. Primitive sets do not have greater dimensions.
+        /// It can depend on other propoerties (it should be clarified) like instantiable, autopopulated, virtual etc.
+        /// </summary>
+        public bool Primitive { get; set; }
 
         /// <summary>
         /// If this set generates all possible elements (satisfying the constraints). 
         /// </summary>
-        protected bool _autoPopulatedSet;
-        public bool IsAutoPopulatedSet { get { return _autoPopulatedSet; } }
+        public bool AutoPopulatedSet { get; set; }
 
         #region Schema methods. Inclusion (subset) hierarchy.
 
@@ -88,7 +91,7 @@ namespace Com.Model
             get
             {
                 Set root = this;
-                while (this != null)
+                while (root.SuperSet != null)
                 {
                     root = root.SuperSet;
                 }
@@ -105,10 +108,27 @@ namespace Com.Model
             get { return _subDims.Select(x => x.LesserSet).ToList(); }
         }
 
+        public List<Set> GetAllSubsets()
+        {
+            int count = SubSets.Count;
+            List<Set> result = new List<Set>(SubSets);
+            for (int i = 0; i < count; i++)
+            {
+                List<Set> subsets = result[i].GetAllSubsets();
+                if (subsets == null ||subsets.Count == 0)
+                {
+                    continue;
+                }
+                result.AddRange(subsets);
+            }
+
+            return result;
+        }
+
         public Set FindSubset(string name)
         {
             Set set = null;
-            if (_name == name)
+            if (Name.Equals(name, StringComparison.InvariantCultureIgnoreCase))
             {
                 set = this;
             }
@@ -120,28 +140,6 @@ namespace Com.Model
             }
 
             return set;
-        }
-
-        public List<Set> GetSubsets()
-        {
-            if(SubSets.Count == 0) 
-            {
-                return null;
-            }
-
-            List<Set> sets = new List<Set>();
-            int count = sets.Count;
-            for(int i=0; i<count; i++)
-            {
-                List<Set> subsets = sets[i].GetSubsets();
-                if (subsets == null)
-                {
-                    continue;
-                }
-                sets.AddRange(subsets);
-            }
-
-            return sets;
         }
 
         #endregion
@@ -178,7 +176,7 @@ namespace Com.Model
         }
         public Dimension GetGreaterDimension(string name)
         {
-            return _greaterDimensions.FirstOrDefault(d => d.Name == name);
+            return _greaterDimensions.FirstOrDefault(d => d.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
         }
         public List<Set> GetGreaterSets()
         {
@@ -204,7 +202,12 @@ namespace Com.Model
         /// <summary>
         /// Attribute is a named primitive path leading from this set to primitive set along dimensions.
         /// </summary>
-        public List<Attribute> Attributes { get; set; }
+        private List<Attribute> _attributes = new List<Attribute>();
+        public List<Attribute> Attributes
+        {
+            get { return _attributes; }
+            set { _attributes = value; }
+        }
 
         public void UpdateDimensions() // Use attribute structure to create/update dimension structure
         {
@@ -368,10 +371,11 @@ namespace Com.Model
         public Set(string name)
         {
             _id = uniqueId++;
-            _name = name;
+            Name = name;
 
             // TODO: Parameterize depending on the reserved names: Integer, Double etc. (or exclude these names)
-            _instantiable = true;
+            Instantiable = true;
+            Primitive = false;
         }
 
         #endregion
