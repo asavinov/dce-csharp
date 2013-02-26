@@ -215,7 +215,8 @@ namespace Com.Model
 
             Dimension dim;
             Set greaterSet;
-            foreach(Attribute att in Attributes) 
+            // Process FK information for generating greater dimensions
+            foreach (Attribute att in Attributes) 
             {
                 if (String.IsNullOrEmpty(att.FkName)) // No FK - primitive dimension
                 {
@@ -226,7 +227,7 @@ namespace Com.Model
                     // Set dimension properties
                     this.AddGreaterDimension(dim); // Add the new dimension to the schema
                 }
-                else // Complex dimension
+                else // FK found - complex dimension
                 {
                     // Check if a dimension with this FK-name already exists
                     dim = GetGreaterDimension(att.FkName);
@@ -244,16 +245,22 @@ namespace Com.Model
                         // Update existing complex dimension (or check consistency of this attribute with this dimension)
                     }
                 }
+
                 // Update attribute path adding the first segment referencing this new dimension
+                att.Path.Clear();
+                att.Path.Add(dim);
+
+                // Process PK information for determing identity dimensions
+                if (!String.IsNullOrEmpty(att.PkName))
+                {
+                    dim.Identity = true;
+                }
             }
 
-            // Generate complex dimensions from primitive attributes (it should belong to Set if Attribute is independent of data source)
-            // For each FK create one dimension referencing a target set. For each FK attribute add the first segment as this dimension. 
-            // For non-FK attributes create primitive dimension and add a single segment in the attribute path
-
+            // ??? how and where ???
             // Generate complete paths for all attributes. If the first segment points to a non-primitive set then find continuation
-
-            // First, define PKs
+            // It requires that all greater sets have finsihed this procedure (processed fks and pks)
+            // So this method must be called in top down direction so that greater sets are processed before lesser sets.
         }
 
         public void UpdateAttributes() // Use dimension structure to create/update attribute structure

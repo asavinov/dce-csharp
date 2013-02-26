@@ -18,8 +18,7 @@ namespace Com.Model
         /// <summary>
         /// Unique id within this database or (temporary) query session.  
         /// </summary>
-        private int _id;
-        public int Id { get { return _id; } }
+        public int Id { get; private set; }
 
         /// <summary>
         /// This name is unique within the lesser set.
@@ -30,16 +29,14 @@ namespace Com.Model
         /// <summary>
         /// Is identity dimension.
         /// </summary>
-        private bool _identity;
-        public bool Identity { get { return _identity; } }
+        public bool Identity { get; set; }
 
         /// <summary>
         /// Reversed dimension has the opposite semantic interpretation (direction). It is used to resolve semantic cycles. 
         /// For example, when a department references its manager then this dimension is makred by this flag. 
         /// One use is when deciding +how to interpret input and output dimensions of sets and lesser/greater sets of dimensions.
         /// </summary>
-        private bool _reversed;
-        public bool Reversed { get { return _reversed; } }
+        public bool Reversed { get; set; }
 
         /// <summary>
         /// Whether this dimension is supposed (able) to have instances. Some dimensions are used for conceptual purposes. 
@@ -48,21 +45,19 @@ namespace Com.Model
         /// Different interpretations: the power of the domain can increase; the power of the domain is not 0; 
         /// </summary>
         private bool _instantiable;
-        public bool Instantiable { get { return _lesserSet.Instantiable; } }
+        public bool Instantiable { get { return _lesserSet.Instantiable; } private set { _instantiable = value; } }
 
         /// <summary>
         /// Whether this dimension to take no values.
         /// </summary>
-        private bool _nullable;
-        public bool Nullable { get { return _nullable; } }
+        public bool Nullable { get; set; }
 
         /// <summary>
         /// Temporary dimension is discarded after it has been used for computing other dimensions.
         /// It is normally invisible (private) dimension. 
         /// It can be created in the scope of some other dimension, expression or query, and then it is automatically deleted when the process exits this scope.
         /// </summary>
-        private bool _temporary;
-        public bool Temporary { get { return _temporary; } }
+        public bool Temporary { get; set; }
 
         /// <summary>
         /// Here we store an intensional (computable) definition of the function. 
@@ -142,12 +137,12 @@ namespace Com.Model
 
         public Dimension(string name, Set lesserSet, Set greaterSet, bool isIdentity, bool isReversed, bool isInstantiable)
         {
-            _id = uniqueId++;
+            Id = uniqueId++;
             _name = name;
 
-            _identity = isIdentity;
-            _reversed = isReversed;
-            _instantiable = isInstantiable;
+            Identity = isIdentity;
+            Reversed = isReversed;
+            Instantiable = isInstantiable;
 
             LesserSet = lesserSet;
             GreaterSet = greaterSet;
