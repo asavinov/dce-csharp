@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Data;
 
 namespace Com.Model
 {
@@ -182,6 +183,15 @@ namespace Com.Model
         {
             return _greaterDimensions.Select(x => x.GreaterSet).ToList();
         }
+        public List<Dimension> GetGreaterLeafDimensions()
+        {
+            List<Dimension> leaves = new List<Dimension>();
+            foreach(Dimension dim in GreaterDimensions)
+            {
+                leaves.AddRange(dim.GetLeafDimensions());
+            }
+            return leaves;
+        }
 
         public List<Dimension> _lesserDimensions = new List<Dimension>();
         public List<Dimension> LesserDimensions
@@ -197,74 +207,6 @@ namespace Com.Model
         public virtual Dimension CreateDefaultLesserDimension(string name, Set lesserSet)
         {
             return new DimSet(name, lesserSet, this);
-        }
-
-        /// <summary>
-        /// Attribute is a named primitive path leading from this set to primitive set along dimensions.
-        /// </summary>
-        private List<Attribute> _attributes = new List<Attribute>();
-        public List<Attribute> Attributes
-        {
-            get { return _attributes; }
-            set { _attributes = value; }
-        }
-
-        public void UpdateDimensions() // Use attribute structure to create/update dimension structure
-        {
-            // It is assumed that the attribute structrue is initialized and is correct
-
-            Dimension dim;
-            Set greaterSet;
-            // Process FK information for generating greater dimensions
-            foreach (Attribute att in Attributes) 
-            {
-                if (String.IsNullOrEmpty(att.FkName)) // No FK - primitive dimension
-                {
-                    // Get primitive set corresonding to this data type (overwritten by root set and specific to the data source). For example, it can return SetDouble
-                    greaterSet = Root.GetPrimitiveSet(att);
-                    // Create a new primitive dimension
-                    dim = greaterSet.CreateDefaultLesserDimension(att.FkName, this); // The primitive set knows what dimension type to use (by default), say, DimPrimitive<double> (overwritten)
-                    // Set dimension properties
-                    this.AddGreaterDimension(dim); // Add the new dimension to the schema
-                }
-                else // FK found - complex dimension
-                {
-                    // Check if a dimension with this FK-name already exists
-                    dim = GetGreaterDimension(att.FkName);
-                    if (dim == null)
-                    {
-                        // Find greater set using FK target table name
-                        greaterSet = Root.FindSubset(att.FkTargetTableName);
-                        // Create a new complex dimension
-                        dim = greaterSet.CreateDefaultLesserDimension(att.FkName, this);// Say, DimSet
-                        // Set dimension properties
-                        this.AddGreaterDimension(dim); // Add the new dimension to the schema
-                    }
-                    else
-                    {
-                        // Update existing complex dimension (or check consistency of this attribute with this dimension)
-                    }
-                }
-
-                // Update attribute path adding the first segment referencing this new dimension
-                att.Path.Clear();
-                att.Path.Add(dim);
-
-                // Process PK information for determing identity dimensions
-                if (!String.IsNullOrEmpty(att.PkName))
-                {
-                    dim.Identity = true;
-                }
-            }
-
-            // ??? how and where ???
-            // Generate complete paths for all attributes. If the first segment points to a non-primitive set then find continuation
-            // It requires that all greater sets have finsihed this procedure (processed fks and pks)
-            // So this method must be called in top down direction so that greater sets are processed before lesser sets.
-        }
-
-        public void UpdateAttributes() // Use dimension structure to create/update attribute structure
-        {
         }
 
         #endregion
@@ -307,6 +249,10 @@ namespace Com.Model
             _length++;
         }
 
+        public virtual void Append(Instance instance)
+        {
+        }
+
         public virtual void Insert(int offset)
         {
             // Delegate to all dimensions
@@ -337,40 +283,65 @@ namespace Com.Model
             dim.SetValue(offset, value);
         }
 
-        public virtual void Populate()
-        {
-            // Generate the set by instantiating all its elements. They way of population depends on the set properties (importing, autogeneration etc.)
-            if (Root.DataSourceType != DataSourceType.LOCAL)
-            {
-                // Load and then iterate by appending values to dimensions depending the dimension properties and expression
-            }
-
-            // Iterate through all created elements in the set and compute all locally defined dimensions in appropriate sequence determined by their dependency graph
-        }
-
-        public virtual void Unpopulate()
-        {
-            // Free all elements if they were stored somewhere (cache, dimensions etc.)
-            if (Root.DataSourceType != DataSourceType.LOCAL)
-            {
-                // Load and then iterate by appending values to dimensions depending the dimension properties and expression
-            }
-
-            // Iterate through all created elements in the set and compute all locally defined dimensions in appropriate sequence determined by their dependency graph
-        }
-
         #endregion
 
-        #region Expressions: WHERE (filter), ORDER BY (sorting), WHERE (composition) 
-        /// <summary>
-        /// Logical expression which is used to select a subset of element during auto-population. 
-        /// </summary>
-        public Expression WhereExpression  { get; set; }
+        #region Remoting and population
 
         /// <summary>
-        /// Two-place predicate for comparison of values or a complex type where primitive types use natural ordering. 
+        /// Constraints on all possible instances. Only instances satisfying these constraints will be created. 
         /// </summary>
-        public Expression OrderbyExpression  { get; set; }
+        public Expression WhereExpression { get; set; }
+
+        /// <summary>
+        /// Ordering of the generated instances. Instances will be sorted according to these criteria. 
+        /// </summary>
+        public Expression OrderbyExpression { get; set; }
+
+        /// <summary>
+        /// The source of instances for this set. It can be a remote set, user input or explicit definition of the set like {1, 7, 4}.
+        /// If it is empty then this set is defined purely locally via its greater dimensions and all possible elements will be instantiated.
+        /// If it is not empty then only a subset of all possible values will be instantiated. 
+        /// </summary>
+        public Expression Instances { get; set; }
+        public Set RemoteSet { get; set; } // For simplicity
+
+        public virtual void Import(DataTable dataTable)
+        {
+            foreach (DataRow raw in dataTable.Rows)
+            {
+                // Use mappings to produce a complex instance from the current raw
+                Instance instance=null;
+                // Check if this instance satisfies the local expressions (local where etc.). Is it really possible and necessary?
+                // Append the new instance to the set
+                Append(instance);
+            }
+        }
+
+        public virtual DataTable Export()
+        {
+            // Root represents a database engine and it knows how to access data (from local dimensions, from remote db, from file etc.)
+            return Root.Export(this);
+        }
+
+        public virtual void Populate()
+        {
+            if (RemoteSet == null) // Local population procedure without importing (without external extensional)
+            {
+            }
+            else // Popoulating using externally provided values
+            {
+                Set remoteSet = RemoteSet; // Find remote set
+                DataTable export = remoteSet.Export(); // Request a (flat) result set from the remote set
+                Import(export); // Import
+
+            }
+        }
+
+        public virtual void Unpopulate() // Clean, Empty
+        {
+            // After this operation the set is empty
+        }
+
         #endregion
 
         #region Constructors and initializers.
@@ -386,6 +357,80 @@ namespace Com.Model
         }
 
         #endregion
+
+        #region Deprecedate (delete)
+
+        /// <summary>
+        /// Attribute is a named primitive path leading from this set to primitive set along dimensions.
+        /// </summary>
+        private List<Attribute> _attributes = new List<Attribute>();
+        public List<Attribute> Attributes
+        {
+            get { return _attributes; }
+            set { _attributes = value; }
+        }
+
+        public void UpdateDimensions() // Use attribute structure to create/update dimension structure
+        {
+            // It is assumed that the attribute structrue is initialized and is correct
+
+            Dimension dim;
+            Set greaterSet;
+            // Process FK information for generating greater dimensions
+            foreach (Attribute att in Attributes)
+            {
+                if (String.IsNullOrEmpty(att.FkName)) // No FK - primitive dimension
+                {
+                    // Get primitive set corresonding to this data type (overwritten by root set and specific to the data source). For example, it can return SetDouble
+                    greaterSet = Root.GetPrimitiveSet(att);
+                    // Create a new primitive dimension
+                    dim = greaterSet.CreateDefaultLesserDimension(att.FkName, this); // The primitive set knows what dimension type to use (by default), say, DimPrimitive<double> (overwritten)
+                    // Set dimension properties
+                    this.AddGreaterDimension(dim); // Add the new dimension to the schema
+                }
+                else // FK found - complex dimension
+                {
+                    // Check if a dimension with this FK-name already exists
+                    dim = GetGreaterDimension(att.FkName);
+                    if (dim == null)
+                    {
+                        // Find greater set using FK target table name
+                        greaterSet = Root.FindSubset(att.FkTargetTableName);
+                        // Create a new complex dimension
+                        dim = greaterSet.CreateDefaultLesserDimension(att.FkName, this);// Say, DimSet
+                        // Set dimension properties
+                        this.AddGreaterDimension(dim); // Add the new dimension to the schema
+                    }
+                    else
+                    {
+                        // Update existing complex dimension (or check consistency of this attribute with this dimension)
+                    }
+                }
+
+                // Process PK information for determing identity dimensions
+                if (!String.IsNullOrEmpty(att.PkName))
+                {
+                    dim.Identity = true;
+                }
+
+                // Update attribute path adding the first segment referencing this new dimension
+                att.Path.Clear();
+                att.Path.Add(dim);
+
+            }
+
+            // ??? how and where ???
+            // Generate complete paths for all attributes. If the first segment points to a non-primitive set then find continuation
+            // It requires that all greater sets have finsihed this procedure (processed fks and pks)
+            // So this method must be called in top down direction so that greater sets are processed before lesser sets.
+        }
+
+        public void UpdateAttributes() // Use dimension structure to create/update attribute structure
+        {
+        }
+
+        #endregion
+
     }
 
     public enum DataSourceType

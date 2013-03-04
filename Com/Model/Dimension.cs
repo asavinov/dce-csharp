@@ -59,13 +59,6 @@ namespace Com.Model
         /// </summary>
         public bool Temporary { get; set; }
 
-        /// <summary>
-        /// Here we store an intensional (computable) definition of the function. 
-        /// It represents a mapping from input set to output set in terms of other already defined functions (local or remote).
-        /// Note that it does not define sorting (ORDER BY), filter predicate (WHERE), or composition (FROM) - it only defines mapping and can be evaluated for one input value.
-        /// </summary>
-        public Expression FunctionExpression { get; set; }
-
         #region Schema methods.
 
         /// <summary>
@@ -94,6 +87,63 @@ namespace Com.Model
             }
         }
 
+        /// <summary>
+        /// Parent dimension. 
+        /// It is null for original complex dimensions of a set which point to a direct greater set.
+        /// </summary>
+        private Dimension _parentDimension;
+        public Dimension ParentDimension
+        {
+            get { return _parentDimension; }
+            set
+            {
+                _parentDimension = value; // TODO: Update all influenced elements.
+            }
+        }
+        public Dimension Root
+        {
+            get
+            {
+                Dimension root = this;
+                while (root.ParentDimension != null)
+                {
+                    root = root.ParentDimension;
+                }
+
+                return root;
+            }
+        }
+
+        /// <summary>
+        /// Child dimensions. 
+        /// The child dimensions represent a continuation of this dimension along all dimensions of the greater set, that is, they point to one step higher. 
+        /// </summary>
+        private List<Dimension> _childDimensions;
+        public List<Dimension> ChildDimensions
+        {
+            get { return _childDimensions; }
+            set
+            {
+                _childDimensions = value; // TODO: Update all influenced elements.
+            }
+        }
+        public List<Dimension> GetLeafDimensions()
+        {
+            List<Dimension> result = new List<Dimension>();
+            if(ChildDimensions.Count == 0)
+            {
+                result.Add(this);
+                return result;
+            }
+
+            foreach (Dimension child in ChildDimensions)
+            {
+                result.AddRange(child.GetLeafDimensions());
+            }
+
+            return result;
+        }
+
         #endregion
 
         #region Properties of the function
@@ -120,6 +170,13 @@ namespace Com.Model
         public virtual object GetValue(int offset) { return null; }
 
         public virtual void SetValue(int offset, object value) { }
+
+        /// <summary>
+        /// It is used to compose a remote query for loading data during population and then interpret the result set by mapping to local terms. 
+        /// </summary>
+        public Expression RemoteSelect { get; set; }
+        public string RemoteName { get; set; } // It is for simplicity. It is a remote column/attribute/alias mapped to this dimension path.
+        public string RemoteDefinition { get; set; } // It is a definition of the remote column/attribute/alias like "col1+col2/3"
 
         #endregion
 

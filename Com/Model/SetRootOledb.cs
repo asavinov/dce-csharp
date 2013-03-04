@@ -186,20 +186,57 @@ namespace Com.Model
             }
         }
 
-        public void Populate()
+        public override DataTable Export(Set set) // Dimensions are empty - data is in the remote database
         {
-			// Open file
-			// Load all rows (the first row has column names)
-	    }
+            // Check if this set is our child
 
-        public void next()
-        {
-			// Move to the next row
-	    }
+            // Generate query for our database engine by including at least all identity dimensions
+            string select = ""; // Attribute names or their definitions stored in the dimensions
+            List<Dimension> attributes = set.GetGreaterLeafDimensions(); // These must be primitive dimensions storing column names
+            foreach (Dimension dim in attributes)
+            {
+                select += dim.Name + ", ";
+            }
+            select = select.Substring(0, select.Length - 2);
 
-        public void getValue(string column)
-        {
-	    }
+            string from = set.Name;
+            string where = ""; // set.WhereExpression
+            string orderby = ""; // set.OrderbyExpression
+
+            // Send query to the remote database for execution
+            string query = "SELECT " + select + " FROM " + from + " ";
+            query += String.IsNullOrEmpty(where) ? "" : "WHERE " + where + " ";
+            query += String.IsNullOrEmpty(orderby) ? "" : "ORDER BY " + orderby + " ";
+
+            // Read and return the result set
+            DataSet myDataSet = new DataSet();
+            try
+            {
+
+                OleDbCommand myAccessCommand = new OleDbCommand(query, _connection);
+                OleDbDataAdapter myDataAdapter = new OleDbDataAdapter(myAccessCommand);
+
+                Open();
+
+                myDataAdapter.Fill(myDataSet);
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error: Failed to retrieve the required data from the DataBase.\n{0}", ex.Message);
+                return null;
+            }
+            finally
+            {
+                Close();
+            }
+
+            Console.WriteLine("{0} tables in data set", myDataSet.Tables.Count);
+            Console.WriteLine("{0} rows and {1} columns in table {2}", myDataSet.Tables[0].Rows.Count, myDataSet.Tables[0].Columns.Count, myDataSet.Tables[0].TableName);
+            DataTable dataTable = myDataSet.Tables[0]; // We expect only one table
+
+            return dataTable;
+        }
 
         public SetRootOledb(string name)
             : base(name) // C#: If nothing specified, then base() will always be called by default

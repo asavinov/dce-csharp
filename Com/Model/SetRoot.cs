@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Data;
 
 namespace Com.Model
 {
@@ -49,6 +50,14 @@ namespace Com.Model
         public virtual Set GetPrimitiveSet(Attribute attribute)
         {
             return null; // For local database (without remote data source) types are not mapped (identity mapping)
+        }
+
+        public virtual DataTable Export(Set set)
+        {
+            // Check if this set is our child
+            DataTable dataTable = new DataTable(set.Name);
+            // Add rows by reading them from this set local dimensions
+            return null;
         }
 
         public SetRoot(string name)
