@@ -251,6 +251,29 @@ namespace Com.Model
 
         public virtual void Append(Instance instance)
         {
+            // How to append (quickly)?
+            // - 1. to only leaf dimensions 2. propagate automatically to root immediately (delete leaves optionally) 3. propagate later for all (optionally delete leaves)
+            // - we always start from leaves (assumption for this method - generalizations can be implemented in future versions)
+            // - elementary task: find/append a parent dim given its child dim values
+            // - this elementary task is executed recursively (if children a not processed yet then process them recursively by finding/appending their value)
+/*
+            foreach(dim in GreaterDimensions) // Iterate either through greater dims (by finding child instances) or by child instances (by finding greater dims)
+            {
+                ChildInstace = instance.ChildInstances[dim]; // Mapping: greaterDim -> childInstance
+                dim.Append(ChildInstace); // Recursion
+            }
+            Append(directGreaterIds[]); // Append given direct greater values (computed above). Non-recursive - all values are known.
+*/
+
+            // - we can reduce it to the same dimension method dim.Append() 
+            // This method is applied to a parent dimension (of anxy level) and takes the corresponding node from the instance structure
+            // Its task is to add/find an instance in this dimension given child instance values. After finishing it assigns it to the node value (so that parents can use it). Normally we return offsets.
+
+            // We actualy do not need nested dimensions for that because values are inserted into normal dimensions along the paths. 
+            // Nested dimensions are needed to represent and map paths. They also could be used as longer path indexes for performance.
+
+            // Theoretically, we could simply insert new instances into leaf dimensions and forget. 
+            // Then on the second step, we propagate leave dimensions into parent dimensions using the above recursieve procedure.
         }
 
         public virtual void Insert(int offset)
@@ -307,10 +330,16 @@ namespace Com.Model
 
         public virtual void Import(DataTable dataTable)
         {
+            // Prepare a mapping for performance - we do not want to create it for each instance (associate columns in the raw with our (primitive) dimensions)
+            // Mapping: columnIndex <-> dimensionIndex or dimensionReference (a leaf dimension)
+            // Question: 1. we import all we get, 2. we import all we have 3. we import only identities
+
+            Instance instance = null;
             foreach (DataRow raw in dataTable.Rows)
             {
-                // Use mappings to produce a complex instance from the current raw
-                Instance instance=null;
+                // Use mappings to initialize complex instance from the current raw
+                instance=null;
+
                 // Check if this instance satisfies the local expressions (local where etc.). Is it really possible and necessary?
                 // Append the new instance to the set
                 Append(instance);
@@ -331,8 +360,8 @@ namespace Com.Model
             else // Popoulating using externally provided values
             {
                 Set remoteSet = RemoteSet; // Find remote set
-                DataTable export = remoteSet.Export(); // Request a (flat) result set from the remote set
-                Import(export); // Import
+                DataTable dataTable = remoteSet.Export(); // Request a (flat) result set from the remote set
+                Import(dataTable); // Import
 
             }
         }
@@ -358,7 +387,7 @@ namespace Com.Model
 
         #endregion
 
-        #region Deprecedate (delete)
+        #region Deprecated (delete)
 
         /// <summary>
         /// Attribute is a named primitive path leading from this set to primitive set along dimensions.

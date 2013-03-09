@@ -209,17 +209,18 @@ namespace Com.Model
             query += String.IsNullOrEmpty(orderby) ? "" : "ORDER BY " + orderby + " ";
 
             // Read and return the result set
-            DataSet myDataSet = new DataSet();
+            DataSet dataSet = new DataSet();
             try
             {
-
-                OleDbCommand myAccessCommand = new OleDbCommand(query, _connection);
-                OleDbDataAdapter myDataAdapter = new OleDbDataAdapter(myAccessCommand);
-
                 Open();
-
-                myDataAdapter.Fill(myDataSet);
-
+                using (OleDbCommand cmd = new OleDbCommand())
+                {
+                    cmd.CommandText = query;
+                    using (OleDbDataAdapter adapter = new OleDbDataAdapter(cmd))
+                    {
+                        adapter.Fill(dataSet);
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -231,9 +232,9 @@ namespace Com.Model
                 Close();
             }
 
-            Console.WriteLine("{0} tables in data set", myDataSet.Tables.Count);
-            Console.WriteLine("{0} rows and {1} columns in table {2}", myDataSet.Tables[0].Rows.Count, myDataSet.Tables[0].Columns.Count, myDataSet.Tables[0].TableName);
-            DataTable dataTable = myDataSet.Tables[0]; // We expect only one table
+            Console.WriteLine("{0} tables in data set", dataSet.Tables.Count);
+            Console.WriteLine("{0} rows and {1} columns in table {2}", dataSet.Tables[0].Rows.Count, dataSet.Tables[0].Columns.Count, dataSet.Tables[0].TableName);
+            DataTable dataTable = dataSet.Tables[0]; // We expect only one table
 
             return dataTable;
         }
