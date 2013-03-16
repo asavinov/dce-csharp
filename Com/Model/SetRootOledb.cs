@@ -111,14 +111,15 @@ namespace Com.Model
             foreach (DataRow col in columns.Rows)
             {
                 string columnName = col["COLUMN_NAME"].ToString();
-                OleDbType columnType = (OleDbType)col["DATA_TYPE"];
+                string columnType = MapToLocalType(((OleDbType)col["DATA_TYPE"]).ToString());
 
                 Dimension path = tableSet.GetGreaterPath(columnName); // It might have been already added
                 if (path == null)
                 {
                     path = new Dimension(columnName);
                     path.LesserSet = tableSet; // Assign domain set give the table name
-                    path.GreaterSet = Root.GetPrimitiveSet(columnType.ToString()); // TODO: Here we have to use type mapping specific to this database
+                    path.GreaterSet = Root.GetPrimitiveSet(columnType);
+                    tableSet.AddGreaterPath(path); // We do not know if it is FK or simple dimensin so it needs to be checked and fixed later
                 }
 
                 // Find PKs this attribute belongs to (among all PK columns of this table)
@@ -181,7 +182,7 @@ namespace Com.Model
                         fkTargetPath = new Dimension(fkTargetColumnName);
                         fkTargetPath.LesserSet = fkTargetSet;
                         fkTargetPath.GreaterSet = path.GreaterSet;
-                        fkTargetSet.AddGreaterPath(fkTargetPath); // Add this rest-path to the set (we do not know if it is a primitive dimension or belongs to a FK)
+                        fkTargetSet.AddGreaterPath(fkTargetPath); // We do not know if it is really a FK or simple dimension so this needs to be fixed later
                     }
 
                     if (path.Path.Count > 1)
@@ -196,20 +197,34 @@ namespace Com.Model
                     break; // We assume that a column can belong to only one FK
                 }
 
-                if (path.Rank == 0) // It is not FK - add as a simple dimension
-                {
-                    tableSet.AddGreaterDimension(path);
-                }
-                else if (path.Rank == 2) // It is FK - add as a complex path
-                {
-                    tableSet.AddGreaterPath(path);
-                }
-                else
-                {
-                    // ERROR: Wrong use.
-                }
             }
 
+        }
+
+        public string MapToLocalType(string externalType)
+        {
+            string localType = null;
+
+            switch (externalType)
+            {
+                case "Double": // System.Data.OleDb.OleDbType.Double
+                    localType = "Double";
+                    break;
+                case "Inteer": // System.Data.OleDb.OleDbType.Integer
+                    localType = "Integer";
+                    break;
+                case "Char": // System.Data.OleDb.OleDbType.Char
+                case "VarChar": // System.Data.OleDb.OleDbType.VarChar
+                case "VarWChar": // System.Data.OleDb.OleDbType.VarWChar
+                case "WChar": // System.Data.OleDb.OleDbType.WChar
+                    localType = "String";
+                    break;
+                default:
+                    localType = "String"; // All the rest of types or error
+                    break;
+            }
+
+            return localType;
         }
 
         public void ImportSchema()
@@ -232,7 +247,7 @@ namespace Com.Model
             List<Set> sets = GetAllSubsets();
             foreach (Set set in sets)
             {
-                foreach (Dimension path in set.GreaterPaths)
+                foreach (Dimension path in set.GreaterPaths.ToArray())
                 {
                     path.ExpandPath();
                 }

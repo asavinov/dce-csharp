@@ -157,7 +157,15 @@ namespace Com.Model
         {
             List<Dimension> allSegments = GetAllSegments();
             Path.Clear();
-            Path.AddRange(allSegments);
+            if (allSegments == null || allSegments.Count == 0)
+            {
+                LesserSet.RemoveGreaterPath(this);
+                LesserSet.AddGreaterDimension(this);
+            }
+            else
+            {
+                Path.AddRange(allSegments);
+            }
         }
 
         private List<Dimension> GetAllSegments()
@@ -239,6 +247,7 @@ namespace Com.Model
         public Dimension(string name)
             : this(name, null, null)
         {
+            Path = new List<Dimension>();
         }
 
         public Dimension(string name, Set lesserSet, Set greaterSet)

@@ -273,7 +273,8 @@ namespace Com.Model
 
         public Set GetPrimitiveSet(string name)
         {
-            return SubDims.FirstOrDefault(x => x.LesserSet.Primitive && x.LesserSet.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase)).LesserSet;
+            Dimension dim = SubDims.FirstOrDefault(x => x.LesserSet.Primitive && x.LesserSet.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+            return dim != null ? dim.LesserSet : null;
         }
 
         #endregion
@@ -632,6 +633,16 @@ namespace Com.Model
         {
             _id = uniqueId++;
             Name = name;
+
+            SuperDims = new List<Dimension>();
+            SubDims = new List<Dimension>();
+            GreaterDims = new List<Dimension>();
+            LesserDims = new List<Dimension>();
+
+            SuperPaths = new List<Dimension>();
+            SubPaths = new List<Dimension>();
+            GreaterPaths = new List<Dimension>();
+            LesserPaths = new List<Dimension>();
 
             // TODO: Parameterize depending on the reserved names: Integer, Double etc. (or exclude these names)
             Instantiable = true;
