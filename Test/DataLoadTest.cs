@@ -77,7 +77,7 @@ namespace Test
 
             root.Open();
 
-            root.LoadSchema();
+            root.ImportSchema();
 
             // Check validity of the schema
         }

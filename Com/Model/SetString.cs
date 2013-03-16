@@ -21,7 +21,7 @@ namespace Com.Model
             get { return int.MaxValue; } // We assume that a string may have any length (unlimited)
         }
 
-        public virtual Dimension CreateDefaultLesserDimension(string name, Set lesserSet)
+        public override Dimension CreateDefaultLesserDimension(string name, Set lesserSet)
         {
             return new DimPrimitive<string>(name, lesserSet, this);
         }

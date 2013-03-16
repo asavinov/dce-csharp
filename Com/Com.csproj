@@ -39,7 +39,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Model\Attribute.cs" />
     <Compile Include="Model\DimBool.cs" />
     <Compile Include="Model\DimPrimitive.cs" />
     <Compile Include="Model\DimRoot.cs" />
@@ -54,7 +53,7 @@
     <Compile Include="Model\SetDouble.cs" />
     <Compile Include="Model\SetInteger.cs" />
     <Compile Include="Model\SetRoot.cs" />
-    <Compile Include="Model\SetRootCsv.cs" />
+    <Compile Include="Model\SetRootOdata.cs" />
     <Compile Include="Model\SetRootOledb.cs" />
     <Compile Include="Model\SetString.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -14,6 +14,8 @@ namespace Com.Model
     /// </summary>
     public class Set
     {
+        #region Properties
+
         private static int uniqueId; // To implement unique automatic ids
 
         /// <summary>
@@ -26,6 +28,24 @@ namespace Com.Model
         /// A set name. Note that in the general case a set has an associated structure (concept, type) which may have its own name. 
         /// </summary>
         public string Name { get; set; }
+
+        /// <summary>
+        /// How many _instances this set has. Cardinality. Set power. Length (height) of instance set.
+        /// If instances are identified by integer offsets, then size also represents offset range.
+        /// </summary>
+        protected int _length;
+        public virtual int Length
+        {
+            get { return _length; }
+        }
+
+        /// <summary>
+        /// Size of values or cells (physical identities) in bytes.
+        /// </summary>
+        public virtual int Width
+        {
+            get { return sizeof(int); }
+        }
 
         /// <summary>
         /// Whether this set is supposed (able) to have instances. Some sets are used for conceptual purposes. 
@@ -45,6 +65,254 @@ namespace Com.Model
         /// </summary>
         public bool AutoPopulatedSet { get; set; }
 
+        #endregion
+
+        #region Simple dimensions
+
+        public List<Dimension> SuperDims { get; private set; }
+        public List<Dimension> SubDims { get; private set; }
+        public List<Dimension> GreaterDims { get; private set; }
+        public List<Dimension> LesserDims { get; private set; }
+
+        #region Inclusion. Super.
+
+        public Dimension SuperDim
+        {
+            get
+            {
+                System.Diagnostics.Debug.Assert(SuperDims != null && SuperDims.Count < 2, "Wrong use: more than one super dimension.");
+                return SuperDims.Count == 0 ? null : SuperDims[0];
+            }
+            set
+            {
+                Dimension dim = SuperDim;
+                if (value == null) // Remove the current super-dimension
+                {
+                    if (dim != null)
+                    {
+                        SuperDims.Remove(dim);
+                        dim.GreaterSet.SubDims.Remove(dim);
+                    }
+                    return;
+                }
+
+                if (dim != null) // Remove the current super-dimension if present before setting a new one (using this same method)
+                {
+                    SuperDim = null;
+                }
+
+                System.Diagnostics.Debug.Assert(value.LesserSet == this && value.GreaterSet != null, "Wrong use: dimension greater and lesser sets must be set correctly.");
+
+                if (false) // TODO: Check value.GreaterSet for validity - we cannot break poset relation
+                {
+                    // ERROR: poset relation is broken
+                }
+
+                // Really add new dimension
+                SuperDims.Add(value);
+                value.GreaterSet.SubDims.Add(value);
+            }
+        }
+
+        public Set SuperSet
+        {
+            get { return SuperDim != null ? SuperDim.GreaterSet : null; }
+        }
+
+        public SetRoot Root
+        {
+            get
+            {
+                Set root = this;
+                while (root.SuperSet != null)
+                {
+                    root = root.SuperSet;
+                }
+
+                return (SetRoot)root;
+            }
+        }
+
+        #endregion
+
+        #region Inclusion. Sub.
+
+        public List<Set> SubSets
+        {
+            get { return SubDims.Select(x => x.LesserSet).ToList(); }
+        }
+
+        public List<Set> GetAllSubsets()
+        {
+            int count = SubSets.Count;
+            List<Set> result = new List<Set>(SubSets);
+            for (int i = 0; i < count; i++)
+            {
+                List<Set> subsets = result[i].GetAllSubsets();
+                if (subsets == null || subsets.Count == 0)
+                {
+                    continue;
+                }
+                result.AddRange(subsets);
+            }
+
+            return result;
+        }
+
+        public Set FindSubset(string name)
+        {
+            Set set = null;
+            if (Name.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+            {
+                set = this;
+            }
+
+            foreach (Dimension d in SubDims)
+            {
+                if (set != null) break;
+                set = d.LesserSet.FindSubset(name);
+            }
+
+            return set;
+        }
+
+        #endregion
+
+        #region Poset. Greater.
+
+        public void AddGreaterDimension(Dimension dim)
+        {
+            RemoveGreaterDimension(dim);
+            // TODO: propagate addition of new dimension by updating higher rank dimensions and other parameters
+            dim.GreaterSet.LesserDims.Add(dim);
+            dim.LesserSet.GreaterDims.Add(dim);
+        }
+        public void RemoveGreaterDimension(Dimension dim)
+        {
+            // TODO: propagate removal of the dimension by updating higher rank dimensions and other parameters
+            dim.GreaterSet.LesserDims.Remove(dim);
+            dim.LesserSet.GreaterDims.Remove(dim);
+        }
+        public void RemoveGreaterDimension(string name)
+        {
+            Dimension dim = GetGreaterDimension(name);
+            if (dim != null)
+            {
+                RemoveGreaterDimension(dim);
+            }
+        }
+        public Dimension GetGreaterDimension(string name)
+        {
+            return GreaterDims.FirstOrDefault(d => d.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+        }
+        public List<Set> GetGreaterSets()
+        {
+            return GreaterDims.Select(x => x.GreaterSet).ToList();
+        }
+
+        #endregion
+
+        #region Poset. Lesser.
+
+        public List<Set> GetLesserSets()
+        {
+            return LesserDims.Select(x => x.LesserSet).ToList();
+        }
+
+        #endregion
+
+        public List<Dimension> GetGreaterLeafDimensions()
+        {
+            List<Dimension> leaves = new List<Dimension>();
+            foreach (Dimension dim in GreaterDims)
+            {
+//                leaves.AddRange(dim.GetLeafDimensions());
+            }
+            return leaves;
+        }
+
+        public List<Dimension> GetDimensions(DimensionType dimType, DimensionDirection dimDirection)
+        {
+            List<Dimension> result = null;
+
+            if (dimDirection == DimensionDirection.GREATER)
+            {
+                if (dimType == DimensionType.POSET)
+                {
+                    result = GreaterDims;
+                }
+                else if (dimType == DimensionType.INCLUSION)
+                {
+                    result = SuperDims;
+                }
+            }
+            else if (dimDirection == DimensionDirection.LESSER)
+            {
+                if (dimType == DimensionType.POSET)
+                {
+                    result = LesserDims;
+                }
+                else if (dimType == DimensionType.INCLUSION)
+                {
+                    result = SubDims;
+                }
+            }
+
+            return result;
+        }
+
+        public List<Set> PrimitiveSets
+        {
+            get { return SubDims.Where(x => x.LesserSet.Primitive).Select(x => x.LesserSet).ToList(); }
+        }
+
+        public List<Set> NonPrimitiveSets
+        {
+            get { return SubDims.Where(x => !x.LesserSet.Primitive).Select(x => x.LesserSet).ToList(); }
+        }
+
+        public Set GetPrimitiveSet(string name)
+        {
+            return SubDims.FirstOrDefault(x => x.LesserSet.Primitive && x.LesserSet.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase)).LesserSet;
+        }
+
+        #endregion
+
+        #region Complex dimensions (paths)
+
+        public List<Dimension> SuperPaths { get; private set; }
+        public List<Dimension> SubPaths { get; private set; }
+        public List<Dimension> GreaterPaths { get; private set; }
+        public List<Dimension> LesserPaths { get; private set; }
+
+        public void AddGreaterPath(Dimension path)
+        {
+            RemoveGreaterPath(path);
+            path.GreaterSet.LesserPaths.Add(path);
+            path.LesserSet.GreaterPaths.Add(path);
+        }
+        public void RemoveGreaterPath(Dimension path)
+        {
+            path.GreaterSet.LesserPaths.Remove(path);
+            path.LesserSet.GreaterPaths.Remove(path);
+        }
+        public void RemoveGreaterPath(string name)
+        {
+            Dimension path = GetGreaterPath(name);
+            if (path != null)
+            {
+                RemoveGreaterPath(path);
+            }
+        }
+        public Dimension GetGreaterPath(string name)
+        {
+            return GreaterPaths.FirstOrDefault(d => d.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+        }
+
+        #endregion
+
+        #region Deprecated dimension strucutre (replaced by DimensionManager)
+        /*
         #region Schema methods. Inclusion (subset) hierarchy.
 
         /// <summary>
@@ -210,38 +478,30 @@ namespace Com.Model
         }
 
         #endregion
-
-        #region Set characteristics
-
-        /// <summary>
-        /// How many _instances this set has. Cardinality. Set power. Length (height) of instance set.
-        /// If instances are identified by integer offsets, then size also represents offset range.
-        /// </summary>
-        protected int _length;
-        public virtual int Length
-        {
-            get { return _length; }
-        }
-
-        /// <summary>
-        /// Size of values or cells (physical identities) in bytes.
-        /// </summary>
-        public virtual int Width
-        {
-            get { return sizeof(int); }
-        }
-
-        #endregion
+*/
+        #endregion 
 
         #region Instance manipulation (function) methods
 
         // TODO: Here we need an interface like ResultSet in JDBC with all possible types
 		// Alternative: maybe define these methos in the SetRemote class where we will have one class for manually entering elements
 
+        public virtual object GetValue(string name, int offset)
+        {
+            Dimension dim = GetGreaterDimension(name);
+            return dim.GetValue(offset);
+        }
+
+        public virtual void SetValue(string name, int offset, object value)
+        {
+            Dimension dim = GetGreaterDimension(name);
+            dim.SetValue(offset, value);
+        }
+
         public virtual void Append() // An overloaded method could take an array/list/map of values - check how TableSet works
         {
             // Delegate to all dimensions
-            foreach(Dimension d in _greaterDimensions)
+            foreach(Dimension d in GreaterDims)
             {
                 d.Append(0); // Append default value for this dimension
             }
@@ -279,7 +539,7 @@ namespace Com.Model
         public virtual void Insert(int offset)
         {
             // Delegate to all dimensions
-            foreach(Dimension d in _greaterDimensions)
+            foreach(Dimension d in GreaterDims)
             {
                 d.Insert(offset, 0);
             }
@@ -292,18 +552,6 @@ namespace Com.Model
             _length--;
             // TODO: Remove it from all dimensions in loop including super-dim and special dims
             // PROBLEM: should we propagate this removal to all lesser dimensions? We need a flag for this property. 
-        }
-
-        public virtual object GetValue(string name, int offset)
-        {
-            Dimension dim = GetGreaterDimension(name);
-            return dim.GetValue(offset);
-        }
-
-        public virtual void SetValue(string name, int offset, object value)
-        {
-            Dimension dim = GetGreaterDimension(name);
-            dim.SetValue(offset, value);
         }
 
         #endregion
@@ -326,7 +574,7 @@ namespace Com.Model
         /// If it is not empty then only a subset of all possible values will be instantiated. 
         /// </summary>
         public Expression Instances { get; set; }
-        public Set RemoteSet { get; set; } // For simplicity
+        public Set RemoteSet { get; set; } // For simplicity. This remote set will export instances and this set will import them
 
         public virtual void Import(DataTable dataTable)
         {
@@ -375,6 +623,11 @@ namespace Com.Model
 
         #region Constructors and initializers.
 
+        public virtual Dimension CreateDefaultLesserDimension(string name, Set lesserSet)
+        {
+            return new DimSet(name, lesserSet, this);
+        }
+
         public Set(string name)
         {
             _id = uniqueId++;
@@ -388,7 +641,7 @@ namespace Com.Model
         #endregion
 
         #region Deprecated (delete)
-
+/*
         /// <summary>
         /// Attribute is a named primitive path leading from this set to primitive set along dimensions.
         /// </summary>
@@ -415,7 +668,7 @@ namespace Com.Model
                     // Create a new primitive dimension
                     dim = greaterSet.CreateDefaultLesserDimension(att.FkName, this); // The primitive set knows what dimension type to use (by default), say, DimPrimitive<double> (overwritten)
                     // Set dimension properties
-                    this.AddGreaterDimension(dim); // Add the new dimension to the schema
+                    AddGreaterDimension(dim); // Add the new dimension to the schema
                 }
                 else // FK found - complex dimension
                 {
@@ -428,7 +681,7 @@ namespace Com.Model
                         // Create a new complex dimension
                         dim = greaterSet.CreateDefaultLesserDimension(att.FkName, this);// Say, DimSet
                         // Set dimension properties
-                        this.AddGreaterDimension(dim); // Add the new dimension to the schema
+                        AddGreaterDimension(dim); // Add the new dimension to the schema
                     }
                     else
                     {
@@ -457,9 +710,21 @@ namespace Com.Model
         public void UpdateAttributes() // Use dimension structure to create/update attribute structure
         {
         }
-
+*/
         #endregion
 
+    }
+
+    public enum DimensionType
+    {
+        INCLUSION,
+        POSET,
+    }
+
+    public enum DimensionDirection
+    {
+        GREATER, // Up
+        LESSER, // Down, reverse
     }
 
     public enum DataSourceType

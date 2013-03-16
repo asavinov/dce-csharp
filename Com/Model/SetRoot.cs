@@ -32,26 +32,6 @@ namespace Com.Model
             get { return 0; }
         }
 
-        public List<Set> PrimitiveSets
-        {
-            get { return SubDims.Where(x => x.LesserSet.Primitive).Select(x => x.LesserSet).ToList(); }
-        }
-
-        public List<Set> NonPrimitiveSets
-        {
-            get { return SubDims.Where(x => !x.LesserSet.Primitive).Select(x => x.LesserSet).ToList(); }
-        }
-
-        public virtual Set GetPrimitiveSet(string name)
-        {
-            return SubDims.FirstOrDefault(x => x.LesserSet.Primitive && x.LesserSet.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase)).LesserSet;
-        }
-
-        public virtual Set GetPrimitiveSet(Attribute attribute)
-        {
-            return null; // For local database (without remote data source) types are not mapped (identity mapping)
-        }
-
         public virtual DataTable Export(Set set)
         {
             // Check if this set is our child

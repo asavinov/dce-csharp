@@ -68,11 +68,11 @@ namespace Test
             Dimension name = new DimPrimitive<string>("name", t1, setString);
             t1.AddGreaterDimension(name);
 
-            Assert.AreEqual(1, t1.GreaterDimensions.Count(x => x.Name == "orders"));
-            Assert.AreEqual(1, t1.GreaterDimensions.Count(x => x.Name == "revenue"));
-            Assert.AreEqual(1, t1.GreaterDimensions.Count(x => x.Name == "name"));
+            Assert.AreEqual(1, t1.GreaterDims.Count(x => x.Name == "orders"));
+            Assert.AreEqual(1, t1.GreaterDims.Count(x => x.Name == "revenue"));
+            Assert.AreEqual(1, t1.GreaterDims.Count(x => x.Name == "name"));
 
-            Assert.AreEqual(3, t1.GreaterDimensions.Count);
+            Assert.AreEqual(3, t1.GreaterDims.Count);
             Assert.AreEqual(3, t1.GetGreaterSets().Count);
         }
 

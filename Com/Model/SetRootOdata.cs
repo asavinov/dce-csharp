@@ -6,9 +6,9 @@ using System.Text;
 namespace Com.Model
 {
     /// <summary>
-    /// Set with data loaded from a CSV file.
+    /// Set with data loaded from OData connection.
     /// </summary>
-    public abstract class SetRootCsv : SetRoot
+    public abstract class SetRootOdata : SetRoot
     {
         /// <summary>
         /// Connection to the remote database or engine where data is stored and processed.
@@ -21,6 +21,28 @@ namespace Com.Model
         private string[] _columnNames; // A list of column names
         private string _fieldSeparator;
 
+        public override void Populate()
+        {
+			// Open file
+			// Load all rows (the first row has column names)
+	    }
+
+        public void next()
+        {
+			// Move to the next row
+	    }
+
+        public void getValue(string column)
+        {
+	    }
+
+        public SetRootOdata(string name)
+            : base(name) // C#: If nothing specified, then base() will always be called by default
+        {
+        }
+
+        #region Deprecated 
+/*
         public override Set GetPrimitiveSet(Attribute attribute)
         {
             string typeName = "string";
@@ -45,26 +67,8 @@ namespace Com.Model
             Set set = GetPrimitiveSet(typeName); // Find primitive set with this type
             return set;
         }
-
-        public void Populate()
-        {
-			// Open file
-			// Load all rows (the first row has column names)
-	    }
-
-        public void next()
-        {
-			// Move to the next row
-	    }
-
-        public void getValue(string column)
-        {
-	    }
-
-        public SetRootCsv(string name)
-            : base(name) // C#: If nothing specified, then base() will always be called by default
-        {
-        }
+*/
+        #endregion
     }
 
 }

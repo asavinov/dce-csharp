@@ -21,7 +21,7 @@ namespace Com.Model
             get { return sizeof(double); }
         }
 
-        public virtual Dimension CreateDefaultLesserDimension(string name, Set lesserSet)
+        public override Dimension CreateDefaultLesserDimension(string name, Set lesserSet)
         {
             return new DimPrimitive<double>(name, lesserSet, this);
         }

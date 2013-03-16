@@ -25,34 +25,6 @@ namespace Com.Model
 
         private OleDbConnection _connection;
 
-        public override Set GetPrimitiveSet(Attribute attribute)
-        {
-            string typeName = null;
-
-            // Type mapping
-            switch (attribute.DataType)
-            {
-                case "Double": // System.Data.OleDb.OleDbType.Double
-                    typeName = "Double";
-                    break;
-                case "Inteer": // System.Data.OleDb.OleDbType.Integer
-                    typeName = "Integer";
-                    break;
-                case "Char": // System.Data.OleDb.OleDbType.Char
-                case "VarChar": // System.Data.OleDb.OleDbType.VarChar
-                case "VarWChar": // System.Data.OleDb.OleDbType.VarWChar
-                case "WChar": // System.Data.OleDb.OleDbType.WChar
-                    typeName = "String";
-                    break;
-                default:
-                    typeName = "String"; // All the rest of types or error
-                    break;
-            }
-
-            Set set = GetPrimitiveSet(typeName); // Find primitive set with this type
-            return set;
-        }
-
         public void Open()
         {
             if (String.IsNullOrEmpty(ConnectionString))
@@ -119,10 +91,17 @@ namespace Com.Model
             return tableNames;
         }
 
-        private List<Attribute> ReadAttributes(string tableName)
+        /// <summary>
+        /// The method loops through all columns and for each of them creates or finds existing three elements in the schema:
+        /// a complex path from this set to the primtiive domain, a simple FK dimension from this set to the target FK set, and 
+        /// a complex path from the target FK set to the primitive domain. The complex path corresponding to the column will 
+        /// contain only two segments and this path definition has to be corrected later. 
+        /// </summary>
+        /// <param name="tableName"></param>
+        private void ImportPaths(string tableName)
         {
-            // Assumption: connection is open
-            List<Attribute> attributes = new List<Attribute>();
+            // Find set corresonding to this table
+            Set tableSet = Root.FindSubset(tableName); 
 
             DataTable pks = _connection.GetOleDbSchemaTable(OleDbSchemaGuid.Primary_Keys, new object[] { null, null, tableName });
             DataTable fks = _connection.GetOleDbSchemaTable(OleDbSchemaGuid.Foreign_Keys, new object[] { null, null, null, null, null, tableName });
@@ -132,57 +111,131 @@ namespace Com.Model
             foreach (DataRow col in columns.Rows)
             {
                 string columnName = col["COLUMN_NAME"].ToString();
-                Attribute attribute = new Attribute(columnName);
-                attribute.TableName = tableName;
-                attribute.TypeSystem = "OleDb"; // TODO: we need to standartize all type systems (providers?)
                 OleDbType columnType = (OleDbType)col["DATA_TYPE"];
-                attribute.DataType = columnType.ToString();
 
-                // Find PKs this attribute belongs to
+                Dimension path = tableSet.GetGreaterPath(columnName); // It might have been already added
+                if (path == null)
+                {
+                    path = new Dimension(columnName);
+                    path.LesserSet = tableSet; // Assign domain set give the table name
+                    path.GreaterSet = Root.GetPrimitiveSet(columnType.ToString()); // TODO: Here we have to use type mapping specific to this database
+                }
+
+                // Find PKs this attribute belongs to (among all PK columns of this table)
                 foreach (DataRow pk in pks.Rows)
                 {
-                    if (columnName.Equals((string)pk["COLUMN_NAME"], StringComparison.InvariantCultureIgnoreCase))
+                    string pkColumnName = (string)pk["COLUMN_NAME"];
+                    if (columnName.Equals(pkColumnName, StringComparison.InvariantCultureIgnoreCase))
                     {
-                        attribute.PkName = (string)pk["PK_NAME"];
-                        break; // Assume that a column can belong to only one PK
+                        path.Identity = true; // PK name pk["PK_NAME"] is not stored. It has to be stored then Dimension class has to be extended
+                        break; // Assume that a column can belong to only one PK 
                     }
                 }
 
-                // Find FKs this attribute belongs to
+                // Find FKs this attribute belongs to (among all FK columns of this table)
                 foreach (DataRow fk in fks.Rows)
                 {
-                    if (columnName.Equals((string)fk["FK_COLUMN_NAME"], StringComparison.InvariantCultureIgnoreCase))
+                    if (!columnName.Equals((string)fk["FK_COLUMN_NAME"], StringComparison.InvariantCultureIgnoreCase))
                     {
-                        attribute.FkName = (string)fk["FK_NAME"];
-                        attribute.FkTargetTableName = (string)fk["PK_TABLE_NAME"];
-                        attribute.FkTargetColumnName = (string)fk["PK_COLUMN_NAME"];
-                        attribute.FkTargetPkName = (string)fk["PK_NAME"];
-                        break; // Assume that a column can belong to only one FK
+                        continue;
                     }
+
+                    // Target PK name fk["PK_NAME"] is not stored and is not used because we assume that there is only one PK
+
+                    //
+                    // Step 1. Add FK-segment
+                    //
+
+                    string fkName = (string)fk["FK_NAME"];
+                    Dimension fkSegment = tableSet.GetGreaterDimension(fkName);
+                    if (fkSegment != null)
+                    {
+                        // ERROR: Wrong use.
+                    }
+
+                    fkSegment = new Dimension(fkName); // It is the first segment in the path representing this FK
+                    fkSegment.LesserSet = tableSet;
+
+                    string fkTargetTableName = (string)fk["PK_TABLE_NAME"]; // Name of the target set of the simple dimension (first segment of this complex path)
+                    Set fkTargetSet = Root.FindSubset(fkTargetTableName);
+                    fkSegment.GreaterSet = fkTargetSet;
+                    tableSet.AddGreaterDimension(fkSegment); // Add this FK-dimension to the set (it is always new)
+
+                    if (path.Path.Count > 0)
+                    {
+                        path.Path[0] = fkSegment;
+                    }
+                    else
+                    {
+                        path.Path.Add(fkSegment);
+                    }
+
+                    //
+                    // Step 2. Add rest of the path
+                    //
+
+                    string fkTargetColumnName = (string)fk["PK_COLUMN_NAME"]; // Next path name belonging to the target set
+                    Dimension fkTargetPath = fkTargetSet.GetGreaterPath(fkTargetColumnName); // This column might have been created
+                    if (fkTargetPath == null)
+                    {
+                        fkTargetPath = new Dimension(fkTargetColumnName);
+                        fkTargetPath.LesserSet = fkTargetSet;
+                        fkTargetPath.GreaterSet = path.GreaterSet;
+                        fkTargetSet.AddGreaterPath(fkTargetPath); // Add this rest-path to the set (we do not know if it is a primitive dimension or belongs to a FK)
+                    }
+
+                    if (path.Path.Count > 1)
+                    {
+                        path.Path[1] = fkTargetPath;
+                    }
+                    else
+                    {
+                        path.Path.Add(fkTargetPath);
+                    }
+
+                    break; // We assume that a column can belong to only one FK
                 }
 
-                attributes.Add(attribute);
+                if (path.Rank == 0) // It is not FK - add as a simple dimension
+                {
+                    tableSet.AddGreaterDimension(path);
+                }
+                else if (path.Rank == 2) // It is FK - add as a complex path
+                {
+                    tableSet.AddGreaterPath(path);
+                }
+                else
+                {
+                    // ERROR: Wrong use.
+                }
             }
 
-            return attributes;
         }
 
-        public void LoadSchema()
+        public void ImportSchema()
         {
             List<string> tableNames = ReadTables();
+
+            // Create all sets
             foreach(string tableName in tableNames) 
             {
                 Set set = new Set(tableName); // Create a set 
                 set.SuperDim = new DimRoot("super", set, this); // Add the new set to the schema by setting its super dimension
+            }
 
-                List<Attribute> attributes = ReadAttributes(tableName);
-                set.Attributes = attributes;
+            // Load columns and FKs as (complesx) paths and (simple) FK-dimensions
+            foreach (string tableName in tableNames)
+            {
+                ImportPaths(tableName);
             }
 
             List<Set> sets = GetAllSubsets();
             foreach (Set set in sets)
             {
-                set.UpdateDimensions(); // Create dimensions from attributes
+                foreach (Dimension path in set.GreaterPaths)
+                {
+                    path.ExpandPath();
+                }
             }
         }
 
@@ -243,6 +296,88 @@ namespace Com.Model
             : base(name) // C#: If nothing specified, then base() will always be called by default
         {
         }
+
+        #region Deprecated
+/*
+        public override Set GetPrimitiveSet(Attribute attribute)
+        {
+            string typeName = null;
+
+            // Type mapping
+            switch (attribute.DataType)
+            {
+                case "Double": // System.Data.OleDb.OleDbType.Double
+                    typeName = "Double";
+                    break;
+                case "Inteer": // System.Data.OleDb.OleDbType.Integer
+                    typeName = "Integer";
+                    break;
+                case "Char": // System.Data.OleDb.OleDbType.Char
+                case "VarChar": // System.Data.OleDb.OleDbType.VarChar
+                case "VarWChar": // System.Data.OleDb.OleDbType.VarWChar
+                case "WChar": // System.Data.OleDb.OleDbType.WChar
+                    typeName = "String";
+                    break;
+                default:
+                    typeName = "String"; // All the rest of types or error
+                    break;
+            }
+
+            Set set = GetPrimitiveSet(typeName); // Find primitive set with this type
+            return set;
+        }
+*/
+/*
+        private List<Attribute> ReadAttributes(string tableName)
+        {
+            // Assumption: connection is open
+            List<Attribute> attributes = new List<Attribute>();
+
+            DataTable pks = _connection.GetOleDbSchemaTable(OleDbSchemaGuid.Primary_Keys, new object[] { null, null, tableName });
+            DataTable fks = _connection.GetOleDbSchemaTable(OleDbSchemaGuid.Foreign_Keys, new object[] { null, null, null, null, null, tableName });
+
+            // Read all columns info
+            DataTable columns = _connection.GetOleDbSchemaTable(OleDbSchemaGuid.Columns, new object[] { null, null, tableName, null });
+            foreach (DataRow col in columns.Rows)
+            {
+                string columnName = col["COLUMN_NAME"].ToString();
+                Attribute attribute = new Attribute(columnName);
+                attribute.TableName = tableName;
+                attribute.TypeSystem = "OleDb"; // TODO: we need to standartize all type systems (providers?)
+                OleDbType columnType = (OleDbType)col["DATA_TYPE"];
+                attribute.DataType = columnType.ToString();
+
+                // Find PKs this attribute belongs to
+                foreach (DataRow pk in pks.Rows)
+                {
+                    if (columnName.Equals((string)pk["COLUMN_NAME"], StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        attribute.PkName = (string)pk["PK_NAME"];
+                        break; // Assume that a column can belong to only one PK
+                    }
+                }
+
+                // Find FKs this attribute belongs to
+                foreach (DataRow fk in fks.Rows)
+                {
+                    if (columnName.Equals((string)fk["FK_COLUMN_NAME"], StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        attribute.FkName = (string)fk["FK_NAME"];
+                        attribute.FkTargetTableName = (string)fk["PK_TABLE_NAME"];
+                        attribute.FkTargetColumnName = (string)fk["PK_COLUMN_NAME"];
+                        attribute.FkTargetPkName = (string)fk["PK_NAME"];
+                        break; // Assume that a column can belong to only one FK
+                    }
+                }
+
+                attributes.Add(attribute);
+            }
+
+            return attributes;
+        }
+*/
+
+        #endregion
     }
 
 }

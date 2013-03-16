@@ -21,7 +21,7 @@ namespace Com.Model
             get { return sizeof(bool); } // It actually depends on how it is represented and depends on the dimension.
         }
 
-        public virtual Dimension CreateDefaultLesserDimension(string name, Set lesserSet)
+        public override Dimension CreateDefaultLesserDimension(string name, Set lesserSet)
         {
             return new DimPrimitive<bool>(name, lesserSet, this);
         }

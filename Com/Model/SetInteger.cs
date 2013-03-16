@@ -21,7 +21,7 @@ namespace Com.Model
             get { return sizeof(int); } // It is not absolutely true because there can be integers of different length like Int32 and Int64
         }
 
-        public virtual Dimension CreateDefaultLesserDimension(string name, Set lesserSet)
+        public override Dimension CreateDefaultLesserDimension(string name, Set lesserSet)
         {
             return new DimPrimitive<int>(name, lesserSet, this);
         }

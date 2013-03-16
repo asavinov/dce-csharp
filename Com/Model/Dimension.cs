@@ -13,6 +13,8 @@ namespace Com.Model
     /// </summary>
     public class Dimension
     {
+        #region Properties
+
         private static int uniqueId;
 
         /// <summary>
@@ -25,6 +27,17 @@ namespace Com.Model
         /// </summary>
         private string _name;
         public string Name { get { return _name; } }
+
+        public virtual int Width // Width of instances. It depends on the implementation (and might not be the same for all dimensions of the greater set). 
+        {
+            get { return GreaterSet != null ? GreaterSet.Width : 0; }
+        }
+
+        protected int _length;
+        public virtual int Length // How many instances. It is the same for all dimensions of the lesser set. 
+        {
+            get { return _length; }
+        }
 
         /// <summary>
         /// Is identity dimension.
@@ -45,7 +58,7 @@ namespace Com.Model
         /// Different interpretations: the power of the domain can increase; the power of the domain is not 0; 
         /// </summary>
         private bool _instantiable;
-        public bool Instantiable { get { return _lesserSet.Instantiable; } private set { _instantiable = value; } }
+        public bool Instantiable { get { return LesserSet.Instantiable; } private set { _instantiable = value; } }
 
         /// <summary>
         /// Whether this dimension to take no values.
@@ -59,33 +72,19 @@ namespace Com.Model
         /// </summary>
         public bool Temporary { get; set; }
 
+        #endregion
+
         #region Schema methods.
 
         /// <summary>
         /// Greater (output) set.
         /// </summary>
-        private Set _greaterSet;
-        public Set GreaterSet
-        {
-            get { return _greaterSet; }
-            set 
-            {
-                _greaterSet = value; // TODO: Update involved sets. Update this dim instances.
-            }
-        }
+        public Set GreaterSet { get; set; }
 
         /// <summary>
         /// Lesser (input) set. 
         /// </summary>
-        private Set _lesserSet;
-        public Set LesserSet
-        {
-            get { return _lesserSet; }
-            set 
-            { 
-                _lesserSet = value; // TODO: Update involved sets. Update this dim instances.
-            }
-        }
+        public Set LesserSet { get; set; }
 
         /// <summary>
         /// Parent dimension. 
@@ -115,48 +114,103 @@ namespace Com.Model
         }
 
         /// <summary>
-        /// Child dimensions. 
-        /// The child dimensions represent a continuation of this dimension along all dimensions of the greater set, that is, they point to one step higher. 
+        /// A dimension can be defined as a sequence of other dimensions. For simple dimensions the path is empty.
         /// </summary>
-        private List<Dimension> _childDimensions;
-        public List<Dimension> ChildDimensions
+        public List<Dimension> Path { get; private set; }
+
+        public int Rank
         {
-            get { return _childDimensions; }
-            set
+            get
             {
-                _childDimensions = value; // TODO: Update all influenced elements.
+                if (Path == null) return 1; // Simple dimension
+                int r = 0;
+                foreach (Dimension dim in Path)
+                {
+                    r += dim.Rank;
+                }
+                return r;
             }
         }
-        public List<Dimension> GetLeafDimensions()
-        {
-            List<Dimension> result = new List<Dimension>();
-            if(ChildDimensions.Count == 0)
-            {
-                result.Add(this);
-                return result;
-            }
 
-            foreach (Dimension child in ChildDimensions)
+        public bool IsComplex
+        {
+            get
             {
-                result.AddRange(child.GetLeafDimensions());
+                return Path != null && Path.Count > 0;
+            }
+        }
+
+        public bool StartsWith(List<Dimension> path)
+        {
+            if (Path.Count < path.Count) return false;
+            for (int i = 0; i < path.Count; i++ )
+            {
+                if (path[i] != Path[i]) return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Convert path definition (composition) to a canonical representation as a sequence of simple dimensions without complex constituents.
+        /// </summary>
+        public void ExpandPath()
+        {
+            List<Dimension> allSegments = GetAllSegments();
+            Path.Clear();
+            Path.AddRange(allSegments);
+        }
+
+        private List<Dimension> GetAllSegments()
+        {
+            if (Path == null) return null;
+            List<Dimension> result = new List<Dimension>();
+            for (int i = 0; i < Path.Count; i++)
+            {
+                if (Path[i].IsComplex)
+                {
+                    result.AddRange(Path[i].GetAllSegments());
+                }
+                else // Simple segment - nothing to expand
+                {
+                    result.Add(Path[i]);
+                }
             }
 
             return result;
         }
 
-        #endregion
-
-        #region Properties of the function
-
-        public virtual int Width // Width of instances. It depends on the implementation (and might not be the same for all dimensions of the greater set). 
+        /// <summary>
+        /// Check if the path is correct and all its segments are consequitive.
+        /// Returns the segment number where the sequence breaks. If the path is correct then it returns the last segment number (rank).
+        /// </summary>
+        private int ValidateSegmentSequence()
         {
-            get { return _greaterSet != null ? _greaterSet.Width : 0; }
+            return Rank; // TODO
         }
 
-        protected int _length;
-        public virtual int Length // How many instances. It is the same for all dimensions of the lesser set. 
+        public Dimension GetSegment(int rank)
         {
-            get { return _length; }
+            System.Diagnostics.Debug.Assert(rank >= 0);
+            return rank < Path.Count ? Path[rank] : null; // TODO: take into account the nested structure of complex dimensions
+        }
+
+        public void Concatenate(List<Dimension> path)
+        {
+            System.Diagnostics.Debug.Assert(Path != null);
+            if(Path[0].LesserSet == path[path.Count-1].GreaterSet) // Insert as prefix
+            {
+                Path.InsertRange(0, path);
+                LesserSet = path[0].LesserSet;
+            }
+            else if (Path[Path.Count - 1].GreaterSet == path[0].LesserSet) // Append as suffix
+            {
+                Path.AddRange(path);
+                GreaterSet = path[path.Count - 1].GreaterSet;
+            }
+            else
+            {
+                // Wrong use: two paths must be adjacent
+            }
         }
 
         #endregion
