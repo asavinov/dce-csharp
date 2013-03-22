@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Data.OleDb;
 using System.Data;
+using System.Diagnostics;
 
 namespace Com.Model
 {
@@ -30,6 +31,11 @@ namespace Com.Model
             if (String.IsNullOrEmpty(ConnectionString))
             {
                 return; 
+            }
+
+            if (_connection != null && _connection.State == System.Data.ConnectionState.Open)
+            {
+                return;
             }
 
             try
@@ -117,8 +123,9 @@ namespace Com.Model
                 if (path == null)
                 {
                     path = new Dimension(columnName);
+                    path.RemoteName = columnName;
                     path.LesserSet = tableSet; // Assign domain set give the table name
-                    path.GreaterSet = Root.GetPrimitiveSet(columnType);
+                    path.GreaterSet = Root.GetPrimitiveSubset(columnType);
                     tableSet.AddGreaterPath(path); // We do not know if it is FK or simple dimensin so it needs to be checked and fixed later
                 }
 
@@ -148,13 +155,9 @@ namespace Com.Model
                     //
 
                     string fkName = (string)fk["FK_NAME"];
-                    Dimension fkSegment = tableSet.GetGreaterDimension(fkName);
-                    if (fkSegment != null)
-                    {
-                        // ERROR: Wrong use.
-                    }
+                    Debug.Assert(tableSet.GetGreaterDimension(fkName) == null, "A dimension already exists.");
 
-                    fkSegment = new Dimension(fkName); // It is the first segment in the path representing this FK
+                    Dimension fkSegment = new Dimension(fkName); // It is the first segment in the path representing this FK
                     fkSegment.LesserSet = tableSet;
 
                     string fkTargetTableName = (string)fk["PK_TABLE_NAME"]; // Name of the target set of the simple dimension (first segment of this complex path)
@@ -193,8 +196,18 @@ namespace Com.Model
                     {
                         path.Path.Add(fkTargetPath);
                     }
-
                     break; // We assume that a column can belong to only one FK
+                }
+
+                if (path.Path.Count == 0) // Not FK - just normal column
+                {
+                    Dimension dim = new Dimension(path.Name);
+                    dim.LesserSet = path.LesserSet;
+                    dim.GreaterSet = path.GreaterSet;
+                    dim.Identity = path.Identity;
+                    dim.LesserSet.AddGreaterDimension(dim);
+
+                    path.Path.Add(dim); // The path will consist of a single segment
                 }
 
             }
@@ -235,6 +248,7 @@ namespace Com.Model
             foreach(string tableName in tableNames) 
             {
                 Set set = new Set(tableName); // Create a set 
+                set.FromSet = tableName;
                 set.SuperDim = new DimRoot("super", set, this); // Add the new set to the schema by setting its super dimension
             }
 
@@ -260,14 +274,14 @@ namespace Com.Model
 
             // Generate query for our database engine by including at least all identity dimensions
             string select = ""; // Attribute names or their definitions stored in the dimensions
-            List<Dimension> attributes = set.GetGreaterLeafDimensions(); // These must be primitive dimensions storing column names
+            List<Dimension> attributes = set.GreaterPaths; // We need our custom aliases with target platform definitions as db-specific column names
             foreach (Dimension dim in attributes)
             {
-                select += dim.Name + ", ";
+                select += "[" + (String.IsNullOrEmpty(dim.RemoteDefinition) ? dim.Name : dim.RemoteDefinition) + "]" + ", ";
             }
             select = select.Substring(0, select.Length - 2);
 
-            string from = set.Name;
+            string from = "[" + (String.IsNullOrEmpty(set.FromSet) ? set.Name : set.FromSet) + "]";
             string where = ""; // set.WhereExpression
             string orderby = ""; // set.OrderbyExpression
 
@@ -281,9 +295,8 @@ namespace Com.Model
             try
             {
                 Open();
-                using (OleDbCommand cmd = new OleDbCommand())
+                using (OleDbCommand cmd = new OleDbCommand(query, _connection))
                 {
-                    cmd.CommandText = query;
                     using (OleDbDataAdapter adapter = new OleDbDataAdapter(cmd))
                     {
                         adapter.Fill(dataSet);

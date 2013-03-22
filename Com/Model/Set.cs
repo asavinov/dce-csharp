@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Data;
+using System.Diagnostics;
 
 namespace Com.Model
 {
@@ -74,13 +75,43 @@ namespace Com.Model
         public List<Dimension> GreaterDims { get; private set; }
         public List<Dimension> LesserDims { get; private set; }
 
+        public List<Dimension> GetDimensions(DimensionType dimType, DimensionDirection dimDirection) // Selector of field depending on parameters
+        {
+            List<Dimension> result = null;
+
+            if (dimDirection == DimensionDirection.GREATER)
+            {
+                if (dimType == DimensionType.POSET)
+                {
+                    result = GreaterDims;
+                }
+                else if (dimType == DimensionType.INCLUSION)
+                {
+                    result = SuperDims;
+                }
+            }
+            else if (dimDirection == DimensionDirection.LESSER)
+            {
+                if (dimType == DimensionType.POSET)
+                {
+                    result = LesserDims;
+                }
+                else if (dimType == DimensionType.INCLUSION)
+                {
+                    result = SubDims;
+                }
+            }
+
+            return result;
+        }
+
         #region Inclusion. Super.
 
         public Dimension SuperDim
         {
             get
             {
-                System.Diagnostics.Debug.Assert(SuperDims != null && SuperDims.Count < 2, "Wrong use: more than one super dimension.");
+                Debug.Assert(SuperDims != null && SuperDims.Count < 2, "Wrong use: more than one super dimension.");
                 return SuperDims.Count == 0 ? null : SuperDims[0];
             }
             set
@@ -101,7 +132,7 @@ namespace Com.Model
                     SuperDim = null;
                 }
 
-                System.Diagnostics.Debug.Assert(value.LesserSet == this && value.GreaterSet != null, "Wrong use: dimension greater and lesser sets must be set correctly.");
+                Debug.Assert(value.LesserSet == this && value.GreaterSet != null, "Wrong use: dimension greater and lesser sets must be set correctly.");
 
                 if (false) // TODO: Check value.GreaterSet for validity - we cannot break poset relation
                 {
@@ -176,9 +207,52 @@ namespace Com.Model
             return set;
         }
 
+        public List<Set> PrimitiveSubsets
+        {
+            get { return SubDims.Where(x => x.LesserSet.Primitive).Select(x => x.LesserSet).ToList(); }
+        }
+
+        public List<Set> NonPrimitiveSubsets
+        {
+            get { return SubDims.Where(x => !x.LesserSet.Primitive).Select(x => x.LesserSet).ToList(); }
+        }
+
+        public Set GetPrimitiveSubset(string name)
+        {
+            Dimension dim = SubDims.FirstOrDefault(x => x.LesserSet.Primitive && x.LesserSet.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+            return dim != null ? dim.LesserSet : null;
+        }
+
         #endregion
 
         #region Poset. Greater.
+
+        public int IdentityArity
+        {
+            get
+            {
+                return GreaterDims.Count(x => x.Identity);
+            }
+        }
+
+        public int IdentityPrimitiveArity
+        {
+            get // It is computed recursively - we sum up greater set arities of all our identity dimensions up to the prmitive sets with arity 1
+            {
+                if (Primitive) return 1;
+                return GreaterDims.Where(x => x.Identity).Sum(x => x.GreaterSet.IdentityPrimitiveArity);
+            }
+        }
+
+        public List<Dimension> GetGreaterLeafDimensions()
+        {
+            List<Dimension> leaves = new List<Dimension>();
+            foreach (Dimension dim in GreaterDims)
+            {
+                //                leaves.AddRange(dim.GetLeafDimensions());
+            }
+            return leaves;
+        }
 
         public void AddGreaterDimension(Dimension dim)
         {
@@ -220,62 +294,6 @@ namespace Com.Model
         }
 
         #endregion
-
-        public List<Dimension> GetGreaterLeafDimensions()
-        {
-            List<Dimension> leaves = new List<Dimension>();
-            foreach (Dimension dim in GreaterDims)
-            {
-//                leaves.AddRange(dim.GetLeafDimensions());
-            }
-            return leaves;
-        }
-
-        public List<Dimension> GetDimensions(DimensionType dimType, DimensionDirection dimDirection)
-        {
-            List<Dimension> result = null;
-
-            if (dimDirection == DimensionDirection.GREATER)
-            {
-                if (dimType == DimensionType.POSET)
-                {
-                    result = GreaterDims;
-                }
-                else if (dimType == DimensionType.INCLUSION)
-                {
-                    result = SuperDims;
-                }
-            }
-            else if (dimDirection == DimensionDirection.LESSER)
-            {
-                if (dimType == DimensionType.POSET)
-                {
-                    result = LesserDims;
-                }
-                else if (dimType == DimensionType.INCLUSION)
-                {
-                    result = SubDims;
-                }
-            }
-
-            return result;
-        }
-
-        public List<Set> PrimitiveSets
-        {
-            get { return SubDims.Where(x => x.LesserSet.Primitive).Select(x => x.LesserSet).ToList(); }
-        }
-
-        public List<Set> NonPrimitiveSets
-        {
-            get { return SubDims.Where(x => !x.LesserSet.Primitive).Select(x => x.LesserSet).ToList(); }
-        }
-
-        public Set GetPrimitiveSet(string name)
-        {
-            Dimension dim = SubDims.FirstOrDefault(x => x.LesserSet.Primitive && x.LesserSet.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
-            return dim != null ? dim.LesserSet : null;
-        }
 
         #endregion
 
@@ -574,8 +592,9 @@ namespace Com.Model
         /// If it is empty then this set is defined purely locally via its greater dimensions and all possible elements will be instantiated.
         /// If it is not empty then only a subset of all possible values will be instantiated. 
         /// </summary>
-        public Expression Instances { get; set; }
-        public Set RemoteSet { get; set; } // For simplicity. This remote set will export instances and this set will import them
+        public Expression FromExpression { get; set; }
+        public SetRoot FromDb { get; set; } // For simplicity. This remote set will export instances and this set will import them
+        public string FromSet { get; set; } // 
 
         public virtual void Import(DataTable dataTable)
         {
@@ -584,7 +603,7 @@ namespace Com.Model
             // Question: 1. we import all we get, 2. we import all we have 3. we import only identities
 
             Instance instance = null;
-            foreach (DataRow raw in dataTable.Rows)
+            foreach (DataRow row in dataTable.Rows)
             {
                 // Use mappings to initialize complex instance from the current raw
                 instance=null;
@@ -603,15 +622,14 @@ namespace Com.Model
 
         public virtual void Populate()
         {
-            if (RemoteSet == null) // Local population procedure without importing (without external extensional)
+            if (FromSet == null) // Local population procedure without importing (without external extensional)
             {
             }
             else // Popoulating using externally provided values
             {
-                Set remoteSet = RemoteSet; // Find remote set
+                Set remoteSet = null; // Find remote set
                 DataTable dataTable = remoteSet.Export(); // Request a (flat) result set from the remote set
                 Import(dataTable); // Import
-
             }
         }
 

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Diagnostics;
 
 namespace Com.Model
 {
@@ -25,8 +26,7 @@ namespace Com.Model
         /// <summary>
         /// This name is unique within the lesser set.
         /// </summary>
-        private string _name;
-        public string Name { get { return _name; } }
+        public string Name { get; set; }
 
         public virtual int Width // Width of instances. It depends on the implementation (and might not be the same for all dimensions of the greater set). 
         {
@@ -122,7 +122,7 @@ namespace Com.Model
         {
             get
             {
-                if (Path == null) return 1; // Simple dimension
+                if (Path == null || Path.Count == 0) return 1; // Simple dimension
                 int r = 0;
                 foreach (Dimension dim in Path)
                 {
@@ -157,14 +157,18 @@ namespace Com.Model
         {
             List<Dimension> allSegments = GetAllSegments();
             Path.Clear();
-            if (allSegments == null || allSegments.Count == 0)
+            if (allSegments != null && allSegments.Count != 0)
             {
-                LesserSet.RemoveGreaterPath(this);
-                LesserSet.AddGreaterDimension(this);
+                Path.AddRange(allSegments);
             }
             else
             {
-                Path.AddRange(allSegments);
+                // ERROR: Wrong use: The path does not have the corresponding dimension
+            }
+
+            if (GreaterSet.IdentityPrimitiveArity == 1) // For 1-column FK, dimensino name is the only column name instead of fkName (fkName is not used).
+            {
+                Name = Path[0].Name; 
             }
         }
 
@@ -198,13 +202,13 @@ namespace Com.Model
 
         public Dimension GetSegment(int rank)
         {
-            System.Diagnostics.Debug.Assert(rank >= 0);
+            Debug.Assert(rank >= 0, "Wrong use of method parameter. Rank cannot be negative.");
             return rank < Path.Count ? Path[rank] : null; // TODO: take into account the nested structure of complex dimensions
         }
 
         public void Concatenate(List<Dimension> path)
         {
-            System.Diagnostics.Debug.Assert(Path != null);
+            Debug.Assert(path != null);
             if(Path[0].LesserSet == path[path.Count-1].GreaterSet) // Insert as prefix
             {
                 Path.InsertRange(0, path);
@@ -258,7 +262,7 @@ namespace Com.Model
         public Dimension(string name, Set lesserSet, Set greaterSet, bool isIdentity, bool isReversed, bool isInstantiable)
         {
             Id = uniqueId++;
-            _name = name;
+            Name = name;
 
             Identity = isIdentity;
             Reversed = isReversed;

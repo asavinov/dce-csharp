@@ -17,8 +17,8 @@ namespace Test
             SetRoot root = new SetRoot("Root");
 
             // Test root structure
-            Assert.IsTrue("Double" == root.GetPrimitiveSet("Double").Name);
-            Assert.IsTrue("String" == root.GetPrimitiveSet("String").Name);
+            Assert.IsTrue("Double" == root.GetPrimitiveSubset("Double").Name);
+            Assert.IsTrue("String" == root.GetPrimitiveSubset("String").Name);
 
             Set c1 = new Set("c1");
             c1.SuperDim = new DimRoot("super", c1, root);
@@ -33,7 +33,7 @@ namespace Test
             c12.SuperDim = new DimSuper("super", c12, c1);
 
             // Test quantities
-            Assert.AreEqual(2, root.NonPrimitiveSets.Count);
+            Assert.AreEqual(2, root.NonPrimitiveSubsets.Count);
             Assert.AreEqual(2, c1.SubSets.Count);
             Assert.AreEqual(0, c2.SubSets.Count);
 
@@ -50,9 +50,9 @@ namespace Test
         public void TableSchemaTest()
         {
             SetRoot root = new SetRoot("Root");
-            Set setInteger = root.GetPrimitiveSet("Integer");
-            Set setDouble = root.GetPrimitiveSet("Double");
-            Set setString = root.GetPrimitiveSet("String");
+            Set setInteger = root.GetPrimitiveSubset("Integer");
+            Set setDouble = root.GetPrimitiveSubset("Double");
+            Set setString = root.GetPrimitiveSubset("String");
 
             // Insert table
             Set t1 = new Set("t1");

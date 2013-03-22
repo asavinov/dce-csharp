@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Com.Model;
 
@@ -34,9 +36,9 @@ namespace Test
             // Prepare table schema
             //
             SetRoot root = new SetRoot("Root");
-            Set setInteger = root.GetPrimitiveSet("Integer");
-            Set setDouble = root.GetPrimitiveSet("Double");
-            Set setString = root.GetPrimitiveSet("String");
+            Set setInteger = root.GetPrimitiveSubset("Integer");
+            Set setDouble = root.GetPrimitiveSubset("Double");
+            Set setString = root.GetPrimitiveSubset("String");
 
             // Insert table
             Set t1 = new Set("t1");
@@ -70,16 +72,60 @@ namespace Test
         public void OledbSchemaLoadTest()
         {
             // Create Oldedb root set
-            SetRootOledb root = new SetRootOledb("Root");
+            SetRootOledb dbRoot = new SetRootOledb("Root");
 
-            root.ConnectionString = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\\Users\\savinov\\git\\comcsharp\\Test\\Northwind.accdb";
+            dbRoot.ConnectionString = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\\Users\\savinov\\git\\comcsharp\\Test\\Northwind.accdb";
             // Another provider: "Provider=Microsoft.Jet.OLEDB.4.0;"
 
-            root.Open();
+            dbRoot.Open();
 
-            root.ImportSchema();
+            dbRoot.ImportSchema();
 
             // Check validity of the schema
+            Set epSet = dbRoot.FindSubset("Employee Privileges");
+            Assert.AreEqual(2, epSet.GreaterDims.Count);
+            Assert.AreEqual(2, epSet.GreaterPaths.Count);
+            Assert.AreEqual(2, epSet.GreaterPaths[0].Rank);
+            Assert.AreEqual(2, epSet.GreaterPaths[1].Rank);
+
+            Set doubleSet = dbRoot.FindSubset("Double");
+            Assert.AreEqual(2, doubleSet.LesserDims.Count);
+            Assert.AreEqual(2, doubleSet.LesserPaths.Count);
+
+            Set empSet = dbRoot.FindSubset("Employees");
+            System.Data.DataTable dataTable = dbRoot.Export(empSet);
+            Assert.AreEqual(9, dataTable.Rows.Count);
+            Assert.AreEqual(18, dataTable.Columns.Count);
+        }
+
+        [TestMethod]
+        public void OledbDataImportTest()
+        {
+            // Create Oldedb root set
+            SetRootOledb dbRoot = new SetRootOledb("Root");
+
+            dbRoot.ConnectionString = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\\Users\\savinov\\git\\comcsharp\\Test\\Northwind.accdb";
+            // Another provider: "Provider=Microsoft.Jet.OLEDB.4.0;"
+
+            dbRoot.Open();
+
+            dbRoot.ImportSchema();
+
+            Set empSet = dbRoot.FindSubset("Employees");
+            System.Data.DataTable dataTable = dbRoot.Export(empSet);
+
+            // Create workspace root set
+            SetRoot wsRoot = new SetRootOledb("My Mashup");
+
+            // Insert table with instances imported/cloned from a remote table
+            // What about inserting attributes: no, only identity, all
+            // What about necessary greater tables?
+            // If we insert greater tables then we have to connect them by inserting some dimensions
+            Set t1 = new Set("t1");
+            t1.SuperDim = new DimRoot("super", t1, wsRoot);
+
+            // Insert dimensions with data imported from a remote table possibly using a (custom) definition
+
         }
 
         [TestMethod]
