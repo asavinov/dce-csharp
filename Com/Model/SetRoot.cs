@@ -33,6 +33,32 @@ namespace Com.Model
             get { return 0; }
         }
 
+        public virtual string MapToLocalType(string externalType)
+        {
+            string localType = null;
+
+            switch (externalType)
+            {
+                case "Double": // System.Data.OleDb.OleDbType.Double
+                    localType = "Double";
+                    break;
+                case "Integer": // System.Data.OleDb.OleDbType.Integer
+                    localType = "Integer";
+                    break;
+                case "Char": // System.Data.OleDb.OleDbType.Char
+                case "VarChar": // System.Data.OleDb.OleDbType.VarChar
+                case "VarWChar": // System.Data.OleDb.OleDbType.VarWChar
+                case "WChar": // System.Data.OleDb.OleDbType.WChar
+                    localType = "String";
+                    break;
+                default:
+                    localType = "String"; // All the rest of types or error
+                    break;
+            }
+
+            return localType;
+        }
+
         public virtual DataTable Export(Set set)
         {
             // Check if this set is our child

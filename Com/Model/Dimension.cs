@@ -240,9 +240,8 @@ namespace Com.Model
         /// <summary>
         /// It is used to compose a remote query for loading data during population and then interpret the result set by mapping to local terms. 
         /// </summary>
-        public Expression RemoteSelect { get; set; }
-        public string RemoteName { get; set; } // It is for simplicity. It is a remote column/attribute/alias mapped to this dimension path.
-        public string RemoteDefinition { get; set; } // It is a definition of the remote column/attribute/alias like "col1+col2/3"
+        public Expression SelectExpression { get; set; }
+        public string SelectDefinition { get; set; } // It is a definition of the remote column/attribute/alias like "col1+col2/3"
 
         #endregion
 
@@ -251,7 +250,6 @@ namespace Com.Model
         public Dimension(string name)
             : this(name, null, null)
         {
-            Path = new List<Dimension>();
         }
 
         public Dimension(string name, Set lesserSet, Set greaterSet)
@@ -268,11 +266,21 @@ namespace Com.Model
             Reversed = isReversed;
             Instantiable = isInstantiable;
 
+            Path = new List<Dimension>();
+
             LesserSet = lesserSet;
             GreaterSet = greaterSet;
 
             // Parameterize depending on the reserved names: super
             // Parameterize depending on the greater and lesser set type. For example, dimension type must correspond to its greater set type (SetInteger <- DimInteger etc.)
+        }
+
+        public Dimension(string name, Dimension sourceDim)
+            : this(name, sourceDim.LesserSet, sourceDim.GreaterSet)
+        {
+            // It will be a clone of the source dimension (the same function)
+            SelectExpression = null;
+            SelectDefinition = sourceDim.Name;
         }
 
         #endregion

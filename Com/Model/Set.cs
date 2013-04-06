@@ -594,7 +594,77 @@ namespace Com.Model
         /// </summary>
         public Expression FromExpression { get; set; }
         public SetRoot FromDb { get; set; } // For simplicity. This remote set will export instances and this set will import them
-        public string FromSet { get; set; } // 
+        public string FromSetName { get; set; } // 
+
+        public virtual void ImportDimensions()
+        {
+            // We assume that importing = cloning, that is, this set has the same structure as the remote set (at least identity).
+            // Thus our task is to clone the structure by retaining the mapping. Cloning structure means reducing it to primitive elements. 
+            // The structure can be cloned in two ways: by expanding dimensions, by cloning paths
+
+            // Find from which set to import dimensions
+            if (FromDb == null || String.IsNullOrEmpty(FromSetName))
+            {
+                return; // Nothing to import
+            }
+            Set srcSet = FromDb.FindSubset(FromSetName);
+            if (srcSet == null)
+            {
+                return; // Nothing to import
+            }
+
+            foreach (Dimension srcPath in srcSet.GreaterPaths)
+            {
+
+                Dimension path = null; // TODO: We should try to find this path and create a new path only if it cannot be found. Or, if found, the existing path should be deleted along with all its segments.
+                if (path == null)
+                {
+                    path = new Dimension(srcPath.Name, srcPath); // We also store a mapping (definition)
+                }
+                path.LesserSet = this;
+                string columnType = Root.MapToLocalType(srcPath.GreaterSet.Name);
+                Set gSet = Root.GetPrimitiveSubset(columnType);
+                if (gSet == null)
+                {
+                    // ERROR: Cannot find the matching primitive set for the path
+                }
+                path.GreaterSet = gSet;
+
+                Set lSet = this;
+                foreach (Dimension srcDim in srcPath.Path)
+                {
+                    Dimension dim = null; // TODO: We should try to find this segment and create a new segment only if it does not exist. Or, if found, the original dimension should be deleted.
+                    if (dim == null)
+                    {
+                        dim = new Dimension(srcDim.Name, srcDim); // We also store a mapping (definition)
+                    }
+                    dim.LesserSet = lSet;
+                    if (srcDim.GreaterSet == srcPath.GreaterSet)
+                    {
+                        gSet = srcPath.GreaterSet; // Last segment has the same greater set as the path it belongs to
+                    }
+                    else // Try to find this greater set in our database
+                    {
+                        gSet = Root.FindSubset(srcDim.GreaterSet.Name);
+                        if (gSet == null)
+                        {
+                            // ERROR: Automatic set matching failed. Manual mapping of sets is needed. 
+                        }
+                    }
+                    dim.GreaterSet = gSet;
+
+                    path.Path.Add(dim); // Add the new segment to the path
+
+                    lSet = gSet; // Loop iteration
+                }
+
+                AddGreaterPath(path); // Add the new dimension to this set 
+                foreach (Dimension dim in path.Path) // Add also all its segments
+                {
+                    dim.LesserSet.AddGreaterDimension(dim);
+                }
+            }
+        }
 
         public virtual void Import(DataTable dataTable)
         {
@@ -622,7 +692,7 @@ namespace Com.Model
 
         public virtual void Populate()
         {
-            if (FromSet == null) // Local population procedure without importing (without external extensional)
+            if (FromSetName == null) // Local population procedure without importing (without external extensional)
             {
             }
             else // Popoulating using externally provided values
@@ -665,6 +735,15 @@ namespace Com.Model
             // TODO: Parameterize depending on the reserved names: Integer, Double etc. (or exclude these names)
             Instantiable = true;
             Primitive = false;
+        }
+
+        public Set(string name, Set sourceSet)
+            : this(name)
+        {
+            // It will be a clone of the source set (the same structure, at least the same structure of identities)
+            FromExpression = null;
+            FromDb = sourceSet.Root; 
+            FromSetName = sourceSet.Name; // The (remote) source of instances for populating this set
         }
 
         #endregion

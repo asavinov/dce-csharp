@@ -99,6 +99,35 @@ namespace Test
         }
 
         [TestMethod]
+        public void OledbSchemaImportTest()
+        {
+            //
+            // Create Oldedb root set
+            //
+            SetRootOledb dbRoot = new SetRootOledb("Root");
+            dbRoot.ConnectionString = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\\Users\\savinov\\git\\comcsharp\\Test\\Northwind.accdb";
+            dbRoot.Open();
+            dbRoot.ImportSchema();
+
+            //
+            // Create workspace root set
+            //
+            SetRoot wsRoot = new SetRoot("My Mashup");
+
+            // Add a new set
+            Set emp = new Set("Emp", dbRoot.FindSubset("Employees"));
+            emp.SuperDim = new DimRoot("super", emp, wsRoot); // Insert the set (no dimensions)
+
+            // Import dimension(s)
+            emp.ImportDimensions(); // Import all dimensions
+            // ImportSetIdentitySchema possibly by specifying the dimension(s) and other options like what to do with intermediate tables, set nesting etc.
+
+            // Assert. Check imported dimensions
+            Assert.AreEqual(18, emp.GreaterPaths.Count);
+            Assert.AreEqual(18, emp.GreaterDims.Count);
+        }
+
+        [TestMethod]
         public void OledbDataImportTest()
         {
             // Create Oldedb root set
@@ -115,17 +144,11 @@ namespace Test
             System.Data.DataTable dataTable = dbRoot.Export(empSet);
 
             // Create workspace root set
-            SetRoot wsRoot = new SetRootOledb("My Mashup");
+            SetRoot wsRoot = new SetRoot("My Mashup");
 
-            // Insert table with instances imported/cloned from a remote table
-            // What about inserting attributes: no, only identity, all
-            // What about necessary greater tables?
-            // If we insert greater tables then we have to connect them by inserting some dimensions
-            Set t1 = new Set("t1");
-            t1.SuperDim = new DimRoot("super", t1, wsRoot);
+            // TODO: Insert a new imported table in the mashup by importing its structure from another database
 
-            // Insert dimensions with data imported from a remote table possibly using a (custom) definition
-
+            // TODO: Populate the new table in the mashup by importing data from its remote counterpart
         }
 
         [TestMethod]

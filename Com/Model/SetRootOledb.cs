@@ -123,7 +123,7 @@ namespace Com.Model
                 if (path == null)
                 {
                     path = new Dimension(columnName);
-                    path.RemoteName = columnName;
+                    path.SelectDefinition = columnName;
                     path.LesserSet = tableSet; // Assign domain set give the table name
                     path.GreaterSet = Root.GetPrimitiveSubset(columnType);
                     tableSet.AddGreaterPath(path); // We do not know if it is FK or simple dimensin so it needs to be checked and fixed later
@@ -214,32 +214,6 @@ namespace Com.Model
 
         }
 
-        public string MapToLocalType(string externalType)
-        {
-            string localType = null;
-
-            switch (externalType)
-            {
-                case "Double": // System.Data.OleDb.OleDbType.Double
-                    localType = "Double";
-                    break;
-                case "Inteer": // System.Data.OleDb.OleDbType.Integer
-                    localType = "Integer";
-                    break;
-                case "Char": // System.Data.OleDb.OleDbType.Char
-                case "VarChar": // System.Data.OleDb.OleDbType.VarChar
-                case "VarWChar": // System.Data.OleDb.OleDbType.VarWChar
-                case "WChar": // System.Data.OleDb.OleDbType.WChar
-                    localType = "String";
-                    break;
-                default:
-                    localType = "String"; // All the rest of types or error
-                    break;
-            }
-
-            return localType;
-        }
-
         public void ImportSchema()
         {
             List<string> tableNames = ReadTables();
@@ -248,7 +222,7 @@ namespace Com.Model
             foreach(string tableName in tableNames) 
             {
                 Set set = new Set(tableName); // Create a set 
-                set.FromSet = tableName;
+                set.FromSetName = tableName;
                 set.SuperDim = new DimRoot("super", set, this); // Add the new set to the schema by setting its super dimension
             }
 
@@ -277,11 +251,11 @@ namespace Com.Model
             List<Dimension> attributes = set.GreaterPaths; // We need our custom aliases with target platform definitions as db-specific column names
             foreach (Dimension dim in attributes)
             {
-                select += "[" + (String.IsNullOrEmpty(dim.RemoteDefinition) ? dim.Name : dim.RemoteDefinition) + "]" + ", ";
+                select += "[" + (String.IsNullOrEmpty(dim.SelectDefinition) ? dim.Name : dim.SelectDefinition) + "]" + ", ";
             }
             select = select.Substring(0, select.Length - 2);
 
-            string from = "[" + (String.IsNullOrEmpty(set.FromSet) ? set.Name : set.FromSet) + "]";
+            string from = "[" + (String.IsNullOrEmpty(set.FromSetName) ? set.Name : set.FromSetName) + "]";
             string where = ""; // set.WhereExpression
             string orderby = ""; // set.OrderbyExpression
 
