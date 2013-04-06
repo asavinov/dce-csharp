@@ -633,34 +633,37 @@ namespace Com.Model
                 Set lSet = this;
                 foreach (Dimension srcDim in srcPath.Path)
                 {
-                    Dimension dim = null; // TODO: We should try to find this segment and create a new segment only if it does not exist. Or, if found, the original dimension should be deleted.
+                    Dimension dim = lSet.GetGreaterDimension(srcDim.Name);
                     if (dim == null)
                     {
                         dim = new Dimension(srcDim.Name, srcDim); // We also store a mapping (definition)
-                    }
-                    dim.LesserSet = lSet;
-                    if (srcDim.GreaterSet == srcPath.GreaterSet)
-                    {
-                        gSet = srcPath.GreaterSet; // Last segment has the same greater set as the path it belongs to
-                    }
-                    else // Try to find this greater set in our database
-                    {
-                        gSet = Root.FindSubset(srcDim.GreaterSet.Name);
-                        if (gSet == null)
+                        dim.LesserSet = lSet;
+                        if (srcDim.GreaterSet == srcPath.GreaterSet)
                         {
-                            // ERROR: Automatic set matching failed. Manual mapping of sets is needed. 
+                            gSet = srcPath.GreaterSet; // Last segment has the same greater set as the path it belongs to
                         }
+                        else // Try to find this greater set in our database
+                        {
+                            gSet = Root.FindSubset(srcDim.GreaterSet.Name);
+                            if (gSet == null)
+                            {
+                                gSet = new Set(srcDim.GreaterSet.Name, srcDim.GreaterSet);
+                                gSet.SuperDim = new DimRoot("super", gSet, Root); // Default solution: insert the set (no dimensions)
+                                gSet.ImportDimensions(); // Import its dimensions (recursively). We need at least identity dimensions
+                            }
+                        }
+                        dim.GreaterSet = gSet;
                     }
-                    dim.GreaterSet = gSet;
 
-                    path.Path.Add(dim); // Add the new segment to the path
+                    path.Path.Add(dim); // Add this dimension as the next segment in the path
 
                     lSet = gSet; // Loop iteration
                 }
 
                 AddGreaterPath(path); // Add the new dimension to this set 
-                foreach (Dimension dim in path.Path) // Add also all its segments
+                foreach (Dimension dim in path.Path) // Add also all its segments if they do not exist yet
                 {
+                    if (dim.LesserSet.GreaterDims.Contains(dim)) continue;
                     dim.LesserSet.AddGreaterDimension(dim);
                 }
             }

@@ -115,16 +115,22 @@ namespace Test
             SetRoot wsRoot = new SetRoot("My Mashup");
 
             // Add a new set
-            Set emp = new Set("Emp", dbRoot.FindSubset("Employees"));
-            emp.SuperDim = new DimRoot("super", emp, wsRoot); // Insert the set (no dimensions)
+            Set empPriv = new Set("Emp", dbRoot.FindSubset("Employee Privileges"));
+            empPriv.SuperDim = new DimRoot("super", empPriv, wsRoot); // Insert the set (no dimensions)
 
             // Import dimension(s)
-            emp.ImportDimensions(); // Import all dimensions
-            // ImportSetIdentitySchema possibly by specifying the dimension(s) and other options like what to do with intermediate tables, set nesting etc.
+            empPriv.ImportDimensions();
 
             // Assert. Check imported dimensions
-            Assert.AreEqual(18, emp.GreaterPaths.Count);
-            Assert.AreEqual(18, emp.GreaterDims.Count);
+            Assert.AreEqual(2, empPriv.GreaterPaths.Count);
+            Assert.AreEqual(2, empPriv.GreaterDims.Count);
+
+            // Check intermediate sets and their imported structure
+            Assert.AreEqual(18, empPriv.GreaterDims[0].GreaterSet.GreaterPaths.Count);
+            Assert.AreEqual(18, empPriv.GreaterDims[0].GreaterSet.GreaterDims.Count);
+
+            Assert.AreEqual(2, empPriv.GreaterDims[1].GreaterSet.GreaterPaths.Count);
+            Assert.AreEqual(2, empPriv.GreaterDims[1].GreaterSet.GreaterDims.Count);
         }
 
         [TestMethod]
@@ -146,9 +152,20 @@ namespace Test
             // Create workspace root set
             SetRoot wsRoot = new SetRoot("My Mashup");
 
-            // TODO: Insert a new imported table in the mashup by importing its structure from another database
+            // Add a new set and import its structure
+            Set emp = new Set("Emp", dbRoot.FindSubset("Employees"));
+            emp.SuperDim = new DimRoot("super", emp, wsRoot); // Insert the set (no dimensions)
+            emp.ImportDimensions(); // Import all dimensions
 
-            // TODO: Populate the new table in the mashup by importing data from its remote counterpart
+            emp.Populate();
+
+            // Add EmployeePrivileges table which references one existing and one non-existing tables
+            Set empPriv = new Set("EmpPriv", dbRoot.FindSubset("Employee Privileges"));
+            empPriv.SuperDim = new DimRoot("super", empPriv, wsRoot); // Insert the set (no dimensions)
+            empPriv.ImportDimensions(); // Import all dimensions
+
+            empPriv.Populate();
+
         }
 
         [TestMethod]

@@ -168,7 +168,7 @@ namespace Com.Model
 
             if (GreaterSet.IdentityPrimitiveArity == 1) // For 1-column FK, dimensino name is the only column name instead of fkName (fkName is not used).
             {
-                Name = Path[0].Name; 
+                Path[0].Name = Name; // FK-name is overwritten and lost - attribute name is used instead
             }
         }
 
