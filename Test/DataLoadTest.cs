@@ -45,13 +45,13 @@ namespace Test
             t1.SuperDim = new DimRoot("super", t1, root);
 
             Dimension orders = new DimPrimitive<int>("orders", t1, setInteger);
-            t1.AddGreaterDimension(orders);
+            t1.AddGreaterDim(orders);
 
             Dimension revenue = new DimPrimitive<double>("revenue", t1, setDouble);
-            t1.AddGreaterDimension(revenue);
+            t1.AddGreaterDim(revenue);
 
             Dimension name = new DimPrimitive<string>("name", t1, setString);
-            t1.AddGreaterDimension(name);
+            t1.AddGreaterDim(name);
 
             //
             // Insert new data
@@ -157,14 +157,20 @@ namespace Test
             emp.SuperDim = new DimRoot("super", emp, wsRoot); // Insert the set (no dimensions)
             emp.ImportDimensions(); // Import all dimensions
 
+            // Import data
             emp.Populate();
+
+            Assert.AreEqual(9, emp.Length);
+            Assert.AreEqual(6, emp.GetValue("ID", 5));
+            Assert.AreEqual("Mariya", emp.GetValue("First Name", 3));
+            Assert.AreEqual("Seattle", emp.GetValue("City", 8));
 
             // Add EmployeePrivileges table which references one existing and one non-existing tables
             Set empPriv = new Set("EmpPriv", dbRoot.FindSubset("Employee Privileges"));
             empPriv.SuperDim = new DimRoot("super", empPriv, wsRoot); // Insert the set (no dimensions)
             empPriv.ImportDimensions(); // Import all dimensions
 
-            empPriv.Populate();
+//            empPriv.Populate();
 
         }
 

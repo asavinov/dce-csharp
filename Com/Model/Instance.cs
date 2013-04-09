@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Data;
+using Offset = System.Int32;
 
 namespace Com.Model
 {
@@ -27,7 +28,7 @@ namespace Com.Model
 
         /// <summary>
         /// It is a dimension (place, label, attribute) leading to this set from its parent. NULL for a root.
-        /// This dimension has a lesser set equal to the parent and greater set equal to this set (the set specified in this instance).
+        /// This dimension has a lesser set equal to the parent, and greater set equal to this set (name of this node).
         /// </summary>
         public string DimensionName { get; set; }
         public Dimension Dimension { get; set; }

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Data;
 using System.Diagnostics;
+using Offset = System.Int32;
 
 namespace Com.Model
 {
@@ -70,7 +71,7 @@ namespace Com.Model
         public SetRoot(string name)
             : base(name) // C#: If nothing specified, then base() will always be called by default
         {
-            Instantiable = false;
+            IsInstantiable = false;
 
             //
             // Generate all predefined primitive sets as subsets

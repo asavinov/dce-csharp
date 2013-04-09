@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Offset = System.Int32;
 
 namespace Com.Model
 {
@@ -58,7 +59,7 @@ namespace Com.Model
             }
         }
 
-        #region Manipulate function (slow). Inherited interface. 
+        #region Manipulate function (slow). Inherited object-based interface. 
 
         public override void Append(object value)
         {
@@ -86,6 +87,24 @@ namespace Com.Model
         public override void SetValue(int offset, object value)
         {
             UpdateIndex(offset, ObjectToGeneric(value));
+        }
+
+        public override int[] GetOffsets(object value)
+        {
+            return deproject(ObjectToGeneric(value));
+        }
+
+        private T _currentValue;
+        public override object CurrentValue 
+        { 
+            get 
+            {
+                return _currentValue;
+            }
+            set
+            {
+                _currentValue = ObjectToGeneric(value);
+            }
         }
 
         #endregion
@@ -292,7 +311,7 @@ namespace Com.Model
 
             if (indexes.Item1 == indexes.Item2)
             {
-                return null; // Not found
+                return new int[0]; // Not found
             }
 
             int[] result = new int[indexes.Item2 - indexes.Item1];

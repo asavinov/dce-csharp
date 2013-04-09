@@ -60,13 +60,13 @@ namespace Test
 
             // Insert attributes
             Dimension orders = new DimPrimitive<int>("orders", t1, setInteger);
-            t1.AddGreaterDimension(orders);
+            t1.AddGreaterDim(orders);
 
             Dimension revenue = new DimPrimitive<double>("revenue", t1, setDouble);
-            t1.AddGreaterDimension(revenue);
+            t1.AddGreaterDim(revenue);
 
             Dimension name = new DimPrimitive<string>("name", t1, setString);
-            t1.AddGreaterDimension(name);
+            t1.AddGreaterDim(name);
 
             Assert.AreEqual(1, t1.GreaterDims.Count(x => x.Name == "orders"));
             Assert.AreEqual(1, t1.GreaterDims.Count(x => x.Name == "revenue"));

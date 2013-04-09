@@ -5,6 +5,7 @@ using System.Text;
 using System.Data.OleDb;
 using System.Data;
 using System.Diagnostics;
+using Offset = System.Int32;
 
 namespace Com.Model
 {
@@ -135,7 +136,7 @@ namespace Com.Model
                     string pkColumnName = (string)pk["COLUMN_NAME"];
                     if (columnName.Equals(pkColumnName, StringComparison.InvariantCultureIgnoreCase))
                     {
-                        path.Identity = true; // PK name pk["PK_NAME"] is not stored. It has to be stored then Dimension class has to be extended
+                        path.IsIdentity = true; // PK name pk["PK_NAME"] is not stored. It has to be stored then Dimension class has to be extended
                         break; // Assume that a column can belong to only one PK 
                     }
                 }
@@ -155,7 +156,7 @@ namespace Com.Model
                     //
 
                     string fkName = (string)fk["FK_NAME"];
-                    Debug.Assert(tableSet.GetGreaterDimension(fkName) == null, "A dimension already exists.");
+                    Debug.Assert(tableSet.GetGreaterDim(fkName) == null, "A dimension already exists.");
 
                     Dimension fkSegment = new Dimension(fkName); // It is the first segment in the path representing this FK
                     fkSegment.LesserSet = tableSet;
@@ -163,7 +164,7 @@ namespace Com.Model
                     string fkTargetTableName = (string)fk["PK_TABLE_NAME"]; // Name of the target set of the simple dimension (first segment of this complex path)
                     Set fkTargetSet = Root.FindSubset(fkTargetTableName);
                     fkSegment.GreaterSet = fkTargetSet;
-                    tableSet.AddGreaterDimension(fkSegment); // Add this FK-dimension to the set (it is always new)
+                    tableSet.AddGreaterDim(fkSegment); // Add this FK-dimension to the set (it is always new)
 
                     if (path.Path.Count > 0)
                     {
@@ -204,8 +205,8 @@ namespace Com.Model
                     Dimension dim = new Dimension(path.Name);
                     dim.LesserSet = path.LesserSet;
                     dim.GreaterSet = path.GreaterSet;
-                    dim.Identity = path.Identity;
-                    dim.LesserSet.AddGreaterDimension(dim);
+                    dim.IsIdentity = path.IsIdentity;
+                    dim.LesserSet.AddGreaterDim(dim);
 
                     path.Path.Add(dim); // The path will consist of a single segment
                 }

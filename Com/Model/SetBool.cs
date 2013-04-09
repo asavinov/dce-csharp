@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Offset = System.Int32;
 
 namespace Com.Model
 {
@@ -33,8 +34,8 @@ namespace Com.Model
         {
             // TODO: Parameterize this instance as boolean virtual set. Important: isPrimitive
             Name = "Bool"; // So the parameter is ignored
-            Instantiable = false;
-            Primitive = true;
+            IsInstantiable = false;
+            IsPrimitive = true;
         }
 
         #endregion

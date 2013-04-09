@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Diagnostics;
+using Offset = System.Int32;
 
 namespace Com.Model
 {
@@ -42,14 +43,14 @@ namespace Com.Model
         /// <summary>
         /// Is identity dimension.
         /// </summary>
-        public bool Identity { get; set; }
+        public bool IsIdentity { get; set; }
 
         /// <summary>
         /// Reversed dimension has the opposite semantic interpretation (direction). It is used to resolve semantic cycles. 
         /// For example, when a department references its manager then this dimension is makred by this flag. 
         /// One use is when deciding +how to interpret input and output dimensions of sets and lesser/greater sets of dimensions.
         /// </summary>
-        public bool Reversed { get; set; }
+        public bool IsReversed { get; set; }
 
         /// <summary>
         /// Whether this dimension is supposed (able) to have instances. Some dimensions are used for conceptual purposes. 
@@ -58,19 +59,27 @@ namespace Com.Model
         /// Different interpretations: the power of the domain can increase; the power of the domain is not 0; 
         /// </summary>
         private bool _instantiable;
-        public bool Instantiable { get { return LesserSet.Instantiable; } private set { _instantiable = value; } }
+        public bool IsInstantiable { get { return LesserSet.IsInstantiable; } private set { _instantiable = value; } }
 
         /// <summary>
         /// Whether this dimension to take no values.
         /// </summary>
-        public bool Nullable { get; set; }
+        public bool IsNullable { get; set; }
 
         /// <summary>
         /// Temporary dimension is discarded after it has been used for computing other dimensions.
         /// It is normally invisible (private) dimension. 
         /// It can be created in the scope of some other dimension, expression or query, and then it is automatically deleted when the process exits this scope.
         /// </summary>
-        public bool Temporary { get; set; }
+        public bool IsTemporary { get; set; }
+
+        public bool IsPrimitive
+        {
+            get
+            {
+                return GreaterSet.IsPrimitive;
+            }
+        }
 
         #endregion
 
@@ -118,6 +127,34 @@ namespace Com.Model
         /// </summary>
         public List<Dimension> Path { get; private set; }
 
+        public void AddSegment(Dimension dim)
+        {
+            if (Path == null)
+            {
+                Path = new List<Dimension>();
+            }
+
+            Path.Add(dim);
+            dim.LesserSet = GreaterSet; // We can add only to the end
+            GreaterSet = dim.GreaterSet;
+        }
+
+        public Dimension RemoveSegment()
+        {
+            if (Path == null)
+            {
+                Path = new List<Dimension>();
+                return null;
+            }
+
+            if (Path.Count == 0) return null; // Nothing to remove
+
+            GreaterSet = Path[Path.Count - 1].LesserSet;
+            Dimension result = Path[Path.Count - 1];
+            Path.RemoveAt(Path.Count - 1);
+            return result;
+        }
+
         public int Rank
         {
             get
@@ -148,6 +185,22 @@ namespace Com.Model
                 if (path[i] != Path[i]) return false;
             }
             return true;
+        }
+
+        public Dimension FirstSegment
+        {
+            get
+            {
+                return Path == null || Path.Count == 0 ? null : Path[0];
+            }
+        }
+
+        public Dimension LastSegment
+        {
+            get
+            {
+                return Path == null || Path.Count == 0 ? null : Path[Path.Count - 1];
+            }
         }
 
         /// <summary>
@@ -237,6 +290,13 @@ namespace Com.Model
 
         public virtual void SetValue(int offset, object value) { }
 
+        public virtual int[] GetOffsets(object value) { return null; }
+
+        /// <summary>
+        /// It is a convenience property used to import/export data and other purposes. 
+        /// </summary>
+        public virtual object CurrentValue { get; set; }
+
         /// <summary>
         /// It is used to compose a remote query for loading data during population and then interpret the result set by mapping to local terms. 
         /// </summary>
@@ -262,9 +322,9 @@ namespace Com.Model
             Id = uniqueId++;
             Name = name;
 
-            Identity = isIdentity;
-            Reversed = isReversed;
-            Instantiable = isInstantiable;
+            IsIdentity = isIdentity;
+            IsReversed = isReversed;
+            IsInstantiable = isInstantiable;
 
             Path = new List<Dimension>();
 
