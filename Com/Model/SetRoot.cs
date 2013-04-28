@@ -40,10 +40,13 @@ namespace Com.Model
 
             switch (externalType)
             {
-                case "Double": // System.Data.OleDb.OleDbType.Double
+                case "Double": // System.Data.OleDb.OleDbType.Double "Numeric"
+                case "Numeric":
                     localType = "Double";
                     break;
                 case "Integer": // System.Data.OleDb.OleDbType.Integer
+                case "UnsignedTinyInt":
+                case "SmallInt":
                     localType = "Integer";
                     break;
                 case "Char": // System.Data.OleDb.OleDbType.Char
@@ -52,12 +55,69 @@ namespace Com.Model
                 case "WChar": // System.Data.OleDb.OleDbType.WChar
                     localType = "String";
                     break;
+                case "Boolean":
+                    localType = "Boolean";
+                    break;
+                case "Date":
+                    localType = "String";
+                    break;
+                case "Currency":
+                    localType = "Double";
+                    break;
                 default:
-                    localType = "String"; // All the rest of types or error
+                    localType = externalType; // The same type name
                     break;
             }
 
             return localType;
+        }
+
+        public virtual Set MapToLocalSet(Set externalSet)
+        {
+            string externalType = externalSet.Name;
+            Set localSet = null;
+            string localType = null;
+
+            if (externalSet.IsRoot)
+            {
+                return this; // Root is mapped to root by definition
+            }
+
+            if (externalSet.IsPrimitive)
+            {
+                // Primitive sets never point to a remote source so we use some predefined mapping rules
+                localType = MapToLocalType(externalType);
+                localSet = GetPrimitiveSubset(localType);
+                return localSet;
+            }
+
+            foreach (Set set in GetAllSubsets()) // First, we try to find explicitly marked sets
+            {
+                if (set.IsRoot) continue;
+                if (set.IsPrimitive) continue;
+
+                if (String.IsNullOrEmpty(set.FromSetName)) continue;
+
+                if (set.FromSetName.Equals(externalType, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    localSet = set; // Found.
+                    return localSet;
+                }
+            }
+
+            foreach (Set set in GetAllSubsets()) // Second, we try to find by semantics
+            {
+                if (set.IsRoot) continue;
+                if (set.IsPrimitive) continue;
+
+                if (set.Name.Equals(externalType, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    localSet = set; // Found.
+                    return localSet;
+                }
+            }
+
+            return localSet;
         }
 
         public virtual DataTable Export(Set set)
@@ -84,6 +144,9 @@ namespace Com.Model
 
             SetString setString = new SetString("String");
             setString.SuperDim = new DimRoot("super", setString, this);
+
+            SetBoolean setBoolean = new SetBoolean("Boolean");
+            setBoolean.SuperDim = new DimRoot("super", setBoolean, this);
         }
     }
 

@@ -12,7 +12,7 @@ namespace Com.Model
     /// One array of type T stores elements in their original order without sorting. 
     /// Second array stores indexes (offsets) of elements in the first array in sorted order.
     /// </summary>
-    public class DimPrimitive<T> : Dimension
+    public class DimPrimitive<T> : Dim
     {
         private T[] _cells; // Each cell contains a T value in arbitrary original order
         private int[] _offsets; // Each cell contains an offset to an element in cells in ascending or descending order

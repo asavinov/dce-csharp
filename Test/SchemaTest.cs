@@ -59,13 +59,13 @@ namespace Test
             t1.SuperDim = new DimRoot("super", t1, root);
 
             // Insert attributes
-            Dimension orders = new DimPrimitive<int>("orders", t1, setInteger);
+            Dim orders = new DimPrimitive<int>("orders", t1, setInteger);
             t1.AddGreaterDim(orders);
 
-            Dimension revenue = new DimPrimitive<double>("revenue", t1, setDouble);
+            Dim revenue = new DimPrimitive<double>("revenue", t1, setDouble);
             t1.AddGreaterDim(revenue);
 
-            Dimension name = new DimPrimitive<string>("name", t1, setString);
+            Dim name = new DimPrimitive<string>("name", t1, setString);
             t1.AddGreaterDim(name);
 
             Assert.AreEqual(1, t1.GreaterDims.Count(x => x.Name == "orders"));

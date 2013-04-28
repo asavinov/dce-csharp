@@ -22,7 +22,7 @@ namespace Com.Model
             get { return sizeof(double); }
         }
 
-        public override Dimension CreateDefaultLesserDimension(string name, Set lesserSet)
+        public override Dim CreateDefaultLesserDimension(string name, Set lesserSet)
         {
             return new DimPrimitive<double>(name, lesserSet, this);
         }

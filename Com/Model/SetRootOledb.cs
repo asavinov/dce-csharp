@@ -120,10 +120,10 @@ namespace Com.Model
                 string columnName = col["COLUMN_NAME"].ToString();
                 string columnType = MapToLocalType(((OleDbType)col["DATA_TYPE"]).ToString());
 
-                Dimension path = tableSet.GetGreaterPath(columnName); // It might have been already added
+                Dim path = tableSet.GetGreaterPath(columnName); // It might have been already added
                 if (path == null)
                 {
-                    path = new Dimension(columnName);
+                    path = new Dim(columnName);
                     path.SelectDefinition = columnName;
                     path.LesserSet = tableSet; // Assign domain set give the table name
                     path.GreaterSet = Root.GetPrimitiveSubset(columnType);
@@ -158,7 +158,7 @@ namespace Com.Model
                     string fkName = (string)fk["FK_NAME"];
                     Debug.Assert(tableSet.GetGreaterDim(fkName) == null, "A dimension already exists.");
 
-                    Dimension fkSegment = new Dimension(fkName); // It is the first segment in the path representing this FK
+                    Dim fkSegment = new Dim(fkName); // It is the first segment in the path representing this FK
                     fkSegment.LesserSet = tableSet;
 
                     string fkTargetTableName = (string)fk["PK_TABLE_NAME"]; // Name of the target set of the simple dimension (first segment of this complex path)
@@ -180,10 +180,10 @@ namespace Com.Model
                     //
 
                     string fkTargetColumnName = (string)fk["PK_COLUMN_NAME"]; // Next path name belonging to the target set
-                    Dimension fkTargetPath = fkTargetSet.GetGreaterPath(fkTargetColumnName); // This column might have been created
+                    Dim fkTargetPath = fkTargetSet.GetGreaterPath(fkTargetColumnName); // This column might have been created
                     if (fkTargetPath == null)
                     {
-                        fkTargetPath = new Dimension(fkTargetColumnName);
+                        fkTargetPath = new Dim(fkTargetColumnName);
                         fkTargetPath.LesserSet = fkTargetSet;
                         fkTargetPath.GreaterSet = path.GreaterSet;
                         fkTargetSet.AddGreaterPath(fkTargetPath); // We do not know if it is really a FK or simple dimension so this needs to be fixed later
@@ -202,7 +202,7 @@ namespace Com.Model
 
                 if (path.Path.Count == 0) // Not FK - just normal column
                 {
-                    Dimension dim = new Dimension(path.Name);
+                    Dim dim = new Dim(path.Name);
                     dim.LesserSet = path.LesserSet;
                     dim.GreaterSet = path.GreaterSet;
                     dim.IsIdentity = path.IsIdentity;
@@ -236,7 +236,7 @@ namespace Com.Model
             List<Set> sets = GetAllSubsets();
             foreach (Set set in sets)
             {
-                foreach (Dimension path in set.GreaterPaths.ToArray())
+                foreach (Dim path in set.GreaterPaths.ToArray())
                 {
                     path.ExpandPath();
                 }
@@ -249,8 +249,8 @@ namespace Com.Model
 
             // Generate query for our database engine by including at least all identity dimensions
             string select = ""; // Attribute names or their definitions stored in the dimensions
-            List<Dimension> attributes = set.GreaterPaths; // We need our custom aliases with target platform definitions as db-specific column names
-            foreach (Dimension dim in attributes)
+            List<Dim> attributes = set.GreaterPaths; // We need our custom aliases with target platform definitions as db-specific column names
+            foreach (Dim dim in attributes)
             {
                 select += "[" + (String.IsNullOrEmpty(dim.SelectDefinition) ? dim.Name : dim.SelectDefinition) + "]" + ", ";
             }
@@ -298,6 +298,7 @@ namespace Com.Model
         public SetRootOledb(string name)
             : base(name) // C#: If nothing specified, then base() will always be called by default
         {
+            // We need to bootstrap the database with primitive types corresponding to OleDb standard
         }
 
         #region Deprecated

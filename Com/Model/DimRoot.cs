@@ -9,7 +9,7 @@ namespace Com.Model
     /// <summary>
     /// This super dimension leads to an empty set (root) and does not store any elements. 
     /// </summary>
-    public class DimRoot : Dimension
+    public class DimRoot : Dim
     {
         public DimRoot(string name, Set lesserSet, Set greaterSet) 
             : base(name, lesserSet, greaterSet)

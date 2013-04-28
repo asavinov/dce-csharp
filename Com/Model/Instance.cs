@@ -15,13 +15,14 @@ namespace Com.Model
     public class Instance
     {
         /// <summary>
-        /// For leaf instances with no children this field stores a real object.
-        /// For intermediate nodes with children it is null.
+        /// For leaf instances with no children this field stores a real value like double.
+        /// For intermediate nodes it is either null or contains a surrogate (offset).
         /// </summary>
         public object Value { get; set; }
 
         /// <summary>
-        /// It is a set this value belongs to, that is, where this value is a member.
+        /// It identifies a set this value belongs to, that is, where this value is a member.
+        /// Many nodes can reference the same set if the same greater set is used in many paths. 
         /// </summary>
         public string SetName { get; set; }
         public Set Set { get; set; }
@@ -31,13 +32,13 @@ namespace Com.Model
         /// This dimension has a lesser set equal to the parent, and greater set equal to this set (name of this node).
         /// </summary>
         public string DimensionName { get; set; }
-        public Dimension Dimension { get; set; }
+        public Dim Dimension { get; set; }
 
         /// <summary>
         /// Constituents of this element.
         /// </summary>
         public List<Instance> ChildInstances { get; set; }
-        public Instance GetChild(Dimension dimension)
+        public Instance GetChild(Dim dimension)
         {
             return ChildInstances.FirstOrDefault(i => i.Dimension == dimension);
         }
@@ -64,6 +65,15 @@ namespace Com.Model
             }
         }
 
+        public void EmptyValues()
+        {
+            Value = null;
+            foreach (Instance child in ChildInstances)
+            {
+                child.EmptyValues();
+            }
+        }
+
         // GetPrimitiveDictionary
         // Get primitive values (flatten the tree). Either as a dictionary or as a flattened Instance (remove intermediate nodes).
         // Set primitive value given a path name or list of intermediate names
@@ -73,15 +83,24 @@ namespace Com.Model
         // Map instance-dimensions (various options)
         // Build instance from a flat key-value pairs (raw from a flat result set)
 
-        public static Instance CreatePrimitiveInstance(Set set)
-        {
-            // Create instance structure corresponding to the primitive structure of identity dimensions of the specified set
-            Instance instance = new Instance();
-            return instance;
-        }
-
         public void SetValues(DataRow row, object mapping)
         {
+        }
+
+        public Instance(Set set)
+        {
+            Set = set;
+            SetName = set.Name;
+
+            // Create instances for each greater dimension set (recursively) and add them to the new instance. 
+            foreach (Dim dim in set.GreaterDims)
+            {
+                Instance child = new Instance(dim.GreaterSet);
+                child.Dimension = dim;
+                child.DimensionName = dim.Name;
+                child.ParentInstance = this;
+                ChildInstances.Add(child);
+            }
         }
 
     }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,7 +14,7 @@ namespace Com.Model
     /// Extensions also can define functions defined via a formula or a query to an external database.
     /// It is only important that a function somehow impplements a mapping from its lesser set to its greater set. 
     /// </summary>
-    public class Dimension
+    public class Dim : IEnumerable
     {
         #region Properties
 
@@ -99,8 +100,8 @@ namespace Com.Model
         /// Parent dimension. 
         /// It is null for original complex dimensions of a set which point to a direct greater set.
         /// </summary>
-        private Dimension _parentDimension;
-        public Dimension ParentDimension
+        private Dim _parentDimension;
+        public Dim ParentDimension
         {
             get { return _parentDimension; }
             set
@@ -108,11 +109,11 @@ namespace Com.Model
                 _parentDimension = value; // TODO: Update all influenced elements.
             }
         }
-        public Dimension Root
+        public Dim Root
         {
             get
             {
-                Dimension root = this;
+                Dim root = this;
                 while (root.ParentDimension != null)
                 {
                     root = root.ParentDimension;
@@ -125,13 +126,13 @@ namespace Com.Model
         /// <summary>
         /// A dimension can be defined as a sequence of other dimensions. For simple dimensions the path is empty.
         /// </summary>
-        public List<Dimension> Path { get; private set; }
+        public List<Dim> Path { get; private set; }
 
-        public void AddSegment(Dimension dim)
+        public void AddSegment(Dim dim)
         {
             if (Path == null)
             {
-                Path = new List<Dimension>();
+                Path = new List<Dim>();
             }
 
             Path.Add(dim);
@@ -139,18 +140,18 @@ namespace Com.Model
             GreaterSet = dim.GreaterSet;
         }
 
-        public Dimension RemoveSegment()
+        public Dim RemoveSegment()
         {
             if (Path == null)
             {
-                Path = new List<Dimension>();
+                Path = new List<Dim>();
                 return null;
             }
 
             if (Path.Count == 0) return null; // Nothing to remove
 
             GreaterSet = Path[Path.Count - 1].LesserSet;
-            Dimension result = Path[Path.Count - 1];
+            Dim result = Path[Path.Count - 1];
             Path.RemoveAt(Path.Count - 1);
             return result;
         }
@@ -161,7 +162,7 @@ namespace Com.Model
             {
                 if (Path == null || Path.Count == 0) return 1; // Simple dimension
                 int r = 0;
-                foreach (Dimension dim in Path)
+                foreach (Dim dim in Path)
                 {
                     r += dim.Rank;
                 }
@@ -177,7 +178,7 @@ namespace Com.Model
             }
         }
 
-        public bool StartsWith(List<Dimension> path)
+        public bool StartsWith(List<Dim> path)
         {
             if (Path.Count < path.Count) return false;
             for (int i = 0; i < path.Count; i++ )
@@ -187,7 +188,7 @@ namespace Com.Model
             return true;
         }
 
-        public Dimension FirstSegment
+        public Dim FirstSegment
         {
             get
             {
@@ -195,7 +196,7 @@ namespace Com.Model
             }
         }
 
-        public Dimension LastSegment
+        public Dim LastSegment
         {
             get
             {
@@ -208,7 +209,7 @@ namespace Com.Model
         /// </summary>
         public void ExpandPath()
         {
-            List<Dimension> allSegments = GetAllSegments();
+            List<Dim> allSegments = GetAllSegments();
             Path.Clear();
             if (allSegments != null && allSegments.Count != 0)
             {
@@ -225,10 +226,10 @@ namespace Com.Model
             }
         }
 
-        private List<Dimension> GetAllSegments()
+        private List<Dim> GetAllSegments()
         {
             if (Path == null) return null;
-            List<Dimension> result = new List<Dimension>();
+            List<Dim> result = new List<Dim>();
             for (int i = 0; i < Path.Count; i++)
             {
                 if (Path[i].IsComplex)
@@ -253,13 +254,13 @@ namespace Com.Model
             return Rank; // TODO
         }
 
-        public Dimension GetSegment(int rank)
+        public Dim GetSegment(int rank)
         {
             Debug.Assert(rank >= 0, "Wrong use of method parameter. Rank cannot be negative.");
             return rank < Path.Count ? Path[rank] : null; // TODO: take into account the nested structure of complex dimensions
         }
 
-        public void Concatenate(List<Dimension> path)
+        public void Concatenate(List<Dim> path)
         {
             Debug.Assert(path != null);
             if(Path[0].LesserSet == path[path.Count-1].GreaterSet) // Insert as prefix
@@ -305,19 +306,54 @@ namespace Com.Model
 
         #endregion
 
+        #region IEnumerable Members
+
+        public IEnumerator GetEnumerator()
+        {
+            return (IEnumerator)new DepthDimEnumerator(this);
+        }
+
+        #endregion
+
+        #region Overriding System.Object
+
+        public override string ToString()
+        {
+            return String.Format("{0} {1}, ID: {2}", Name, 0, Id);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (obj == null) return false;
+            if (Object.ReferenceEquals(this, obj)) return true;
+            if (this.GetType() != obj.GetType()) return false;
+
+            Dim dim = (Dim)obj;
+            if (Id.Equals(dim.Id)) return true;
+
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return Id.GetHashCode();
+        }
+
+        #endregion
+
         #region Constructors and initializers.
 
-        public Dimension(string name)
+        public Dim(string name)
             : this(name, null, null)
         {
         }
 
-        public Dimension(string name, Set lesserSet, Set greaterSet)
+        public Dim(string name, Set lesserSet, Set greaterSet)
             : this(name, lesserSet, greaterSet, false, false, true)
         {
         }
 
-        public Dimension(string name, Set lesserSet, Set greaterSet, bool isIdentity, bool isReversed, bool isInstantiable)
+        public Dim(string name, Set lesserSet, Set greaterSet, bool isIdentity, bool isReversed, bool isInstantiable)
         {
             Id = uniqueId++;
             Name = name;
@@ -326,7 +362,7 @@ namespace Com.Model
             IsReversed = isReversed;
             IsInstantiable = isInstantiable;
 
-            Path = new List<Dimension>();
+            Path = new List<Dim>();
 
             LesserSet = lesserSet;
             GreaterSet = greaterSet;
@@ -335,7 +371,7 @@ namespace Com.Model
             // Parameterize depending on the greater and lesser set type. For example, dimension type must correspond to its greater set type (SetInteger <- DimInteger etc.)
         }
 
-        public Dimension(string name, Dimension sourceDim)
+        public Dim(string name, Dim sourceDim)
             : this(name, sourceDim.LesserSet, sourceDim.GreaterSet)
         {
             // It will be a clone of the source dimension (the same function)
@@ -346,4 +382,108 @@ namespace Com.Model
         #endregion
 
     }
+
+    public abstract class DimEnumerator : IEnumerable
+    {
+        public List<Dim> _Path = new List<Dim>();
+
+       public DimEnumerator(Dim tree)
+        {
+            _Path.Add(tree);
+        }
+
+        // Get the explicit current node.
+        public Dim Current { get { return _Path[_Path.Count - 1]; } }
+
+/*
+        // Get the implicit current node.
+        object System.Collections.IEnumerator.Current
+        {
+            get { return _Path[_Path.Count - 1]; }
+        }
+*/
+ 
+        // Increment the iterator and moves the current node to the next one
+        public abstract bool MoveNext();
+
+        // Dispose the object.
+        public void Dispose()
+        {
+            _Path.Clear();
+        }
+
+        // Reset the iterator.
+        public void Reset()
+        {
+            Dim segment = _Path[0];
+            _Path.Clear();
+            _Path.Add(segment);
+        }
+
+        // Get the underlying enumerator.
+        public virtual IEnumerator GetEnumerator()
+        {
+            return (IEnumerator < Dim >)this;
+        }
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+        {
+            // this calls the IEnumerator<Foo> GetEnumerator method
+            // as explicit method implementations aren't used for method resolution in C#
+            // polymorphism (IEnumerator<T> implements IEnumerator)
+            // ensures this is type-safe
+            return GetEnumerator();
+        }
+    }
+
+    /// <summary>
+    /// Implementing iterators: 
+    /// http://msdn.microsoft.com/en-us/magazine/cc163682.aspx
+    /// http://www.codeproject.com/Articles/34352/Tree-Iterators
+    /// TODO:
+    /// - study how to use yield in iterators
+    /// - study how to use nested classes for iterators
+    /// - implement many different kinds of iterators: depth-first, bredth-first, leafs-only etc.
+    /// </summary>
+    public class DepthDimEnumerator : DimEnumerator
+    {
+        public DepthDimEnumerator(Dim tree)
+            : base(tree) { }
+
+        public override bool MoveNext()
+        {
+            if (!Current.GreaterSet.IsPrimitive) // Not a leaf - go deeper
+            {
+                _Path.Add(Current.GreaterSet.GreaterDims[0]);
+                return true;
+            }
+
+            // Return back until we find the next child
+            Dim child = null; 
+            do
+            {
+                child = Current;
+                _Path.RemoveAt(_Path.Count - 1);
+                if (_Path.Count == 0) // End. It was the last element.
+                {
+                    return false;
+                }
+                List<Dim> children = Current.GreaterSet.GetIdentityDims();
+                int childIndex = children.IndexOf(child);
+                if (childIndex + 1 < children.Count) // Use this next child
+                {
+                    child = children[childIndex + 1];
+                    _Path.Add(child);
+                    return true;
+                }
+                else // No next child
+                {
+                    child = null;
+                }
+            } while (child == null);
+
+            return true;
+        }
+    }
+
 }

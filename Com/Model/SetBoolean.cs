@@ -10,7 +10,7 @@ namespace Com.Model
     /// A primitive, virtual or predefined set of all elements. 
     /// It does not store real instance and has one formal super-dimension and no greater dimensions.
     /// </summary>
-    class SetBool : Set
+    class SetBoolean : Set
     {
         public override int Length
         {
@@ -22,18 +22,18 @@ namespace Com.Model
             get { return sizeof(bool); } // It actually depends on how it is represented and depends on the dimension.
         }
 
-        public override Dimension CreateDefaultLesserDimension(string name, Set lesserSet)
+        public override Dim CreateDefaultLesserDimension(string name, Set lesserSet)
         {
             return new DimPrimitive<bool>(name, lesserSet, this);
         }
 
         #region Constructors and initializers.
 
-        public SetBool(string name)
+        public SetBoolean(string name)
             : base(name)
         {
             // TODO: Parameterize this instance as boolean virtual set. Important: isPrimitive
-            Name = "Bool"; // So the parameter is ignored
+            Name = "Boolean"; // So the parameter is ignored
             IsInstantiable = false;
             IsPrimitive = true;
         }

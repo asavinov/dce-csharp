@@ -12,7 +12,7 @@ namespace Test
         [TestMethod]
         public void PrimDimensinTest()
         {
-            Dimension dim = new DimPrimitive<int>("Test", null, null);
+            Dim dim = new DimPrimitive<int>("Test", null, null);
 
             //
             // Insert new data
@@ -44,13 +44,13 @@ namespace Test
             Set t1 = new Set("t1");
             t1.SuperDim = new DimRoot("super", t1, root);
 
-            Dimension orders = new DimPrimitive<int>("orders", t1, setInteger);
+            Dim orders = new DimPrimitive<int>("orders", t1, setInteger);
             t1.AddGreaterDim(orders);
 
-            Dimension revenue = new DimPrimitive<double>("revenue", t1, setDouble);
+            Dim revenue = new DimPrimitive<double>("revenue", t1, setDouble);
             t1.AddGreaterDim(revenue);
 
-            Dimension name = new DimPrimitive<string>("name", t1, setString);
+            Dim name = new DimPrimitive<string>("name", t1, setString);
             t1.AddGreaterDim(name);
 
             //

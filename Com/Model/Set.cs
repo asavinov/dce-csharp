@@ -71,14 +71,14 @@ namespace Com.Model
 
         #region Simple dimensions
 
-        public List<Dimension> SuperDims { get; private set; }
-        public List<Dimension> SubDims { get; private set; }
-        public List<Dimension> GreaterDims { get; private set; }
-        public List<Dimension> LesserDims { get; private set; }
+        public List<Dim> SuperDims { get; private set; }
+        public List<Dim> SubDims { get; private set; }
+        public List<Dim> GreaterDims { get; private set; }
+        public List<Dim> LesserDims { get; private set; }
 
-        public List<Dimension> GetDims(DimensionType dimType, DimensionDirection dimDirection) // Selector of field depending on parameters
+        public List<Dim> GetDims(DimensionType dimType, DimensionDirection dimDirection) // Selector of field depending on parameters
         {
-            List<Dimension> result = null;
+            List<Dim> result = null;
 
             if (dimDirection == DimensionDirection.GREATER)
             {
@@ -108,7 +108,7 @@ namespace Com.Model
 
         #region Inclusion. Super.
 
-        public Dimension SuperDim
+        public Dim SuperDim
         {
             get
             {
@@ -117,7 +117,7 @@ namespace Com.Model
             }
             set
             {
-                Dimension dim = SuperDim;
+                Dim dim = SuperDim;
                 if (value == null) // Remove the current super-dimension
                 {
                     if (dim != null)
@@ -165,6 +165,11 @@ namespace Com.Model
             }
         }
 
+        public bool IsRoot
+        {
+            get { return SuperDim == null; }
+        }
+
         #endregion
 
         #region Inclusion. Sub.
@@ -199,7 +204,7 @@ namespace Com.Model
                 set = this;
             }
 
-            foreach (Dimension d in SubDims)
+            foreach (Dim d in SubDims)
             {
                 if (set != null) break;
                 set = d.LesserSet.FindSubset(name);
@@ -220,7 +225,7 @@ namespace Com.Model
 
         public Set GetPrimitiveSubset(string name)
         {
-            Dimension dim = SubDims.FirstOrDefault(x => x.LesserSet.IsPrimitive && x.LesserSet.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+            Dim dim = SubDims.FirstOrDefault(x => x.LesserSet.IsPrimitive && x.LesserSet.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
             return dim != null ? dim.LesserSet : null;
         }
 
@@ -245,38 +250,39 @@ namespace Com.Model
             }
         }
 
-        public List<Dimension> GetGreaterLeafDims()
+        public List<Dim> GetGreaterLeafDims()
         {
-            List<Dimension> leaves = new List<Dimension>();
-            foreach (Dimension dim in GreaterDims)
+            List<Dim> leaves = new List<Dim>();
+            foreach (Dim dim in GreaterDims)
             {
                 // leaves.AddRange(dim.GetLeafDimensions());
             }
             return leaves;
         }
 
-        public void AddGreaterDim(Dimension dim)
+        public void AddGreaterDim(Dim dim)
         {
             RemoveGreaterDim(dim);
+            Debug.Assert(dim.GreaterSet != null && dim.LesserSet != null, "Wrong use: dimension must specify a lesser and greater sets before it can be added to a set.");
             // TODO: propagate addition of new dimension by updating higher rank dimensions and other parameters
             dim.GreaterSet.LesserDims.Add(dim);
             dim.LesserSet.GreaterDims.Add(dim);
         }
-        public void RemoveGreaterDim(Dimension dim)
+        public void RemoveGreaterDim(Dim dim)
         {
             // TODO: propagate removal of the dimension by updating higher rank dimensions and other parameters
-            dim.GreaterSet.LesserDims.Remove(dim);
-            dim.LesserSet.GreaterDims.Remove(dim);
+            if (dim.GreaterSet != null) dim.GreaterSet.LesserDims.Remove(dim);
+            if (dim.LesserSet != null) dim.LesserSet.GreaterDims.Remove(dim);
         }
         public void RemoveGreaterDim(string name)
         {
-            Dimension dim = GetGreaterDim(name);
+            Dim dim = GetGreaterDim(name);
             if (dim != null)
             {
                 RemoveGreaterDim(dim);
             }
         }
-        public Dimension GetGreaterDim(string name)
+        public Dim GetGreaterDim(string name)
         {
             return GreaterDims.FirstOrDefault(d => d.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
         }
@@ -284,7 +290,7 @@ namespace Com.Model
         {
             return GreaterDims.Select(x => x.GreaterSet).ToList();
         }
-        public List<Dimension> GetIdentityDims()
+        public List<Dim> GetIdentityDims()
         {
             return GreaterDims.Where(x => x.IsIdentity).ToList();
         }
@@ -305,42 +311,48 @@ namespace Com.Model
 
         #region Complex dimensions (paths)
 
-        public List<Dimension> SuperPaths { get; private set; }
-        public List<Dimension> SubPaths { get; private set; }
-        public List<Dimension> GreaterPaths { get; private set; }
-        public List<Dimension> LesserPaths { get; private set; }
+        public List<Dim> SuperPaths { get; private set; }
+        public List<Dim> SubPaths { get; private set; }
+        public List<Dim> GreaterPaths { get; private set; }
+        public List<Dim> LesserPaths { get; private set; }
 
-        public void AddGreaterPath(Dimension path)
+        public void AddGreaterPath(Dim path)
         {
+            Debug.Assert(path.GreaterSet != null && path.LesserSet != null, "Wrong use: path must specify a lesser and greater sets before it can be added to a set.");
             RemoveGreaterPath(path);
             path.GreaterSet.LesserPaths.Add(path);
             path.LesserSet.GreaterPaths.Add(path);
         }
-        public void RemoveGreaterPath(Dimension path)
+        public void RemoveGreaterPath(Dim path)
         {
-            path.GreaterSet.LesserPaths.Remove(path);
-            path.LesserSet.GreaterPaths.Remove(path);
+            if (path.GreaterSet != null) path.GreaterSet.LesserPaths.Remove(path);
+            if (path.LesserSet != null) path.LesserSet.GreaterPaths.Remove(path);
         }
         public void RemoveGreaterPath(string name)
         {
-            Dimension path = GetGreaterPath(name);
+            Dim path = GetGreaterPath(name);
             if (path != null)
             {
                 RemoveGreaterPath(path);
             }
         }
-        public Dimension GetGreaterPath(string name)
+        public Dim GetGreaterPath(string name)
         {
             return GreaterPaths.FirstOrDefault(d => d.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
         }
-        public List<Dimension> GetGreaterPathsStartingWith(Dimension path)
+        public List<Dim> GetGreaterPathsStartingWith(Dim path)
         {
-            var result = new List<Dimension>();
-            foreach (Dimension p in GreaterPaths)
+            if (path == null || path.Path == null) return new List<Dim>();
+            return GetGreaterPathsStartingWith(path.Path);
+        }
+        public List<Dim> GetGreaterPathsStartingWith(List<Dim> path)
+        {
+            var result = new List<Dim>();
+            foreach (Dim p in GreaterPaths)
             {
-                if (p.Path == null || path.Path == null) continue;
-                if (p.Path.Count < path.Path.Count) continue; // Too short path (cannot include the input path)
-                if (p.StartsWith(path.Path))
+                if (p.Path == null) continue;
+                if (p.Path.Count < path.Count) continue; // Too short path (cannot include the input path)
+                if (p.StartsWith(path))
                 {
                     result.Add(p);
                 }
@@ -527,20 +539,20 @@ namespace Com.Model
 
         public virtual object GetValue(string name, int offset)
         {
-            Dimension dim = GetGreaterDim(name);
+            Dim dim = GetGreaterDim(name);
             return dim.GetValue(offset);
         }
 
         public virtual void SetValue(string name, int offset, object value)
         {
-            Dimension dim = GetGreaterDim(name);
+            Dim dim = GetGreaterDim(name);
             dim.SetValue(offset, value);
         }
 
         public virtual int Append() // Append or find default values
         {
             // Delegate to all dimensions
-            foreach (Dimension d in GreaterDims)
+            foreach (Dim d in GreaterDims)
             {
                 d.Append(0); // Append default value for this dimension
             }
@@ -549,11 +561,10 @@ namespace Com.Model
             return _length;
         }
         
-        public virtual object AppendOrFindIdentity(Dimension lesserPath)
+        public virtual object AppendOrFindIdentity(Dim lesserPath)
         {
             object ret = null;
-            // End of recursion. Here we do not compute the value from greater elemenets but rather get it from the path as final values
-            if (IsPrimitive)
+            if (IsPrimitive) // End of recursion. Here we do not compute the value from greater elemenets but rather get it from the path as final values
             {
                 var paths = lesserPath.LesserSet.GetGreaterPathsStartingWith(lesserPath); // Find the path with the value
                 if (paths == null || paths.Count == 0) // Not found
@@ -576,12 +587,12 @@ namespace Com.Model
             }
 
             // If it is not primitive then we really find/append value in the greater dimensions and then store the found/appended in the last segment
-            int[] result = Enumerable.Range(0, Length).ToArray(); // All elements
-            foreach(Dimension dim in GreaterDims) // OPTIMIZE: the order of dimensions matters. Use statistics for ordering dimensions. First, use dimensions providing better filtering. 
+            int[] result = Enumerable.Range(0, Length).ToArray(); // All elements (can be quite long)
+            foreach(Dim dim in GreaterDims) // OPTIMIZE: the order of dimensions matters. Use statistics for ordering dimensions. First, use dimensions providing better filtering. 
             {
                 // First, we need to find the value to be appended recursively (it is empty)
                 lesserPath.AddSegment(dim);
-                dim.GreaterSet.AppendOrFindIdentity(lesserPath); // This will set CurrentValue for this dimension
+                dim.GreaterSet.AppendOrFindIdentity(lesserPath); // Recursion. This will set CurrentValue for this dimension
                 lesserPath.RemoveSegment();
 
                 if (!dim.IsIdentity) continue;
@@ -594,7 +605,7 @@ namespace Com.Model
 
             if (result.Length == 0) // Not found - append
             {
-                foreach (Dimension dim in GreaterDims) // We have to append to all dimensions - not only identity dimensions
+                foreach (Dim dim in GreaterDims) // We have to append to all dimensions - not only identity dimensions
                 {
                     // OPTIMIZE: Provide positions for the values which have been found during the search (not all positions are known if the search has been broken).
                     dim.Append(dim.CurrentValue);
@@ -619,24 +630,76 @@ namespace Com.Model
             return ret;
         }
 
+        public virtual object AppendOrFindIdentity(Expression expr)
+        {
+            object ret = null;
+            if (IsPrimitive) // End of recursion. Here we do not compute the value from greater elemenets but rather get it from the expression as final values
+            {
+                ret = expr.Output;
+                return ret;
+            }
+
+            // If it is not primitive then we really find/append value in all greater dimensions and then store the found/appended
+            int[] result = Enumerable.Range(0, Length).ToArray(); // All elements of this set (can be quite long)
+            foreach (Dim dim in GreaterDims) // OPTIMIZE: the order of dimensions matters. Use statistics for ordering dimensions. First, use dimensions providing better filtering. 
+            {
+                // First, find or append the value recursively. It will be in Output
+                Expression childExpr = expr.GetOperand(dim.Name);
+                dim.GreaterSet.AppendOrFindIdentity(childExpr);
+
+                if (!dim.IsIdentity) continue;
+
+                // Second, use this value to analyze a combination of values for uniqueness - only for identity dimensions
+                int[] range = dim.GetOffsets(childExpr.Output); // Deproject the value
+                result = result.Intersect(range).ToArray(); // OPTIMIZE: Write our own implementation for various operations. Assume that they are ordered.
+                // OPTIMIZE: Remember the position for the case this value will have to be inserted so we do not have again search for this positin during insertion (optimization)
+            }
+
+            if (result.Length == 0) // Not found - append
+            {
+                foreach (Dim dim in GreaterDims) // We have to append to all dimensions - not only identity dimensions
+                {
+                    Expression childExpr = expr.GetOperand(dim.Name);
+                    // OPTIMIZE: Provide positions for the values which have been found during the search (not all positions are known if the search has been broken).
+                    dim.Append(childExpr.Output);
+                }
+                _length++;
+                ret = Length - 1;
+            }
+            else if (result.Length == 1) // Found single element - return its offset
+            {
+                ret = result[0];
+            }
+            else // Many elements satisfy these properties (non-unique identities)
+            {
+                ret = null; // TODO: Either return the first offset, or all offsets, or generate error
+            }
+
+            return ret;
+        }
+
         public virtual int Append(Instance instance)
         {
-            // How to append (quickly)?
-            // - 1. to only leaf dimensions 2. propagate automatically to root immediately (delete leaves optionally) 3. propagate later for all (optionally delete leaves)
-            // - we always start from leaves (assumption for this method - generalizations can be implemented in future versions)
-            // - elementary task: find/append a parent dim given its child dim values
-            // - this elementary task is executed recursively (if children a not processed yet then process them recursively by finding/appending their value)
-/*
-            foreach(dim in GreaterDimensions) // Iterate either through greater dims (by finding child instances) or by child instances (by finding greater dims)
+            if (IsPrimitive)
             {
-                ChildInstace = instance.ChildInstances[dim]; // Mapping: greaterDim -> childInstance
-                dim.Append(ChildInstace); // Recursion
+                return 0;
             }
-            Append(directGreaterIds[]); // Append given direct greater values (computed above). Non-recursive - all values are known.
-*/
+
+            foreach(Dim dim in GreaterDims) // Iterate either through greater dims (by finding child instances) or by child instances (by finding greater dims)
+            {
+                Instance child = instance.GetChild(dim.Name); // Mapping: greaterDim -> childInstance
+                dim.GreaterSet.Append(child); // Recursion. Append the child value.
+
+                // TODO: We need to compute ranges to find if it already exists
+
+                dim.Append(child.Value); 
+            }
+
+            instance.Value = null;
+
 
             // - we can reduce it to the same dimension method dim.Append() 
-            // This method is applied to a parent dimension (of anxy level) and takes the corresponding node from the instance structure
+            // This method is applied to a parent dimension (of any level) and takes the corresponding node from the instance structure
             // Its task is to add/find an instance in this dimension given child instance values. After finishing it assigns it to the node value (so that parents can use it). Normally we return offsets.
 
             // We actualy do not need nested dimensions for that because values are inserted into normal dimensions along the paths. 
@@ -644,13 +707,13 @@ namespace Com.Model
 
             // Theoretically, we could simply insert new instances into leaf dimensions and forget. 
             // Then on the second step, we propagate leave dimensions into parent dimensions using the above recursieve procedure.
-            return 0;
+            return (int) instance.Value;
         }
 
         public virtual void Insert(int offset)
         {
             // Delegate to all dimensions
-            foreach(Dimension d in GreaterDims)
+            foreach(Dim d in GreaterDims)
             {
                 d.Insert(offset, 0);
             }
@@ -691,13 +754,16 @@ namespace Com.Model
         private DataTable DataTable { get; set; }
         private int CurrentRow;
 
-        public virtual void ImportDimensions()
+        /// <summary>
+        /// Create dimensions in this set by cloning dimensions of the source set.
+        /// The source set is specified in this set definition (FromExpression). 
+        /// The method not only creates new dimensions by also defines them by setting their SelectExpression. 
+        /// </summary>
+        public virtual void ImportDimensions2()
         {
-            // We assume that importing = cloning, that is, this set has the same structure as the remote set (at least identity).
-            // Thus our task is to clone the structure by retaining the mapping. Cloning structure means reducing it to primitive elements. 
-            // The structure can be cloned in two ways: by expanding dimensions, by cloning paths
-
-            // Find from which set to import dimensions
+            //
+            // Find the source set the dimensions have to be cloned from
+            //
             if (FromDb == null || String.IsNullOrEmpty(FromSetName))
             {
                 return; // Nothing to import
@@ -708,7 +774,10 @@ namespace Com.Model
                 return; // Nothing to import
             }
 
-            foreach (Dimension srcPath in srcSet.GreaterPaths)
+            //
+            // Loop through all source paths and use them these paths in the expressions
+            //
+            foreach (Dim srcPath in srcSet.GreaterPaths)
             {
 
                 string columnType = Root.MapToLocalType(srcPath.GreaterSet.Name);
@@ -717,7 +786,7 @@ namespace Com.Model
                 {
                     // ERROR: Cannot find the matching primitive set for the path
                 }
-                Dimension path = null; // TODO: We should try to find this path and create a new path only if it cannot be found. Or, if found, the existing path should be deleted along with all its segments.
+                Dim path = null; // TODO: We should try to find this path and create a new path only if it cannot be found. Or, if found, the existing path should be deleted along with all its segments.
                 if (path == null)
                 {
                     path = gSet.CreateDefaultLesserDimension(srcPath.Name, this); // We do not know the type of the path
@@ -728,9 +797,9 @@ namespace Com.Model
                 path.GreaterSet = gSet;
 
                 Set lSet = this;
-                foreach (Dimension srcDim in srcPath.Path)
+                foreach (Dim srcDim in srcPath.Path)
                 {
-                    Dimension dim = lSet.GetGreaterDim(srcDim.Name);
+                    Dim dim = lSet.GetGreaterDim(srcDim.Name);
                     if (dim == null)
                     {
                         if (srcDim.GreaterSet == srcPath.GreaterSet)
@@ -761,7 +830,7 @@ namespace Com.Model
                 }
 
                 AddGreaterPath(path); // Add the new dimension to this set 
-                foreach (Dimension dim in path.Path) // Add also all its segments if they do not exist yet
+                foreach (Dim dim in path.Path) // Add also all its segments if they do not exist yet
                 {
                     if (dim.LesserSet.GreaterDims.Contains(dim)) continue;
                     dim.LesserSet.AddGreaterDim(dim);
@@ -769,14 +838,91 @@ namespace Com.Model
             }
         }
 
+        /// <summary>
+        /// Create dimensions in this set by cloning dimensions of the source set.
+        /// The source set is specified in this set definition (FromExpression). 
+        /// The method not only creates new dimensions by also defines them by setting their SelectExpression. 
+        /// </summary>
+        public virtual void ImportDimensions()
+        {
+            //
+            // Find the source set the dimensions have to be cloned from
+            //
+            if (FromDb == null || String.IsNullOrEmpty(FromSetName))
+            {
+                return; // Nothing to import
+            }
+            Set srcSet = FromDb.FindSubset(FromSetName);
+            if (srcSet == null)
+            {
+                return; // Nothing to import
+            }
+
+            //
+            // Loop through all source dimensions and for each create/define one target dimension
+            //
+            foreach (Dim srcDim in srcSet.GreaterDims)
+            {
+                Dim dstDim = ImportDimension(srcDim); // Clone dimension
+            }
+        }
+
+        /// <summary>
+        /// Create (recursively) the same dimension tree within this set and return its reference. 
+        /// Greater and super sets will be found using mapping (equivalence, same as) and created if absent.
+        /// </summary>
+        /// <param name="remDim"></param>
+        /// <returns></returns>
+        public Dim ImportDimension(Dim remDim)
+        {
+            Set remSet = remDim.GreaterSet;
+            Set locSet = null;
+
+            Dim locDim = GetGreaterDim(remDim.Name); // Dimensions are mapped by name
+            if (locDim == null) // Not found
+            {
+                // Try to find local equivalent of the remote greater set using (same as)
+                locSet = Root.MapToLocalSet(remSet);
+                if (locSet == null) // Not found
+                {
+
+                    locSet = new Set(remSet.Name, remSet); // Clone.
+                    Set locSuperSet = Root.MapToLocalSet(remSet.SuperSet);
+                    locSet.SuperDim = new DimRoot("super", this, locSuperSet);
+                }
+
+                // Create a local equivalent of the dimension
+                locDim = locSet.CreateDefaultLesserDimension(remDim.Name, this);
+                locDim.LesserSet = this;
+                locDim.GreaterSet = locSet;
+                locDim.IsIdentity = remDim.IsIdentity;
+                locDim.SelectExpression = new Expression(remDim);
+
+                // Really add this new dimension to this set
+                AddGreaterDim(locDim);
+            }
+            else // Found
+            {
+                locSet = locDim.GreaterSet;
+            }
+
+            // Clone recursively all greater dimensions
+            foreach (Dim dim in remSet.GreaterDims) 
+            {
+                locSet.ImportDimension(dim);
+            }
+
+            return locDim;
+        }
+
         public virtual void Import(Set remoteSet)
         {
             while (remoteSet.ExportCurrentValue() >= 0)
             {
                 // Copy values to be imported using some mapping
-                foreach (Dimension path in GreaterPaths)
+                foreach (Dim path in GreaterPaths)
                 {
-                    Dimension remotePath = remoteSet.GetGreaterPath(path.Name); // Mapping
+                    Dim remotePath = remoteSet.GetGreaterPath(path.Name); // Mapping
                     if(remotePath == null) continue;
 
                     // Reset all intermediate values along this path
@@ -796,26 +942,20 @@ namespace Com.Model
         {
             foreach (DataRow row in dataTable.Rows) // A row is <colName, primValue> collection
             {
-                foreach (Dimension path in GreaterPaths)
+                foreach (Dim dim in GreaterDims)
                 {
-                    string columnName = dataTable.Columns[path.Name].ToString(); // Mapping
-                    if (columnName == null)
-                    {
-                        path.CurrentValue = null;
-                        continue;
-                    }
+                    if (dim.SelectExpression == null) continue;
 
-                    // Reset all intermediate values along this path
-                    for (int i = 0; i < path.Path.Count; i++)
-                    {
-                        path.Path[i].CurrentValue = null;
-                    }
+                    // First, initialize its expression by setting inputs (reference to the current data row)
+// TODO                    dim.SelectExpression.SetInput(row);
 
-                    path.CurrentValue = row[columnName];
+                    // Second, evaluate each expression so that outputs at leaves will be set
+                    dim.SelectExpression.Evaluate();
                 }
 
                 ImportCurrentValue(); // Import one record (recursively)
             }
+// TODO           AppendOrFindIdentity(Expression expr);
         }
 
         public virtual DataTable Export()
@@ -838,7 +978,7 @@ namespace Com.Model
 
             DataRow row = DataTable.Rows[CurrentRow];
 
-            foreach (Dimension path in GreaterPaths)
+            foreach (Dim path in GreaterPaths)
             {
                 // Reset all intermediate values along this path
                 for (int i = 0; i < path.Path.Count; i++)
@@ -854,7 +994,7 @@ namespace Com.Model
 
         public virtual object ImportCurrentValue()
         {
-            Dimension path = new Dimension("LesserPath", this, this); // Used for technical purposes for recursion
+            Dim path = new Dim("LesserPath", this, this); // Used for technical purposes for recursion
             object ret = AppendOrFindIdentity(path); // Recursive call
             return ret;
         }
@@ -883,11 +1023,43 @@ namespace Com.Model
 
         #endregion
 
+        #region Overriding System.Object
+
+        public override string ToString()
+        {
+            return String.Format("{0} {1}, ID: {2}", Name, IdentityArity, Id);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (obj == null) return false;
+            if (Object.ReferenceEquals(this, obj)) return true;
+            if (this.GetType() != obj.GetType()) return false;
+
+            Set set = (Set)obj;
+            if (Id.Equals(set.Id)) return true;
+
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return Id.GetHashCode();
+        }
+
+        #endregion
+
         #region Constructors and initializers.
 
-        public virtual Dimension CreateDefaultLesserDimension(string name, Set lesserSet)
+        public virtual Dim CreateDefaultLesserDimension(string name, Set lesserSet)
         {
             return new DimSet(name, lesserSet, this);
+        }
+
+        public virtual Instance CreateDefaultInstance()
+        {
+            Instance instance = new Instance(this);
+            return instance;
         }
 
         public Set(string name)
@@ -895,15 +1067,15 @@ namespace Com.Model
             _id = uniqueId++;
             Name = name;
 
-            SuperDims = new List<Dimension>();
-            SubDims = new List<Dimension>();
-            GreaterDims = new List<Dimension>();
-            LesserDims = new List<Dimension>();
+            SuperDims = new List<Dim>();
+            SubDims = new List<Dim>();
+            GreaterDims = new List<Dim>();
+            LesserDims = new List<Dim>();
 
-            SuperPaths = new List<Dimension>();
-            SubPaths = new List<Dimension>();
-            GreaterPaths = new List<Dimension>();
-            LesserPaths = new List<Dimension>();
+            SuperPaths = new List<Dim>();
+            SubPaths = new List<Dim>();
+            GreaterPaths = new List<Dim>();
+            LesserPaths = new List<Dim>();
 
             // TODO: Parameterize depending on the reserved names: Integer, Double etc. (or exclude these names)
             IsInstantiable = true;

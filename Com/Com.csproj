@@ -39,6 +39,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Model\Dim.cs" />
     <Compile Include="Model\DimBool.cs" />
     <Compile Include="Model\DimPrimitive.cs" />
     <Compile Include="Model\DimRoot.cs" />
@@ -48,8 +49,7 @@
     <Compile Include="Model\Expression.cs" />
     <Compile Include="Model\Instance.cs" />
     <Compile Include="Model\Set.cs" />
-    <Compile Include="Model\Dimension.cs" />
-    <Compile Include="Model\SetBool.cs" />
+    <Compile Include="Model\SetBoolean.cs" />
     <Compile Include="Model\SetDouble.cs" />
     <Compile Include="Model\SetInteger.cs" />
     <Compile Include="Model\SetRoot.cs" />
