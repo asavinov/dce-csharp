@@ -95,7 +95,7 @@ namespace Com.Model
         /// <summary>
         /// Compute output of the expression by applying it to a row of the data table. 
         /// </summary>
-        public object Evaluate()
+        public object Evaluate(bool append)
         {
 			switch(Operation)
 			{
@@ -119,18 +119,24 @@ namespace Com.Model
                         {
                             child.Input = Input;
                         }
-                        child.Evaluate();
+                        child.Evaluate(append);
                     }
-                    Output = null; // The result is a combination of its operand results. We might store the offset but it needs to be found. 
+                    Output = null; // The result is a combination of its operand results
+                    if (append) //  Find the offset of this combination and append it if absent
+                    {
+                        // Output = AppendOrFind();
+                    GreaterSet.Append(Expression expr);
+                    GreaterSet.Append(path);
+                    }
                     break;
                 }
                 case Operation.FUNCTION:
                 case Operation.PATH:
                 {
-                    Input.Evaluate(); // Evaluate 'this' object before it can be used
+                    Input.Evaluate(append); // Evaluate 'this' object before it can be used
                     foreach (Expression child in Operands) // Evaluate all parameters before they can be used
                     {
-                        child.Evaluate();
+                        child.Evaluate(append);
                     }
 
                     // Now we can compute the function using input and operands
@@ -172,6 +178,37 @@ namespace Com.Model
         public Expression(string name)
         {
             Name = name;
+        }
+
+        public Expression(Set set)
+        {
+            Output = null;
+            OutputSet = set;
+            OutputSetName = set.Name;
+
+            Name = null;
+            Dimension = null;
+
+            Input = null; // Input will be a constant (value, data row etc.) defined for evaluation purposes
+
+            Operands = null;
+
+            if (set.IsPrimitive)
+            {
+                Operation = Operation.PRIMITIVE;
+            }
+            else
+            {
+                Operation = Operation.TUPLE;
+
+                Operands = new List<Expression>();
+                foreach (Dim gDim in set.GetIdentityDims())
+                {
+                    Expression child = new Expression(set); // Recursive
+                    Operands.Add(child);
+                    child.ParentExpression = this;
+                }
+            }
         }
 
         public Expression(Dim remDim)

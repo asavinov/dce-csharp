@@ -18,13 +18,10 @@ namespace Com.Model
     {
         #region Properties
 
-        private static int uniqueId; // To implement unique automatic ids
-
         /// <summary>
         /// Unique set id (in this database) . In C++, this Id field would be used as a reference filed
         /// </summary>
-        private int _id;
-        public int Id { get { return _id; } }
+        public Guid Id { get; private set; }
 
         /// <summary>
         /// A set name. Note that in the general case a set has an associated structure (concept, type) which may have its own name. 
@@ -67,48 +64,30 @@ namespace Com.Model
         /// </summary>
         public bool IsAutoPopulated { get; set; }
 
+        /// <summary>
+        /// Constraints on all possible instances. Only instances satisfying these constraints can exist. 
+        /// </summary>
+        public Expression WhereExpression { get; set; }
+
+        /// <summary>
+        /// Ordering of the instances. Instances will be sorted according to these criteria. 
+        /// </summary>
+        public Expression OrderbyExpression { get; set; }
+
         #endregion
 
         #region Simple dimensions
 
-        public List<Dim> SuperDims { get; private set; }
-        public List<Dim> SubDims { get; private set; }
+        public List<DimSuper> SuperDims { get; private set; }
+        public List<DimSuper> SubDims { get; private set; }
         public List<Dim> GreaterDims { get; private set; }
         public List<Dim> LesserDims { get; private set; }
-
-        public List<Dim> GetDims(DimensionType dimType, DimensionDirection dimDirection) // Selector of field depending on parameters
-        {
-            List<Dim> result = null;
-
-            if (dimDirection == DimensionDirection.GREATER)
-            {
-                if (dimType == DimensionType.POSET)
-                {
-                    result = GreaterDims;
-                }
-                else if (dimType == DimensionType.INCLUSION)
-                {
-                    result = SuperDims;
-                }
-            }
-            else if (dimDirection == DimensionDirection.LESSER)
-            {
-                if (dimType == DimensionType.POSET)
-                {
-                    result = LesserDims;
-                }
-                else if (dimType == DimensionType.INCLUSION)
-                {
-                    result = SubDims;
-                }
-            }
-
-            return result;
-        }
+        public List<DimExport> ExportDims { get; private set; }
+        public List<DimExport> ImportDims { get; private set; }
 
         #region Inclusion. Super.
 
-        public Dim SuperDim
+        public DimSuper SuperDim
         {
             get
             {
@@ -117,7 +96,7 @@ namespace Com.Model
             }
             set
             {
-                Dim dim = SuperDim;
+                DimSuper dim = SuperDim;
                 if (value == null) // Remove the current super-dimension
                 {
                     if (dim != null)
@@ -295,6 +274,68 @@ namespace Com.Model
             return GreaterDims.Where(x => x.IsIdentity).ToList();
         }
 
+        /// <summary>
+        /// Clone the specified dimension as a new greater dimension in this set or find it. 
+        /// If not specified, the greater set will be found using name comparison and created if absent.
+        /// </summary>
+        /// <param name="remDim"></param>
+        /// <returns></returns>
+        public Dim CloneGreaterDim(Dim remDim, Set greaterSet)
+        {
+            Debug.Assert(!IsPrimitive, "This set is prmitive. Cannot add dimensions to a primitive set.");
+
+            Set remSet = remDim.GreaterSet;
+
+            //
+            // Try to find the specified dimension
+            //
+            Dim locDim = GetGreaterDim(remDim.Name);
+            if (locDim != null) // Found
+            {
+                Debug.Assert(greaterSet == null || greaterSet.Equals(locDim.GreaterSet), "The specified greater set must be equal to the greater set of the found dimension.");
+                return locDim;
+            }
+
+            //
+            // Not found. A new dimension will be created.
+            //
+
+            // 1. If greater set is not specified then try to find it by matching 
+            if (greaterSet == null)
+            {
+                greaterSet = Root.MapToLocalSet(remSet);
+                if (greaterSet == null) // Not found. Clone.
+                {
+                    greaterSet = new Set(remSet.Name);
+                    Set locSuperSet = Root.MapToLocalSet(remSet.SuperSet);
+                    greaterSet.SuperDim = new DimRoot("super", this, locSuperSet);
+                }
+            }
+            // Now we have a greater set - either found or created
+
+            // 2. Create a local equivalent of the dimension
+            locDim = greaterSet.CreateDefaultLesserDimension(remDim.Name, this);
+            locDim.LesserSet = this;
+            locDim.GreaterSet = greaterSet;
+            locDim.IsIdentity = remDim.IsIdentity;
+            locDim.SelectExpression = null; // Only computed/derived dimensions have a definition
+
+            // Really add this new dimension to this set
+            AddGreaterDim(locDim);
+
+            return locDim;
+        }
+
+        public void CloneGreaterDimensions(Set remSet)
+        {
+            // Loop through all remote dimensions and for each create/define one target dimension
+            foreach (Dim remDim in remSet.GreaterDims)
+            {
+                Dim newDim = CloneGreaterDim(remDim, null); // Clone dimension (no recursion)
+                if (newDim.GreaterSet.IsPrimitive) continue;
+                newDim.GreaterSet.CloneGreaterDimensions(remDim.GreaterSet); // Recursion
+            }
+        }
 
         #endregion
 
@@ -311,8 +352,8 @@ namespace Com.Model
 
         #region Complex dimensions (paths)
 
-        public List<Dim> SuperPaths { get; private set; }
-        public List<Dim> SubPaths { get; private set; }
+        public List<DimSuper> SuperPaths { get; private set; }
+        public List<DimSuper> SubPaths { get; private set; }
         public List<Dim> GreaterPaths { get; private set; }
         public List<Dim> LesserPaths { get; private set; }
 
@@ -362,176 +403,6 @@ namespace Com.Model
 
         #endregion
 
-        #region Deprecated dimension strucutre (replaced by DimensionManager)
-        /*
-        #region Schema methods. Inclusion (subset) hierarchy.
-
-        /// <summary>
-        /// Returns a set where this element is a subset. 
-        /// </summary>
-        private Dimension _superDim;
-        public Dimension SuperDim
-        {
-            get { return _superDim; }
-            set
-            {
-                if (value == null) // Request to remove the current super-dimension
-                {
-                    if (_superDim != null)
-                    {
-                        _superDim.GreaterSet._subDims.Remove(_superDim);
-                        _superDim = null;
-                    }
-                    return;
-                }
-
-                if (_superDim != null) // Remove the current super-dimension if present
-                {
-                    this.SuperDim = null;
-                }
-
-                if (value.LesserSet != this || value.GreaterSet == null)
-                {
-                    // ERROR: Dimension greater and lesser sets must be set correctly
-                }
-
-                // Add new dimension
-                _superDim = value;
-                _superDim.GreaterSet._subDims.Add(_superDim);
-            }
-        }
-
-        public Set SuperSet
-        {
-            get { return _superDim != null ? _superDim.GreaterSet : null; }
-        }
-
-        public SetRoot Root
-        {
-            get
-            {
-                Set root = this;
-                while (root.SuperSet != null)
-                {
-                    root = root.SuperSet;
-                }
-
-                return (SetRoot)root;
-            }
-        }
-
-        private List<Dimension> _subDims = new List<Dimension>();
-        public List<Dimension> SubDims { get { return _subDims; } }
-
-        public List<Set> SubSets
-        {
-            get { return _subDims.Select(x => x.LesserSet).ToList(); }
-        }
-
-        public List<Set> GetAllSubsets()
-        {
-            int count = SubSets.Count;
-            List<Set> result = new List<Set>(SubSets);
-            for (int i = 0; i < count; i++)
-            {
-                List<Set> subsets = result[i].GetAllSubsets();
-                if (subsets == null ||subsets.Count == 0)
-                {
-                    continue;
-                }
-                result.AddRange(subsets);
-            }
-
-            return result;
-        }
-
-        public Set FindSubset(string name)
-        {
-            Set set = null;
-            if (Name.Equals(name, StringComparison.InvariantCultureIgnoreCase))
-            {
-                set = this;
-            }
-
-            foreach (Dimension d in _subDims)
-            {
-                if (set != null) break;
-                set = d.LesserSet.FindSubset(name);
-            }
-
-            return set;
-        }
-
-        #endregion
-
-        #region Schema methods. Dimension structure.
-
-        /// <summary>
-        /// These are domain-specific dimensions. 
-        /// </summary>
-        public List<Dimension> _greaterDimensions = new List<Dimension>();
-        public List<Dimension> GreaterDimensions
-        {
-            get { return _greaterDimensions; }
-            set { _greaterDimensions = value; }
-        }
-        public void AddGreaterDimension(Dimension dim)
-        {
-            RemoveGreaterDimension(dim);
-            dim.GreaterSet._lesserDimensions.Add(dim);
-            dim.LesserSet._greaterDimensions.Add(dim);
-        }
-        public void RemoveGreaterDimension(Dimension dim)
-        {
-            dim.GreaterSet._lesserDimensions.Remove(dim);
-            dim.LesserSet._greaterDimensions.Remove(dim);
-        }
-        public void RemoveGreaterDimension(string name)
-        {
-            Dimension dim = GetGreaterDimension(name);
-            if (dim != null)
-            {
-                RemoveGreaterDimension(dim);
-            }
-        }
-        public Dimension GetGreaterDimension(string name)
-        {
-            return _greaterDimensions.FirstOrDefault(d => d.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
-        }
-        public List<Set> GetGreaterSets()
-        {
-            return _greaterDimensions.Select(x => x.GreaterSet).ToList();
-        }
-        public List<Dimension> GetGreaterLeafDimensions()
-        {
-            List<Dimension> leaves = new List<Dimension>();
-            foreach(Dimension dim in GreaterDimensions)
-            {
-                leaves.AddRange(dim.GetLeafDimensions());
-            }
-            return leaves;
-        }
-
-        public List<Dimension> _lesserDimensions = new List<Dimension>();
-        public List<Dimension> LesserDimensions
-        {
-            get { return _lesserDimensions; }
-            set { _lesserDimensions = value; }
-        }
-        public List<Set> GetLesserSets()
-        {
-            return _lesserDimensions.Select(x => x.LesserSet).ToList();
-        }
-
-        public virtual Dimension CreateDefaultLesserDimension(string name, Set lesserSet)
-        {
-            return new DimSet(name, lesserSet, this);
-        }
-
-        #endregion
-*/
-        #endregion 
-
         #region Instance manipulation (function) methods
 
         // TODO: Here we need an interface like ResultSet in JDBC with all possible types
@@ -561,7 +432,7 @@ namespace Com.Model
             return _length;
         }
         
-        public virtual object AppendOrFindIdentity(Dim lesserPath)
+        public virtual object Append(Dim lesserPath)
         {
             object ret = null;
             if (IsPrimitive) // End of recursion. Here we do not compute the value from greater elemenets but rather get it from the path as final values
@@ -592,7 +463,7 @@ namespace Com.Model
             {
                 // First, we need to find the value to be appended recursively (it is empty)
                 lesserPath.AddSegment(dim);
-                dim.GreaterSet.AppendOrFindIdentity(lesserPath); // Recursion. This will set CurrentValue for this dimension
+                dim.GreaterSet.Append(lesserPath); // Recursion. This will set CurrentValue for this dimension
                 lesserPath.RemoveSegment();
 
                 if (!dim.IsIdentity) continue;
@@ -630,7 +501,7 @@ namespace Com.Model
             return ret;
         }
 
-        public virtual object AppendOrFindIdentity(Expression expr)
+        public virtual object Append(Expression expr)
         {
             object ret = null;
             if (IsPrimitive) // End of recursion. Here we do not compute the value from greater elemenets but rather get it from the expression as final values
@@ -645,7 +516,7 @@ namespace Com.Model
             {
                 // First, find or append the value recursively. It will be in Output
                 Expression childExpr = expr.GetOperand(dim.Name);
-                dim.GreaterSet.AppendOrFindIdentity(childExpr);
+                dim.GreaterSet.Append(childExpr);
 
                 if (!dim.IsIdentity) continue;
 
@@ -730,299 +601,6 @@ namespace Com.Model
 
         #endregion
 
-        #region Remoting and population
-
-        /// <summary>
-        /// Constraints on all possible instances. Only instances satisfying these constraints will be created. 
-        /// </summary>
-        public Expression WhereExpression { get; set; }
-
-        /// <summary>
-        /// Ordering of the generated instances. Instances will be sorted according to these criteria. 
-        /// </summary>
-        public Expression OrderbyExpression { get; set; }
-
-        /// <summary>
-        /// The source of instances for this set. It can be a remote set, user input or explicit definition of the set like {1, 7, 4}.
-        /// If it is empty then this set is defined purely locally via its greater dimensions and all possible elements will be instantiated.
-        /// If it is not empty then only a subset of all possible values will be instantiated. 
-        /// </summary>
-        public Expression FromExpression { get; set; }
-        public SetRoot FromDb { get; set; } // For simplicity. This remote set will export instances and this set will import them
-        public string FromSetName { get; set; } // 
-
-        private DataTable DataTable { get; set; }
-        private int CurrentRow;
-
-        /// <summary>
-        /// Create dimensions in this set by cloning dimensions of the source set.
-        /// The source set is specified in this set definition (FromExpression). 
-        /// The method not only creates new dimensions by also defines them by setting their SelectExpression. 
-        /// </summary>
-        public virtual void ImportDimensions2()
-        {
-            //
-            // Find the source set the dimensions have to be cloned from
-            //
-            if (FromDb == null || String.IsNullOrEmpty(FromSetName))
-            {
-                return; // Nothing to import
-            }
-            Set srcSet = FromDb.FindSubset(FromSetName);
-            if (srcSet == null)
-            {
-                return; // Nothing to import
-            }
-
-            //
-            // Loop through all source paths and use them these paths in the expressions
-            //
-            foreach (Dim srcPath in srcSet.GreaterPaths)
-            {
-
-                string columnType = Root.MapToLocalType(srcPath.GreaterSet.Name);
-                Set gSet = Root.GetPrimitiveSubset(columnType);
-                if (gSet == null)
-                {
-                    // ERROR: Cannot find the matching primitive set for the path
-                }
-                Dim path = null; // TODO: We should try to find this path and create a new path only if it cannot be found. Or, if found, the existing path should be deleted along with all its segments.
-                if (path == null)
-                {
-                    path = gSet.CreateDefaultLesserDimension(srcPath.Name, this); // We do not know the type of the path
-                }
-                path.IsIdentity = srcPath.IsIdentity;
-                path.SelectDefinition = srcPath.Name;
-                path.LesserSet = this;
-                path.GreaterSet = gSet;
-
-                Set lSet = this;
-                foreach (Dim srcDim in srcPath.Path)
-                {
-                    Dim dim = lSet.GetGreaterDim(srcDim.Name);
-                    if (dim == null)
-                    {
-                        if (srcDim.GreaterSet == srcPath.GreaterSet)
-                        {
-                            gSet = srcPath.GreaterSet; // Last segment has the same greater set as the path it belongs to
-                        }
-                        else // Try to find this greater set in our database
-                        {
-                            gSet = Root.FindSubset(srcDim.GreaterSet.Name);
-                            if (gSet == null)
-                            {
-                                gSet = new Set(srcDim.GreaterSet.Name, srcDim.GreaterSet);
-                                gSet.SuperDim = new DimRoot("super", gSet, Root); // Default solution: insert the set (no dimensions)
-                                gSet.ImportDimensions(); // Import its dimensions (recursively). We need at least identity dimensions
-                            }
-                        }
-
-                        dim = gSet.CreateDefaultLesserDimension(srcDim.Name, lSet);
-                        dim.IsIdentity = srcDim.IsIdentity;
-                        dim.SelectDefinition = srcDim.Name;
-                        dim.LesserSet = lSet;
-                        dim.GreaterSet = gSet;
-                    }
-
-                    path.Path.Add(dim); // Add this dimension as the next segment in the path
-
-                    lSet = gSet; // Loop iteration
-                }
-
-                AddGreaterPath(path); // Add the new dimension to this set 
-                foreach (Dim dim in path.Path) // Add also all its segments if they do not exist yet
-                {
-                    if (dim.LesserSet.GreaterDims.Contains(dim)) continue;
-                    dim.LesserSet.AddGreaterDim(dim);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Create dimensions in this set by cloning dimensions of the source set.
-        /// The source set is specified in this set definition (FromExpression). 
-        /// The method not only creates new dimensions by also defines them by setting their SelectExpression. 
-        /// </summary>
-        public virtual void ImportDimensions()
-        {
-            //
-            // Find the source set the dimensions have to be cloned from
-            //
-            if (FromDb == null || String.IsNullOrEmpty(FromSetName))
-            {
-                return; // Nothing to import
-            }
-            Set srcSet = FromDb.FindSubset(FromSetName);
-            if (srcSet == null)
-            {
-                return; // Nothing to import
-            }
-
-            //
-            // Loop through all source dimensions and for each create/define one target dimension
-            //
-            foreach (Dim srcDim in srcSet.GreaterDims)
-            {
-                Dim dstDim = ImportDimension(srcDim); // Clone dimension
-            }
-        }
-
-        /// <summary>
-        /// Create (recursively) the same dimension tree within this set and return its reference. 
-        /// Greater and super sets will be found using mapping (equivalence, same as) and created if absent.
-        /// </summary>
-        /// <param name="remDim"></param>
-        /// <returns></returns>
-        public Dim ImportDimension(Dim remDim)
-        {
-            Set remSet = remDim.GreaterSet;
-            Set locSet = null;
-
-            Dim locDim = GetGreaterDim(remDim.Name); // Dimensions are mapped by name
-            if (locDim == null) // Not found
-            {
-                // Try to find local equivalent of the remote greater set using (same as)
-                locSet = Root.MapToLocalSet(remSet);
-                if (locSet == null) // Not found
-                {
-
-                    locSet = new Set(remSet.Name, remSet); // Clone.
-                    Set locSuperSet = Root.MapToLocalSet(remSet.SuperSet);
-                    locSet.SuperDim = new DimRoot("super", this, locSuperSet);
-                }
-
-                // Create a local equivalent of the dimension
-                locDim = locSet.CreateDefaultLesserDimension(remDim.Name, this);
-                locDim.LesserSet = this;
-                locDim.GreaterSet = locSet;
-                locDim.IsIdentity = remDim.IsIdentity;
-                locDim.SelectExpression = new Expression(remDim);
-
-                // Really add this new dimension to this set
-                AddGreaterDim(locDim);
-            }
-            else // Found
-            {
-                locSet = locDim.GreaterSet;
-            }
-
-            // Clone recursively all greater dimensions
-            foreach (Dim dim in remSet.GreaterDims) 
-            {
-                locSet.ImportDimension(dim);
-            }
-
-            return locDim;
-        }
-
-        public virtual void Import(Set remoteSet)
-        {
-            while (remoteSet.ExportCurrentValue() >= 0)
-            {
-                // Copy values to be imported using some mapping
-                foreach (Dim path in GreaterPaths)
-                {
-                    Dim remotePath = remoteSet.GetGreaterPath(path.Name); // Mapping
-                    if(remotePath == null) continue;
-
-                    // Reset all intermediate values along this path
-                    for (int i = 0; i < path.Path.Count; i++)
-                    {
-                        path.Path[i].CurrentValue = null;
-                    }
-
-                    path.CurrentValue = remotePath.CurrentValue;
-                }
-
-                ImportCurrentValue(); // Import one record (recursively)
-            }
-        }
-
-        public virtual void Import(DataTable dataTable)
-        {
-            foreach (DataRow row in dataTable.Rows) // A row is <colName, primValue> collection
-            {
-                foreach (Dim dim in GreaterDims)
-                {
-                    if (dim.SelectExpression == null) continue;
-
-                    // First, initialize its expression by setting inputs (reference to the current data row)
-// TODO                    dim.SelectExpression.SetInput(row);
-
-                    // Second, evaluate each expression so that outputs at leaves will be set
-                    dim.SelectExpression.Evaluate();
-                }
-
-                ImportCurrentValue(); // Import one record (recursively)
-            }
-// TODO           AppendOrFindIdentity(Expression expr);
-        }
-
-        public virtual DataTable Export()
-        {
-            // Root represents a database engine and it knows how to access data (from local dimensions, from remote db, from file etc.)
-            DataTable = Root.Export(this);
-            CurrentRow = -1;
-            return DataTable;
-        }
-
-        public virtual int ExportCurrentValue()
-        {
-            CurrentRow++;
-            if (CurrentRow >= DataTable.Rows.Count)
-            {
-                // TODO: Reset all values
-                CurrentRow = -1;
-                return CurrentRow;
-            }
-
-            DataRow row = DataTable.Rows[CurrentRow];
-
-            foreach (Dim path in GreaterPaths)
-            {
-                // Reset all intermediate values along this path
-                for (int i = 0; i < path.Path.Count; i++)
-                {
-                    path.Path[i].CurrentValue = null;
-                }
-
-                path.CurrentValue = row[path.Name]; // Set the primitive value for the matching column name in the source data table
-            }
-
-            return CurrentRow;
-        }
-
-        public virtual object ImportCurrentValue()
-        {
-            Dim path = new Dim("LesserPath", this, this); // Used for technical purposes for recursion
-            object ret = AppendOrFindIdentity(path); // Recursive call
-            return ret;
-        }
-
-        public virtual void Populate()
-        {
-            if (FromSetName == null) // Local population procedure without importing (without external extensional)
-            {
-                // TODO: 
-            }
-            else // Popoulating using externally provided values
-            {
-                // Export data from the remote set
-                Set remoteSet = FromDb.FindSubset(FromSetName); // Find remote set
-                remoteSet.Export(); // Request a (flat) result set from the remote set
-
-                // Import data into this set
-                Import(remoteSet);
-            }
-        }
-
-        public virtual void Unpopulate() // Clean, Empty
-        {
-            // After this operation the set is empty
-        }
-
-        #endregion
-
         #region Overriding System.Object
 
         public override string ToString()
@@ -1064,16 +642,18 @@ namespace Com.Model
 
         public Set(string name)
         {
-            _id = uniqueId++;
+            Id = Guid.NewGuid();
             Name = name;
 
-            SuperDims = new List<Dim>();
-            SubDims = new List<Dim>();
+            SuperDims = new List<DimSuper>();
+            SubDims = new List<DimSuper>();
             GreaterDims = new List<Dim>();
             LesserDims = new List<Dim>();
+            ExportDims = new List<DimExport>();
+            ImportDims = new List<DimExport>();
 
-            SuperPaths = new List<Dim>();
-            SubPaths = new List<Dim>();
+            SuperPaths = new List<DimSuper>();
+            SubPaths = new List<DimSuper>();
             GreaterPaths = new List<Dim>();
             LesserPaths = new List<Dim>();
 
@@ -1082,88 +662,6 @@ namespace Com.Model
             IsPrimitive = false;
         }
 
-        public Set(string name, Set sourceSet)
-            : this(name)
-        {
-            // It will be a clone of the source set (the same structure, at least the same structure of identities)
-            FromExpression = null;
-            FromDb = sourceSet.Root; 
-            FromSetName = sourceSet.Name; // The (remote) source of instances for populating this set
-        }
-
-        #endregion
-
-        #region Deprecated (delete)
-/*
-        /// <summary>
-        /// Attribute is a named primitive path leading from this set to primitive set along dimensions.
-        /// </summary>
-        private List<Attribute> _attributes = new List<Attribute>();
-        public List<Attribute> Attributes
-        {
-            get { return _attributes; }
-            set { _attributes = value; }
-        }
-
-        public void UpdateDimensions() // Use attribute structure to create/update dimension structure
-        {
-            // It is assumed that the attribute structrue is initialized and is correct
-
-            Dimension dim;
-            Set greaterSet;
-            // Process FK information for generating greater dimensions
-            foreach (Attribute att in Attributes)
-            {
-                if (String.IsNullOrEmpty(att.FkName)) // No FK - primitive dimension
-                {
-                    // Get primitive set corresonding to this data type (overwritten by root set and specific to the data source). For example, it can return SetDouble
-                    greaterSet = Root.GetPrimitiveSet(att);
-                    // Create a new primitive dimension
-                    dim = greaterSet.CreateDefaultLesserDimension(att.FkName, this); // The primitive set knows what dimension type to use (by default), say, DimPrimitive<double> (overwritten)
-                    // Set dimension properties
-                    AddGreaterDimension(dim); // Add the new dimension to the schema
-                }
-                else // FK found - complex dimension
-                {
-                    // Check if a dimension with this FK-name already exists
-                    dim = GetGreaterDimension(att.FkName);
-                    if (dim == null)
-                    {
-                        // Find greater set using FK target table name
-                        greaterSet = Root.FindSubset(att.FkTargetTableName);
-                        // Create a new complex dimension
-                        dim = greaterSet.CreateDefaultLesserDimension(att.FkName, this);// Say, DimSet
-                        // Set dimension properties
-                        AddGreaterDimension(dim); // Add the new dimension to the schema
-                    }
-                    else
-                    {
-                        // Update existing complex dimension (or check consistency of this attribute with this dimension)
-                    }
-                }
-
-                // Process PK information for determing identity dimensions
-                if (!String.IsNullOrEmpty(att.PkName))
-                {
-                    dim.Identity = true;
-                }
-
-                // Update attribute path adding the first segment referencing this new dimension
-                att.Path.Clear();
-                att.Path.Add(dim);
-
-            }
-
-            // ??? how and where ???
-            // Generate complete paths for all attributes. If the first segment points to a non-primitive set then find continuation
-            // It requires that all greater sets have finsihed this procedure (processed fks and pks)
-            // So this method must be called in top down direction so that greater sets are processed before lesser sets.
-        }
-
-        public void UpdateAttributes() // Use dimension structure to create/update attribute structure
-        {
-        }
-*/
         #endregion
 
     }
@@ -1172,6 +670,7 @@ namespace Com.Model
     {
         INCLUSION,
         POSET,
+        EXPORT,
     }
 
     public enum DimensionDirection

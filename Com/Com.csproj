@@ -41,13 +41,16 @@
   <ItemGroup>
     <Compile Include="Model\Dim.cs" />
     <Compile Include="Model\DimBool.cs" />
+    <Compile Include="Model\DimExport.cs" />
     <Compile Include="Model\DimPrimitive.cs" />
     <Compile Include="Model\DimRoot.cs" />
     <Compile Include="Model\DimSet.cs" />
     <Compile Include="Model\DimSubset.cs" />
     <Compile Include="Model\DimSuper.cs" />
     <Compile Include="Model\Expression.cs" />
-    <Compile Include="Model\Instance.cs" />
+    <Compile Include="Model\Instance.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Model\Set.cs" />
     <Compile Include="Model\SetBoolean.cs" />
     <Compile Include="Model\SetDouble.cs" />

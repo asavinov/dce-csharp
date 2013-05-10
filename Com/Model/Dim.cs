@@ -23,7 +23,7 @@ namespace Com.Model
         /// <summary>
         /// Unique id within this database or (temporary) query session.  
         /// </summary>
-        public int Id { get; private set; }
+        public Guid Id { get; private set; }
 
         /// <summary>
         /// This name is unique within the lesser set.
@@ -298,24 +298,24 @@ namespace Com.Model
         /// </summary>
         public virtual object CurrentValue { get; set; }
 
+        #endregion
+
+        #region Function definition and expression evaluation
+
         /// <summary>
-        /// It is used to compose a remote query for loading data during population and then interpret the result set by mapping to local terms. 
+        /// It is a formula defining a function from the lesser set to the greater set. 
+        /// When evaluated, it returs a (new) identity value of the greater set given an identity value of the lesser set.
         /// </summary>
         public Expression SelectExpression { get; set; }
-        public string SelectDefinition { get; set; } // It is a definition of the remote column/attribute/alias like "col1+col2/3"
 
         #endregion
 
-        #region IEnumerable Members
+        #region Overriding System.Object and interfaces
 
         public IEnumerator GetEnumerator()
         {
             return (IEnumerator)new DepthDimEnumerator(this);
         }
-
-        #endregion
-
-        #region Overriding System.Object
 
         public override string ToString()
         {
@@ -355,7 +355,7 @@ namespace Com.Model
 
         public Dim(string name, Set lesserSet, Set greaterSet, bool isIdentity, bool isReversed, bool isInstantiable)
         {
-            Id = uniqueId++;
+            Id = Guid.NewGuid();
             Name = name;
 
             IsIdentity = isIdentity;
@@ -369,14 +369,6 @@ namespace Com.Model
 
             // Parameterize depending on the reserved names: super
             // Parameterize depending on the greater and lesser set type. For example, dimension type must correspond to its greater set type (SetInteger <- DimInteger etc.)
-        }
-
-        public Dim(string name, Dim sourceDim)
-            : this(name, sourceDim.LesserSet, sourceDim.GreaterSet)
-        {
-            // It will be a clone of the source dimension (the same function)
-            SelectExpression = null;
-            SelectDefinition = sourceDim.Name;
         }
 
         #endregion

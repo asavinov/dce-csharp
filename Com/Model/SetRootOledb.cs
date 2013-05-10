@@ -98,6 +98,34 @@ namespace Com.Model
             return tableNames;
         }
 
+        public void ImportSchema()
+        {
+            List<string> tableNames = ReadTables();
+
+            // Create all sets
+            foreach (string tableName in tableNames)
+            {
+                Set set = new Set(tableName); // Create a set 
+                set.FromSetName = tableName;
+                set.SuperDim = new DimRoot("super", set, this); // Add the new set to the schema by setting its super dimension
+            }
+
+            // Load columns and FKs as (complesx) paths and (simple) FK-dimensions
+            foreach (string tableName in tableNames)
+            {
+                ImportPaths(tableName);
+            }
+
+            List<Set> sets = GetAllSubsets();
+            foreach (Set set in sets)
+            {
+                foreach (Dim path in set.GreaterPaths.ToArray())
+                {
+                    path.ExpandPath();
+                }
+            }
+        }
+
         /// <summary>
         /// The method loops through all columns and for each of them creates or finds existing three elements in the schema:
         /// a complex path from this set to the primtiive domain, a simple FK dimension from this set to the target FK set, and 
@@ -108,7 +136,22 @@ namespace Com.Model
         private void ImportPaths(string tableName)
         {
             // Find set corresonding to this table
-            Set tableSet = Root.FindSubset(tableName); 
+            Set tableSet = Root.FindSubset(tableName);
+
+            Debug.Assert(!tableSet.IsPrimitive, "Wrong use: cannot load paths into a primitive set.");
+
+            if (tableSet.SelectExpression == null)
+            {
+                // TODO: Finish creating a new expression. Maybe define a constructor for paths. 
+                tableSet.SelectExpression = new Expression(Name);
+                tableSet.SelectExpression.OutputSet = this;
+                tableSet.SelectExpression.OutputSetName = Name;
+                tableSet.SelectExpression.Operation = Operation.TUPLE;
+            }
+            else
+            {
+                // TODO: Check if we are happy with the existing expression. Maybe empty simply empty it.
+            }
 
             DataTable pks = _connection.GetOleDbSchemaTable(OleDbSchemaGuid.Primary_Keys, new object[] { null, null, tableName });
             DataTable fks = _connection.GetOleDbSchemaTable(OleDbSchemaGuid.Foreign_Keys, new object[] { null, null, null, null, null, tableName });
@@ -124,10 +167,15 @@ namespace Com.Model
                 if (path == null)
                 {
                     path = new Dim(columnName);
-                    path.SelectDefinition = columnName;
                     path.LesserSet = tableSet; // Assign domain set give the table name
                     path.GreaterSet = Root.GetPrimitiveSubset(columnType);
                     tableSet.AddGreaterPath(path); // We do not know if it is FK or simple dimensin so it needs to be checked and fixed later
+
+                    // TODO: Add complete definition for the path: attribute name, path instead of function etc.
+                    Expression pathExpr = new Expression();
+                    pathExpr.Name = columnName;
+                    pathExpr.ParentExpression = tableSet.SelectExpression;
+                    tableSet.SelectExpression.Operands.Add(pathExpr);
                 }
 
                 // Find PKs this attribute belongs to (among all PK columns of this table)
@@ -215,34 +263,6 @@ namespace Com.Model
 
         }
 
-        public void ImportSchema()
-        {
-            List<string> tableNames = ReadTables();
-
-            // Create all sets
-            foreach(string tableName in tableNames) 
-            {
-                Set set = new Set(tableName); // Create a set 
-                set.FromSetName = tableName;
-                set.SuperDim = new DimRoot("super", set, this); // Add the new set to the schema by setting its super dimension
-            }
-
-            // Load columns and FKs as (complesx) paths and (simple) FK-dimensions
-            foreach (string tableName in tableNames)
-            {
-                ImportPaths(tableName);
-            }
-
-            List<Set> sets = GetAllSubsets();
-            foreach (Set set in sets)
-            {
-                foreach (Dim path in set.GreaterPaths.ToArray())
-                {
-                    path.ExpandPath();
-                }
-            }
-        }
-
         public override DataTable Export(Set set) // Dimensions are empty - data is in the remote database
         {
             // Check if this set is our child
@@ -301,87 +321,6 @@ namespace Com.Model
             // We need to bootstrap the database with primitive types corresponding to OleDb standard
         }
 
-        #region Deprecated
-/*
-        public override Set GetPrimitiveSet(Attribute attribute)
-        {
-            string typeName = null;
-
-            // Type mapping
-            switch (attribute.DataType)
-            {
-                case "Double": // System.Data.OleDb.OleDbType.Double
-                    typeName = "Double";
-                    break;
-                case "Inteer": // System.Data.OleDb.OleDbType.Integer
-                    typeName = "Integer";
-                    break;
-                case "Char": // System.Data.OleDb.OleDbType.Char
-                case "VarChar": // System.Data.OleDb.OleDbType.VarChar
-                case "VarWChar": // System.Data.OleDb.OleDbType.VarWChar
-                case "WChar": // System.Data.OleDb.OleDbType.WChar
-                    typeName = "String";
-                    break;
-                default:
-                    typeName = "String"; // All the rest of types or error
-                    break;
-            }
-
-            Set set = GetPrimitiveSet(typeName); // Find primitive set with this type
-            return set;
-        }
-*/
-/*
-        private List<Attribute> ReadAttributes(string tableName)
-        {
-            // Assumption: connection is open
-            List<Attribute> attributes = new List<Attribute>();
-
-            DataTable pks = _connection.GetOleDbSchemaTable(OleDbSchemaGuid.Primary_Keys, new object[] { null, null, tableName });
-            DataTable fks = _connection.GetOleDbSchemaTable(OleDbSchemaGuid.Foreign_Keys, new object[] { null, null, null, null, null, tableName });
-
-            // Read all columns info
-            DataTable columns = _connection.GetOleDbSchemaTable(OleDbSchemaGuid.Columns, new object[] { null, null, tableName, null });
-            foreach (DataRow col in columns.Rows)
-            {
-                string columnName = col["COLUMN_NAME"].ToString();
-                Attribute attribute = new Attribute(columnName);
-                attribute.TableName = tableName;
-                attribute.TypeSystem = "OleDb"; // TODO: we need to standartize all type systems (providers?)
-                OleDbType columnType = (OleDbType)col["DATA_TYPE"];
-                attribute.DataType = columnType.ToString();
-
-                // Find PKs this attribute belongs to
-                foreach (DataRow pk in pks.Rows)
-                {
-                    if (columnName.Equals((string)pk["COLUMN_NAME"], StringComparison.InvariantCultureIgnoreCase))
-                    {
-                        attribute.PkName = (string)pk["PK_NAME"];
-                        break; // Assume that a column can belong to only one PK
-                    }
-                }
-
-                // Find FKs this attribute belongs to
-                foreach (DataRow fk in fks.Rows)
-                {
-                    if (columnName.Equals((string)fk["FK_COLUMN_NAME"], StringComparison.InvariantCultureIgnoreCase))
-                    {
-                        attribute.FkName = (string)fk["FK_NAME"];
-                        attribute.FkTargetTableName = (string)fk["PK_TABLE_NAME"];
-                        attribute.FkTargetColumnName = (string)fk["PK_COLUMN_NAME"];
-                        attribute.FkTargetPkName = (string)fk["PK_NAME"];
-                        break; // Assume that a column can belong to only one FK
-                    }
-                }
-
-                attributes.Add(attribute);
-            }
-
-            return attributes;
-        }
-*/
-
-        #endregion
     }
 
 }
