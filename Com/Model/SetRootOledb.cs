@@ -106,7 +106,7 @@ namespace Com.Model
             foreach (string tableName in tableNames)
             {
                 Set set = new Set(tableName); // Create a set 
-                set.FromSetName = tableName;
+//                set.FromSetName = tableName;
                 set.SuperDim = new DimRoot("super", set, this); // Add the new set to the schema by setting its super dimension
             }
 
@@ -127,6 +127,7 @@ namespace Com.Model
         }
 
         /// <summary>
+        /// The method loads schema data from the specified table in the underlying database and stores them in a matching set.
         /// The method loops through all columns and for each of them creates or finds existing three elements in the schema:
         /// a complex path from this set to the primtiive domain, a simple FK dimension from this set to the target FK set, and 
         /// a complex path from the target FK set to the primitive domain. The complex path corresponding to the column will 
@@ -139,19 +140,6 @@ namespace Com.Model
             Set tableSet = Root.FindSubset(tableName);
 
             Debug.Assert(!tableSet.IsPrimitive, "Wrong use: cannot load paths into a primitive set.");
-
-            if (tableSet.SelectExpression == null)
-            {
-                // TODO: Finish creating a new expression. Maybe define a constructor for paths. 
-                tableSet.SelectExpression = new Expression(Name);
-                tableSet.SelectExpression.OutputSet = this;
-                tableSet.SelectExpression.OutputSetName = Name;
-                tableSet.SelectExpression.Operation = Operation.TUPLE;
-            }
-            else
-            {
-                // TODO: Check if we are happy with the existing expression. Maybe empty simply empty it.
-            }
 
             DataTable pks = _connection.GetOleDbSchemaTable(OleDbSchemaGuid.Primary_Keys, new object[] { null, null, tableName });
             DataTable fks = _connection.GetOleDbSchemaTable(OleDbSchemaGuid.Foreign_Keys, new object[] { null, null, null, null, null, tableName });
@@ -170,12 +158,6 @@ namespace Com.Model
                     path.LesserSet = tableSet; // Assign domain set give the table name
                     path.GreaterSet = Root.GetPrimitiveSubset(columnType);
                     tableSet.AddGreaterPath(path); // We do not know if it is FK or simple dimensin so it needs to be checked and fixed later
-
-                    // TODO: Add complete definition for the path: attribute name, path instead of function etc.
-                    Expression pathExpr = new Expression();
-                    pathExpr.Name = columnName;
-                    pathExpr.ParentExpression = tableSet.SelectExpression;
-                    tableSet.SelectExpression.Operands.Add(pathExpr);
                 }
 
                 // Find PKs this attribute belongs to (among all PK columns of this table)
@@ -263,6 +245,11 @@ namespace Com.Model
 
         }
 
+        /// <summary>
+        /// Load data corresponding the specified set from the underlying database. 
+        /// </summary>
+        /// <param name="set"></param>
+        /// <returns></returns>
         public override DataTable Export(Set set) // Dimensions are empty - data is in the remote database
         {
             // Check if this set is our child
@@ -272,11 +259,11 @@ namespace Com.Model
             List<Dim> attributes = set.GreaterPaths; // We need our custom aliases with target platform definitions as db-specific column names
             foreach (Dim dim in attributes)
             {
-                select += "[" + (String.IsNullOrEmpty(dim.SelectDefinition) ? dim.Name : dim.SelectDefinition) + "]" + ", ";
+                select += "[" + dim.Name + "]" + ", ";
             }
             select = select.Substring(0, select.Length - 2);
 
-            string from = "[" + (String.IsNullOrEmpty(set.FromSetName) ? set.Name : set.FromSetName) + "]";
+            string from = "[" + set.Name + "]";
             string where = ""; // set.WhereExpression
             string orderby = ""; // set.OrderbyExpression
 

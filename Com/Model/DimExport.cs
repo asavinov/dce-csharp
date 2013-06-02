@@ -59,65 +59,71 @@ namespace Com.Model
         #region Export schema
 
         /// <summary>
-        /// Export all dimensions from the lesser set and import them into the greater set.
-        /// This method also creates a definition for the export function. 
-        /// All primitive dimensions paths are exported without modifications. 
+        /// Create (clone) an expression for exporting lesser (input) set values into greater (output) set values.
+        /// The experession describes both structure and values.
+        /// </summary>
+        public virtual void BuildExpression()
+        {
+            Debug.Assert(LesserSet != null, "Wrong use: lesser set cannot be null for export.");
+            SelectExpression = Expression.BuildExpression(LesserSet);
+
+            SelectExpression.Name = "DimExport";
+            SelectExpression.Dimension = this;
+        }
+
+        /// <summary>
+        /// Use expression to create/clone output (greater) set structure.  
         /// A default mapping (name equality) is used to match sets by finding similar sets. If not found, a new set is created. 
         /// </summary>
         public virtual void ExportDimensions()
         {
-            Debug.Assert(LesserSet != null, "Wrong use: lesser set cannot be null for export.");
-            GreaterSet.CloneGreaterDimensions(LesserSet); // Recursive
-        }
+            Debug.Assert(SelectExpression != null, "Wrong use: exprssion cannot be null for export.");
+            Debug.Assert(GreaterSet != null, "Wrong use: greater set cannot be null for export.");
 
-        /// <summary>
-        /// Create an expression for exporting the values, that is, for mapping from the lesser to the greater set (including their structures).
-        /// The created expression must have the structure of the greater set so that the result of evaluation corresponds to the output set. 
-        /// </summary>
-        public virtual void ExportExpression()
-        {
-            Debug.Assert(LesserSet != null, "Wrong use: lesser set cannot be null for export.");
-            SelectExpression = new Expression(GreaterSet);
+            SelectExpression.FindOrCreateSet(GreaterSet.Root);
         }
 
         #endregion
 
-        #region Deprecated: export schema
+        #region Deprecated/obsolete: export schema
 
         /// <summary>
         /// Create (recursively) the same dimension tree within the greater set and return its reference. 
         /// New sets will be found using name comparison and created if absent.
+        /// 
+        /// It will not work because recursion will not work. Recursion requires that every intermediate set in the tree is connected via ExportDim while only the root of two trees are connected. 
+        /// Solution: 1. Build an expression within this DimExport which describes (clones) the source schema, 2. Build the target schema from this expression
         /// </summary>
         /// <param name="remDim"></param>
         /// <returns></returns>
+        [Obsolete("Deprecated. First, create expression, and then use this expression to create the target schema.", true)]
         public Dim ExportDimension(Dim remDim)
         {
             Set remSet = remDim.GreaterSet;
             Set locSet = null;
 
             // Clone one dimension
-            Dim locDim = GetGreaterDim(remDim.Name); // Dimensions are mapped by name
+            Dim locDim = GreaterSet.GetGreaterDim(remDim.Name); // Dimensions are mapped by name
             if (locDim == null) // Not found
             {
                 // Try to find local equivalent of the remote greater set using (same as)
-                locSet = Root.MapToLocalSet(remSet);
+                locSet = LesserSet.Root.MapToLocalSet(remSet);
                 if (locSet == null) // Not found
                 {
-
-                    locSet = new Set(remSet.Name, remSet); // Clone.
-                    Set locSuperSet = Root.MapToLocalSet(remSet.SuperSet);
-                    locSet.SuperDim = new DimRoot("super", this, locSuperSet);
+                    locSet = new Set(remSet.Name); // Clone.
+                    Set locSuperSet = LesserSet.Root.MapToLocalSet(remSet.SuperSet);
+                    locSet.SuperDim = new DimRoot("super", GreaterSet, locSuperSet);
                 }
 
                 // Create a local equivalent of the dimension
-                locDim = locSet.CreateDefaultLesserDimension(remDim.Name, this);
-                locDim.LesserSet = this;
+                locDim = locSet.CreateDefaultLesserDimension(remDim.Name, GreaterSet);
+                locDim.LesserSet = GreaterSet;
                 locDim.GreaterSet = locSet;
                 locDim.IsIdentity = remDim.IsIdentity;
-                locDim.SelectExpression = new Expression(remDim);
+                locDim.SelectExpression = Expression.BuildExpression(remDim, null);
 
                 // Really add this new dimension to this set
-                AddGreaterDim(locDim);
+                GreaterSet.AddGreaterDim(locDim);
             }
             else // Found
             {
@@ -127,94 +133,12 @@ namespace Com.Model
             // Recursion: the same method for all greater dimensions of the new greater set
             foreach (Dim dim in remSet.GreaterDims)
             {
-                locSet.ExportDimension(dim);
+//                locSet.ExportDimension(dim);
+                // PROBLEM: recursion does not work here because not all tree nodes have defs as ExportDim. Recursion will work in Expressions or simply using the original structures (without ExportDim)
+                // Question: How to define and import structure? Via Expressions (tree)? 
             }
 
             return locDim;
-        }
-
-        /// <summary>
-        /// Create dimensions in this set by cloning dimensions of the source set.
-        /// The source set is specified in this set definition (FromExpression). 
-        /// The method not only creates new dimensions by also defines them by setting their SelectExpression. 
-        /// </summary>
-        public virtual void ExportDimensions2()
-        {
-            //
-            // Find the source set the dimensions have to be cloned from
-            //
-            if (FromDb == null || String.IsNullOrEmpty(FromSetName))
-            {
-                return; // Nothing to import
-            }
-            Set srcSet = FromDb.FindSubset(FromSetName);
-            if (srcSet == null)
-            {
-                return; // Nothing to import
-            }
-
-            //
-            // Loop through all source paths and use them these paths in the expressions
-            //
-            foreach (Dim srcPath in srcSet.GreaterPaths)
-            {
-
-                string columnType = Root.MapToLocalType(srcPath.GreaterSet.Name);
-                Set gSet = Root.GetPrimitiveSubset(columnType);
-                if (gSet == null)
-                {
-                    // ERROR: Cannot find the matching primitive set for the path
-                }
-                Dim path = null; // TODO: We should try to find this path and create a new path only if it cannot be found. Or, if found, the existing path should be deleted along with all its segments.
-                if (path == null)
-                {
-                    path = gSet.CreateDefaultLesserDimension(srcPath.Name, this); // We do not know the type of the path
-                }
-                path.IsIdentity = srcPath.IsIdentity;
-                path.SelectDefinition = srcPath.Name;
-                path.LesserSet = this;
-                path.GreaterSet = gSet;
-
-                Set lSet = this;
-                foreach (Dim srcDim in srcPath.Path)
-                {
-                    Dim dim = lSet.GetGreaterDim(srcDim.Name);
-                    if (dim == null)
-                    {
-                        if (srcDim.GreaterSet == srcPath.GreaterSet)
-                        {
-                            gSet = srcPath.GreaterSet; // Last segment has the same greater set as the path it belongs to
-                        }
-                        else // Try to find this greater set in our database
-                        {
-                            gSet = Root.FindSubset(srcDim.GreaterSet.Name);
-                            if (gSet == null)
-                            {
-                                gSet = new Set(srcDim.GreaterSet.Name, srcDim.GreaterSet);
-                                gSet.SuperDim = new DimRoot("super", gSet, Root); // Default solution: insert the set (no dimensions)
-                                gSet.ImportDimensions(); // Import its dimensions (recursively). We need at least identity dimensions
-                            }
-                        }
-
-                        dim = gSet.CreateDefaultLesserDimension(srcDim.Name, lSet);
-                        dim.IsIdentity = srcDim.IsIdentity;
-                        dim.SelectDefinition = srcDim.Name;
-                        dim.LesserSet = lSet;
-                        dim.GreaterSet = gSet;
-                    }
-
-                    path.Path.Add(dim); // Add this dimension as the next segment in the path
-
-                    lSet = gSet; // Loop iteration
-                }
-
-                AddGreaterPath(path); // Add the new dimension to this set 
-                foreach (Dim dim in path.Path) // Add also all its segments if they do not exist yet
-                {
-                    if (dim.LesserSet.GreaterDims.Contains(dim)) continue;
-                    dim.LesserSet.AddGreaterDim(dim);
-                }
-            }
         }
 
         #endregion

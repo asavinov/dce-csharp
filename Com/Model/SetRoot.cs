@@ -91,19 +91,7 @@ namespace Com.Model
                 return localSet;
             }
 
-            foreach (Set set in GetAllSubsets()) // First, we try to find explicitly marked sets
-            {
-                if (set.IsRoot) continue;
-                if (set.IsPrimitive) continue;
-
-                if (String.IsNullOrEmpty(set.FromSetName)) continue;
-
-                if (set.FromSetName.Equals(externalType, StringComparison.InvariantCultureIgnoreCase))
-                {
-                    localSet = set; // Found.
-                    return localSet;
-                }
-            }
+            // TODO: try to find explicitly marked sets (same as)
 
             foreach (Set set in GetAllSubsets()) // Second, we try to find by semantics
             {

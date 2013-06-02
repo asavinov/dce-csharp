@@ -115,11 +115,11 @@ namespace Test
             SetRoot wsRoot = new SetRoot("My Mashup");
 
             // Add a new set
-            Set empPriv = new Set("Emp", dbRoot.FindSubset("Employee Privileges"));
+            Set empPriv = new Set("Emp" /*, dbRoot.FindSubset("Employee Privileges")*/);
             empPriv.SuperDim = new DimRoot("super", empPriv, wsRoot); // Insert the set (no dimensions)
 
             // Import dimension(s)
-            empPriv.ImportDimensions();
+//            empPriv.ImportDimensions();
 
             // Assert. Check imported dimensions
             Assert.AreEqual(2, empPriv.GreaterPaths.Count);
@@ -153,12 +153,12 @@ namespace Test
             SetRoot wsRoot = new SetRoot("My Mashup");
 
             // Add a new set and import its structure
-            Set emp = new Set("Emp", dbRoot.FindSubset("Employees"));
+            Set emp = new Set("Emp" /*, dbRoot.FindSubset("Employees")*/);
             emp.SuperDim = new DimRoot("super", emp, wsRoot); // Insert the set (no dimensions)
-            emp.ImportDimensions(); // Import all dimensions
+//            emp.ImportDimensions(); // Import all dimensions
 
             // Import data
-            emp.Populate();
+//            emp.Populate();
 
             Assert.AreEqual(9, emp.Length);
             Assert.AreEqual(6, emp.GetValue("ID", 5));
@@ -166,9 +166,9 @@ namespace Test
             Assert.AreEqual("Seattle", emp.GetValue("City", 8));
 
             // Add EmployeePrivileges table which references one existing and one non-existing tables
-            Set empPriv = new Set("EmpPriv", dbRoot.FindSubset("Employee Privileges"));
+            Set empPriv = new Set("EmpPriv" /*, dbRoot.FindSubset("Employee Privileges")*/);
             empPriv.SuperDim = new DimRoot("super", empPriv, wsRoot); // Insert the set (no dimensions)
-            empPriv.ImportDimensions(); // Import all dimensions
+//            empPriv.ImportDimensions(); // Import all dimensions
 
 //            empPriv.Populate();
 

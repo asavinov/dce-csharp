@@ -22,7 +22,7 @@ namespace Com.Model
         private string[] _columnNames; // A list of column names
         private string _fieldSeparator;
 
-        public override void Populate()
+        public void Populate()
         {
 			// Open file
 			// Load all rows (the first row has column names)

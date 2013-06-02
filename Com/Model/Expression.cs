@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Data;
+using System.Diagnostics;
 using Offset = System.Int32;
 
 namespace Com.Model
@@ -36,7 +37,7 @@ namespace Com.Model
         public Dim Dimension { get; set; } // Dimension/functin this expression defines. Its lesser and greater sets should correspond to this expression intput and output sets.
 
         /// <summary>
-        /// Operation for this node.
+        /// Operation for this node. What do we do in order to compute the output using input value and operand values. 
         /// </summary>
         public Operation Operation { get; set; }
 
@@ -47,6 +48,25 @@ namespace Com.Model
         /// The set the input value belongs to is specified in the expression. 
         /// </summary>
         public Expression Input { get; set; }
+        public void SetInput(object input)
+        {
+            if (input is DataRow)
+            {
+                Input = new Expression();
+                Input.Operation = Operation.DATA_ROW;
+                Input.Output = (DataRow)input;
+            }
+            if (input is Offset)
+            {
+                Input = new Expression();
+                Input.Operation = Operation.DATA_ROW;
+                Input.Output = (Offset)input;
+            }
+            else
+            {
+                throw new NotImplementedException();
+            }
+        }
 
         /// <summary>
         /// These are parameters which are needed for evaluation of this expression
@@ -125,8 +145,8 @@ namespace Com.Model
                     if (append) //  Find the offset of this combination and append it if absent
                     {
                         // Output = AppendOrFind();
-                    GreaterSet.Append(Expression expr);
-                    GreaterSet.Append(path);
+//                    GreaterSet.Append(Expression expr);
+//                    GreaterSet.Append(path);
                     }
                     break;
                 }
@@ -170,6 +190,136 @@ namespace Com.Model
             return Output;
 		}
 
+        public Set FindOrCreateSet(SetRoot root)
+        {
+            Set lesserSet = ParentExpression != null ? ParentExpression.OutputSet : null;
+            Debug.Assert(lesserSet.Root == root, "Wrong use: parent expression set hast to be within the specified root.");
+
+            // 1. Find all possible matching sets
+            Set set = null;
+            if (Operation == Operation.TUPLE)
+            {
+                set = OutputSet != null ? root.MapToLocalSet(OutputSet) : root.FindSubset(OutputSetName);
+
+                if (set == null) // No matching sets have been found. Create a new set
+                {
+                    Set superSet = null;
+                    superSet = OutputSet != null ? root.MapToLocalSet(OutputSet.SuperSet) : root;
+
+                    set = new Set(OutputSetName); // Or OutputSet.Name
+                    set.SuperDim = new DimSuper("super", set, superSet);
+                }
+            }
+            else
+            {
+                set = root.GetPrimitiveSubset(OutputSetName);
+            }
+
+            // 2. Find a matching dimension leading from the lesser set among the matching sets
+            Dim dim = null;
+            if (lesserSet != null)
+            {
+                foreach(Dim gDim in lesserSet.GreaterDims) 
+                {
+                    if (gDim.Name.Equals(Name, StringComparison.InvariantCultureIgnoreCase)) // Or Dimension.Name
+                    {
+                        dim = gDim;
+                        break;
+                    }
+                }
+            }
+
+            if (dim == null)
+            {
+                dim = set.CreateDefaultLesserDimension(Name, lesserSet);
+                // Clone all parametes
+                dim.IsIdentity = Dimension.IsIdentity;
+            }
+
+            //
+            // It is the main result of this method: update this expression with found/created elements. 
+            //
+            OutputSet = set;
+            OutputSetName = set.Name;
+
+            Name = dim.Name;
+            Dimension = dim;
+
+            // Recursively process all child expressions (only for non-primitive sets)
+            if (Operation == Operation.TUPLE)
+            {
+                foreach (Expression child in Operands)
+                {
+                    child.FindOrCreateSet(root);
+                }
+            }
+
+            return set;
+        }
+
+        public static Expression BuildExpression(Dim dim, Expression parent)
+        {
+            Expression expr = new Expression();
+
+            expr.Output = null; // Output stores a result of each evaluation (of input value)
+            expr.OutputSet = dim.GreaterSet;
+            expr.OutputSetName = dim.GreaterSet.Name;
+
+            expr.Name = dim.Name; // Name of the function
+            expr.Dimension = dim;
+
+            expr.Input = null; // Input will be a constant (value, data row etc.) defined for each evaluation
+
+            expr.ParentExpression = parent;
+            if (parent != null)
+            {
+                parent.Operands.Add(expr);
+            }
+
+            if (dim.IsPrimitive) // End of recursion
+            {
+                expr.Operation = Operation.FUNCTION; // Or PATH
+
+                // Replace a function by path
+                List<Dim> path = expr.GetPath();
+                List<Dim> remPaths = dim.LesserSet.GetGreaterPathsStartingWith(path);
+                if (remPaths.Count == 1)
+                {
+                    expr.Name = remPaths[0].Name; // Name of the path (attribute name) denoting a sequence of segments
+                }
+                else if (remPaths.Count > 1) // Found many
+                {
+                }
+                else // Not found
+                {
+                }
+            }
+            else // Recursion on greater dimensions
+            {
+                expr.Operation = Operation.TUPLE;
+                expr.Operands = new List<Expression>();
+
+                Set gSet = dim.GreaterSet;
+                foreach (Dim gDim in gSet.GetIdentityDims()) // Only identity dimensions?
+                {
+                    BuildExpression(gDim, expr);
+                }
+            }
+
+            return expr;
+        }
+
+        public static Expression BuildExpression(Set set)
+        {
+            Dim dim = new Dim("", null, set); // Workaround - create an auxiliary object
+            Expression expr = BuildExpression(dim, null); // and then use an existing method
+
+            expr.Name = ""; // Reset unknown parameters
+            expr.Dimension = null;
+
+            return expr;
+        }
+
         public Expression()
             : this("")
         {
@@ -180,83 +330,6 @@ namespace Com.Model
             Name = name;
         }
 
-        public Expression(Set set)
-        {
-            Output = null;
-            OutputSet = set;
-            OutputSetName = set.Name;
-
-            Name = null;
-            Dimension = null;
-
-            Input = null; // Input will be a constant (value, data row etc.) defined for evaluation purposes
-
-            Operands = null;
-
-            if (set.IsPrimitive)
-            {
-                Operation = Operation.PRIMITIVE;
-            }
-            else
-            {
-                Operation = Operation.TUPLE;
-
-                Operands = new List<Expression>();
-                foreach (Dim gDim in set.GetIdentityDims())
-                {
-                    Expression child = new Expression(set); // Recursive
-                    Operands.Add(child);
-                    child.ParentExpression = this;
-                }
-            }
-        }
-
-        public Expression(Dim remDim)
-        {
-            Output = null;
-            OutputSet = remDim.GreaterSet;
-            OutputSetName = remDim.GreaterSet.Name;
-
-            Name = remDim.Name; // Name of the function
-            Dimension = remDim;
-
-            Input = null; // Input will be a constant (value, data row etc.) defined for evaluation purposes
-
-            Operands = null;
-
-            if (remDim.IsPrimitive)
-            {
-                Operation = Operation.FUNCTION;
-
-                // Replace a function by path
-                List<Dim> path = GetPath();
-                List<Dim> remPaths = remDim.LesserSet.GetGreaterPathsStartingWith(path);
-                if (remPaths.Count == 1)
-                {
-                    Name = remPaths[0].Name; // Name of the path (attribute name) denoting a sequence of segments
-                }
-                else if (remPaths.Count > 1) // Found many
-                {
-                }
-                else // Not found
-                {
-                }
-            }
-            else
-            {
-                Operation = Operation.TUPLE;
-
-                Operands = new List<Expression>();
-                Set gSet = remDim.GreaterSet;
-                foreach (Dim gDim in gSet.GetIdentityDims())
-                {
-                    Expression child = new Expression(gDim);
-                    Operands.Add(child);
-                    child.ParentExpression = this;
-                }
-            }
-        }
-
     }
 
     public enum Operation
@@ -265,7 +338,7 @@ namespace Com.Model
         DATA_ROW, // Output stores a reference to a DataRow. It is a sort of primitive (predefined, non-evaluatable) values which have internal structure
         TUPLE, // This expression is a tuple composed of its operands as members. Names of operands identify tuple members. A tuple can belong to a set and then it has its structure. 
         FUNCTION, // Compute a function. The function is specified in the operand. The function is applied to... Parameter of the function are in... 
-        PATH, // In contrast to functions, it denotes a sequence of segments. So it is a matter of representation - we have two type of representations: dimensions (functions) and paths. 
+        PATH, // In contrast to functions, it denotes a sequence of segments. So it is a matter of representation: either dimensions (functions) or paths (named sequences of dimensions). 
         PROCEDURE, // Standard procedure which does not use 'this' (input) object and depends only on parameters
         PLUS,
         MINUS,
