@@ -9,6 +9,9 @@ namespace Test
     [TestClass]
     public class DataLoadTest
     {
+        public static string Northwind = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\\Users\\savinov\\git\\comcsharp\\Test\\Northwind.accdb";
+        // Another provider: "Provider=Microsoft.Jet.OLEDB.4.0;"
+
         [TestMethod]
         public void PrimDimensinTest()
         {
@@ -74,8 +77,7 @@ namespace Test
             // Create Oldedb root set
             SetRootOledb dbRoot = new SetRootOledb("Root");
 
-            dbRoot.ConnectionString = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\\Users\\savinov\\git\\comcsharp\\Test\\Northwind.accdb";
-            // Another provider: "Provider=Microsoft.Jet.OLEDB.4.0;"
+            dbRoot.ConnectionString = Northwind;
 
             dbRoot.Open();
 
@@ -105,7 +107,7 @@ namespace Test
             // Create Oldedb root set
             //
             SetRootOledb dbRoot = new SetRootOledb("Root");
-            dbRoot.ConnectionString = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\\Users\\savinov\\git\\comcsharp\\Test\\Northwind.accdb";
+            dbRoot.ConnectionString = Northwind;
             dbRoot.Open();
             dbRoot.ImportSchema();
 
@@ -115,22 +117,32 @@ namespace Test
             SetRoot wsRoot = new SetRoot("My Mashup");
 
             // Add a new set
-            Set empPriv = new Set("Emp" /*, dbRoot.FindSubset("Employee Privileges")*/);
-            empPriv.SuperDim = new DimRoot("super", empPriv, wsRoot); // Insert the set (no dimensions)
+            Set emp = new Set("Employees");
+            emp.SuperDim = new DimRoot("super", emp, wsRoot); // Insert the set (no dimensions)
 
-            // Import dimension(s)
-//            empPriv.ImportDimensions();
+            //
+            // Import an existing set
+            //
+            DimExport dimExp = new DimExport("export emp", dbRoot.FindSubset("Employees"), emp);
+            dimExp.BuildExpression();
+            dimExp.ExportDimensions();
 
             // Assert. Check imported dimensions
-            Assert.AreEqual(2, empPriv.GreaterPaths.Count);
-            Assert.AreEqual(2, empPriv.GreaterDims.Count);
+            Assert.AreEqual(18, emp.GreaterDims.Count); // The existing set had to get all dimensions
 
-            // Check intermediate sets and their imported structure
-            Assert.AreEqual(18, empPriv.GreaterDims[0].GreaterSet.GreaterPaths.Count);
-            Assert.AreEqual(18, empPriv.GreaterDims[0].GreaterSet.GreaterDims.Count);
+            //
+            // Import second non-existing set
+            //
+            DimExport dimExp2 = new DimExport("export emp priv", dbRoot.FindSubset("Employee Privileges"), wsRoot);
+            dimExp2.BuildExpression();
+            dimExp2.ExportDimensions();
 
-            Assert.AreEqual(2, empPriv.GreaterDims[1].GreaterSet.GreaterPaths.Count);
-            Assert.AreEqual(2, empPriv.GreaterDims[1].GreaterSet.GreaterDims.Count);
+            // Assert. Check imported dimensions
+            Set ep = wsRoot.FindSubset("Employee Privileges"); // This set had to be created
+            Assert.AreEqual(2, ep.GreaterDims.Count);
+
+            Set privs = wsRoot.FindSubset("Privileges");
+            Assert.AreEqual(2, privs.GreaterDims.Count); // This set had to be created
         }
 
         [TestMethod]
@@ -139,7 +151,7 @@ namespace Test
             // Create Oldedb root set
             SetRootOledb dbRoot = new SetRootOledb("Root");
 
-            dbRoot.ConnectionString = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\\Users\\savinov\\git\\comcsharp\\Test\\Northwind.accdb";
+            dbRoot.ConnectionString = Northwind;
             // Another provider: "Provider=Microsoft.Jet.OLEDB.4.0;"
 
             dbRoot.Open();

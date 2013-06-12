@@ -193,7 +193,8 @@ namespace Com.Model
         public Set FindOrCreateSet(SetRoot root)
         {
             Set lesserSet = ParentExpression != null ? ParentExpression.OutputSet : null;
-            Debug.Assert(lesserSet.Root == root, "Wrong use: parent expression set hast to be within the specified root.");
+            Debug.Assert(root != null, "Wrong use: The root set parameter cannot be null.");
+            Debug.Assert(lesserSet == null || lesserSet.Root == root, "Wrong use: parent expression set hast to be within the specified root.");
 
             // 1. Find all possible matching sets
             Set set = null;
@@ -210,16 +211,16 @@ namespace Com.Model
                     set.SuperDim = new DimSuper("super", set, superSet);
                 }
             }
-            else
+            else // Operation.FUNCTION or similar
             {
-                set = root.GetPrimitiveSubset(OutputSetName);
+                set = OutputSet != null ? root.MapToLocalSet(OutputSet) : root.GetPrimitiveSubset(root.MapToLocalType(OutputSetName));
             }
 
             // 2. Find a matching dimension leading from the lesser set among the matching sets
             Dim dim = null;
             if (lesserSet != null)
             {
-                foreach(Dim gDim in lesserSet.GreaterDims) 
+                foreach (Dim gDim in lesserSet.GreaterDims) 
                 {
                     if (gDim.Name.Equals(Name, StringComparison.InvariantCultureIgnoreCase)) // Or Dimension.Name
                     {
@@ -227,23 +228,27 @@ namespace Com.Model
                         break;
                     }
                 }
-            }
 
-            if (dim == null)
-            {
-                dim = set.CreateDefaultLesserDimension(Name, lesserSet);
-                // Clone all parametes
-                dim.IsIdentity = Dimension.IsIdentity;
+                if (dim == null) // Matching dimension not found
+                {
+                    dim = set.CreateDefaultLesserDimension(Name, lesserSet);
+                    // Clone all parametes
+                    dim.IsIdentity = Dimension.IsIdentity;
+                    lesserSet.AddGreaterDim(dim); // Really add
+                }
             }
 
             //
-            // It is the main result of this method: update this expression with found/created elements. 
+            // Update this expression so that it points to the new created elements (set and dimension). 
             //
             OutputSet = set;
             OutputSetName = set.Name;
 
-            Name = dim.Name;
-            Dimension = dim;
+            if (dim != null)
+            {
+                Name = dim.Name;
+                Dimension = dim;
+            }
 
             // Recursively process all child expressions (only for non-primitive sets)
             if (Operation == Operation.TUPLE)
@@ -257,7 +262,7 @@ namespace Com.Model
             return set;
         }
 
-        public static Expression BuildExpression(Dim dim, Expression parent)
+        public static Expression CreateExpression(Dim dim, Expression parent)
         {
             Expression expr = new Expression();
 
@@ -300,19 +305,19 @@ namespace Com.Model
                 expr.Operands = new List<Expression>();
 
                 Set gSet = dim.GreaterSet;
-                foreach (Dim gDim in gSet.GetIdentityDims()) // Only identity dimensions?
+                foreach (Dim gDim in gSet.GreaterDims) // Only identity dimensions?
                 {
-                    BuildExpression(gDim, expr);
+                    CreateExpression(gDim, expr);
                 }
             }
 
             return expr;
         }
 
-        public static Expression BuildExpression(Set set)
+        public static Expression CreateExpression(Set set)
         {
             Dim dim = new Dim("", null, set); // Workaround - create an auxiliary object
-            Expression expr = BuildExpression(dim, null); // and then use an existing method
+            Expression expr = CreateExpression(dim, null); // and then use an existing method
 
             expr.Name = ""; // Reset unknown parameters
             expr.Dimension = null;

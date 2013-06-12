@@ -16,12 +16,43 @@ namespace Com.Model
     /// </summary>
     public class DimExport : Dim
     {
+        #region Schema methods
 
-        #region Export and populate data
+        /// <summary>
+        /// Create (clone) an expression for exporting lesser (input) set values into greater (output) set values.
+        /// The created experession describes both structure and values.
+        /// </summary>
+        public virtual void BuildExpression()
+        {
+            Debug.Assert(LesserSet != null, "Wrong use: lesser set cannot be null for export.");
+
+            SelectExpression = Expression.CreateExpression(LesserSet);
+
+            SelectExpression.Name = "DimExport";
+            SelectExpression.Dimension = this;
+        }
+
+        /// <summary>
+        /// Use the expression to create/clone output (greater) set structure.  
+        /// A default mapping (name equality) is used to match sets by finding similar sets. If not found, a new set is created. 
+        /// </summary>
+        public virtual void ExportDimensions()
+        {
+            Debug.Assert(SelectExpression != null, "Wrong use: exprssion cannot be null for export.");
+            Debug.Assert(GreaterSet != null, "Wrong use: greater set cannot be null for export.");
+
+            Set set = SelectExpression.FindOrCreateSet(GreaterSet.Root);
+
+            GreaterSet = set;
+        }
+
+        #endregion
+
+        #region Data methods
 
         public virtual void Populate()
         {
-             // Local population procedure without importing (without external extensional)
+            // Local population procedure without importing (without external extensional)
             if (LesserSet.Root is SetRootOledb)
             {
                 // Request a (flat) result set from the remote set (data table)
@@ -36,7 +67,7 @@ namespace Com.Model
             }
             else if (LesserSet.Root is SetRootOdata)
             {
-            } 
+            }
             else // Direct access using offsets
             {
                 for (Offset offset = 0; offset < LesserSet.Length; offset++)
@@ -52,35 +83,6 @@ namespace Com.Model
         {
             // Simply empty the greater set
             // After this operation the greater set is empty
-        }
-
-        #endregion
-
-        #region Export schema
-
-        /// <summary>
-        /// Create (clone) an expression for exporting lesser (input) set values into greater (output) set values.
-        /// The experession describes both structure and values.
-        /// </summary>
-        public virtual void BuildExpression()
-        {
-            Debug.Assert(LesserSet != null, "Wrong use: lesser set cannot be null for export.");
-            SelectExpression = Expression.BuildExpression(LesserSet);
-
-            SelectExpression.Name = "DimExport";
-            SelectExpression.Dimension = this;
-        }
-
-        /// <summary>
-        /// Use expression to create/clone output (greater) set structure.  
-        /// A default mapping (name equality) is used to match sets by finding similar sets. If not found, a new set is created. 
-        /// </summary>
-        public virtual void ExportDimensions()
-        {
-            Debug.Assert(SelectExpression != null, "Wrong use: exprssion cannot be null for export.");
-            Debug.Assert(GreaterSet != null, "Wrong use: greater set cannot be null for export.");
-
-            SelectExpression.FindOrCreateSet(GreaterSet.Root);
         }
 
         #endregion
@@ -120,7 +122,7 @@ namespace Com.Model
                 locDim.LesserSet = GreaterSet;
                 locDim.GreaterSet = locSet;
                 locDim.IsIdentity = remDim.IsIdentity;
-                locDim.SelectExpression = Expression.BuildExpression(remDim, null);
+                locDim.SelectExpression = Expression.CreateExpression(remDim, null);
 
                 // Really add this new dimension to this set
                 GreaterSet.AddGreaterDim(locDim);
