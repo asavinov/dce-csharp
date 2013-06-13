@@ -57,12 +57,20 @@ namespace Com.Model
             {
                 // Request a (flat) result set from the remote set (data table)
                 // For each row, evaluate the expression and append the new element
-                DataTable dataTable = ((SetRootOledb)LesserSet.Root).Export(LesserSet); // TODO: rename Export to GetDataTable
+                DataTable dataTable = ((SetRootOledb)LesserSet.Root).Export(LesserSet);
+
+                SelectExpression.SetInput(Operation.FUNCTION, Operation.DATA_ROW); // Set the necessary input expression
 
                 foreach (DataRow row in dataTable.Rows) // A row is <colName, primValue> collection
                 {
-                    SelectExpression.SetInput(row); // First, initialize its expression by setting inputs (reference to the current data row)
-                    SelectExpression.Evaluate(true); // Second, evaluate each expression by appending the values if absent
+                    // Reset
+                    SelectExpression.SetOutput(Operation.ALL, null);
+
+                    // Set the constant values in the expression
+                    SelectExpression.SetOutput(Operation.DATA_ROW, row);
+
+                    // Evaluate the expression tree by appending the elements into the sets if absent
+                    SelectExpression.Evaluate(true);
                 }
             }
             else if (LesserSet.Root is SetRootOdata)
@@ -72,7 +80,7 @@ namespace Com.Model
             {
                 for (Offset offset = 0; offset < LesserSet.Length; offset++)
                 {
-                    SelectExpression.SetInput(offset);
+                    SelectExpression.SetOutput(Operation.OFFSET, offset);
                     SelectExpression.Evaluate(true);
                 }
             }

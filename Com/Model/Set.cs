@@ -528,7 +528,7 @@ namespace Com.Model
 
             if (result.Length == 0) // Not found - append
             {
-                foreach (Dim dim in GreaterDims) // We have to append to all dimensions - not only identity dimensions
+                foreach (Dim dim in GetIdentityDims() /*GreaterDims*/) // We have to append to all dimensions - not only identity dimensions
                 {
                     Expression childExpr = expr.GetOperand(dim.Name);
                     // OPTIMIZE: Provide positions for the values which have been found during the search (not all positions are known if the search has been broken).

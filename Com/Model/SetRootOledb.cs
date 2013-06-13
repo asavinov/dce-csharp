@@ -189,6 +189,8 @@ namespace Com.Model
                     Debug.Assert(tableSet.GetGreaterDim(fkName) == null, "A dimension already exists.");
 
                     Dim fkSegment = new Dim(fkName); // It is the first segment in the path representing this FK
+                    fkSegment.IsIdentity = path.IsIdentity;
+
                     fkSegment.LesserSet = tableSet;
 
                     string fkTargetTableName = (string)fk["PK_TABLE_NAME"]; // Name of the target set of the simple dimension (first segment of this complex path)
@@ -214,6 +216,7 @@ namespace Com.Model
                     if (fkTargetPath == null)
                     {
                         fkTargetPath = new Dim(fkTargetColumnName);
+                        fkTargetPath.IsIdentity = path.IsIdentity;
                         fkTargetPath.LesserSet = fkTargetSet;
                         fkTargetPath.GreaterSet = path.GreaterSet;
                         fkTargetSet.AddGreaterPath(fkTargetPath); // We do not know if it is really a FK or simple dimension so this needs to be fixed later

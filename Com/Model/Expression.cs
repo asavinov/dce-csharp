@@ -29,6 +29,30 @@ namespace Com.Model
         private int _minValues=1; // Static constraint on output: Minimum number of values
         private int _maxValues = 1; // Static constraint on output: Maximum number of values
 
+        public void SetOutput(Operation op, object output) // Set constant values recursively
+        {
+            if (op == null || op == Operation.ALL || Operation == op) // Assignment is needed
+            {
+                // Check validity of assignment
+                Debug.Assert(!(output != null && Operation == Operation.PRIMITIVE && !output.GetType().IsPrimitive), "Wrong use: constant value type has to correspond to operation type.");
+                Debug.Assert(!(output != null && Operation == Operation.DATA_ROW && !(output is DataRow)), "Wrong use: constant value type has to correspond to operation type.");
+                Debug.Assert(!(output != null && Operation == Operation.OFFSET && !(output is Offset)), "Wrong use: constant value type has to correspond to operation type.");
+                Debug.Assert(!(output != null && Operation == Operation.TUPLE && !(output is Offset)), "Wrong use: constant value type has to correspond to operation type.");
+
+                Output = output;
+            }
+            
+            // The same for all child nodes recursively
+            if (Input != null) Input.SetOutput(op, output);
+            if (Operands != null)
+            {
+                foreach (Expression child in Operands)
+                {
+                    child.SetOutput(op, output);
+                }
+            }
+        }
+
         /// <summary>
         /// Expressin name or alias. 
         /// It can be or must be eqaul to the dimension/function name the expression defines. 
@@ -47,27 +71,43 @@ namespace Com.Model
         /// It can be this identity (offset), remote element (data row), an intermediate element or null/root for global expressions.
         /// The set the input value belongs to is specified in the expression. 
         /// </summary>
-        public Expression Input { get; set; }
-        public void SetInput(object input)
+        public Expression Input
         {
-            if (input is DataRow)
+            get;
+            set;
+        }
+/*
+        public Expression GetInput() // Input inheritance strategy
+        {
+            return Input != null ? Input : (ParentExpression != null ? ParentExpression.Input : null);
+        }
+*/
+        public void SetInput(Operation op, Operation inputOp)
+        {
+            if (op == null || op == Operation.ALL || Operation == op) // Assignment is needed
             {
-                Input = new Expression();
-                Input.Operation = Operation.DATA_ROW;
-                Input.Output = (DataRow)input;
+                if (Input == null)
+                {
+                    Input = new Expression("Input");
+                    Input.ParentExpression = this;
+                    Input.Operation = inputOp;
+                }
+                else
+                {
+                    Input.Operation = inputOp;
+                }
             }
-            if (input is Offset)
+
+            // The same for all child nodes recursively
+            if (Operands != null)
             {
-                Input = new Expression();
-                Input.Operation = Operation.DATA_ROW;
-                Input.Output = (Offset)input;
-            }
-            else
-            {
-                throw new NotImplementedException();
+                foreach (Expression child in Operands)
+                {
+                    child.SetInput(op, inputOp);
+                }
             }
         }
-
+ 
         /// <summary>
         /// These are parameters which are needed for evaluation of this expression
         /// </summary>
@@ -121,42 +161,53 @@ namespace Com.Model
 			{
                 case Operation.PRIMITIVE:
 				{
+                    // Output is expected to store a primitive value or null
                     // Nothing to compute - it is a leaf expression containing a terminal value/atom/literal. 
                     // Output = Output; // The result already stores the value(s), operands are not needed. The set has to correspond to the value.
                     break;
                 }
                 case Operation.DATA_ROW:
                 {
+                    // Output is expected to store DataRow or null
+                    // Nothing to compute - it is a leaf expression containing a reference to a DataRow as a terminal value.
+                    // Output = Output; // The result already stores the value(s), operands are not needed. The set has to correspond to the value.
+                    break;
+                }
+                case Operation.OFFSET:
+                {
+                    // Output is expected to store Offset or null
                     // Nothing to compute - it is a leaf expression containing a reference to a DataRow as a terminal value.
                     // Output = Output; // The result already stores the value(s), operands are not needed. The set has to correspond to the value.
                     break;
                 }
                 case Operation.TUPLE:
 				{
-                    foreach (Expression child in Operands) // Evaluate all parameters
+                    foreach (Expression child in Operands) // Evaluate all parameters (recursively)
                     {
-                        if (child.Input == null) // The rule of input inheritance
-                        {
-                            child.Input = Input;
-                        }
-                        child.Evaluate(append);
+                        child.Evaluate(append); // Recursion. Child output will be set
                     }
-                    Output = null; // The result is a combination of its operand results
-                    if (append) //  Find the offset of this combination and append it if absent
+                    Output = null; // Reset
+                    Debug.Assert(OutputSet != null, "Wrong use: output set must be non-null when evaluating tuple expressions.");
+                    if (append) // Determine this output using child's outputs
                     {
-                        // Output = AppendOrFind();
-//                    GreaterSet.Append(Expression expr);
-//                    GreaterSet.Append(path);
+                        Output = OutputSet.Append(this); // Try to find. If not found then append
+                    }
+                    else 
+                    {
+                        // Output = OutputSet.Find(); // TODO: Only find without appending
                     }
                     break;
                 }
                 case Operation.FUNCTION:
                 case Operation.PATH:
                 {
-                    Input.Evaluate(append); // Evaluate 'this' object before it can be used
-                    foreach (Expression child in Operands) // Evaluate all parameters before they can be used
+                    if (Input != null) Input.Evaluate(append); // Evaluate 'this' object before it can be used
+                    if (Operands != null)
                     {
-                        child.Evaluate(append);
+                        foreach (Expression child in Operands) // Evaluate all parameters before they can be used
+                        {
+                            child.Evaluate(append);
+                        }
                     }
 
                     // Now we can compute the function using input and operands
@@ -166,7 +217,14 @@ namespace Com.Model
                     if (Input.Operation == Operation.DATA_ROW)
                     {
                         DataRow thisRow = (DataRow)Input.Output;
-                        Output = thisRow[functionName];
+                        try
+                        {
+                            Output = thisRow[functionName];
+                        }
+                        catch (Exception e)
+                        {
+                            Output = null;
+                        }
                     }
                     else
                     {
@@ -339,20 +397,36 @@ namespace Com.Model
 
     public enum Operation
     {
-        PRIMITIVE, // Primitive value (literal) - a leaf of the expression tree. The value need not be evaluated - it is stored. 
-        DATA_ROW, // Output stores a reference to a DataRow. It is a sort of primitive (predefined, non-evaluatable) values which have internal structure
+        // Patterns or collections of operations (used for querying or imposing constraints)
+        NONE,
+        ALL,
+
+        // Constants. These operations are not evaluated because they are supposed to store the result in the output field. 
+        PRIMITIVE, // Primitive value (literal) - a leaf of the expression tree
+        DATA_ROW, // Output stores a reference to a DataRow
+        OFFSET, // Output stores an offset to an element
+
+        // Structural composition
         TUPLE, // This expression is a tuple composed of its operands as members. Names of operands identify tuple members. A tuple can belong to a set and then it has its structure. 
+
+        // Calls
         FUNCTION, // Compute a function. The function is specified in the operand. The function is applied to... Parameter of the function are in... 
         PATH, // In contrast to functions, it denotes a sequence of segments. So it is a matter of representation: either dimensions (functions) or paths (named sequences of dimensions). 
         PROCEDURE, // Standard procedure which does not use 'this' (input) object and depends only on parameters
+
+        // Arithmetics
         PLUS,
         MINUS,
         TIMES,
         DIVIDE,
+
+        // Aggregation function like SUM or AVG. It is a procedure applied to a group of other objects (normally values but might be more complex expressions). 
+        AGGREGATION,
+
+        // Logic
         AND,
         OR,
         NEGATE,
-        AGGREGATION, // Aggregation function like SUM or AVG. It is a procedure applied to a group of other objects (normally values but might be more complex expressions). 
     }
 	
     public enum OperationType

@@ -106,7 +106,7 @@ namespace Test
             //
             // Create Oldedb root set
             //
-            SetRootOledb dbRoot = new SetRootOledb("Root");
+            SetRootOledb dbRoot = new SetRootOledb("Northwind");
             dbRoot.ConnectionString = Northwind;
             dbRoot.Open();
             dbRoot.ImportSchema();
@@ -116,7 +116,7 @@ namespace Test
             //
             SetRoot wsRoot = new SetRoot("My Mashup");
 
-            // Add a new set
+            // Add a new set manualy
             Set emp = new Set("Employees");
             emp.SuperDim = new DimRoot("super", emp, wsRoot); // Insert the set (no dimensions)
 
@@ -149,41 +149,53 @@ namespace Test
         public void OledbDataImportTest()
         {
             // Create Oldedb root set
-            SetRootOledb dbRoot = new SetRootOledb("Root");
-
+            SetRootOledb dbRoot = new SetRootOledb("Northwind");
             dbRoot.ConnectionString = Northwind;
-            // Another provider: "Provider=Microsoft.Jet.OLEDB.4.0;"
-
             dbRoot.Open();
-
             dbRoot.ImportSchema();
-
-            Set empSet = dbRoot.FindSubset("Employees");
-            System.Data.DataTable dataTable = dbRoot.Export(empSet);
 
             // Create workspace root set
             SetRoot wsRoot = new SetRoot("My Mashup");
 
-            // Add a new set and import its structure
-            Set emp = new Set("Emp" /*, dbRoot.FindSubset("Employees")*/);
-            emp.SuperDim = new DimRoot("super", emp, wsRoot); // Insert the set (no dimensions)
-//            emp.ImportDimensions(); // Import all dimensions
+            //
+            // Import first set
+            //
+            DimExport dimExp = new DimExport("export emp", dbRoot.FindSubset("Employees"), wsRoot);
+            dimExp.BuildExpression();
+            dimExp.ExportDimensions();
 
             // Import data
-//            emp.Populate();
+            dimExp.Populate();
+
+            // Assert. Check imported data
+            Set emp = wsRoot.FindSubset("Employees");
 
             Assert.AreEqual(9, emp.Length);
             Assert.AreEqual(6, emp.GetValue("ID", 5));
-            Assert.AreEqual("Mariya", emp.GetValue("First Name", 3));
-            Assert.AreEqual("Seattle", emp.GetValue("City", 8));
+            //Assert.AreEqual("Mariya", emp.GetValue("First Name", 3));
+            //Assert.AreEqual("Seattle", emp.GetValue("City", 8));
 
-            // Add EmployeePrivileges table which references one existing and one non-existing tables
-            Set empPriv = new Set("EmpPriv" /*, dbRoot.FindSubset("Employee Privileges")*/);
-            empPriv.SuperDim = new DimRoot("super", empPriv, wsRoot); // Insert the set (no dimensions)
-//            empPriv.ImportDimensions(); // Import all dimensions
+            //
+            // Import second set
+            //
+            DimExport dimExp2 = new DimExport("export emp priv", dbRoot.FindSubset("Employee Privileges"), wsRoot);
+            dimExp2.BuildExpression();
+            dimExp2.ExportDimensions();
 
-//            empPriv.Populate();
+            // Import data
+            dimExp2.Populate();
 
+            // Assert. Check imported data
+            Set ep = wsRoot.FindSubset("Employee Privileges");
+
+            Assert.AreEqual(1, ep.Length);
+            //Assert.AreEqual(2, ep.GetValue("Employee ID", 0));
+
+            Set priv = wsRoot.FindSubset("Privileges");
+
+            Assert.AreEqual(1, priv.Length);
+            //Assert.AreEqual(2, ep.GetValue("Purchase ID", 0));
+            //Assert.AreEqual("Purchase Approvals", ep.GetValue("Purchase Name", 0));
         }
 
         [TestMethod]
