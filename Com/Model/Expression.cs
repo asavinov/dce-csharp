@@ -31,7 +31,7 @@ namespace Com.Model
 
         public void SetOutput(Operation op, object output) // Set constant values recursively
         {
-            if (op == null || op == Operation.ALL || Operation == op) // Assignment is needed
+            if (op == Operation.ALL || Operation == op) // Assignment is needed
             {
                 // Check validity of assignment
                 Debug.Assert(!(output != null && Operation == Operation.PRIMITIVE && !output.GetType().IsPrimitive), "Wrong use: constant value type has to correspond to operation type.");
@@ -84,7 +84,7 @@ namespace Com.Model
 */
         public void SetInput(Operation op, Operation inputOp)
         {
-            if (op == null || op == Operation.ALL || Operation == op) // Assignment is needed
+            if (op == Operation.ALL || Operation == op) // Assignment is needed
             {
                 if (Input == null)
                 {
@@ -141,10 +141,13 @@ namespace Com.Model
                 return root;
             }
         }
-        public List<Dim> GetPath() // Return a list of dimensions from the root till this expression
+        public List<Dim> GetPath()
         {
+            // Return a list of dimensions from the root till this expression
+            // We ignore the segment that corresponds to the root expression because it is normally corresponds to the special export dimension
+
             List<Dim> ret = new List<Dim>();
-            for (Expression exp = this; exp != null; exp = exp.ParentExpression)
+            for (Expression exp = this; exp.ParentExpression != null; exp = exp.ParentExpression)
             {
                 ret.Insert(0, exp.Dimension);
             }
@@ -155,7 +158,7 @@ namespace Com.Model
         /// <summary>
         /// Compute output of the expression by applying it to a row of the data table. 
         /// </summary>
-        public object Evaluate(bool append)
+        public object Evaluate(EvaluationMode evaluationMode)
         {
 			switch(Operation)
 			{
@@ -184,29 +187,33 @@ namespace Com.Model
 				{
                     foreach (Expression child in Operands) // Evaluate all parameters (recursively)
                     {
-                        child.Evaluate(append); // Recursion. Child output will be set
+                        child.Evaluate(evaluationMode); // Recursion. Child output will be set
                     }
                     Output = null; // Reset
                     Debug.Assert(OutputSet != null, "Wrong use: output set must be non-null when evaluating tuple expressions.");
-                    if (append) // Determine this output using child's outputs
+                    switch(evaluationMode) 
                     {
-                        Output = OutputSet.Append(this); // Try to find. If not found then append
+                        case EvaluationMode.FIND:// TODO: Only find with no update and no append 
+                            // Output = OutputSet.Find(); // Only identities will be used
+                            break;
+                        case EvaluationMode.UPDATE: // If an element exists (is found) then update its attributes, otherwise nothing to do
+                            break;
+                        case EvaluationMode.APPEND: // Try to find the element (identity). If not found then append (new identity). Update its attributes.
+                            Output = OutputSet.Append(this); 
+                            break;
                     }
-                    else 
-                    {
-                        // Output = OutputSet.Find(); // TODO: Only find without appending
-                    }
+
                     break;
                 }
                 case Operation.FUNCTION:
                 case Operation.PATH:
                 {
-                    if (Input != null) Input.Evaluate(append); // Evaluate 'this' object before it can be used
+                    if (Input != null) Input.Evaluate(evaluationMode); // Evaluate 'this' object before it can be used
                     if (Operands != null)
                     {
                         foreach (Expression child in Operands) // Evaluate all parameters before they can be used
                         {
-                            child.Evaluate(append);
+                            child.Evaluate(evaluationMode);
                         }
                     }
 
@@ -341,14 +348,14 @@ namespace Com.Model
 
             if (dim.IsPrimitive) // End of recursion
             {
-                expr.Operation = Operation.FUNCTION; // Or PATH
+                expr.Operation = Operation.PATH; // Or FUNCTION
 
-                // Replace a function by path
+                // Expresssion name is function name, so we need to find a correct function name that can be resolved later during its use
                 List<Dim> path = expr.GetPath();
-                List<Dim> remPaths = dim.LesserSet.GetGreaterPathsStartingWith(path);
+                List<Dim> remPaths = expr.Root.OutputSet.GetGreaterPathsStartingWith(path);
                 if (remPaths.Count == 1)
                 {
-                    expr.Name = remPaths[0].Name; // Name of the path (attribute name) denoting a sequence of segments
+                    expr.Name = remPaths[0].Name; // Name of the path (attribute name) denoting a sequence of segments. 
                 }
                 else if (remPaths.Count > 1) // Found many
                 {
@@ -375,6 +382,7 @@ namespace Com.Model
         public static Expression CreateExpression(Set set)
         {
             Dim dim = new Dim("", null, set); // Workaround - create an auxiliary object
+
             Expression expr = CreateExpression(dim, null); // and then use an existing method
 
             expr.Name = ""; // Reset unknown parameters
@@ -434,5 +442,12 @@ namespace Com.Model
         ARITHMETIC, // sum, product etc. 
         SET, // intersect/union/negate input sets
         LOGICAL
+    }
+
+    public enum EvaluationMode
+    {
+        FIND, // Only find 
+        UPDATE, // Find and update the found element
+        APPEND, // Find and append and then update
     }
 }

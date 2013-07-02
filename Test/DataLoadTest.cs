@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -84,20 +85,40 @@ namespace Test
             dbRoot.ImportSchema();
 
             // Check validity of the schema
-            Set epSet = dbRoot.FindSubset("Employee Privileges");
-            Assert.AreEqual(2, epSet.GreaterDims.Count);
-            Assert.AreEqual(2, epSet.GreaterPaths.Count);
-            Assert.AreEqual(2, epSet.GreaterPaths[0].Rank);
-            Assert.AreEqual(2, epSet.GreaterPaths[1].Rank);
-
             Set doubleSet = dbRoot.FindSubset("Double");
-            Assert.AreEqual(2, doubleSet.LesserDims.Count);
-            Assert.AreEqual(2, doubleSet.LesserPaths.Count);
+            Assert.AreEqual(16, doubleSet.LesserDims.Count);
+            Assert.AreEqual(45, doubleSet.LesserPaths.Count);
 
             Set empSet = dbRoot.FindSubset("Employees");
             System.Data.DataTable dataTable = dbRoot.Export(empSet);
             Assert.AreEqual(9, dataTable.Rows.Count);
             Assert.AreEqual(18, dataTable.Columns.Count);
+
+            Set epSet = dbRoot.FindSubset("Employee Privileges");
+            Assert.AreEqual(2, epSet.GreaterDims.Count);
+            Assert.AreEqual(20, epSet.GreaterPaths.Count); // 2 stored paths and 18 non-stored paths (inherited from Employees)
+            Assert.AreEqual(2, epSet.GetGreaterPath("Employee ID").Rank);
+            Assert.AreEqual(2, epSet.GetGreaterPath("Privilege ID").Rank);
+
+            // Test enumerators
+            int pathCount = 0;
+            foreach (List<Dim> p in empSet.GetGreaterPrimitiveDims(DimensionType.IDENTITY_ENTITY))
+            {
+                Assert.AreEqual(1, p.Count);
+                pathCount++;
+            }
+            Assert.AreEqual(18, pathCount);
+
+            pathCount = 0;
+            foreach (List<Dim> p in epSet.GetGreaterPrimitiveDims(DimensionType.IDENTITY_ENTITY))
+            {
+                pathCount++;
+            }
+            Assert.AreEqual(20, pathCount);
+
+            // Test path correctness
+            pathCount = epSet.GreaterPaths.Count;
+            Assert.AreEqual(20, pathCount);
         }
 
         [TestMethod]
@@ -154,6 +175,9 @@ namespace Test
             dbRoot.Open();
             dbRoot.ImportSchema();
 
+            Set emp = dbRoot.FindSubset("Inventory Transactions"); // "Purchase Order Details" "Employee Privileges"
+            string sql = dbRoot.BuildSql(emp);
+
             // Create workspace root set
             SetRoot wsRoot = new SetRoot("My Mashup");
 
@@ -163,7 +187,7 @@ namespace Test
             DimExport dimExp = new DimExport("export emp", dbRoot.FindSubset("Employees"), wsRoot);
             dimExp.BuildExpression();
             dimExp.ExportDimensions();
-
+/*
             // Import data
             dimExp.Populate();
 
@@ -174,7 +198,7 @@ namespace Test
             Assert.AreEqual(6, emp.GetValue("ID", 5));
             //Assert.AreEqual("Mariya", emp.GetValue("First Name", 3));
             //Assert.AreEqual("Seattle", emp.GetValue("City", 8));
-
+*/
             //
             // Import second set
             //

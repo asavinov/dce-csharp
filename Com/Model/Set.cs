@@ -29,6 +29,13 @@ namespace Com.Model
         public string Name { get; set; }
 
         /// <summary>
+        /// Additional names specific to the relational model and maybe other PK-FK-based models.
+        /// We assume that there is only one PK (identity). Otherwise, we need a collection. 
+        /// </summary>
+        public string RelationalPkName { get; set; } // The same field exists also in Dim (do not confuse them)
+        public string RelationalTableName { get; set; }
+
+        /// <summary>
         /// How many _instances this set has. Cardinality. Set power. Length (height) of instance set.
         /// If instances are identified by integer offsets, then size also represents offset range.
         /// </summary>
@@ -229,16 +236,28 @@ namespace Com.Model
             }
         }
 
-        public List<Dim> GetGreaterLeafDims()
+        public DepthDimEnumerator GetGreaterPrimitiveDims(DimensionType dimType)
         {
-            List<Dim> leaves = new List<Dim>();
-            foreach (Dim dim in GreaterDims)
-            {
-                // leaves.AddRange(dim.GetLeafDimensions());
-            }
-            return leaves;
+            return new DepthDimEnumerator(this, dimType);
         }
+/*
+        IEnumerable<List<Dim>> GetAllPrimitiveDims()
+        {
+            Dim p = new Dim("");
+            p.Path = new List<Dim>();
+            p.LesserSet = this;
+            p.GreaterSet = this;
 
+            while (roots.Count > 0)
+            {
+                var node = roots.Pop();
+                foreach (var child in node.GreaterSet.GreaterDims)
+                    roots.Push(child);
+
+                yield return node; // Compose a new list and return it
+            }
+        }
+*/
         public void AddGreaterDim(Dim dim)
         {
             RemoveGreaterDim(dim);
@@ -265,6 +284,10 @@ namespace Com.Model
         {
             return GreaterDims.FirstOrDefault(d => d.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
         }
+        public Dim GetGreaterDimByFkName(string name)
+        {
+            return GreaterDims.FirstOrDefault(d => d.RelationalFkName.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+        }
         public List<Set> GetGreaterSets()
         {
             return GreaterDims.Select(x => x.GreaterSet).ToList();
@@ -273,68 +296,9 @@ namespace Com.Model
         {
             return GreaterDims.Where(x => x.IsIdentity).ToList();
         }
-
-        /// <summary>
-        /// Clone the specified dimension as a new greater dimension in this set or find it. 
-        /// If not specified, the greater set will be found using name comparison and created if absent.
-        /// </summary>
-        /// <param name="remDim"></param>
-        /// <returns></returns>
-        public Dim CloneGreaterDim(Dim remDim, Set greaterSet)
+        public List<Dim> GetEntityDims()
         {
-            Debug.Assert(!IsPrimitive, "This set is prmitive. Cannot add dimensions to a primitive set.");
-
-            Set remSet = remDim.GreaterSet;
-
-            //
-            // Try to find the specified dimension
-            //
-            Dim locDim = GetGreaterDim(remDim.Name);
-            if (locDim != null) // Found
-            {
-                Debug.Assert(greaterSet == null || greaterSet.Equals(locDim.GreaterSet), "The specified greater set must be equal to the greater set of the found dimension.");
-                return locDim;
-            }
-
-            //
-            // Not found. A new dimension will be created.
-            //
-
-            // 1. If greater set is not specified then try to find it by matching 
-            if (greaterSet == null)
-            {
-                greaterSet = Root.MapToLocalSet(remSet);
-                if (greaterSet == null) // Not found. Clone.
-                {
-                    greaterSet = new Set(remSet.Name);
-                    Set locSuperSet = Root.MapToLocalSet(remSet.SuperSet);
-                    greaterSet.SuperDim = new DimRoot("super", this, locSuperSet);
-                }
-            }
-            // Now we have a greater set - either found or created
-
-            // 2. Create a local equivalent of the dimension
-            locDim = greaterSet.CreateDefaultLesserDimension(remDim.Name, this);
-            locDim.LesserSet = this;
-            locDim.GreaterSet = greaterSet;
-            locDim.IsIdentity = remDim.IsIdentity;
-            locDim.SelectExpression = null; // Only computed/derived dimensions have a definition
-
-            // Really add this new dimension to this set
-            AddGreaterDim(locDim);
-
-            return locDim;
-        }
-
-        public void CloneGreaterDimensions(Set remSet)
-        {
-            // Loop through all remote dimensions and for each create/define one target dimension
-            foreach (Dim remDim in remSet.GreaterDims)
-            {
-                Dim newDim = CloneGreaterDim(remDim, null); // Clone dimension (no recursion)
-                if (newDim.GreaterSet.IsPrimitive) continue;
-                newDim.GreaterSet.CloneGreaterDimensions(remDim.GreaterSet); // Recursion
-            }
+            return GreaterDims.Where(x => !x.IsIdentity).ToList();
         }
 
         #endregion
@@ -381,6 +345,27 @@ namespace Com.Model
         {
             return GreaterPaths.FirstOrDefault(d => d.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
         }
+        public Dim GetGreaterPathByColumnName(string name)
+        {
+            return GreaterPaths.FirstOrDefault(d => d.RelationalColumnName.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+        }
+        public Dim GetGreaterPath(Dim path)
+        {
+            if (path == null || path.Path == null) return null;
+            foreach (Dim p in GreaterPaths)
+            {
+                if (p.Path == null) continue;
+                if (p.Path.Count != path.Path.Count) continue; // Difference lengths
+
+                bool equal = true;
+                for (int seg=0; seg<p.Path.Count && equal; seg++)
+                {
+                    if (p.Path[seg] != path.Path[seg]) equal = false;
+                }
+                if(equal) return p;
+            }
+            return null;
+        }
         public List<Dim> GetGreaterPathsStartingWith(Dim path)
         {
             if (path == null || path.Path == null) return new List<Dim>();
@@ -400,10 +385,38 @@ namespace Com.Model
             }
             return result;
         }
+        
+        public void AddAllNonStoredPaths()
+        {
+            int pathCounter = 0;
+
+            Dim path = new Dim("");
+            foreach (List<Dim> p in GetGreaterPrimitiveDims(DimensionType.IDENTITY_ENTITY))
+            {
+                if (p.Count < 2) continue; // All primitive paths are stored in this set. We need at least 2 segments.
+
+                // Check if this path already exists
+                path.Path = p;
+                if (GetGreaterPath(path) != null) continue; // Already exists
+
+                string pathName = "__inherited__" + ++pathCounter;
+
+                Dim newPath = new Dim(pathName);
+                newPath.Path = new List<Dim>(p);
+                newPath.Name = newPath.ComplexName; // Overwrite previous pathName (so previous is not needed actually)
+                newPath.RelationalColumnName = newPath.Name; // It actually will be used for relational queries
+                newPath.RelationalFkName = path.RelationalFkName; // Belongs to the same FK
+                newPath.RelationalPkName = null;
+                newPath.LesserSet = this;
+                newPath.GreaterSet = p[p.Count - 1].GreaterSet;
+
+                AddGreaterPath(newPath);
+            }
+        }
 
         #endregion
 
-        #region Instance manipulation (function) methods
+        #region Instance manipulation (function, data) methods
 
         // TODO: Here we need an interface like ResultSet in JDBC with all possible types
 		// Alternative: maybe define these methos in the SetRemote class where we will have one class for manually entering elements
@@ -605,7 +618,7 @@ namespace Com.Model
 
         public override string ToString()
         {
-            return String.Format("{0} {1}, ID: {2}", Name, IdentityArity, Id);
+            return String.Format("{0} gDims: {1}, IdArity: {2}", Name, GreaterDims.Count, IdentityArity);
         }
 
         public override bool Equals(object obj)
@@ -666,19 +679,6 @@ namespace Com.Model
 
     }
 
-    public enum DimensionType
-    {
-        INCLUSION,
-        POSET,
-        EXPORT,
-    }
-
-    public enum DimensionDirection
-    {
-        GREATER, // Up
-        LESSER, // Down, reverse
-    }
-
     public enum DataSourceType
     {
         LOCAL, // This database
@@ -687,3 +687,72 @@ namespace Com.Model
         EXCEL
     }
 }
+
+
+/*
+
+        /// <summary>
+        /// Clone the specified dimension as a new greater dimension in this set or find it. 
+        /// If not specified, the greater set will be found using name comparison and created if absent.
+        /// </summary>
+        /// <param name="remDim"></param>
+        /// <returns></returns>
+        [System.Obsolete("", true)]
+        public Dim CloneGreaterDim(Dim remDim, Set greaterSet)
+        {
+            Debug.Assert(!IsPrimitive, "This set is prmitive. Cannot add dimensions to a primitive set.");
+
+            Set remSet = remDim.GreaterSet;
+
+            //
+            // Try to find the specified dimension
+            //
+            Dim locDim = GetGreaterDim(remDim.Name);
+            if (locDim != null) // Found
+            {
+                Debug.Assert(greaterSet == null || greaterSet.Equals(locDim.GreaterSet), "The specified greater set must be equal to the greater set of the found dimension.");
+                return locDim;
+            }
+
+            //
+            // Not found. A new dimension will be created.
+            //
+
+            // 1. If greater set is not specified then try to find it by matching 
+            if (greaterSet == null)
+            {
+                greaterSet = Root.MapToLocalSet(remSet);
+                if (greaterSet == null) // Not found. Clone.
+                {
+                    greaterSet = new Set(remSet.Name);
+                    Set locSuperSet = Root.MapToLocalSet(remSet.SuperSet);
+                    greaterSet.SuperDim = new DimRoot("super", this, locSuperSet);
+                }
+            }
+            // Now we have a greater set - either found or created
+
+            // 2. Create a local equivalent of the dimension
+            locDim = greaterSet.CreateDefaultLesserDimension(remDim.Name, this);
+            locDim.LesserSet = this;
+            locDim.GreaterSet = greaterSet;
+            locDim.IsIdentity = remDim.IsIdentity;
+            locDim.SelectExpression = null; // Only computed/derived dimensions have a definition
+
+            // Really add this new dimension to this set
+            AddGreaterDim(locDim);
+
+            return locDim;
+        }
+        [System.Obsolete("", true)]
+        public void CloneGreaterDimensions(Set remSet)
+        {
+            // Loop through all remote dimensions and for each create/define one target dimension
+            foreach (Dim remDim in remSet.GreaterDims)
+            {
+                Dim newDim = CloneGreaterDim(remDim, null); // Clone dimension (no recursion)
+                if (newDim.GreaterSet.IsPrimitive) continue;
+                newDim.GreaterSet.CloneGreaterDimensions(remDim.GreaterSet); // Recursion
+            }
+        }
+
+*/

@@ -116,6 +116,14 @@ namespace Com.Model
             return null;
         }
 
+        public virtual DataTable ExportAll(Set set)
+        {
+            // Check if this set is our child
+            DataTable dataTable = new DataTable(set.Name);
+            // Add rows by reading them from this set local dimensions
+            return null;
+        }
+
         public SetRoot(string name)
             : base(name) // C#: If nothing specified, then base() will always be called by default
         {

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -14,7 +13,7 @@ namespace Com.Model
     /// Extensions also can define functions defined via a formula or a query to an external database.
     /// It is only important that a function somehow impplements a mapping from its lesser set to its greater set. 
     /// </summary>
-    public class Dim : IEnumerable
+    public class Dim
     {
         #region Properties
 
@@ -29,6 +28,37 @@ namespace Com.Model
         /// This name is unique within the lesser set.
         /// </summary>
         public string Name { get; set; }
+        public string ComplexName 
+        {
+            get 
+            {
+                if (Path == null || Path.Count == 0) return "";
+                string complexName = "";
+                foreach (Dim seg in Path) complexName += "_" + seg.Name;
+                return complexName;
+            }
+        }
+        public string HashName
+        {
+            get
+            {
+                if (Path == null || Path.Count == 0) return "0";
+                int hash = 0;
+                foreach (Dim seg in Path) hash += seg.Id.GetHashCode();
+
+                hash = Math.Abs(hash);
+                string hashName = hash.ToString("X"); // unique hash representing this path
+                return hashName.Length > 6 ? hashName.Substring(0, 6) : hashName;
+            }
+        }
+
+        /// <summary>
+        /// Additional names specific to the relational model and maybe other PK-FK-based models.
+        /// These fields can be extracted into some child class if it will be created like relational dimension, path dimension etc.
+        /// </summary>
+        public string RelationalColumnName { get; set; } // For paths, it is the original column name used in the database (can be moved to a child class if such will be introduced for relational dimensions or for path dimensions). 
+        public string RelationalFkName { get; set; } // For dimensions, which were created from FK, it stores the original FK name
+        public string RelationalPkName { get; set; } // PK this column belongs to according to the schema
 
         public virtual int Width // Width of instances. It depends on the implementation (and might not be the same for all dimensions of the greater set). 
         {
@@ -126,7 +156,7 @@ namespace Com.Model
         /// <summary>
         /// A dimension can be defined as a sequence of other dimensions. For simple dimensions the path is empty.
         /// </summary>
-        public List<Dim> Path { get; private set; }
+        public List<Dim> Path { get; set; }
 
         public void AddSegment(Dim dim)
         {
@@ -205,10 +235,15 @@ namespace Com.Model
         }
 
         /// <summary>
-        /// Convert path definition (composition) to a canonical representation as a sequence of simple dimensions without complex constituents.
+        /// Convert nested path to a flat canonical representation as a sequence of simple dimensions which do not contain other dimensions.
+        /// Initially, paths are pairs <this set dim, greater set path>. We recursively replace all nested paths by dimensions.
+        /// Also, adjust path names in special cases like empty name or simple structure. 
         /// </summary>
         public void ExpandPath()
         {
+            //
+            // Flatten all paths by converting <dim, greater-path> pairs by sequences of dimensions <dim, dim2, dim3,...>
+            //
             List<Dim> allSegments = GetAllSegments();
             Path.Clear();
             if (allSegments != null && allSegments.Count != 0)
@@ -220,7 +255,18 @@ namespace Com.Model
                 // ERROR: Wrong use: The path does not have the corresponding dimension
             }
 
-            if (GreaterSet.IdentityPrimitiveArity == 1) // For 1-column FK, dimensino name is the only column name instead of fkName (fkName is not used).
+            //
+            // Adding missing paths. Particularly, non-stored paths (paths returning values which are stored only in the greater sets but not in this set).
+            //
+            if (!String.IsNullOrEmpty(RelationalFkName) && GreaterSet.IdentityPrimitiveArity == 1)
+            {
+                Path[0].Name = Name; // FK-name is overwritten and lost - attribute name is used instead
+            }
+
+            //
+            // Dim name adjustment: for 1-column FK dimensions, we prefer to use its only column name instead of the FK-name (fkName is not used)
+            //
+            if (!String.IsNullOrEmpty(RelationalFkName) && GreaterSet.IdentityPrimitiveArity == 1) 
             {
                 Path[0].Name = Name; // FK-name is overwritten and lost - attribute name is used instead
             }
@@ -312,14 +358,9 @@ namespace Com.Model
 
         #region Overriding System.Object and interfaces
 
-        public IEnumerator GetEnumerator()
-        {
-            return (IEnumerator)new DepthDimEnumerator(this);
-        }
-
         public override string ToString()
         {
-            return String.Format("{0} {1}, ID: {2}", Name, 0, Id);
+            return String.Format("{0} From: {1}, To: {2}", Name, LesserSet.Name, GreaterSet.Name);
         }
 
         public override bool Equals(object obj)
@@ -375,25 +416,24 @@ namespace Com.Model
 
     }
 
-    public abstract class DimEnumerator : IEnumerable
+    public abstract class DimEnumerator : Dim, IEnumerator<List<Dim>> // IEnumerable<List<Dim>>
     {
-        public List<Dim> _Path = new List<Dim>();
 
-       public DimEnumerator(Dim tree)
+        public DimEnumerator(Set set) : base("")
         {
-            _Path.Add(tree);
+            Path = new List<Dim>();
+            LesserSet = set;
+            GreaterSet = set;
         }
 
         // Get the explicit current node.
-        public Dim Current { get { return _Path[_Path.Count - 1]; } }
+       public List<Dim> Current { get { return new List<Dim>(Path); } }
 
-/*
         // Get the implicit current node.
         object System.Collections.IEnumerator.Current
         {
-            get { return _Path[_Path.Count - 1]; }
+            get { return Current; }
         }
-*/
  
         // Increment the iterator and moves the current node to the next one
         public abstract bool MoveNext();
@@ -401,23 +441,25 @@ namespace Com.Model
         // Dispose the object.
         public void Dispose()
         {
-            _Path.Clear();
+            LesserSet = null;
+            GreaterSet = null;
+
+            Path.Clear();
+            Path = null;
         }
 
         // Reset the iterator.
         public void Reset()
         {
-            Dim segment = _Path[0];
-            _Path.Clear();
-            _Path.Add(segment);
+            Path.Clear();
         }
 
         // Get the underlying enumerator.
-        public virtual IEnumerator GetEnumerator()
+        public virtual IEnumerator<List<Dim>> GetEnumerator()
         {
-            return (IEnumerator < Dim >)this;
+            return (IEnumerator<List<Dim>>)this; 
         }
-
+/*
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
         {
             // this calls the IEnumerator<Foo> GetEnumerator method
@@ -426,6 +468,7 @@ namespace Com.Model
             // ensures this is type-safe
             return GetEnumerator();
         }
+*/
     }
 
     /// <summary>
@@ -439,43 +482,113 @@ namespace Com.Model
     /// </summary>
     public class DepthDimEnumerator : DimEnumerator
     {
-        public DepthDimEnumerator(Dim tree)
-            : base(tree) { }
+        private DimensionType _dimType;
+
+        public DepthDimEnumerator(Set set, DimensionType dimType)
+            : base(set) 
+        {
+            _dimType = dimType;
+        }
 
         public override bool MoveNext()
         {
-            if (!Current.GreaterSet.IsPrimitive) // Not a leaf - go deeper
+            if (!GreaterSet.IsPrimitive)
             {
-                _Path.Add(Current.GreaterSet.GreaterDims[0]);
-                return true;
+                bool foundPrimitive = MoveUp();
+                if (foundPrimitive) return true;
+                // Else move down back
             }
 
-            // Return back until we find the next child
-            Dim child = null; 
-            do
+            // Go down (return back) until we find the next (unvisited) child
+            bool foundChild = MoveDown();
+            if (!foundChild) return false;
+
+            return MoveUp();
+        }
+        private bool MoveUp() // true - found primitive, false - found non-primitive leaf
+        {
+            while (!GreaterSet.IsPrimitive) // Not a leaf - go up deeper and search for the first primitive set
             {
-                child = Current;
-                _Path.RemoveAt(_Path.Count - 1);
-                if (_Path.Count == 0) // End. It was the last element.
+                List<Dim> dims = GetChildren();
+
+                if (dims.Count != 0)
+                {
+                    Path.Add(dims[0]); // Continue depth-first by adding the very first dimension
+                    GreaterSet = LastSegment.GreaterSet;
+                }
+                else
+                {
+                    return false; // Non-primitive set but no possibility to continue
+                }
+            }
+            return true;
+        }
+        private bool MoveDown() // true - found next child that can be continued up, false - not found (end)
+        {
+            Dim child = null;
+            do // It is only down loop (removing last segment)
+            {
+                if (Path.Count == 0) // Nothing to remove. End.
                 {
                     return false;
                 }
-                List<Dim> children = Current.GreaterSet.GetIdentityDims();
+
+                child = LastSegment;
+                Path.RemoveAt(Path.Count - 1);
+                GreaterSet = Path.Count == 0 ? LesserSet : LastSegment.GreaterSet;
+
+                List<Dim> children = GetChildren();
+
                 int childIndex = children.IndexOf(child);
-                if (childIndex + 1 < children.Count) // Use this next child
+                if (childIndex + 1 < children.Count) // Good child. Use it
                 {
                     child = children[childIndex + 1];
-                    _Path.Add(child);
+                    Path.Add(child);
+                    GreaterSet = LastSegment.GreaterSet;
                     return true;
                 }
-                else // No next child
+                else // Bad child. Continue removing.
                 {
                     child = null;
                 }
             } while (child == null);
 
-            return true;
+            return false; // Unreachable
         }
+
+        private List<Dim> GetChildren()
+        {
+            switch (_dimType)
+            {
+                case DimensionType.IDENTITY: return GreaterSet.GetIdentityDims();
+                case DimensionType.ENTITY: return GreaterSet.GetEntityDims();
+                case DimensionType.IDENTITY_ENTITY: return GreaterSet.GreaterDims;
+            }
+            return null;
+        }
+    }
+
+    public enum DimensionType
+    {
+        INCLUSION, // Both super and sub
+        SUPER, // 
+        SUB, // 
+
+        POSET, // Both greater and lesser
+        GREATER, // 
+        LESSER, // 
+
+        IDENTITY_ENTITY, // Both identity and entity
+        IDENTITY, //
+        ENTITY, // 
+
+        EXPORT,
+    }
+
+    public enum DimensionDirection
+    {
+        GREATER, // Up
+        LESSER, // Down, reverse
     }
 
 }
