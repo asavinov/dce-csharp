@@ -164,9 +164,16 @@ namespace Com.Model
 			{
                 case Operation.PRIMITIVE:
 				{
-                    // Output is expected to store a primitive value or null
-                    // Nothing to compute - it is a leaf expression containing a terminal value/atom/literal. 
-                    // Output = Output; // The result already stores the value(s), operands are not needed. The set has to correspond to the value.
+                    if (Input != null)
+                    {
+                        Input.Evaluate(evaluationMode);
+                        Output = Input.Output;
+                    }
+                    else if (Operands != null && Operands.Count > 0)
+                    {
+                        Operands[0].Evaluate(evaluationMode);
+                        Output = Operands[0].Output;
+                    }
                     break;
                 }
                 case Operation.DATA_ROW:
@@ -247,7 +254,14 @@ namespace Com.Model
                         Output = dim.GetValue((Offset)Input.Output); // Read the value of the function
                     }
 
-                    OutputSet = null; // TODO: We have to find a primitive set corresponding to the value. For that purpose, we have to know the database the result is computed for.
+                    // Output value may have quite different type and not all types can be consumed (stored) in the system. So cast or transform or reduce to our type system
+                    // Probably the best way is to use a unified type matching and value conversion API
+                    if (Output is DBNull)
+                    {
+                        Output = (Int32) 0; // TODO: We have to learn to work with NULL values as well as with non-supported values like BLOB etc.
+                    }
+
+                    // OutputSet = ???; // TODO: We have to find a primitive set corresponding to the value. For that purpose, we have to know the database the result is computed for.
                     break;
                 }
             }
@@ -285,14 +299,7 @@ namespace Com.Model
             Dim dim = null;
             if (lesserSet != null)
             {
-                foreach (Dim gDim in lesserSet.GreaterDims) 
-                {
-                    if (gDim.Name.Equals(Name, StringComparison.InvariantCultureIgnoreCase)) // Or Dimension.Name
-                    {
-                        dim = gDim;
-                        break;
-                    }
-                }
+                dim = lesserSet.GetGreaterDim(Name); // Or Dimension.Name
 
                 if (dim == null) // Matching dimension not found
                 {
@@ -338,8 +345,6 @@ namespace Com.Model
             expr.Name = dim.Name; // Name of the function
             expr.Dimension = dim;
 
-            expr.Input = null; // Input will be a constant (value, data row etc.) defined for each evaluation
-
             expr.ParentExpression = parent;
             if (parent != null)
             {
@@ -348,26 +353,31 @@ namespace Com.Model
 
             if (dim.IsPrimitive) // End of recursion
             {
-                expr.Operation = Operation.PATH; // Or FUNCTION
+                expr.Operation = Operation.PRIMITIVE; // Or PATH or FUNCTION
+                expr.Name = dim.Name;
 
-                // Expresssion name is function name, so we need to find a correct function name that can be resolved later during its use
+                Expression funcExpr = new Expression();
+                funcExpr.Operation = Operation.FUNCTION;
                 List<Dim> path = expr.GetPath();
-                List<Dim> remPaths = expr.Root.OutputSet.GetGreaterPathsStartingWith(path);
-                if (remPaths.Count == 1)
-                {
-                    expr.Name = remPaths[0].Name; // Name of the path (attribute name) denoting a sequence of segments. 
-                }
-                else if (remPaths.Count > 1) // Found many
-                {
-                }
-                else // Not found
-                {
-                }
+                Set sourceSet = expr.Root.OutputSet; // Or simply expr.Root.OutputSet.ImportDims[0].LesserSet
+                Dim srcPath = sourceSet.GetGreaterPath(path);
+                Debug.Assert(srcPath != null, "Import path not found. Something wrong with import.");
+                funcExpr.Name = srcPath != null ? srcPath.Name : null;
+
+                // Add Input of function as DATA_ROW
+                funcExpr.Input = new Expression();
+                funcExpr.Input.Operation = Operation.DATA_ROW;
+                funcExpr.Input.ParentExpression = expr;
+
+                // Add function to this expression
+                expr.Input = funcExpr;
+                expr.Input.ParentExpression = expr;
             }
             else // Recursion on greater dimensions
             {
                 expr.Operation = Operation.TUPLE;
                 expr.Operands = new List<Expression>();
+                expr.Input = null;
 
                 Set gSet = dim.GreaterSet;
                 foreach (Dim gDim in gSet.GreaterDims) // Only identity dimensions?

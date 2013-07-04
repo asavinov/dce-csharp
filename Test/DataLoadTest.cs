@@ -175,9 +175,10 @@ namespace Test
             dbRoot.Open();
             dbRoot.ImportSchema();
 
+/*
             Set emp = dbRoot.FindSubset("Inventory Transactions"); // "Purchase Order Details" "Employee Privileges"
             string sql = dbRoot.BuildSql(emp);
-
+*/
             // Create workspace root set
             SetRoot wsRoot = new SetRoot("My Mashup");
 
@@ -187,7 +188,9 @@ namespace Test
             DimExport dimExp = new DimExport("export emp", dbRoot.FindSubset("Employees"), wsRoot);
             dimExp.BuildExpression();
             dimExp.ExportDimensions();
-/*
+            dimExp.LesserSet.ExportDims.Add(dimExp);
+            dimExp.GreaterSet.ImportDims.Add(dimExp);
+
             // Import data
             dimExp.Populate();
 
@@ -196,30 +199,31 @@ namespace Test
 
             Assert.AreEqual(9, emp.Length);
             Assert.AreEqual(6, emp.GetValue("ID", 5));
-            //Assert.AreEqual("Mariya", emp.GetValue("First Name", 3));
-            //Assert.AreEqual("Seattle", emp.GetValue("City", 8));
-*/
+            Assert.AreEqual("Mariya", emp.GetValue("First Name", 3));
+            Assert.AreEqual("Seattle", emp.GetValue("City", 8));
+
             //
             // Import second set
             //
-            DimExport dimExp2 = new DimExport("export emp priv", dbRoot.FindSubset("Employee Privileges"), wsRoot);
+            DimExport dimExp2 = new DimExport("export emp priv", dbRoot.FindSubset("Inventory Transactions"), wsRoot); // "Employee Privileges"
             dimExp2.BuildExpression();
             dimExp2.ExportDimensions();
+            dimExp2.LesserSet.ExportDims.Add(dimExp2);
+            dimExp2.GreaterSet.ImportDims.Add(dimExp2);
 
             // Import data
             dimExp2.Populate();
 
             // Assert. Check imported data
-            Set ep = wsRoot.FindSubset("Employee Privileges");
+            Set it = wsRoot.FindSubset("Inventory Transactions");
 
-            Assert.AreEqual(1, ep.Length);
-            //Assert.AreEqual(2, ep.GetValue("Employee ID", 0));
+            Assert.AreEqual(102, it.Length);
+            Assert.AreEqual(1, it.GetValue("Transaction Type", 99)); // 1 is offset which should correspond to second record "Sold"
 
-            Set priv = wsRoot.FindSubset("Privileges");
+            Set pro = wsRoot.FindSubset("Products");
 
-            Assert.AreEqual(1, priv.Length);
-            //Assert.AreEqual(2, ep.GetValue("Purchase ID", 0));
-            //Assert.AreEqual("Purchase Approvals", ep.GetValue("Purchase Name", 0));
+            Assert.AreEqual(28, pro.Length);
+            Assert.AreEqual(34.8, pro.GetValue("List Price", 1));
         }
 
         [TestMethod]

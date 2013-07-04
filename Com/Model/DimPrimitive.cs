@@ -376,7 +376,7 @@ namespace Com.Model
                 {
                     return (T)Convert.ChangeType(value, typeof(T));
                 }
-                catch (InvalidCastException)
+                catch (InvalidCastException e)
                 {
                     return default(T);
                 }

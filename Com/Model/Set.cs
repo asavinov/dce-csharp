@@ -352,15 +352,21 @@ namespace Com.Model
         public Dim GetGreaterPath(Dim path)
         {
             if (path == null || path.Path == null) return null;
+            return GetGreaterPath(path.Path);
+        }
+        public Dim GetGreaterPath(List<Dim> path)
+        {
+            if (path == null ) return null;
             foreach (Dim p in GreaterPaths)
             {
                 if (p.Path == null) continue;
-                if (p.Path.Count != path.Path.Count) continue; // Difference lengths
+                if (p.Path.Count != path.Count) continue; // Different lengths => not equal
 
                 bool equal = true;
                 for (int seg=0; seg<p.Path.Count && equal; seg++)
                 {
-                    if (p.Path[seg] != path.Path[seg]) equal = false;
+                    if (!p.Path[seg].Name.Equals(path[seg].Name, StringComparison.InvariantCultureIgnoreCase)) equal = false;
+                    // if (p.Path[seg] != path[seg]) equal = false; // Compare strings as objects
                 }
                 if(equal) return p;
             }
@@ -541,7 +547,7 @@ namespace Com.Model
 
             if (result.Length == 0) // Not found - append
             {
-                foreach (Dim dim in GetIdentityDims() /*GreaterDims*/) // We have to append to all dimensions - not only identity dimensions
+                foreach (Dim dim in GreaterDims)
                 {
                     Expression childExpr = expr.GetOperand(dim.Name);
                     // OPTIMIZE: Provide positions for the values which have been found during the search (not all positions are known if the search has been broken).
