@@ -26,7 +26,7 @@ namespace Com.Model
         {
             Debug.Assert(LesserSet != null, "Wrong use: lesser set cannot be null for export.");
 
-            SelectExpression = Expression.CreateExpression(LesserSet);
+            SelectExpression = Expression.CreateExportExpression(LesserSet);
 
             SelectExpression.Name = "DimExport";
             SelectExpression.Dimension = this;
@@ -50,7 +50,7 @@ namespace Com.Model
 
         #region Data methods
 
-        public virtual void Populate()
+        public override void Populate()
         {
             // Local population procedure without importing (without external extensional)
             if (LesserSet.Root is SetRootOledb)
@@ -87,68 +87,10 @@ namespace Com.Model
 
         }
 
-        public virtual void Unpopulate() // Clean, Empty
+        public override void Unpopulate() // Clean, Empty
         {
             // Simply empty the greater set
             // After this operation the greater set is empty
-        }
-
-        #endregion
-
-        #region Deprecated/obsolete: export schema
-
-        /// <summary>
-        /// Create (recursively) the same dimension tree within the greater set and return its reference. 
-        /// New sets will be found using name comparison and created if absent.
-        /// 
-        /// It will not work because recursion will not work. Recursion requires that every intermediate set in the tree is connected via ExportDim while only the root of two trees are connected. 
-        /// Solution: 1. Build an expression within this DimExport which describes (clones) the source schema, 2. Build the target schema from this expression
-        /// </summary>
-        /// <param name="remDim"></param>
-        /// <returns></returns>
-        [Obsolete("Deprecated. First, create expression, and then use this expression to create the target schema.", true)]
-        public Dim ExportDimension(Dim remDim)
-        {
-            Set remSet = remDim.GreaterSet;
-            Set locSet = null;
-
-            // Clone one dimension
-            Dim locDim = GreaterSet.GetGreaterDim(remDim.Name); // Dimensions are mapped by name
-            if (locDim == null) // Not found
-            {
-                // Try to find local equivalent of the remote greater set using (same as)
-                locSet = LesserSet.Root.MapToLocalSet(remSet);
-                if (locSet == null) // Not found
-                {
-                    locSet = new Set(remSet.Name); // Clone.
-                    Set locSuperSet = LesserSet.Root.MapToLocalSet(remSet.SuperSet);
-                    locSet.SuperDim = new DimRoot("super", GreaterSet, locSuperSet);
-                }
-
-                // Create a local equivalent of the dimension
-                locDim = locSet.CreateDefaultLesserDimension(remDim.Name, GreaterSet);
-                locDim.LesserSet = GreaterSet;
-                locDim.GreaterSet = locSet;
-                locDim.IsIdentity = remDim.IsIdentity;
-                locDim.SelectExpression = Expression.CreateExpression(remDim, null);
-
-                // Really add this new dimension to this set
-                GreaterSet.AddGreaterDim(locDim);
-            }
-            else // Found
-            {
-                locSet = locDim.GreaterSet;
-            }
-
-            // Recursion: the same method for all greater dimensions of the new greater set
-            foreach (Dim dim in remSet.GreaterDims)
-            {
-//                locSet.ExportDimension(dim);
-                // PROBLEM: recursion does not work here because not all tree nodes have defs as ExportDim. Recursion will work in Expressions or simply using the original structures (without ExportDim)
-                // Question: How to define and import structure? Via Expressions (tree)? 
-            }
-
-            return locDim;
         }
 
         #endregion

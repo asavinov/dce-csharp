@@ -262,13 +262,12 @@ namespace Com.Model
         {
             RemoveGreaterDim(dim);
             Debug.Assert(dim.GreaterSet != null && dim.LesserSet != null, "Wrong use: dimension must specify a lesser and greater sets before it can be added to a set.");
-            // TODO: propagate addition of new dimension by updating higher rank dimensions and other parameters
+            dim.SetLength(this.Length);
             dim.GreaterSet.LesserDims.Add(dim);
             dim.LesserSet.GreaterDims.Add(dim);
         }
         public void RemoveGreaterDim(Dim dim)
         {
-            // TODO: propagate removal of the dimension by updating higher rank dimensions and other parameters
             if (dim.GreaterSet != null) dim.GreaterSet.LesserDims.Remove(dim);
             if (dim.LesserSet != null) dim.LesserSet.GreaterDims.Remove(dim);
         }

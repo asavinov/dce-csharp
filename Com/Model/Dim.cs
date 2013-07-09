@@ -329,15 +329,19 @@ namespace Com.Model
 
         #region Function methods (abstract)
 
-        public virtual void Append(object value) { }
+        public virtual void SetLength(Offset length) { } // We will not use it in public API - only a whole set length can be changed so a Set method has to be used
 
-        public virtual void Insert(int offset, object value) { }
+        public virtual void Append(object value) { } // We will not use it in public API - we can append only a whole record so a Set method has to be used
 
-        public virtual object GetValue(int offset) { return null; }
+        public virtual void Insert(Offset offset, object value) { }
 
-        public virtual void SetValue(int offset, object value) { }
+        public virtual object GetValue(Offset offset) { return null; }
 
-        public virtual int[] GetOffsets(object value) { return null; }
+        public virtual void SetValue(Offset offset, object value) { }
+
+        public virtual Offset[] GetOffsets(object value) { return null; } // Accepts both a single object or an array
+
+        public virtual object GetValues(Offset[] offsets) { return null; }
 
         /// <summary>
         /// It is a convenience property used to import/export data and other purposes. 
@@ -353,6 +357,10 @@ namespace Com.Model
         /// When evaluated, it returs a (new) identity value of the greater set given an identity value of the lesser set.
         /// </summary>
         public Expression SelectExpression { get; set; }
+
+        public virtual void Populate() { return; }
+
+        public virtual void Unpopulate() { return; }
 
         #endregion
 

@@ -59,12 +59,35 @@ namespace Com.Model
             }
         }
 
-        #region Manipulate function (slow). Inherited object-based interface. 
+        #region Manipulate function (slow). Inherited object-based interface. Not generic. 
+
+        public override void SetLength(Offset length)
+        {
+            if (length == Length) return;
+
+            // Ensure that there is enough memory
+            if (allocatedSize < length) // Not enough storage for the new element
+            {
+                allocatedSize += incrementSize * ((length - allocatedSize) / incrementSize + 1);
+                System.Array.Resize<T>(ref _cells, allocatedSize); // Resize the storage for values
+                System.Array.Resize(ref _offsets, allocatedSize); // Resize the indeex
+            }
+
+            // Update data and index in the case of increase (append to last) and decrease (delete last)
+            if (length > Length)
+            {
+                while (length > Length) AppendIndex(ObjectToGeneric(0)); // OPTIMIZE: Instead of appending individual values, write a method for appending an interval of offset (with default value)
+            }
+            else if (length < Length)
+            {
+                // TODO: remove last elements
+            }
+        }
 
         public override void Append(object value)
         {
             // Ensure that there is enough memory
-            if (allocatedSize == Length) // Not enough storage for the new element
+            if (allocatedSize == Length) // Not enough storage for the new element (we need Length+1)
             {
                 allocatedSize += incrementSize;
                 System.Array.Resize<T>(ref _cells, allocatedSize); // Resize the storage for values
@@ -74,24 +97,35 @@ namespace Com.Model
             AppendIndex(ObjectToGeneric(value));
         }
 
-        public override void Insert(int offset, object value)
+        public override void Insert(Offset offset, object value)
         {
             // TODO
         }
 
-        public override object GetValue(int offset)
+        public override object GetValue(Offset offset)
         {
             return _cells[offset]; // We do not check the range of offset - the caller must guarantee its validity
         }
 
-        public override void SetValue(int offset, object value)
+        public override void SetValue(Offset offset, object value)
         {
             UpdateIndex(offset, ObjectToGeneric(value));
         }
 
-        public override int[] GetOffsets(object value)
+        public override Offset[] GetOffsets(object value)
         {
-            return deproject(ObjectToGeneric(value));
+            if (value.GetType().IsArray) return deproject(ObjectToGenericArray(value));
+            else return deproject(ObjectToGeneric(value));
+        }
+
+        public override object GetValues(Offset[] offsets)
+        {
+            return project(offsets);
+            // Returns an array. We cannot case between array types (that is, int[] is not object[]) and therefore we return object.
+            // Alternatives for changing type and using array type:
+            // Cast return array type T[] -> object[]
+            // return (object[])Convert.ChangeType(project(offsets), typeof(object[])); // Will fail at run time in the case of wrong type
+            // return project(offsets).Cast<object>().ToArray();
         }
 
         private T _currentValue;
@@ -105,6 +139,31 @@ namespace Com.Model
             {
                 _currentValue = ObjectToGeneric(value);
             }
+        }
+
+        #endregion
+
+        #region Data methods
+
+        public override void Populate()
+        {
+            if (SelectExpression != null) // Derived dimension the values of which have to be computed and stored
+            {
+                for (Offset offset = 0; offset < LesserSet.Length; offset++) // Compute the output function value for each input value (offset)
+                {
+                    SelectExpression.SetOutput(Operation.OFFSET, offset); // Initialize THIS
+
+                    SelectExpression.Evaluate(EvaluationMode.UPDATE); // Compute
+
+                    SetValue(offset, SelectExpression.Output); // Store the final result
+                }
+            }
+        }
+
+        public override void Unpopulate() // Clean, Empty
+        {
+            // Simply empty the greater set
+            // After this operation the greater set is empty
         }
 
         #endregion
@@ -382,6 +441,35 @@ namespace Com.Model
                 }
             }
         }
+
+        protected T[] ObjectToGenericArray(object values)
+        {
+            // Cast array parameter type: object[] -> T[]
+            if (values is T[])
+            {
+                return (T[])values;
+            }
+            else if (values.GetType().IsArray)
+            {
+                try
+                {
+                    return (T[])Convert.ChangeType(values, typeof(T[])); // Will fail at run time in the case of wrong type
+                }
+                catch (InvalidCastException e)
+                {
+                    return default(T[]);
+                }
+            }
+            else
+            {
+                return new T[] { ObjectToGeneric(values) };
+            }
+
+            // Alternatives:
+            // return values.Cast<T>().ToArray(); 
+            // Array.ConvertAll<object, T>(values, Convert.ToChar);
+        }
+
 
     }
 }

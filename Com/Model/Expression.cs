@@ -25,7 +25,7 @@ namespace Com.Model
         public string OutputSetName { get; set; } // Set can be defined by its name rather than reference
         public Set OutputSet { get; set; } // Type/range of the result, that is, the set the values are taken from
 
-        public bool IsOutputSetValued { get; set; } // Expression can produce either a single instance or a set of instances
+        public bool OutputIsSetValued { get; set; } // Expression can produce either a single instance or a set of instances
         private int _minValues=1; // Static constraint on output: Minimum number of values
         private int _maxValues = 1; // Static constraint on output: Maximum number of values
 
@@ -212,8 +212,8 @@ namespace Com.Model
 
                     break;
                 }
-                case Operation.FUNCTION:
                 case Operation.PATH:
+                case Operation.FUNCTION:
                 {
                     if (Input != null) Input.Evaluate(evaluationMode); // Evaluate 'this' object before it can be used
                     if (Operands != null)
@@ -224,10 +224,20 @@ namespace Com.Model
                         }
                     }
 
-                    // Now we can compute the function using input and operands
+                    // Find the function itself
                     string functionName = Name;
+                    Dim dim = null;
+                    if (Operation == Operation.FUNCTION)
+                    {
+                        dim = Input.OutputSet != null ? Input.OutputSet.GetGreaterDim(functionName) : null;
+                    }
+                    else if (Operation == Operation.PATH)
+                    {
+                        dim = Input.OutputSet != null ? Input.OutputSet.GetGreaterPath(functionName) : null;
+                    }
 
-                    // How to evaluate a function depends on the type of input
+                    // Compute the function. 
+                    // The way function is evaluated depends on the type of input (which determines what will be in Input.Output)
                     if (Input.Operation == Operation.DATA_ROW)
                     {
                         DataRow thisRow = (DataRow)Input.Output;
@@ -239,29 +249,33 @@ namespace Com.Model
                         {
                             Output = null;
                         }
+
+                        // Output value may have quite different type and not all types can be consumed (stored) in the system. So cast or transform or reduce to our type system
+                        // Probably the best way is to use a unified type matching and value conversion API
+                        // OutputSet = ???; // TODO: We have to find a primitive set corresponding to the value. For that purpose, we have to know the database the result is computed for.
+                        if (Output is DBNull)
+                        {
+                            Output = (Int32)0; // TODO: We have to learn to work with NULL values as well as with non-supported values like BLOB etc.
+                        }
                     }
-                    else
+                    else if (Input.Operation == Operation.PRIMITIVE) // Apply function to a single value
                     {
-                        Dim dim = null;
-                        if (Operation == Operation.FUNCTION)
-                        {
-                            dim = Input.OutputSet.GetGreaterDim(functionName);
-                        }
-                        else if (Operation == Operation.PATH)
-                        {
-                            dim = Input.OutputSet.GetGreaterPath(functionName);
-                        }
                         Output = dim.GetValue((Offset)Input.Output); // Read the value of the function
                     }
-
-                    // Output value may have quite different type and not all types can be consumed (stored) in the system. So cast or transform or reduce to our type system
-                    // Probably the best way is to use a unified type matching and value conversion API
-                    if (Output is DBNull)
+                    else // Input.Operation == Operation.OFFSET // Apply function to the Output
                     {
-                        Output = (Int32) 0; // TODO: We have to learn to work with NULL values as well as with non-supported values like BLOB etc.
+                        if (Input.OutputIsSetValued) // Project an array of values using this function
+                        {
+                            Debug.Assert(Input.Output is Offset[], "Wrong use: projection can be applied to only an array of offsets - not any other type.");
+                            Output = dim.GetValues((Offset[])Input.Output);
+                        }
+                        else // Project a single value
+                        {
+                            Debug.Assert(Input.Output is Offset, "Wrong use: a function/dimension can be applied to only one offset - not any other type.");
+                            Output = dim.GetValue((Offset)Input.Output);
+                        }
                     }
 
-                    // OutputSet = ???; // TODO: We have to find a primitive set corresponding to the value. For that purpose, we have to know the database the result is computed for.
                     break;
                 }
             }
@@ -334,7 +348,7 @@ namespace Com.Model
             return set;
         }
 
-        public static Expression CreateExpression(Dim dim, Expression parent)
+        private static Expression CreateExportExpression(Dim dim, Expression parent) // It is recursive part of the public method
         {
             Expression expr = new Expression();
 
@@ -382,21 +396,140 @@ namespace Com.Model
                 Set gSet = dim.GreaterSet;
                 foreach (Dim gDim in gSet.GreaterDims) // Only identity dimensions?
                 {
-                    CreateExpression(gDim, expr);
+                    CreateExportExpression(gDim, expr);
                 }
             }
 
             return expr;
         }
 
-        public static Expression CreateExpression(Set set)
+        public static Expression CreateExportExpression(Set set)
         {
             Dim dim = new Dim("", null, set); // Workaround - create an auxiliary object
 
-            Expression expr = CreateExpression(dim, null); // and then use an existing method
+            Expression expr = CreateExportExpression(dim, null); // and then use an existing method
 
             expr.Name = ""; // Reset unknown parameters
             expr.Dimension = null;
+
+            return expr;
+        }
+
+        public static Expression CreateProjectExpression(Set lesserSet, List<Dim> greaterDims)
+        {
+            Debug.Assert(lesserSet != null && greaterDims != null, "Wrong use: parameters cannot be null.");
+            Debug.Assert(greaterDims.Count != 0, "Wrong use: at least one dimension has to be provided for projection.");
+            Debug.Assert(lesserSet == greaterDims[0].LesserSet, "Wrong use: first dimension must be a greater dimension of the lesser set.");
+            for (int i = 1; i < greaterDims.Count; i++)
+            {
+                Debug.Assert(greaterDims[i].LesserSet == greaterDims[i - 1].GreaterSet, "Wrong use: only sequential dimensions are allowded");
+            }
+
+            Expression previousExpr = null;
+            for (int i = 0; i < greaterDims.Count; i++)
+            {
+                Dim dim = greaterDims[i];
+
+                Expression expr = new Expression();
+
+                expr.Output = null; // Result of evaluation
+                expr.OutputSet = dim.GreaterSet;
+                expr.OutputSetName = dim.GreaterSet.Name;
+                expr.OutputIsSetValued = false;
+
+                expr.Name = dim.Name; // Name of the function
+                expr.Dimension = dim;
+
+                expr.Operation = Operation.FUNCTION;
+
+                if(previousExpr != null) // Define the expression to which this expression will be applied
+                {
+                    expr.Input = previousExpr; // What will be produced by the previous segment
+                    previousExpr.ParentExpression = expr;
+                }
+                else 
+                {
+                    // Or primitive element for the first segment
+                    expr.Input = new Expression();
+                    expr.Input.Operation = Operation.OFFSET;
+                    expr.Input.OutputSet = lesserSet;
+                    expr.Input.OutputSetName = lesserSet.Name;
+                    expr.Input.ParentExpression = expr;
+                }
+
+                previousExpr = expr;
+            }
+
+            return previousExpr;
+        }
+
+        public static Expression CreateDeprojectExpression(Set lesserSet, List<Dim> greaterDims)
+        {
+            Debug.Assert(lesserSet != null && greaterDims != null, "Wrong use: parameters cannot be null.");
+            Debug.Assert(greaterDims.Count != 0, "Wrong use: at least one dimension has to be provided for projection.");
+            Debug.Assert(lesserSet == greaterDims[0].LesserSet, "Wrong use: first dimension must be a greater dimension of the lesser set.");
+            for (int i = 1; i < greaterDims.Count; i++)
+            {
+                Debug.Assert(greaterDims[i].LesserSet == greaterDims[i - 1].GreaterSet, "Wrong use: only sequential dimensions are allowded");
+            }
+
+            Expression previousExpr = null;
+            for (int i = greaterDims.Count-1; i >= 0; i--)
+            {
+                Dim dim = greaterDims[i];
+
+                Expression expr = new Expression();
+
+                expr.Output = null; // Result of evaluation
+                expr.OutputSet = dim.LesserSet;
+                expr.OutputSetName = dim.LesserSet.Name;
+                expr.OutputIsSetValued = true;
+
+                expr.Name = dim.Name; // Name of the function
+                expr.Dimension = dim;
+
+                expr.Operation = Operation.INVERSE_FUNCTION;
+
+                if (previousExpr != null) // Define the expression to which this expression will be applied
+                {
+                    expr.Input = previousExpr; // What will be produced by the previous segment
+                    previousExpr.ParentExpression = expr;
+                }
+                else
+                {
+                    // Or primitive element for the first segment
+                    expr.Input = new Expression();
+                    expr.Input.Operation = Operation.OFFSET;
+                    expr.Input.OutputSet = lesserSet;
+                    expr.Input.OutputSetName = lesserSet.Name;
+                    expr.Input.ParentExpression = expr;
+                }
+
+                previousExpr = expr;
+            }
+
+            return previousExpr;
+        }
+
+        public static Expression CreateAggregateExpression(string function, Expression group, Expression measure)
+        {
+            Debug.Assert(group.OutputSet == measure.Input.OutputSet, "Wrong use: Measure is a property of group elements and has to start where groups end.");
+
+            Expression expr = new Expression();
+
+            expr.Output = null; // Result of evaluation
+            expr.OutputSet = measure.OutputSet;
+            expr.OutputSetName = measure.OutputSet.Name;
+            expr.OutputIsSetValued = false;
+
+            expr.Name = function; // Name of the function
+            expr.Dimension = null;
+
+            expr.Operation = Operation.AGGREGATION;
+
+            // First parameter is group specification
+
+            // Second parameter is measure specification
 
             return expr;
         }
@@ -428,7 +561,8 @@ namespace Com.Model
         TUPLE, // This expression is a tuple composed of its operands as members. Names of operands identify tuple members. A tuple can belong to a set and then it has its structure. 
 
         // Calls
-        FUNCTION, // Compute a function. The function is specified in the operand. The function is applied to... Parameter of the function are in... 
+        FUNCTION, // Compute a function. 
+        INVERSE_FUNCTION, // Inverse function. 
         PATH, // In contrast to functions, it denotes a sequence of segments. So it is a matter of representation: either dimensions (functions) or paths (named sequences of dimensions). 
         PROCEDURE, // Standard procedure which does not use 'this' (input) object and depends only on parameters
 

@@ -175,10 +175,6 @@ namespace Test
             dbRoot.Open();
             dbRoot.ImportSchema();
 
-/*
-            Set emp = dbRoot.FindSubset("Inventory Transactions"); // "Purchase Order Details" "Employee Privileges"
-            string sql = dbRoot.BuildSql(emp);
-*/
             // Create workspace root set
             SetRoot wsRoot = new SetRoot("My Mashup");
 
@@ -227,20 +223,52 @@ namespace Test
         }
 
         [TestMethod]
-        public void TwoTableLoadTest()
+        public void DerivedDimensionTest()
         {
-            // Table Employees has one column (say, dept_id - column number 5) referencing rows from table Departments (say, by using column dept_id - column number 0)
-            // Define two sets where one references the other. Define load scenario so that we load rows along with references.
-            // The idea is that the original function E -> dept_id (int) is translated into the target two functions E -> dept_id (D) -> dept_id (int). So we get one intermediate collection. 
+            // Create Oldedb root set
+            SetRootOledb dbRoot = new SetRootOledb("Northwind");
+            dbRoot.ConnectionString = Northwind;
+            dbRoot.Open();
+            dbRoot.ImportSchema();
 
-            //- Use case scenario:
-            //  - Load a flat table
-            //  - Define (as a load option of later change) that some attributes are actually a separate or virtual complex type
-            //  - Define (as a load option of later change) that this complex type is actually hierarchical (inclusion rather than tuple)
-            //  - For some attribute considered a domain get all _instances (this attribute is not represented explicitly as a domain)
-            //  - Create a new set of _instances for some attributes either manually or by imposing constraints on its original domain
-            //  - Deproject this set and return a new set of _instances from the table
-            //  - Use this set of table rows and project it by returning a new subset of the target attribute _instances
+            //
+            // Load test data
+            //
+            SetRoot wsRoot = new SetRoot("My Mashup");
+
+            DimExport dimExp = new DimExport("export emp", dbRoot.FindSubset("Order Details"), wsRoot);
+            dimExp.BuildExpression();
+            dimExp.ExportDimensions();
+            dimExp.LesserSet.ExportDims.Add(dimExp);
+            dimExp.GreaterSet.ImportDims.Add(dimExp);
+
+            // Import data
+            dimExp.Populate();
+
+            //
+            // Create derived dimensions
+            //
+            Set od = wsRoot.FindSubset("Order Details");
+
+            // Create expression
+            Dim d1 = od.GetGreaterDim("Order ID");
+            Dim d2 = d1.GreaterSet.GetGreaterDim("Customer ID");
+            Dim d3 = d2.GreaterSet.GetGreaterDim("Last Name");
+            List<Dim> path = new List<Dim> { d1, d2, d3 };
+
+            Expression expr = Expression.CreateProjectExpression(od, path);
+
+            // Add derived dimension
+            Dim derived1 = d3.GreaterSet.CreateDefaultLesserDimension("Customer Last Name", od);
+            derived1.SelectExpression = expr;
+            od.AddGreaterDim(derived1);
+
+            // Update
+            derived1.Populate(); // Call SelectExpression.Evaluate(EvaluationMode.UPDATE);
+
+            Assert.AreEqual("Axen", od.GetValue("Customer Last Name", 10));
+
+            // Create expression: Customers <- Orders <- Order Details -> Product (List Price)
         }
     }
 }
