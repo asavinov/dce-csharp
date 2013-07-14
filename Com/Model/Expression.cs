@@ -123,6 +123,21 @@ namespace Com.Model
                 return Operands.FirstOrDefault(i => i.Name != null && i.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
             }
         }
+        public List<Expression> GetOperands(Operation op)
+        {
+            List<Expression> res = new List<Expression>();
+            res.AddRange(Operands.Where(i => i.Operation == op));
+
+            if (Operands == null) return res;
+
+            // Also search in all children (recursively)
+            foreach (Expression child in Operands)
+            {
+                res.AddRange(child.GetOperands(op));
+            }
+
+            return res;
+        }
 
         /// <summary>
         /// Where this expression is a child operand.
@@ -264,17 +279,48 @@ namespace Com.Model
                     }
                     else // Input.Operation == Operation.OFFSET // Apply function to the Output
                     {
-                        if (Input.OutputIsSetValued) // Project an array of values using this function
-                        {
-                            Debug.Assert(Input.Output is Offset[], "Wrong use: projection can be applied to only an array of offsets - not any other type.");
-                            Output = dim.GetValues((Offset[])Input.Output);
-                        }
-                        else // Project a single value
+                        if (!Input.OutputIsSetValued) // Project a single value
                         {
                             Debug.Assert(Input.Output is Offset, "Wrong use: a function/dimension can be applied to only one offset - not any other type.");
                             Output = dim.GetValue((Offset)Input.Output);
                         }
+                        else // Project an array of values using this function
+                        {
+                            Debug.Assert(Input.Output is Offset[], "Wrong use: projection can be applied to only an array of offsets - not any other type.");
+                            Output = dim.GetValues((Offset[])Input.Output);
+                        }
                     }
+
+                    break;
+                }
+                case Operation.AGGREGATION:
+                {
+                    Debug.Assert(Operands != null && Operands.Count == 2, "Wrong use: Aggregation expression must have two operands.");
+                    Debug.Assert(string.IsNullOrWhiteSpace(Name), "Wrong use: Aggregation function must be specified.");
+
+                    Expression groupExpr = Operands[0];
+                    Expression measureExpr = Operands[1];
+                    string aggregationFunction = Name;
+                    Dim measureDim = measureExpr.Dimension; // It determines the type of the result and it knows how to aggregate its values
+
+                    groupExpr.Evaluate(evaluationMode); // Compute the group
+
+                    // If group is empty then set null as output
+                    if (groupExpr.Output == null || (groupExpr.Output is Array && (groupExpr.Output as Array).Length == 0))
+                    {
+                        Output = null;
+                        break;
+                    }
+
+                    // Set this group as input to the measure
+                    measureExpr.SetOutput(Operation.OFFSET, groupExpr.Output);
+
+                    measureExpr.Evaluate(evaluationMode); // Compute the measure group
+
+                    Debug.Assert(measureExpr.Output != null, "Wrong use: Measure cannot be null.");
+                    Debug.Assert(measureExpr.Output.GetType().IsArray, "Wrong use: Measure must be an array.");
+
+                    Output = measureDim.Aggregate(measureExpr.Output, aggregationFunction); // The dimension of each type knows how to aggregate its values
 
                     break;
                 }
@@ -315,7 +361,7 @@ namespace Com.Model
             {
                 dim = lesserSet.GetGreaterDim(Name); // Or Dimension.Name
 
-                if (dim == null) // Matching dimension not found
+               if (dim == null) // Matching dimension not found
                 {
                     dim = set.CreateDefaultLesserDimension(Name, lesserSet);
                     // Clone all parametes
@@ -515,6 +561,12 @@ namespace Com.Model
         {
             Debug.Assert(group.OutputSet == measure.Input.OutputSet, "Wrong use: Measure is a property of group elements and has to start where groups end.");
 
+            // Modify measure: accept many values (not single value by default)
+            List<Expression> nodes = measure.GetOperands(Operation.OFFSET);
+            Debug.Assert(nodes != null && nodes.Count == 1, "Wrong use: Input offset nodes in measure expression must be 1.");
+            nodes[0].OutputIsSetValued = true;
+
+            // Create aggregation expression
             Expression expr = new Expression();
 
             expr.Output = null; // Result of evaluation
@@ -527,9 +579,9 @@ namespace Com.Model
 
             expr.Operation = Operation.AGGREGATION;
 
-            // First parameter is group specification
-
-            // Second parameter is measure specification
+            expr.Operands = new List<Expression>();
+            expr.Operands.Add(group); // First parameter is group specification
+            expr.Operands.Add(measure); // Second parameter is measure specification
 
             return expr;
         }

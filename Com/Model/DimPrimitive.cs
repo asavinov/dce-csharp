@@ -23,6 +23,8 @@ namespace Com.Model
 
         protected int allocatedSize; // How many elements (maximum) fit into the allocated memory
 
+        protected static IAggregator<T> Aggregator;
+
         public DimPrimitive(string name, Set lesserSet, Set greaterSet)
             : base(name, lesserSet, greaterSet)
         {
@@ -33,6 +35,15 @@ namespace Com.Model
             allocatedSize = initialSize;
             _cells = new T[allocatedSize];
             _offsets = new int[allocatedSize];
+
+            if (typeof(T) == typeof(int))
+            {
+                Aggregator = new IntAggregator() as IAggregator<T>;
+            }
+            else if (typeof(T) == typeof(double))
+            {
+                Aggregator = new DoubleAggregator() as IAggregator<T>;
+            }
         }
 
         public override int Width // sizeof(T) does not work for generic classes (even if constrained by value types)
@@ -127,6 +138,13 @@ namespace Com.Model
             // return (object[])Convert.ChangeType(project(offsets), typeof(object[])); // Will fail at run time in the case of wrong type
             // return project(offsets).Cast<object>().ToArray();
         }
+
+        public override object Aggregate(object values, string function) // It is actually static but we cannot use static virtual methods in C#
+        {
+            T[] array = ObjectToGenericArray(values);
+            return Aggregate(array, function, Aggregator);
+        } 
+
 
         private T _currentValue;
         public override object CurrentValue 
@@ -408,6 +426,16 @@ namespace Com.Model
             return result;
         }
 
+        public static T Aggregate<T, TProcessor>(T[] values, string function, TProcessor proc) where TProcessor : IAggregator<T>
+        {
+            switch (function)
+            {
+                case "SUM": return proc.Sum(values);
+                case "AVG": return proc.Avg(values);
+                default: throw new Exception("There is no such aggregation operation.");
+            }
+        }
+
         #endregion
 
         protected T ObjectToGeneric(object value)
@@ -447,10 +475,14 @@ namespace Com.Model
             // Cast array parameter type: object[] -> T[]
             if (values is T[])
             {
-                return (T[])values;
+                return values as T[]; // Or return (T[])values;
             }
             else if (values.GetType().IsArray)
             {
+                var array = values as T[];
+                if (array != null) return array;
+
+                // If array is null ('as' failed)
                 try
                 {
                     return (T[])Convert.ChangeType(values, typeof(T[])); // Will fail at run time in the case of wrong type

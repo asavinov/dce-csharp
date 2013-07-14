@@ -223,7 +223,7 @@ namespace Test
         }
 
         [TestMethod]
-        public void DerivedDimensionTest()
+        public void ProjectionTest()
         {
             // Create Oldedb root set
             SetRootOledb dbRoot = new SetRootOledb("Northwind");
@@ -270,5 +270,63 @@ namespace Test
 
             // Create expression: Customers <- Orders <- Order Details -> Product (List Price)
         }
+
+        [TestMethod]
+        public void AggregationTest()
+        {
+            // Create Oldedb root set
+            SetRootOledb dbRoot = new SetRootOledb("Northwind");
+            dbRoot.ConnectionString = Northwind;
+            dbRoot.Open();
+            dbRoot.ImportSchema();
+
+            //
+            // Load test data
+            //
+            SetRoot wsRoot = new SetRoot("My Mashup");
+
+            DimExport dimExp = new DimExport("export emp", dbRoot.FindSubset("Order Details"), wsRoot);
+            dimExp.BuildExpression();
+            dimExp.ExportDimensions();
+            dimExp.LesserSet.ExportDims.Add(dimExp);
+            dimExp.GreaterSet.ImportDims.Add(dimExp);
+
+            // Import data
+            dimExp.Populate();
+
+            //
+            // Create derived dimensions
+            //
+            Set od = wsRoot.FindSubset("Order Details");
+            Set cust = wsRoot.FindSubset("Customers");
+            Set strSet = wsRoot.GetPrimitiveSubset("String");
+
+            // Create deproject (grouping) expression: Customers <- Orders <- Order Details
+            Dim d1 = od.GetGreaterDim("Order ID");
+            Dim d2 = d1.GreaterSet.GetGreaterDim("Customer ID");
+            List<Dim> path = new List<Dim> { d1, d2 };
+
+            Expression deprExpr = Expression.CreateDeprojectExpression(od, path);
+
+            // Create project (measure) expression: Order Details -> Product (List Price)
+            Dim d3 = od.GetGreaterDim("Product ID");
+            Dim d4 = d3.GreaterSet.GetGreaterDim("List Price");
+            List<Dim> mesPath = new List<Dim> { d3, d4 };
+
+            Expression projExpr = Expression.CreateDeprojectExpression(od, mesPath);
+
+            // Add derived dimension
+            Expression aggreExpr = Expression.CreateAggregateExpression("AVG", deprExpr, projExpr);
+            Dim derived1 = strSet.CreateDefaultLesserDimension("Average List Price", cust);
+            derived1.SelectExpression = aggreExpr;
+            cust.AddGreaterDim(derived1);
+
+            // Update
+            derived1.Populate(); // Call SelectExpression.Evaluate(EvaluationMode.UPDATE);
+
+            Assert.AreEqual(25.456, od.GetValue("Average List Price", 10));
+
+        }
+
     }
 }

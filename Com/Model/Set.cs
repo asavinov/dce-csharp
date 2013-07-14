@@ -617,6 +617,8 @@ namespace Com.Model
             // PROBLEM: should we propagate this removal to all lesser dimensions? We need a flag for this property. 
         }
 
+        public virtual object Aggregate(string function, object values) { return null; } // It has to dispatch it to a specific type which knows how to aggregate its values
+
         #endregion
 
         #region Overriding System.Object
