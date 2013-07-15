@@ -316,7 +316,7 @@ namespace Test
             Expression projExpr = Expression.CreateDeprojectExpression(od, mesPath);
 
             // Add derived dimension
-            Expression aggreExpr = Expression.CreateAggregateExpression("AVG", deprExpr, projExpr);
+            Expression aggreExpr = Expression.CreateAggregateExpression("SUM", deprExpr, projExpr);
             Dim derived1 = strSet.CreateDefaultLesserDimension("Average List Price", cust);
             derived1.SelectExpression = aggreExpr;
             cust.AddGreaterDim(derived1);

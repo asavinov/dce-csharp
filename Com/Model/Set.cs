@@ -39,11 +39,7 @@ namespace Com.Model
         /// How many _instances this set has. Cardinality. Set power. Length (height) of instance set.
         /// If instances are identified by integer offsets, then size also represents offset range.
         /// </summary>
-        protected int _length;
-        public virtual int Length
-        {
-            get { return _length; }
-        }
+        public virtual int Length { get; protected set; }
 
         /// <summary>
         /// Size of values or cells (physical identities) in bytes.
@@ -446,8 +442,8 @@ namespace Com.Model
                 d.Append(0); // Append default value for this dimension
             }
 
-            _length++;
-            return _length;
+            Length++;
+            return Length;
         }
 
         public virtual object Append(Expression expr)
@@ -483,7 +479,7 @@ namespace Com.Model
                     // OPTIMIZE: Provide positions for the values which have been found during the search (not all positions are known if the search has been broken).
                     dim.Append(childExpr.Output);
                 }
-                _length++;
+                Length++;
                 ret = Length - 1;
             }
             else if (result.Length == 1) // Found single element - return its offset
@@ -538,12 +534,12 @@ namespace Com.Model
                 d.Insert(offset, 0);
             }
 
-            _length++;
+            Length++;
         }
 
         public virtual void Remove(int offset)
         {
-            _length--;
+            Length--;
             // TODO: Remove it from all dimensions in loop including super-dim and special dims
             // PROBLEM: should we propagate this removal to all lesser dimensions? We need a flag for this property. 
         }

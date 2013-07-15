@@ -31,7 +31,7 @@ namespace Com.Model
             // TODO: Check if output (greater) set is of correct type
 
             // In fact, we know the input set size and hence can allocate the exact number of elements in the array
-            _length = 0;
+            Length = 0;
             allocatedSize = initialSize;
             _cells = new T[allocatedSize];
             _offsets = new int[allocatedSize];
@@ -182,12 +182,12 @@ namespace Com.Model
             // The last element of index is also free and contains garbadge.
 
             int pos = FindIndexes(value).Item2;
-            Array.Copy(_offsets, pos, _offsets, pos + 1, _length - pos); // Free an index element by shifting other elements forward
+            Array.Copy(_offsets, pos, _offsets, pos + 1, Length - pos); // Free an index element by shifting other elements forward
 
-            _offsets[pos] = _length;
-            _cells[_length] = value;
+            _offsets[pos] = Length;
+            _cells[Length] = value;
 
-            _length++;
+            Length++;
         }
 
         private void UpdateIndex(int offset, T value)
@@ -232,7 +232,7 @@ namespace Com.Model
             // Implemented as binary search
             // Source: http://stackoverflow.com/questions/8067643/binary-search-of-a-sorted-array
 
-            int mid = 0, first = 0, last = _length;
+            int mid = 0, first = 0, last = Length;
 
             //for a sorted array with ascending values
             while (first < last)
@@ -262,7 +262,7 @@ namespace Com.Model
             // Optimization: such search is not efficient - it is simple scan. One option would be use binary serach within interval [first, mid] and [mid, last]
             for (first = mid; first >= 0 && _cells[_offsets[first]].Equals(target); first--) 
                 ;
-            for (last = mid; last < _length && _cells[_offsets[last]].Equals(target); last++) 
+            for (last = mid; last < Length && _cells[_offsets[last]].Equals(target); last++) 
                 ;
 
             return new Tuple<int, int>(first+1, last);
@@ -301,12 +301,12 @@ namespace Com.Model
             T[] tempCells = (T[])_cells.Clone();
 
             // Reset offsets befroe sorting (so it will be completely new sort)
-            for (int i = 0; i < _length; i++)
+            for (int i = 0; i < Length; i++)
             {
                 _offsets[i] = i; // Now each offset represents (references) an element of the function (from domain) but they are unsorted
             }
 
-            Array.Sort<T, int>(tempCells, _offsets, 0, _length);
+            Array.Sort<T, int>(tempCells, _offsets, 0, Length);
             // Now offsets are sorted and temp array can be deleted
         }
 

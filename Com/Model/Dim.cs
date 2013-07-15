@@ -65,11 +65,7 @@ namespace Com.Model
             get { return GreaterSet != null ? GreaterSet.Width : 0; }
         }
 
-        protected int _length;
-        public virtual int Length // How many instances. It is the same for all dimensions of the lesser set. 
-        {
-            get { return _length; }
-        }
+        public virtual int Length { get; protected set; } // How many instances. It is the same for all dimensions of the lesser set. 
 
         /// <summary>
         /// Is identity dimension.
