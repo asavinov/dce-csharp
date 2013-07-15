@@ -345,11 +345,6 @@ namespace Com.Model
 
         public virtual object Aggregate(object values, string function) { return null; } // It is actually static but we cannot use static virtual methods in C#
 
-        /// <summary>
-        /// It is a convenience property used to import/export data and other purposes. 
-        /// </summary>
-        public virtual object CurrentValue { get; set; }
-
         #endregion
 
         #region Function definition and expression evaluation

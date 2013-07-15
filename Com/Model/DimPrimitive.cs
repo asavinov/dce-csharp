@@ -145,20 +145,6 @@ namespace Com.Model
             return Aggregate(array, function, Aggregator);
         } 
 
-
-        private T _currentValue;
-        public override object CurrentValue 
-        { 
-            get 
-            {
-                return _currentValue;
-            }
-            set
-            {
-                _currentValue = ObjectToGeneric(value);
-            }
-        }
-
         #endregion
 
         #region Data methods
