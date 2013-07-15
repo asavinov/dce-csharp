@@ -299,32 +299,34 @@ namespace Test
             //
             Set od = wsRoot.FindSubset("Order Details");
             Set cust = wsRoot.FindSubset("Customers");
-            Set strSet = wsRoot.GetPrimitiveSubset("String");
+            Set doubleSet = wsRoot.GetPrimitiveSubset("Double");
 
-            // Create deproject (grouping) expression: Customers <- Orders <- Order Details
+            // Create deproject (grouping) expression: (Customers) <- (Orders) <- (Order Details)
             Dim d1 = od.GetGreaterDim("Order ID");
             Dim d2 = d1.GreaterSet.GetGreaterDim("Customer ID");
             List<Dim> path = new List<Dim> { d1, d2 };
 
             Expression deprExpr = Expression.CreateDeprojectExpression(od, path);
 
-            // Create project (measure) expression: Order Details -> Product (List Price)
+            // Create project (measure) expression: (Order Details) -> (Product) -> List Price
             Dim d3 = od.GetGreaterDim("Product ID");
             Dim d4 = d3.GreaterSet.GetGreaterDim("List Price");
             List<Dim> mesPath = new List<Dim> { d3, d4 };
 
-            Expression projExpr = Expression.CreateDeprojectExpression(od, mesPath);
+            Expression projExpr = Expression.CreateProjectExpression(od, mesPath);
 
             // Add derived dimension
             Expression aggreExpr = Expression.CreateAggregateExpression("SUM", deprExpr, projExpr);
-            Dim derived1 = strSet.CreateDefaultLesserDimension("Average List Price", cust);
+            Dim derived1 = doubleSet.CreateDefaultLesserDimension("Average List Price", cust);
             derived1.SelectExpression = aggreExpr;
             cust.AddGreaterDim(derived1);
 
             // Update
             derived1.Populate(); // Call SelectExpression.Evaluate(EvaluationMode.UPDATE);
+            // Customer 1 "Company A" <- Order ID 44, 71 <- Order Details 48,49 and 71 -> 1, 43, and 40 -> 18.0, 46.0, 18.4
+            // 
 
-            Assert.AreEqual(25.456, od.GetValue("Average List Price", 10));
+            Assert.AreEqual(25.456, cust.GetValue("Average List Price", 10));
 
         }
 

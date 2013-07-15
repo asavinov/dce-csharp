@@ -36,8 +36,8 @@ namespace Com.Model
                 // Check validity of assignment
                 Debug.Assert(!(output != null && Operation == Operation.PRIMITIVE && !output.GetType().IsPrimitive), "Wrong use: constant value type has to correspond to operation type.");
                 Debug.Assert(!(output != null && Operation == Operation.DATA_ROW && !(output is DataRow)), "Wrong use: constant value type has to correspond to operation type.");
-                Debug.Assert(!(output != null && Operation == Operation.OFFSET && !(output is Offset)), "Wrong use: constant value type has to correspond to operation type.");
-                Debug.Assert(!(output != null && Operation == Operation.TUPLE && !(output is Offset)), "Wrong use: constant value type has to correspond to operation type.");
+                Debug.Assert(!(output != null && Operation == Operation.OFFSET && !(output is Offset || output is Offset[])), "Wrong use: constant value type has to correspond to operation type.");
+                Debug.Assert(!(output != null && Operation == Operation.TUPLE && !(output is Offset || output is Offset[])), "Wrong use: constant value type has to correspond to operation type.");
 
                 Output = output;
             }
@@ -126,14 +126,18 @@ namespace Com.Model
         public List<Expression> GetOperands(Operation op)
         {
             List<Expression> res = new List<Expression>();
-            res.AddRange(Operands.Where(i => i.Operation == op));
 
-            if (Operands == null) return res;
+            // Proces this element
+            if (Operation == op) res.Add(this);
 
-            // Also search in all children (recursively)
-            foreach (Expression child in Operands)
+            // Recursively check all children
+            if (Input != null) res.Add(Input);
+            if (Operands != null)
             {
-                res.AddRange(child.GetOperands(op));
+                foreach (Expression child in Operands)
+                {
+                    res.AddRange(child.GetOperands(op));
+                }
             }
 
             return res;
@@ -279,7 +283,11 @@ namespace Com.Model
                     }
                     else // Input.Operation == Operation.OFFSET // Apply function to the Output
                     {
-                        if (!Input.OutputIsSetValued) // Project a single value
+                        if (Input.Output == null)
+                        {
+                            Output = null;
+                        }
+                        else if (!(Input.Output is Array)) // Project a single value
                         {
                             Debug.Assert(Input.Output is Offset, "Wrong use: a function/dimension can be applied to only one offset - not any other type.");
                             Output = dim.GetValue((Offset)Input.Output);
@@ -293,10 +301,31 @@ namespace Com.Model
 
                     break;
                 }
+                case Operation.INVERSE_FUNCTION:
+                {
+                    if (Input != null) Input.Evaluate(evaluationMode); // Evaluate 'this' object before it can be used
+                    if (Operands != null)
+                    {
+                        foreach (Expression child in Operands) // Evaluate all parameters before they can be used
+                        {
+                            child.Evaluate(evaluationMode);
+                        }
+                    }
+
+                    // Find the function itself
+                    string functionName = Name;
+                    Dim dim = null;
+                    dim = OutputSet != null ? OutputSet.GetGreaterDim(functionName) : null;
+
+                    // Compute the function. 
+                    Output = dim.GetOffsets(Input.Output);
+
+                    break;
+                }
                 case Operation.AGGREGATION:
                 {
                     Debug.Assert(Operands != null && Operands.Count == 2, "Wrong use: Aggregation expression must have two operands.");
-                    Debug.Assert(string.IsNullOrWhiteSpace(Name), "Wrong use: Aggregation function must be specified.");
+                    Debug.Assert(!string.IsNullOrWhiteSpace(Name), "Wrong use: Aggregation function must be specified.");
 
                     Expression groupExpr = Operands[0];
                     Expression measureExpr = Operands[1];
@@ -316,9 +345,6 @@ namespace Com.Model
                     measureExpr.SetOutput(Operation.OFFSET, groupExpr.Output);
 
                     measureExpr.Evaluate(evaluationMode); // Compute the measure group
-
-                    Debug.Assert(measureExpr.Output != null, "Wrong use: Measure cannot be null.");
-                    Debug.Assert(measureExpr.Output.GetType().IsArray, "Wrong use: Measure must be an array.");
 
                     Output = measureDim.Aggregate(measureExpr.Output, aggregationFunction); // The dimension of each type knows how to aggregate its values
 
@@ -559,7 +585,7 @@ namespace Com.Model
 
         public static Expression CreateAggregateExpression(string function, Expression group, Expression measure)
         {
-            Debug.Assert(group.OutputSet == measure.Input.OutputSet, "Wrong use: Measure is a property of group elements and has to start where groups end.");
+            // Debug.Assert(group.OutputSet == measure.Input.OutputSet, "Wrong use: Measure is a property of group elements and has to start where groups end.");
 
             // Modify measure: accept many values (not single value by default)
             List<Expression> nodes = measure.GetOperands(Operation.OFFSET);

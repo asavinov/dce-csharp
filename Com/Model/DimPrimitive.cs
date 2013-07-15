@@ -141,6 +141,8 @@ namespace Com.Model
 
         public override object Aggregate(object values, string function) // It is actually static but we cannot use static virtual methods in C#
         {
+            if (values == null) return default(T);
+
             T[] array = ObjectToGenericArray(values);
             return Aggregate(array, function, Aggregator);
         } 
