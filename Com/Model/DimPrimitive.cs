@@ -342,9 +342,11 @@ namespace Com.Model
             // Question: possible sorting of output: ascending, according to input offsets specified, preserve the original order of offsets or do not guarantee anything
             // Question: will it be easier to compute if input offsets are somehow sorted?
 
-            int[] result = new int[offsets.Length];
+            if(offsets == null || offsets.Length == 0) return new T[0];
+
+            T[] result = new T[offsets.Length];
             int resultSize = 0;
-            for (int i = 0; i < offsets.Length; i++)
+            for (int i = 0; i < offsets.Length; i++) // For each input offset to be projected
             {
                 // Check if it exists already 
                 // Optimization is needed: 
@@ -352,11 +354,11 @@ namespace Com.Model
                 // 2. Maintain own (local) index (e.g., sorted elements but separate from projection buing built) 
                 // 3. Use de-projection
                 // 4. In many cases the _offsets can be already sorted (if selected from a sorted list)
-                int cell = offsets[i];
+                T cell = _cells[offsets[i]]; // It is what we either write to the output (if not written already) or ignore (if exists in the output)
                 bool found = false;
                 for (int j = 0; j < resultSize; j++)
                 {
-                    if (result[j] == cell)
+                    if (EqualityComparer<T>.Default.Equals(cell, result[j])) // result[j] == cell does not work for generics
                     {
                         found = true;
                         break; // Found 
@@ -364,10 +366,12 @@ namespace Com.Model
                 }
                 if (found) break;
                 // Append new cell
-                offsets[resultSize] = cell;
+                result[resultSize] = cell;
                 resultSize++;
             }
-            return null; // Arrays.copyOf(result, resultSize);
+
+            Array.Resize<T>(ref result, resultSize);
+            return result;
         }
 
         public int[] deproject(T value)

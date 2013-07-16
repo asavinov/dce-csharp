@@ -19,10 +19,12 @@ namespace Com.Model
 
     public static class ComArray
     {
+/*
         public static object Sum(this System.Collections.IEnumerable values)
         {
             return values.Sum(); // System method of Array
         }
+*/
         public static object Avg(this System.Collections.IEnumerable values)
         {
              var intArray = values as int[];
@@ -59,10 +61,12 @@ namespace Com.Model
     }
     public static class IntArray // Expand int[]
     {
+/*
         public static int Sum(this IEnumerable<int> values)
         {
             return values.Sum();
         }
+*/
         public static int Avg(this IEnumerable<int> values)
        {
             return (int)values.Average();
@@ -76,7 +80,7 @@ namespace Com.Model
     {
         public double Sum(double[] values)
         {
-            return values.Sum();
+            return (double)values.Sum();
         }
         public double Avg(double[] values)
         {
@@ -88,14 +92,15 @@ namespace Com.Model
     }
     public static class DoubleArray // Expand double[]
     {
+/*
         public static double Sum(this IEnumerable<double> values)
         {
             return values.Sum();
         }
+*/
         public static double Avg(this IEnumerable<double> values)
         {
             return values.Average();
         }
     }
-
 }

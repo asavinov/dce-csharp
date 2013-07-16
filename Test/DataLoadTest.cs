@@ -267,8 +267,6 @@ namespace Test
             derived1.Populate(); // Call SelectExpression.Evaluate(EvaluationMode.UPDATE);
 
             Assert.AreEqual("Axen", od.GetValue("Customer Last Name", 10));
-
-            // Create expression: Customers <- Orders <- Order Details -> Product (List Price)
         }
 
         [TestMethod]
@@ -297,23 +295,24 @@ namespace Test
             //
             // Create derived dimensions
             //
-            Set od = wsRoot.FindSubset("Order Details");
+            Set odet = wsRoot.FindSubset("Order Details");
+            Set oders = wsRoot.FindSubset("Orders");
             Set cust = wsRoot.FindSubset("Customers");
             Set doubleSet = wsRoot.GetPrimitiveSubset("Double");
 
             // Create deproject (grouping) expression: (Customers) <- (Orders) <- (Order Details)
-            Dim d1 = od.GetGreaterDim("Order ID");
+            Dim d1 = odet.GetGreaterDim("Order ID");
             Dim d2 = d1.GreaterSet.GetGreaterDim("Customer ID");
             List<Dim> path = new List<Dim> { d1, d2 };
 
-            Expression deprExpr = Expression.CreateDeprojectExpression(od, path);
+            Expression deprExpr = Expression.CreateDeprojectExpression(odet, path);
 
             // Create project (measure) expression: (Order Details) -> (Product) -> List Price
-            Dim d3 = od.GetGreaterDim("Product ID");
+            Dim d3 = odet.GetGreaterDim("Product ID");
             Dim d4 = d3.GreaterSet.GetGreaterDim("List Price");
             List<Dim> mesPath = new List<Dim> { d3, d4 };
 
-            Expression projExpr = Expression.CreateProjectExpression(od, mesPath);
+            Expression projExpr = Expression.CreateProjectExpression(odet, mesPath);
 
             // Add derived dimension
             Expression aggreExpr = Expression.CreateAggregateExpression("SUM", deprExpr, projExpr);
@@ -323,11 +322,8 @@ namespace Test
 
             // Update
             derived1.Populate(); // Call SelectExpression.Evaluate(EvaluationMode.UPDATE);
-            // Customer 1 "Company A" <- Order ID 44, 71 <- Order Details 48,49 and 71 -> 1, 43, and 40 -> 18.0, 46.0, 18.4
-            // 
 
-            Assert.AreEqual(25.456, cust.GetValue("Average List Price", 10));
-
+            Assert.AreEqual(64.0, cust.GetValue("Average List Price", 2));
         }
 
     }
