@@ -82,14 +82,33 @@ namespace Com.Model
             return Input != null ? Input : (ParentExpression != null ? ParentExpression.Input : null);
         }
 */
+        public void SetInput(Expression child)
+        {
+            if (Input != null) // Detach our current child
+            {
+                Input.ParentExpression = null;
+                Input = null;
+            }
+
+            if (child == null) // Nullify input - done above
+            {
+                return;
+            }
+
+            // Detach the child from its parent
+            if (child.ParentExpression != null && child.ParentExpression != this) child.ParentExpression.SetInput(null);
+
+            // Attach a new child
+            Input = child;
+            child.ParentExpression = this;
+        }
         public void SetInput(Operation op, Operation inputOp)
         {
             if (op == Operation.ALL || Operation == op) // Assignment is needed
             {
                 if (Input == null)
                 {
-                    Input = new Expression("Input");
-                    Input.ParentExpression = this;
+                    SetInput(new Expression("Input"));
                     Input.Operation = inputOp;
                 }
                 else
@@ -112,6 +131,44 @@ namespace Com.Model
         /// These are parameters which are needed for evaluation of this expression
         /// </summary>
         public List<Expression> Operands { get; set; }
+        public int AddOperand(Expression child)
+        {
+            if (Operands == null)
+            {
+                Operands = new List<Expression>();
+            }
+
+            int res = Operands.IndexOf(child);
+            if (res >= 0 && res < Operands.Count)
+            {
+                Debug.Assert(child.ParentExpression == this, "Wrong use: child expression must reference its parent");
+                return res; // Already exists
+            }
+
+            if (child.ParentExpression != null) child.ParentExpression.RemoveOperand(child);
+
+            Operands.Add(child);
+            child.ParentExpression = this;
+
+            return Operands.Count - 1;
+        }
+        public int RemoveOperand(Expression child)
+        {
+            int res = -1;
+            if (Operands != null)
+            {
+                res = Operands.IndexOf(child);
+            }
+
+            if (res >= 0) // Found
+            {
+                Operands.RemoveAt(res);
+            }
+
+            if (child.ParentExpression != null && child.ParentExpression == this) child.ParentExpression = null;
+
+            return res;
+        }
         public Expression GetOperand(string name)
         {
             if (name == null)
@@ -431,10 +488,9 @@ namespace Com.Model
             expr.Name = dim.Name; // Name of the function
             expr.Dimension = dim;
 
-            expr.ParentExpression = parent;
             if (parent != null)
             {
-                parent.Operands.Add(expr);
+                parent.AddOperand(expr);
             }
 
             if (dim.IsPrimitive) // End of recursion
@@ -451,19 +507,17 @@ namespace Com.Model
                 funcExpr.Name = srcPath != null ? srcPath.Name : null;
 
                 // Add Input of function as DATA_ROW
-                funcExpr.Input = new Expression();
+                funcExpr.SetInput(new Expression());
                 funcExpr.Input.Operation = Operation.DATA_ROW;
-                funcExpr.Input.ParentExpression = expr;
 
                 // Add function to this expression
-                expr.Input = funcExpr;
-                expr.Input.ParentExpression = expr;
+                expr.SetInput(funcExpr);
             }
             else // Recursion on greater dimensions
             {
                 expr.Operation = Operation.TUPLE;
                 expr.Operands = new List<Expression>();
-                expr.Input = null;
+                expr.SetInput(null);
 
                 Set gSet = dim.GreaterSet;
                 foreach (Dim gDim in gSet.GreaterDims) // Only identity dimensions?
@@ -516,17 +570,15 @@ namespace Com.Model
 
                 if(previousExpr != null) // Define the expression to which this expression will be applied
                 {
-                    expr.Input = previousExpr; // What will be produced by the previous segment
-                    previousExpr.ParentExpression = expr;
+                    expr.SetInput(previousExpr); // What will be produced by the previous segment
                 }
                 else 
                 {
                     // Or primitive element for the first segment
-                    expr.Input = new Expression();
+                    expr.SetInput(new Expression());
                     expr.Input.Operation = Operation.OFFSET;
                     expr.Input.OutputSet = lesserSet;
                     expr.Input.OutputSetName = lesserSet.Name;
-                    expr.Input.ParentExpression = expr;
                 }
 
                 previousExpr = expr;
@@ -564,17 +616,15 @@ namespace Com.Model
 
                 if (previousExpr != null) // Define the expression to which this expression will be applied
                 {
-                    expr.Input = previousExpr; // What will be produced by the previous segment
-                    previousExpr.ParentExpression = expr;
+                    expr.SetInput(previousExpr); // What will be produced by the previous segment
                 }
                 else
                 {
                     // Or primitive element for the first segment
-                    expr.Input = new Expression();
+                    expr.SetInput(new Expression());
                     expr.Input.Operation = Operation.OFFSET;
                     expr.Input.OutputSet = lesserSet;
                     expr.Input.OutputSetName = lesserSet.Name;
-                    expr.Input.ParentExpression = expr;
                 }
 
                 previousExpr = expr;
@@ -605,9 +655,8 @@ namespace Com.Model
 
             expr.Operation = Operation.AGGREGATION;
 
-            expr.Operands = new List<Expression>();
-            expr.Operands.Add(group); // First parameter is group specification
-            expr.Operands.Add(measure); // Second parameter is measure specification
+            expr.AddOperand(group); // First parameter is group specification
+            expr.AddOperand(measure); // Second parameter is measure specification
 
             return expr;
         }
