@@ -100,6 +100,14 @@ namespace Com.Model
 
         public void ImportSchema()
         {
+            // Set root name
+            if (!string.IsNullOrEmpty(_connection.Database))
+                Name = _connection.Database;
+            else if (!string.IsNullOrEmpty(_connection.DataSource))
+                Name = System.IO.Path.GetFileNameWithoutExtension(_connection.DataSource);
+            else
+                Name = "Data Source";
+
             List<string> tableNames = ReadTables();
 
             // Create all sets
@@ -107,7 +115,6 @@ namespace Com.Model
             {
                 Set set = new Set(tableName); // Create a set 
                 set.RelationalTableName = tableName;
-//                set.FromSetName = tableName;
                 set.SuperDim = new DimRoot("super", set, this); // Add the new set to the schema by setting its super dimension
             }
 
