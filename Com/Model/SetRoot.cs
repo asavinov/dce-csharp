@@ -23,7 +23,6 @@ namespace Com.Model
             get { return _type; }
         }
 
-
         public override int Width
         {
             get { return 0; }

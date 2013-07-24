@@ -41,12 +41,17 @@ namespace Com.Model
         /// </summary>
         public virtual int Length { get; protected set; }
 
+        public virtual Type SystemType
+        {
+            get { return typeof(Offset); }
+        }
+
         /// <summary>
         /// Size of values or cells (physical identities) in bytes.
         /// </summary>
         public virtual int Width
         {
-            get { return sizeof(int); }
+            get { return sizeof(Offset); }
         }
 
         /// <summary>

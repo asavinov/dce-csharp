@@ -60,6 +60,11 @@ namespace Com.Model
         public string RelationalFkName { get; set; } // For dimensions, which were created from FK, it stores the original FK name
         public string RelationalPkName { get; set; } // PK this column belongs to according to the schema
 
+        public virtual Type SystemType
+        {
+            get { return GreaterSet != null ? GreaterSet.SystemType : null; }
+        }
+
         public virtual int Width // Width of instances. It depends on the implementation (and might not be the same for all dimensions of the greater set). 
         {
             get { return GreaterSet != null ? GreaterSet.Width : 0; }

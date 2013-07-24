@@ -17,6 +17,11 @@ namespace Com.Model
             get { return int.MaxValue; } // It is the number of all integers
         }
 
+        public virtual Type SystemType
+        {
+            get { return typeof(int); }
+        }
+
         public override int Width
         {
             get { return sizeof(int); } // It is not absolutely true because there can be integers of different length like Int32 and Int64

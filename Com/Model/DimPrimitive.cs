@@ -46,6 +46,11 @@ namespace Com.Model
             }
         }
 
+        public override Type SystemType
+        {
+            get { return typeof(T); }
+        }
+
         public override int Width // sizeof(T) does not work for generic classes (even if constrained by value types)
         {
             get 

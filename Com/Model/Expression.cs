@@ -22,12 +22,13 @@ namespace Com.Model
         /// Result of evaluation. Return value of the funciton computed for the input value.
         /// </summary>
         public object Output { get; set; }
-        public string OutputSetName { get; set; } // Set can be defined by its name rather than reference
         public Set OutputSet { get; set; } // Type/range of the result, that is, the set the values are taken from
+        public string OutputSetName { get; set; } // Set can be defined by its name rather than reference
+        private object OutputClass { get; set; } // It is structure of elements (class) of the output
 
-        public bool OutputIsSetValued { get; set; } // Expression can produce either a single instance or a set of instances
-        private int _minValues=1; // Static constraint on output: Minimum number of values
+        private int _minValues = 0; // Static constraint on output: Minimum number of values
         private int _maxValues = 1; // Static constraint on output: Maximum number of values
+        public bool OutputIsSetValued { get; set; } // Expression can produce more than one instance (set rather than a tuple)
 
         public void SetOutput(Operation op, object output) // Set constant values recursively
         {
@@ -62,6 +63,7 @@ namespace Com.Model
 
         /// <summary>
         /// Operation for this node. What do we do in order to compute the output using input value and operand values. 
+        /// This operation corresponds to the syntactic node type in the grammar and essentially the grammar has the same values for operations. 
         /// </summary>
         public Operation Operation { get; set; }
 
@@ -76,14 +78,10 @@ namespace Com.Model
             get;
             set;
         }
-/*
-        public Expression GetInput() // Input inheritance strategy
-        {
-            return Input != null ? Input : (ParentExpression != null ? ParentExpression.Input : null);
-        }
-*/
         public void SetInput(Expression child)
         {
+            // TODO: We have to semantically check the validity of this child expression in the context of its parent expression (for example, using gramma rules)
+
             if (Input != null) // Detach our current child
             {
                 Input.ParentExpression = null;
@@ -113,7 +111,7 @@ namespace Com.Model
                 }
                 else
                 {
-                    Input.Operation = inputOp;
+                    Input.Operation = inputOp; // TODO: We cannot simply change operation - it is necessary at least to check its validity (and validity of its operands)
                 }
             }
 
@@ -133,6 +131,8 @@ namespace Com.Model
         public List<Expression> Operands { get; set; }
         public int AddOperand(Expression child)
         {
+            // TODO: We have to semantically check the validity of this child expression in the context of its parent expression (for example, using gramma rules)
+
             if (Operands == null)
             {
                 Operands = new List<Expression>();
@@ -288,10 +288,10 @@ namespace Com.Model
 
                     break;
                 }
-                case Operation.PATH:
-                case Operation.FUNCTION:
+                case Operation.DOT:
+                case Operation.PROJECTION:
                 {
-                    if (Input != null) Input.Evaluate(evaluationMode); // Evaluate 'this' object before it can be used
+                    if (Input != null) Input.Evaluate(evaluationMode); // Evaluate input object(s) before it can be used
                     if (Operands != null)
                     {
                         foreach (Expression child in Operands) // Evaluate all parameters before they can be used
@@ -303,13 +303,10 @@ namespace Com.Model
                     // Find the function itself
                     string functionName = Name;
                     Dim dim = null;
-                    if (Operation == Operation.FUNCTION)
+                    if (Input.OutputSet != null)
                     {
-                        dim = Input.OutputSet != null ? Input.OutputSet.GetGreaterDim(functionName) : null;
-                    }
-                    else if (Operation == Operation.PATH)
-                    {
-                        dim = Input.OutputSet != null ? Input.OutputSet.GetGreaterPath(functionName) : null;
+                        dim = Input.OutputSet.GetGreaterDim(functionName);
+                        if (dim == null) dim = Input.OutputSet.GetGreaterPath(functionName); // Alternatively, the functionName could determine whether it is a dimension or a path (complex dimension)
                     }
 
                     // Compute the function. 
@@ -351,14 +348,25 @@ namespace Com.Model
                         }
                         else // Project an array of values using this function
                         {
-                            Debug.Assert(Input.Output is Offset[], "Wrong use: projection can be applied to only an array of offsets - not any other type.");
-                            Output = dim.GetValues((Offset[])Input.Output);
+                            // Debug.Assert(Input.Output is Offset[], "Wrong use: projection/dot can be applied to only an array of offsets - not any other type.");
+                            if (Operation == Operation.PROJECTION)
+                            {
+                                Output = dim.GetValues((Offset[])Input.Output);
+                            }
+                            else if (Operation == Operation.DOT)
+                            {
+                                Output = Array.CreateInstance(dim.SystemType, ((Array)Input.Output).Length);
+                                for(int i=0; i<((Offset[])Input.Output).Length; i++) // Individually and independently project all inputs
+                                {
+                                    (Output as Array).SetValue(dim.GetValue((Offset)(Input.Output as Array).GetValue(i)), i);
+                                }
+                            }
                         }
                     }
 
                     break;
                 }
-                case Operation.INVERSE_FUNCTION:
+                case Operation.DEPROJECTION:
                 {
                     if (Input != null) Input.Evaluate(evaluationMode); // Evaluate 'this' object before it can be used
                     if (Operands != null)
@@ -381,11 +389,12 @@ namespace Com.Model
                 }
                 case Operation.AGGREGATION:
                 {
-                    Debug.Assert(Operands != null && Operands.Count == 2, "Wrong use: Aggregation expression must have two operands.");
+                    Debug.Assert(Input != null, "Wrong use: Aggregation expression must have group expression in Input.");
+                    Debug.Assert(Operands != null && Operands.Count == 1, "Wrong use: Aggregation expression must have measure expression as an operand.");
                     Debug.Assert(!string.IsNullOrWhiteSpace(Name), "Wrong use: Aggregation function must be specified.");
 
-                    Expression groupExpr = Operands[0];
-                    Expression measureExpr = Operands[1];
+                    Expression groupExpr = Input;
+                    Expression measureExpr = Operands[0];
                     string aggregationFunction = Name;
                     Dim measureDim = measureExpr.Dimension; // It determines the type of the result and it knows how to aggregate its values
 
@@ -499,7 +508,7 @@ namespace Com.Model
                 expr.Name = dim.Name;
 
                 Expression funcExpr = new Expression();
-                funcExpr.Operation = Operation.FUNCTION;
+                funcExpr.Operation = Operation.PROJECTION;
                 List<Dim> path = expr.GetPath();
                 Set sourceSet = expr.Root.OutputSet; // Or simply expr.Root.OutputSet.ImportDims[0].LesserSet
                 Dim srcPath = sourceSet.GetGreaterPath(path);
@@ -541,8 +550,9 @@ namespace Com.Model
             return expr;
         }
 
-        public static Expression CreateProjectExpression(Set lesserSet, List<Dim> greaterDims)
+        public static Expression CreateProjectExpression(Set lesserSet, List<Dim> greaterDims, Operation op)
         {
+            Debug.Assert(op == Operation.PROJECTION || op == Operation.DOT, "Wrong use: only PROJECTION or DOT operations are allowed.");
             Debug.Assert(lesserSet != null && greaterDims != null, "Wrong use: parameters cannot be null.");
             Debug.Assert(greaterDims.Count != 0, "Wrong use: at least one dimension has to be provided for projection.");
             Debug.Assert(lesserSet == greaterDims[0].LesserSet, "Wrong use: first dimension must be a greater dimension of the lesser set.");
@@ -566,7 +576,7 @@ namespace Com.Model
                 expr.Name = dim.Name; // Name of the function
                 expr.Dimension = dim;
 
-                expr.Operation = Operation.FUNCTION;
+                expr.Operation = op;
 
                 if(previousExpr != null) // Define the expression to which this expression will be applied
                 {
@@ -612,7 +622,7 @@ namespace Com.Model
                 expr.Name = dim.Name; // Name of the function
                 expr.Dimension = dim;
 
-                expr.Operation = Operation.INVERSE_FUNCTION;
+                expr.Operation = Operation.DEPROJECTION;
 
                 if (previousExpr != null) // Define the expression to which this expression will be applied
                 {
@@ -655,8 +665,8 @@ namespace Com.Model
 
             expr.Operation = Operation.AGGREGATION;
 
-            expr.AddOperand(group); // First parameter is group specification
-            expr.AddOperand(measure); // Second parameter is measure specification
+            expr.SetInput(group); // Group specification is Input
+            expr.AddOperand(measure); // Measure specification is an Operand
 
             return expr;
         }
@@ -684,13 +694,19 @@ namespace Com.Model
         DATA_ROW, // Output stores a reference to a DataRow
         OFFSET, // Output stores an offset to an element
 
-        // Structural composition
-        TUPLE, // This expression is a tuple composed of its operands as members. Names of operands identify tuple members. A tuple can belong to a set and then it has its structure. 
+        // Variables, references
+        VARIABLE, // Local variable with its name in Name. We should maintain a list of all variables with their values (because they can be used in multiple locations). Evaluating a variable will move this value to Output of this node.
 
-        // Calls
-        FUNCTION, // Compute a function. 
-        INVERSE_FUNCTION, // Inverse function. 
-        PATH, // In contrast to functions, it denotes a sequence of segments. So it is a matter of representation: either dimensions (functions) or paths (named sequences of dimensions). 
+        // Structural composition
+        TUPLE, // It is a combination of operands like [thing=[Integer age=21, color="red"], size=3] Names of operands identify tuple members. The output set specifies the set this tuple is from. 
+        COLLECTION, // It is a set of operands like { [Integer age=21, weight=55], [Integer 1, 3] }. The members are stored in operands.
+        LOOP, // It is a loop producing a new set like (Set0 super, Set1 s1, Set2 s2 | predicate | return )
+
+        // Functions
+        DOT, // Apply the function to an instance. The function is Name and belongs to the Input set. Note that it is applied only in special contexts like measure expression where we have the illusion that it is applied to a set. 
+        PROJECTION, // Apply the function to a set but return only non-repeating outputs. The function is Name and belongs to the Input set. 
+        DEPROJECTION, // Return all inputs of the function that have the specified outputs. The function is Name and belongs to the Output set.
+        AGGREGATION, // Aggregation function like SUM or AVG. It is applied to a group of elements in Input and aggregates the values returned by the measure expression. 
         PROCEDURE, // Standard procedure which does not use 'this' (input) object and depends only on parameters
 
         // Arithmetics
@@ -698,9 +714,6 @@ namespace Com.Model
         MINUS,
         TIMES,
         DIVIDE,
-
-        // Aggregation function like SUM or AVG. It is a procedure applied to a group of other objects (normally values but might be more complex expressions). 
-        AGGREGATION,
 
         // Logic
         AND,

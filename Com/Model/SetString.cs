@@ -17,6 +17,11 @@ namespace Com.Model
             get { return int.MaxValue; } // It is the number of all strings
         }
 
+        public virtual Type SystemType
+        {
+            get { return typeof(string); }
+        }
+
         public override int Width
         {
             get { return int.MaxValue; } // We assume that a string may have any length (unlimited)

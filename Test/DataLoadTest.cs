@@ -256,7 +256,7 @@ namespace Test
             Dim d3 = d2.GreaterSet.GetGreaterDim("Last Name");
             List<Dim> path = new List<Dim> { d1, d2, d3 };
 
-            Expression expr = Expression.CreateProjectExpression(od, path);
+            Expression expr = Expression.CreateProjectExpression(od, path, Operation.PROJECTION);
 
             // Add derived dimension
             Dim derived1 = d3.GreaterSet.CreateDefaultLesserDimension("Customer Last Name", od);
@@ -312,7 +312,7 @@ namespace Test
             Dim d4 = d3.GreaterSet.GetGreaterDim("List Price");
             List<Dim> mesPath = new List<Dim> { d3, d4 };
 
-            Expression projExpr = Expression.CreateProjectExpression(odet, mesPath);
+            Expression projExpr = Expression.CreateProjectExpression(odet, mesPath, Operation.DOT);
 
             // Add derived dimension
             Expression aggreExpr = Expression.CreateAggregateExpression("SUM", deprExpr, projExpr);

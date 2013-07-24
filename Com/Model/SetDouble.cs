@@ -17,6 +17,11 @@ namespace Com.Model
             get { return int.MaxValue; } // In fact, it has to be the number of all doubles
         }
 
+        public virtual Type SystemType
+        {
+            get { return typeof(double); }
+        }
+
         public override int Width
         {
             get { return sizeof(double); }
