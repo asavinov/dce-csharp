@@ -30,15 +30,13 @@ namespace Com.Model
         private int _maxValues = 1; // Static constraint on output: Maximum number of values
         public bool OutputIsSetValued { get; set; } // Expression can produce more than one instance (set rather than a tuple)
 
-        public void SetOutput(Operation op, object output) // Set constant values recursively
+        public void SetOutput(Operation op, object output) // Set output values recursively for the specified nodes types
         {
             if (op == Operation.ALL || Operation == op) // Assignment is needed
             {
                 // Check validity of assignment
                 Debug.Assert(!(output != null && Operation == Operation.PRIMITIVE && !output.GetType().IsPrimitive), "Wrong use: constant value type has to correspond to operation type.");
-                Debug.Assert(!(output != null && Operation == Operation.DATA_ROW && !(output is DataRow)), "Wrong use: constant value type has to correspond to operation type.");
-                Debug.Assert(!(output != null && Operation == Operation.OFFSET && !(output is Offset || output is Offset[])), "Wrong use: constant value type has to correspond to operation type.");
-                Debug.Assert(!(output != null && Operation == Operation.TUPLE && !(output is Offset || output is Offset[])), "Wrong use: constant value type has to correspond to operation type.");
+                Debug.Assert(!(output != null && Operation == Operation.VARIABLE && !(output is Offset || output is Offset[] || output is DataRow)), "Wrong use: wrong type for a variable.");
 
                 Output = output;
             }
@@ -252,18 +250,10 @@ namespace Com.Model
                     }
                     break;
                 }
-                case Operation.DATA_ROW:
+                case Operation.VARIABLE:
                 {
-                    // Output is expected to store DataRow or null
-                    // Nothing to compute - it is a leaf expression containing a reference to a DataRow as a terminal value.
-                    // Output = Output; // The result already stores the value(s), operands are not needed. The set has to correspond to the value.
-                    break;
-                }
-                case Operation.OFFSET:
-                {
-                    // Output is expected to store Offset or null
-                    // Nothing to compute - it is a leaf expression containing a reference to a DataRow as a terminal value.
-                    // Output = Output; // The result already stores the value(s), operands are not needed. The set has to correspond to the value.
+                    // Evaluating a variable means retrieving its current value and storing in the output
+                    // Output is expected to store a value like Tuple, Offset or data row
                     break;
                 }
                 case Operation.TUPLE:
@@ -310,8 +300,12 @@ namespace Com.Model
                     }
 
                     // Compute the function. 
-                    // The way function is evaluated depends on the type of input (which determines what will be in Input.Output)
-                    if (Input.Operation == Operation.DATA_ROW)
+                    // The way function is evaluated depends on the type of input 
+                    if (Input.Output == null)
+                    {
+                        Output = null;
+                    }
+                    else if (Input.Output is DataRow)
                     {
                         DataRow thisRow = (DataRow)Input.Output;
                         try
@@ -331,37 +325,26 @@ namespace Com.Model
                             Output = (Int32)0; // TODO: We have to learn to work with NULL values as well as with non-supported values like BLOB etc.
                         }
                     }
-                    else if (Input.Operation == Operation.PRIMITIVE) // Apply function to a single value
+                    else if (Input.Output is Array) // Project an array of values using this function
                     {
-                        Output = dim.GetValue((Offset)Input.Output); // Read the value of the function
+                        // Debug.Assert(Input.Output is Offset[], "Wrong use: projection/dot can be applied to only an array of offsets - not any other type.");
+                        if (Operation == Operation.PROJECTION)
+                        {
+                            Output = dim.GetValues((Offset[])Input.Output);
+                        }
+                        else if (Operation == Operation.DOT)
+                        {
+                            Output = Array.CreateInstance(dim.SystemType, ((Array)Input.Output).Length);
+                            for (int i = 0; i < ((Offset[])Input.Output).Length; i++) // Individually and independently project all inputs
+                            {
+                                (Output as Array).SetValue(dim.GetValue((Offset)(Input.Output as Array).GetValue(i)), i);
+                            }
+                        }
                     }
-                    else // Input.Operation == Operation.OFFSET // Apply function to the Output
+                    else if (!(Input.Output is Array)) // Project a single value. Also: Input.Operation == Operation.PRIMITIVE
                     {
-                        if (Input.Output == null)
-                        {
-                            Output = null;
-                        }
-                        else if (!(Input.Output is Array)) // Project a single value
-                        {
-                            Debug.Assert(Input.Output is Offset, "Wrong use: a function/dimension can be applied to only one offset - not any other type.");
-                            Output = dim.GetValue((Offset)Input.Output);
-                        }
-                        else // Project an array of values using this function
-                        {
-                            // Debug.Assert(Input.Output is Offset[], "Wrong use: projection/dot can be applied to only an array of offsets - not any other type.");
-                            if (Operation == Operation.PROJECTION)
-                            {
-                                Output = dim.GetValues((Offset[])Input.Output);
-                            }
-                            else if (Operation == Operation.DOT)
-                            {
-                                Output = Array.CreateInstance(dim.SystemType, ((Array)Input.Output).Length);
-                                for(int i=0; i<((Offset[])Input.Output).Length; i++) // Individually and independently project all inputs
-                                {
-                                    (Output as Array).SetValue(dim.GetValue((Offset)(Input.Output as Array).GetValue(i)), i);
-                                }
-                            }
-                        }
+                        Debug.Assert(Input.Output is Offset, "Wrong use: a function/dimension can be applied to only one offset - not any other type.");
+                        Output = dim.GetValue((Offset)Input.Output);
                     }
 
                     break;
@@ -407,8 +390,7 @@ namespace Com.Model
                         break;
                     }
 
-                    // Set this group as input to the measure
-                    measureExpr.SetOutput(Operation.OFFSET, groupExpr.Output);
+                    measureExpr.SetOutput(Operation.VARIABLE, groupExpr.Output); // Assign output of the group expression to the variable
 
                     measureExpr.Evaluate(evaluationMode); // Compute the measure group
 
@@ -504,20 +486,20 @@ namespace Com.Model
 
             if (dim.IsPrimitive) // End of recursion
             {
-                expr.Operation = Operation.PRIMITIVE; // Or PATH or FUNCTION
+                expr.Operation = Operation.PRIMITIVE; // Leaf of tuple structure is primitive element (which can be computed)
                 expr.Name = dim.Name;
 
                 Expression funcExpr = new Expression();
-                funcExpr.Operation = Operation.PROJECTION;
+                funcExpr.Operation = Operation.DOT;
                 List<Dim> path = expr.GetPath();
                 Set sourceSet = expr.Root.OutputSet; // Or simply expr.Root.OutputSet.ImportDims[0].LesserSet
                 Dim srcPath = sourceSet.GetGreaterPath(path);
                 Debug.Assert(srcPath != null, "Import path not found. Something wrong with import.");
                 funcExpr.Name = srcPath != null ? srcPath.Name : null;
 
-                // Add Input of function as DATA_ROW
-                funcExpr.SetInput(new Expression());
-                funcExpr.Input.Operation = Operation.DATA_ROW;
+                // Add Input of function as a variable the values of which (output) can be assigned during export
+                funcExpr.SetInput(new Expression("source"));
+                funcExpr.Input.Operation = Operation.VARIABLE;
 
                 // Add function to this expression
                 expr.SetInput(funcExpr);
@@ -584,9 +566,9 @@ namespace Com.Model
                 }
                 else 
                 {
-                    // Or primitive element for the first segment
-                    expr.SetInput(new Expression());
-                    expr.Input.Operation = Operation.OFFSET;
+                    // The project path starts from some variable which stores the initial value(s) to be projected
+                    expr.SetInput(new Expression("this"));
+                    expr.Input.Operation = Operation.VARIABLE;
                     expr.Input.OutputSet = lesserSet;
                     expr.Input.OutputSetName = lesserSet.Name;
                 }
@@ -630,9 +612,9 @@ namespace Com.Model
                 }
                 else
                 {
-                    // Or primitive element for the first segment
-                    expr.SetInput(new Expression());
-                    expr.Input.Operation = Operation.OFFSET;
+                    // The deproject path starts from some variable which stores the initial value(s) to be deprojected
+                    expr.SetInput(new Expression("this"));
+                    expr.Input.Operation = Operation.VARIABLE;
                     expr.Input.OutputSet = lesserSet;
                     expr.Input.OutputSetName = lesserSet.Name;
                 }
@@ -648,8 +630,8 @@ namespace Com.Model
             // Debug.Assert(group.OutputSet == measure.Input.OutputSet, "Wrong use: Measure is a property of group elements and has to start where groups end.");
 
             // Modify measure: accept many values (not single value by default)
-            List<Expression> nodes = measure.GetOperands(Operation.OFFSET);
-            Debug.Assert(nodes != null && nodes.Count == 1, "Wrong use: Input offset nodes in measure expression must be 1.");
+            List<Expression> nodes = measure.GetOperands(Operation.VARIABLE);
+            Debug.Assert(nodes != null && nodes.Count == 1, "Wrong use: Input nodes (variable) in measure expression must be 1.");
             nodes[0].OutputIsSetValued = true;
 
             // Create aggregation expression
@@ -689,18 +671,16 @@ namespace Com.Model
         NONE,
         ALL,
 
-        // Constants. These operations are not evaluated because they are supposed to store the result in the output field. 
-        PRIMITIVE, // Primitive value (literal) - a leaf of the expression tree
-        DATA_ROW, // Output stores a reference to a DataRow
-        OFFSET, // Output stores an offset to an element
+        // Primitive values. 
+        PRIMITIVE, // Primitive value (literal) - a leaf of tuple tree and constants in expressions
 
-        // Variables, references
-        VARIABLE, // Local variable with its name in Name. We should maintain a list of all variables with their values (because they can be used in multiple locations). Evaluating a variable will move this value to Output of this node.
-
-        // Structural composition
+        // Complex values. Structural composition
         TUPLE, // It is a combination of operands like [thing=[Integer age=21, color="red"], size=3] Names of operands identify tuple members. The output set specifies the set this tuple is from. 
         COLLECTION, // It is a set of operands like { [Integer age=21, weight=55], [Integer 1, 3] }. The members are stored in operands.
         LOOP, // It is a loop producing a new set like (Set0 super, Set1 s1, Set2 s2 | predicate | return )
+
+        // Variables, references
+        VARIABLE, // Local variable with its name in Name. We should maintain a list of all variables with their values (because they can be used in multiple locations). Evaluating a variable will move this value to Output of this node.
 
         // Functions
         DOT, // Apply the function to an instance. The function is Name and belongs to the Input set. Note that it is applied only in special contexts like measure expression where we have the illusion that it is applied to a set. 

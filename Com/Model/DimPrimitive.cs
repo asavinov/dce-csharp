@@ -162,7 +162,7 @@ namespace Com.Model
             {
                 for (Offset offset = 0; offset < LesserSet.Length; offset++) // Compute the output function value for each input value (offset)
                 {
-                    SelectExpression.SetOutput(Operation.OFFSET, offset); // Initialize THIS
+                    SelectExpression.SetOutput(Operation.VARIABLE, offset); // Initialize 'this'
 
                     SelectExpression.Evaluate(EvaluationMode.UPDATE); // Compute
 

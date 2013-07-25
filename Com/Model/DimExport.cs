@@ -59,15 +59,15 @@ namespace Com.Model
                 // For each row, evaluate the expression and append the new element
                 DataTable dataTable = ((SetRootOledb)LesserSet.Root).ExportAll(LesserSet);
 
-                SelectExpression.SetInput(Operation.PROJECTION, Operation.DATA_ROW); // Set the necessary input expression for all functions
+                SelectExpression.SetInput(Operation.PROJECTION, Operation.VARIABLE); // ??? CHECK: Set the necessary input expression for all functions
 
                 foreach (DataRow row in dataTable.Rows) // A row is <colName, primValue> collection
                 {
                     // Reset
                     SelectExpression.SetOutput(Operation.ALL, null);
 
-                    // Set the constant values in the expression
-                    SelectExpression.SetOutput(Operation.DATA_ROW, row);
+                    // Set the input variable 'source'
+                    SelectExpression.SetOutput(Operation.VARIABLE, row);
 
                     // Evaluate the expression tree by appending the elements into the sets if absent
                     SelectExpression.Evaluate(EvaluationMode.APPEND);
@@ -80,7 +80,7 @@ namespace Com.Model
             {
                 for (Offset offset = 0; offset < LesserSet.Length; offset++)
                 {
-                    SelectExpression.SetOutput(Operation.OFFSET, offset);
+                    SelectExpression.SetOutput(Operation.VARIABLE, offset); // Assign value of 'this' variable
                     SelectExpression.Evaluate(EvaluationMode.APPEND);
                 }
             }
