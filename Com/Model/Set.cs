@@ -499,44 +499,12 @@ namespace Com.Model
             return ret;
         }
 
-        public virtual int Append(Instance instance)
-        {
-            if (IsPrimitive)
-            {
-                return 0;
-            }
-
-            foreach(Dim dim in GreaterDims) // Iterate either through greater dims (by finding child instances) or by child instances (by finding greater dims)
-            {
-                Instance child = instance.GetChild(dim.Name); // Mapping: greaterDim -> childInstance
-                dim.GreaterSet.Append(child); // Recursion. Append the child value.
-
-                // TODO: We need to compute ranges to find if it already exists
-
-                dim.Append(child.Value); 
-            }
-
-            instance.Value = null;
-
-
-            // - we can reduce it to the same dimension method dim.Append() 
-            // This method is applied to a parent dimension (of any level) and takes the corresponding node from the instance structure
-            // Its task is to add/find an instance in this dimension given child instance values. After finishing it assigns it to the node value (so that parents can use it). Normally we return offsets.
-
-            // We actualy do not need nested dimensions for that because values are inserted into normal dimensions along the paths. 
-            // Nested dimensions are needed to represent and map paths. They also could be used as longer path indexes for performance.
-
-            // Theoretically, we could simply insert new instances into leaf dimensions and forget. 
-            // Then on the second step, we propagate leave dimensions into parent dimensions using the above recursieve procedure.
-            return (int) instance.Value;
-        }
-
         public virtual void Insert(int offset)
         {
             // Delegate to all dimensions
             foreach(Dim d in GreaterDims)
             {
-                d.Insert(offset, 0);
+                d.Insert(offset, null);
             }
 
             Length++;

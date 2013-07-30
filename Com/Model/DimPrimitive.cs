@@ -23,6 +23,8 @@ namespace Com.Model
 
         protected int allocatedSize; // How many elements (maximum) fit into the allocated memory
 
+        protected T NullValue; // One possible implementation of Nulls (not the best)
+
         protected static IAggregator<T> Aggregator;
 
         public DimPrimitive(string name, Set lesserSet, Set greaterSet)
@@ -38,11 +40,17 @@ namespace Com.Model
 
             if (typeof(T) == typeof(int))
             {
+                NullValue = ObjectToGeneric(int.MaxValue);
                 Aggregator = new IntAggregator() as IAggregator<T>;
             }
             else if (typeof(T) == typeof(double))
             {
+                NullValue = ObjectToGeneric(double.NaN);
                 Aggregator = new DoubleAggregator() as IAggregator<T>;
+            }
+            else
+            {
+                NullValue = default(T);
             }
         }
 
@@ -120,12 +128,19 @@ namespace Com.Model
 
         public override object GetValue(Offset offset)
         {
-            return _cells[offset]; // We do not check the range of offset - the caller must guarantee its validity
+            T cell = _cells[offset]; // We do not check the range of offset - the caller must guarantee its validity
+            if (EqualityComparer<T>.Default.Equals(NullValue, cell))
+                return null;
+            else
+                return cell;
         }
 
         public override void SetValue(Offset offset, object value)
         {
-            UpdateIndex(offset, ObjectToGeneric(value));
+            if (value == null)
+                UpdateIndex(offset, NullValue);
+            else
+                UpdateIndex(offset, ObjectToGeneric(value));
         }
 
         public override Offset[] GetOffsets(object value)

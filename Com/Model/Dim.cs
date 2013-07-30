@@ -94,7 +94,7 @@ namespace Com.Model
         public bool IsInstantiable { get { return LesserSet.IsInstantiable; } private set { _instantiable = value; } }
 
         /// <summary>
-        /// Whether this dimension to take no values.
+        /// Whether this dimension is allowed to take no values.
         /// </summary>
         public bool IsNullable { get; set; }
 
@@ -330,11 +330,12 @@ namespace Com.Model
 
         #region Function methods (abstract)
 
-        public virtual void SetLength(Offset length) { } // We will not use it in public API - only a whole set length can be changed so a Set method has to be used
+        public virtual void SetLength(Offset length) { } // Not for public API - only a whole set length can be changed so a Set method has to be used
 
-        public virtual void Append(object value) { } // We will not use it in public API - we can append only a whole record so a Set method has to be used
+        public virtual void Append(object value) { } // Not for public API - we can append only a whole record so a Set method has to be used
 
-        public virtual void Insert(Offset offset, object value) { }
+        public virtual void Insert(Offset offset, object value) { } // Not for public API
+
 
         public virtual object GetValue(Offset offset) { return null; }
 
