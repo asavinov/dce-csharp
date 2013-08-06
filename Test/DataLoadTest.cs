@@ -119,6 +119,20 @@ namespace Test
             // Test path correctness
             pathCount = epSet.GreaterPaths.Count;
             Assert.AreEqual(20, pathCount);
+
+            // Test path enumerators
+            var pathsEnum = new PathEnumerator(new List<Set>(), new List<Set> { dbRoot.FindSubset("Purchase Orders") }, true, DimensionType.IDENTITY_ENTITY);
+            var paths = new List<List<Dim>>(pathsEnum);
+            Assert.AreEqual(2, paths.Count);
+
+            pathsEnum = new PathEnumerator(new List<Set>(), new List<Set> { dbRoot.FindSubset("Products") }, true, DimensionType.IDENTITY_ENTITY);
+            paths = new List<List<Dim>>(pathsEnum);
+            Assert.AreEqual(3, paths.Count);
+
+            pathsEnum = new PathEnumerator(new List<Set>(), new List<Set> { dbRoot.FindSubset("Employees") }, true, DimensionType.IDENTITY_ENTITY);
+            paths = new List<List<Dim>>(pathsEnum);
+            Assert.AreEqual(6, paths.Count);
+
         }
 
         [TestMethod]

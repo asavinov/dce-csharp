@@ -157,6 +157,15 @@ namespace Com.Model
             get { return SuperDim == null; }
         }
 
+        public bool IsIn(Set parent) // Return true if this set is included in the specified set,that is, the specified set is a direct or indirect super-set of this set
+        {
+            for (Set set = this; set != null; set = SuperSet)
+            {
+                if (set == parent) return true;
+            }
+            return false;
+        }
+
         #endregion
 
         #region Inclusion. Sub.
@@ -219,6 +228,14 @@ namespace Com.Model
         #endregion
 
         #region Poset. Greater.
+
+        public bool IsGreatest
+        {
+            get
+            {
+                return GreaterDims.Count == 0;
+            }
+        }
 
         public int IdentityArity
         {
@@ -304,6 +321,14 @@ namespace Com.Model
         #endregion
 
         #region Poset. Lesser.
+
+        public bool IsLeast
+        {
+            get
+            {
+                return LesserDims.Count == 0;
+            }
+        }
 
         public List<Set> GetLesserSets()
         {
@@ -418,6 +443,31 @@ namespace Com.Model
 
                 AddGreaterPath(newPath);
             }
+        }
+
+        #endregion
+
+        #region Matching and suggestion functions
+
+        public void SuggestLesserRelationships(Set dstSet, Set lesserSet)
+        {
+            // Find all possible dimension paths passing through some lesser set
+            // Enumerate all lesser sets via all lesser paths, and for each generate all possible greater paths leading to the destination (if any)
+
+            // Need 1: enumerator for all lesser paths leading to all lesser sets (a similar is an enumerator for all lesser sets independent of the path)
+            // Option: we can specify zere, one or more possible lesser sets as a constraint.
+            // Note: a destination can be specified as a list (of sets) or one set. 
+            // Note: specifying a destination set means that this and all its subsets (or supersets???) are allowed, that is, a dimension leading to any its subset is ok.
+            // Consequence: specifying root means all sets from this schema are allowed (including primitive)
+
+            // Need 2: enumerator for all greater paths leading to some greater set (a similar is an enumerator for all greater sets independent of the path)
+            // Option: we can specify possible greater sets as a constraint.
+
+            // Option: Maybe use complex path as a representation instead of array?
+            Dim[] lesserPath = null; 
+            Dim[] greaterPath = null;
+            double weight = 0.0;
+            var path = new Tuple<Dim[], Dim[], double>(lesserPath, greaterPath, weight); // One path: lesser path, greater path, similarity
         }
 
         #endregion
@@ -594,72 +644,3 @@ namespace Com.Model
         EXCEL
     }
 }
-
-
-/*
-
-        /// <summary>
-        /// Clone the specified dimension as a new greater dimension in this set or find it. 
-        /// If not specified, the greater set will be found using name comparison and created if absent.
-        /// </summary>
-        /// <param name="remDim"></param>
-        /// <returns></returns>
-        [System.Obsolete("", true)]
-        public Dim CloneGreaterDim(Dim remDim, Set greaterSet)
-        {
-            Debug.Assert(!IsPrimitive, "This set is prmitive. Cannot add dimensions to a primitive set.");
-
-            Set remSet = remDim.GreaterSet;
-
-            //
-            // Try to find the specified dimension
-            //
-            Dim locDim = GetGreaterDim(remDim.Name);
-            if (locDim != null) // Found
-            {
-                Debug.Assert(greaterSet == null || greaterSet.Equals(locDim.GreaterSet), "The specified greater set must be equal to the greater set of the found dimension.");
-                return locDim;
-            }
-
-            //
-            // Not found. A new dimension will be created.
-            //
-
-            // 1. If greater set is not specified then try to find it by matching 
-            if (greaterSet == null)
-            {
-                greaterSet = Root.MapToLocalSet(remSet);
-                if (greaterSet == null) // Not found. Clone.
-                {
-                    greaterSet = new Set(remSet.Name);
-                    Set locSuperSet = Root.MapToLocalSet(remSet.SuperSet);
-                    greaterSet.SuperDim = new DimRoot("super", this, locSuperSet);
-                }
-            }
-            // Now we have a greater set - either found or created
-
-            // 2. Create a local equivalent of the dimension
-            locDim = greaterSet.CreateDefaultLesserDimension(remDim.Name, this);
-            locDim.LesserSet = this;
-            locDim.GreaterSet = greaterSet;
-            locDim.IsIdentity = remDim.IsIdentity;
-            locDim.SelectExpression = null; // Only computed/derived dimensions have a definition
-
-            // Really add this new dimension to this set
-            AddGreaterDim(locDim);
-
-            return locDim;
-        }
-        [System.Obsolete("", true)]
-        public void CloneGreaterDimensions(Set remSet)
-        {
-            // Loop through all remote dimensions and for each create/define one target dimension
-            foreach (Dim remDim in remSet.GreaterDims)
-            {
-                Dim newDim = CloneGreaterDim(remDim, null); // Clone dimension (no recursion)
-                if (newDim.GreaterSet.IsPrimitive) continue;
-                newDim.GreaterSet.CloneGreaterDimensions(remDim.GreaterSet); // Recursion
-            }
-        }
-
-*/

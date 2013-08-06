@@ -423,7 +423,18 @@ namespace Com.Model
 
     }
 
-    public abstract class DimEnumerator : Dim, IEnumerator<List<Dim>> // IEnumerable<List<Dim>>
+    /// <summary>
+    /// Abstract base class for all kinds of path enumerators without complex constraints.
+    /// 
+    /// Implementing iterators: 
+    /// http://msdn.microsoft.com/en-us/magazine/cc163682.aspx
+    /// http://www.codeproject.com/Articles/34352/Tree-Iterators
+    /// TODO:
+    /// - study how to use yield in iterators
+    /// - study how to use nested classes for iterators 
+    /// - implement many different kinds of iterators: depth-first, bredth-first, leafs-only etc.
+    /// </summary>
+    public abstract class DimEnumerator : Dim, IEnumerator<List<Dim>>, IEnumerable<List<Dim>>
     {
 
         public DimEnumerator(Set set) : base("")
@@ -458,7 +469,7 @@ namespace Com.Model
         // Reset the iterator.
         public void Reset()
         {
-            Path.Clear();
+            if(Path != null) Path.Clear();
         }
 
         // Get the underlying enumerator.
@@ -466,57 +477,248 @@ namespace Com.Model
         {
             return (IEnumerator<List<Dim>>)this; 
         }
-/*
+
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
         {
-            // this calls the IEnumerator<Foo> GetEnumerator method
-            // as explicit method implementations aren't used for method resolution in C#
-            // polymorphism (IEnumerator<T> implements IEnumerator)
-            // ensures this is type-safe
             return GetEnumerator();
         }
-*/
+
     }
 
     /// <summary>
-    /// Implementing iterators: 
-    /// http://msdn.microsoft.com/en-us/magazine/cc163682.aspx
-    /// http://www.codeproject.com/Articles/34352/Tree-Iterators
-    /// TODO:
-    /// - study how to use yield in iterators
-    /// - study how to use nested classes for iterators
-    /// - implement many different kinds of iterators: depth-first, bredth-first, leafs-only etc.
+    /// Abstract base class for path enumerators with complex constraints.
+    /// </summary>
+    public abstract class DimComplexEnumerator : DimEnumerator
+    {
+        protected List<Set> lesserSets;
+        protected List<Set> greaterSets;
+        protected bool isInverse;
+        protected DimensionType dimType; // The path will be composed of only these types of segments
+        protected bool allowIntermediateSets = false; // Not implemented. lesser and greater sets only as source and destination - not in the middle of the path (default). Otherwise, they can appear in the middle of the path (say, one greater set and then the final greater set).
+
+        public DimComplexEnumerator(List<Set> _lesserSets, List<Set> _greaterSets, bool _isInverse, DimensionType _dimType)
+            : base(null)
+        {
+            lesserSets = _lesserSets;
+            greaterSets = _greaterSets;
+
+            isInverse = _isInverse;
+            dimType = _dimType;
+
+            if (!isInverse)
+            {
+                LesserSet = lesserSets[0];
+                GreaterSet = lesserSets[0];
+            }
+            else
+            {
+                LesserSet = greaterSets[0];
+                GreaterSet = greaterSets[0];
+            }
+        }
+
+        public DimComplexEnumerator(Set set)
+            : base(set)
+        {
+            lesserSets = new List<Set>(new Set[] { set }); // One source set
+            greaterSets = new List<Set>(new Set[] { set.Root }); // All destination sets from this schema
+
+            isInverse = false;
+        }
+    }
+
+    /// <summary>
+    /// Enumerate all different primitive paths. 
+    /// </summary>
+    public class PathEnumerator : DimComplexEnumerator
+    {
+        public PathEnumerator(Set set, DimensionType _dimType) // All primitive paths
+            : this(new List<Set>(new Set[] { set }), null, false, _dimType)
+        {
+        }
+
+        public PathEnumerator(Set lesserSet, Set greaterSet, DimensionType _dimType) // Between two sets
+            : this(new List<Set>(new Set[] { lesserSet }), new List<Set>(new Set[] { greaterSet }), false, _dimType)
+        {
+        }
+
+        public PathEnumerator(List<Set> _lesserSets, List<Set> _greaterSets, bool _isInverse, DimensionType _dimType)
+            : base(_lesserSets, _greaterSets, _isInverse, _dimType)
+        {
+        }
+
+        public override bool MoveNext()
+        {
+            // TODO: We need also loop over all source sets
+
+            if (!AtDestination()) // Try to move forward by attaching a new segment
+            {
+                bool destinationFound = MoveForward(); // Move several steps forward until next destination is found
+                if (destinationFound) return true; // A destination was really found
+                // else // No valid destination was found by moving forward. We have to move backward
+            }
+
+            bool continuationFound = MoveBackward(); // Try to move backward by removing segments until a previous set with an unvisited path forward is found
+            if (!continuationFound) return false;
+
+            return MoveForward();
+        }
+        private bool MoveForward() // return true - valid destination set found, false - no valid destination found (and cannot move forward anymore)
+        {
+            while (!AtDestination()) // Not a destination - move one more step forward
+            {
+                List<Dim> dims = GetContinuations();
+
+                if (dims.Count != 0) // Continue depth-first by adding the very first dimension
+                {
+                    AddLastSegment(dims[0]);
+                }
+                else
+                {
+                    return false; // Not a destination but no possibility to move forward
+                }
+            }
+            return true;
+        }
+        private bool MoveBackward() // return true - found a set with a possibility to continued (with unvisited continuation), false - not found a set with possibility to continue(end, go to next source set)
+        {
+            Dim segment = null;
+            do // A loop for removing last segment and moving backward
+            {
+                if (Path.Count == 0) // Nothing to remove. End.
+                {
+                    return false;
+                }
+
+                segment = RemoveLastSegment(); // Remove last segment
+
+                List<Dim> nextSegs = GetContinuations();
+
+                int segIndex = nextSegs.IndexOf(segment);
+                if (segIndex + 1 < nextSegs.Count) // Continuation found. Use it
+                {
+                    segment = nextSegs[segIndex + 1];
+                    AddLastSegment(segment); // Add next last segment
+                    return true;
+                }
+                else // Continuation not found. Continue removing.
+                {
+                    segment = null;
+                }
+            } while (segment == null);
+
+            return false; // All segments removed but no continuation found in any of the previous sets including the source one
+        }
+
+        private List<Dim> GetContinuations()
+        {
+            if (!isInverse) // Move up from lesser to greater
+            {
+                switch (dimType)
+                {
+                    case DimensionType.IDENTITY: return GreaterSet.GetIdentityDims();
+                    case DimensionType.ENTITY: return GreaterSet.GetEntityDims();
+                    case DimensionType.IDENTITY_ENTITY: return GreaterSet.GreaterDims;
+                }
+            }
+            else
+            {
+                switch (dimType)
+                {
+                    case DimensionType.IDENTITY: return LesserSet.LesserDims.Where(x => x.IsIdentity).ToList();
+                    case DimensionType.ENTITY: return LesserSet.LesserDims.Where(x => !x.IsIdentity).ToList();
+                    case DimensionType.IDENTITY_ENTITY: return LesserSet.LesserDims;
+                }
+            }
+
+            return null;
+        }
+        private Dim RemoveLastSegment()
+        {
+            if (Path.Count == 0) return null; // Nothing to remove
+
+            Dim segment = null;
+            if (!isInverse)
+            {
+                segment = LastSegment;
+                Path.RemoveAt(Path.Count - 1);
+                GreaterSet = Path.Count == 0 ? LesserSet : LastSegment.GreaterSet;
+            }
+            else
+            {
+                segment = FirstSegment;
+                Path.RemoveAt(0);
+                LesserSet = Path.Count == 0 ? GreaterSet : FirstSegment.LesserSet;
+            }
+            return segment;
+        }
+        private void AddLastSegment(Dim segment)
+        {
+            if (!isInverse)
+            {
+                Path.Add(segment); // Append as a greater segment
+                GreaterSet = LastSegment.GreaterSet;
+            }
+            else
+            {
+                Path.Insert(0, segment); // Insert as a lesser segment
+                LesserSet = FirstSegment.LesserSet;
+            }
+        }
+        private bool AtDestination()
+        {
+            List<Set> destinations = !isInverse ? greaterSets : lesserSets;
+            Set dest = !isInverse ? GreaterSet : LesserSet;
+
+            if (destinations == null || destinations.Count == 0)
+            {
+                // Destinations are leaves. Check possibility to continue.
+                if (!isInverse) return GreaterSet.IsGreatest;
+                else return LesserSet.IsLeast;
+            }
+            else // Concrete destinations are specified
+            {
+                foreach (Set set in destinations) if (dest.IsIn(set)) return true;
+                return false;
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Enumerate all different primitive paths. 
+    /// Any returned path starts from the specified source set and ends in a primitive set.
+    /// Intermediate paths (not ending in a primitive set) are not returned. 
     /// </summary>
     public class DepthDimEnumerator : DimEnumerator
     {
-        private DimensionType _dimType;
+        private DimensionType dimType;
 
-        public DepthDimEnumerator(Set set, DimensionType dimType)
+        public DepthDimEnumerator(Set set, DimensionType _dimType)
             : base(set) 
         {
-            _dimType = dimType;
+            dimType = _dimType;
         }
 
         public override bool MoveNext()
         {
             if (!GreaterSet.IsPrimitive)
             {
-                bool foundPrimitive = MoveUp();
-                if (foundPrimitive) return true;
+                bool primitiveFound = MoveForward();
+                if (primitiveFound) return true;
                 // Else move down back
             }
 
             // Go down (return back) until we find the next (unvisited) child
-            bool foundChild = MoveDown();
-            if (!foundChild) return false;
+            bool childFound = MoveBackward();
+            if (!childFound) return false;
 
-            return MoveUp();
+            return MoveForward();
         }
-        private bool MoveUp() // true - found primitive, false - found non-primitive leaf
+        private bool MoveForward() // true - found primitive, false - found non-primitive leaf
         {
             while (!GreaterSet.IsPrimitive) // Not a leaf - go up deeper and search for the first primitive set
             {
-                List<Dim> dims = GetChildren();
+                List<Dim> dims = GetContinuations();
 
                 if (dims.Count != 0)
                 {
@@ -530,7 +732,7 @@ namespace Com.Model
             }
             return true;
         }
-        private bool MoveDown() // true - found next child that can be continued up, false - not found (end)
+        private bool MoveBackward() // true - found next child that can be continued up, false - not found (end)
         {
             Dim child = null;
             do // It is only down loop (removing last segment)
@@ -544,7 +746,7 @@ namespace Com.Model
                 Path.RemoveAt(Path.Count - 1);
                 GreaterSet = Path.Count == 0 ? LesserSet : LastSegment.GreaterSet;
 
-                List<Dim> children = GetChildren();
+                List<Dim> children = GetContinuations();
 
                 int childIndex = children.IndexOf(child);
                 if (childIndex + 1 < children.Count) // Good child. Use it
@@ -563,9 +765,9 @@ namespace Com.Model
             return false; // Unreachable
         }
 
-        private List<Dim> GetChildren()
+        private List<Dim> GetContinuations()
         {
-            switch (_dimType)
+            switch (dimType)
             {
                 case DimensionType.IDENTITY: return GreaterSet.GetIdentityDims();
                 case DimensionType.ENTITY: return GreaterSet.GetEntityDims();
