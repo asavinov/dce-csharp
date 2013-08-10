@@ -52,6 +52,7 @@
     <Compile Include="Model\Instance.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Model\Recommender.cs" />
     <Compile Include="Model\Set.cs" />
     <Compile Include="Model\SetBoolean.cs" />
     <Compile Include="Model\SetDouble.cs" />

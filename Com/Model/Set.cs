@@ -159,7 +159,7 @@ namespace Com.Model
 
         public bool IsIn(Set parent) // Return true if this set is included in the specified set,that is, the specified set is a direct or indirect super-set of this set
         {
-            for (Set set = this; set != null; set = SuperSet)
+            for (Set set = this; set != null; set = set.SuperSet)
             {
                 if (set == parent) return true;
             }
@@ -227,7 +227,7 @@ namespace Com.Model
 
         #endregion
 
-        #region Poset. Greater.
+        #region Poset. Greater. 
 
         public bool IsGreatest
         {
@@ -254,9 +254,9 @@ namespace Com.Model
             }
         }
 
-        public DepthDimEnumerator GetGreaterPrimitiveDims(DimensionType dimType)
+        public PathEnumerator GetGreaterPrimitiveDims(DimensionType dimType)
         {
-            return new DepthDimEnumerator(this, dimType);
+            return new PathEnumerator(this, dimType);
         }
 /*
         IEnumerable<List<Dim>> GetAllPrimitiveDims()
@@ -447,31 +447,6 @@ namespace Com.Model
 
         #endregion
 
-        #region Matching and suggestion functions
-
-        public void SuggestLesserRelationships(Set dstSet, Set lesserSet)
-        {
-            // Find all possible dimension paths passing through some lesser set
-            // Enumerate all lesser sets via all lesser paths, and for each generate all possible greater paths leading to the destination (if any)
-
-            // Need 1: enumerator for all lesser paths leading to all lesser sets (a similar is an enumerator for all lesser sets independent of the path)
-            // Option: we can specify zere, one or more possible lesser sets as a constraint.
-            // Note: a destination can be specified as a list (of sets) or one set. 
-            // Note: specifying a destination set means that this and all its subsets (or supersets???) are allowed, that is, a dimension leading to any its subset is ok.
-            // Consequence: specifying root means all sets from this schema are allowed (including primitive)
-
-            // Need 2: enumerator for all greater paths leading to some greater set (a similar is an enumerator for all greater sets independent of the path)
-            // Option: we can specify possible greater sets as a constraint.
-
-            // Option: Maybe use complex path as a representation instead of array?
-            Dim[] lesserPath = null; 
-            Dim[] greaterPath = null;
-            double weight = 0.0;
-            var path = new Tuple<Dim[], Dim[], double>(lesserPath, greaterPath, weight); // One path: lesser path, greater path, similarity
-        }
-
-        #endregion
-
         #region Instance manipulation (function, data) methods
 
         // TODO: Here we need an interface like ResultSet in JDBC with all possible types
@@ -643,4 +618,5 @@ namespace Com.Model
         SQL, // Generic (standard) SQL
         EXCEL
     }
+
 }

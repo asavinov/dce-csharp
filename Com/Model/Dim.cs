@@ -219,6 +219,19 @@ namespace Com.Model
             return true;
         }
 
+        public bool SamePath(List<Dim> path)
+        {
+            if (Path == null || path == null) return false;
+
+            if (Path.Count != path.Count) return false;
+
+            for (int i = 0; i < path.Count; i++)
+            {
+                if (!path[i].Equals(Path[i])) return false;
+            }
+            return true;
+        }
+
         public Dim FirstSegment
         {
             get
@@ -374,6 +387,12 @@ namespace Com.Model
         {
             if (obj == null) return false;
             if (Object.ReferenceEquals(this, obj)) return true;
+
+            if (obj is List<Dim>)
+            {
+                // ***
+            }
+
             if (this.GetType() != obj.GetType()) return false;
 
             Dim dim = (Dim)obj;
@@ -528,7 +547,7 @@ namespace Com.Model
     }
 
     /// <summary>
-    /// Enumerate all different primitive paths. 
+    /// Enumerate all different paths between specified sets. 
     /// </summary>
     public class PathEnumerator : DimComplexEnumerator
     {
@@ -561,7 +580,9 @@ namespace Com.Model
             bool continuationFound = MoveBackward(); // Try to move backward by removing segments until a previous set with an unvisited path forward is found
             if (!continuationFound) return false;
 
-            return MoveForward();
+            if (AtDestination()) return true;
+
+            return MoveNext(); // Recursive
         }
         private bool MoveForward() // return true - valid destination set found, false - no valid destination found (and cannot move forward anymore)
         {
@@ -670,9 +691,15 @@ namespace Com.Model
             List<Set> destinations = !isInverse ? greaterSets : lesserSets;
             Set dest = !isInverse ? GreaterSet : LesserSet;
 
-            if (destinations == null || destinations.Count == 0)
+            if (destinations == null) // 
             {
-                // Destinations are leaves. Check possibility to continue.
+                // Destinations are primitive sets
+                if (!isInverse) return GreaterSet.IsPrimitive;
+                else return LesserSet.IsLeast; // Just least set because primitive sets do not exist for least sets
+            }
+            else if (destinations.Count == 0)
+            {
+                // Destinations are terminal sets (greatest or least). Check possibility to continue.
                 if (!isInverse) return GreaterSet.IsGreatest;
                 else return LesserSet.IsLeast;
             }
@@ -684,11 +711,7 @@ namespace Com.Model
         }
     }
     
-    /// <summary>
-    /// Enumerate all different primitive paths. 
-    /// Any returned path starts from the specified source set and ends in a primitive set.
-    /// Intermediate paths (not ending in a primitive set) are not returned. 
-    /// </summary>
+/*
     public class DepthDimEnumerator : DimEnumerator
     {
         private DimensionType dimType;
@@ -776,6 +799,7 @@ namespace Com.Model
             return null;
         }
     }
+*/
 
     public enum DimensionType
     {
