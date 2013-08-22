@@ -24,16 +24,16 @@ namespace Test
             Assert.IsTrue("String" == root.GetPrimitiveSubset("String").Name);
 
             Set c1 = new Set("c1");
-            c1.SuperDim = new DimRoot("super", c1, root);
+            root.AddSubset(c1);
 
             Set c2 = new Set("c2");
-            c2.SuperDim = new DimRoot("super", c2, root);
+            root.AddSubset(c2);
 
             Set c11 = new Set("c11");
-            c11.SuperDim = new DimSuper("super", c11, c1);
+            c1.AddSubset(c11);
 
             Set c12 = new Set("c12");
-            c12.SuperDim = new DimSuper("super", c12, c1);
+            c1.AddSubset(c12);
 
             // Test quantities
             Assert.AreEqual(2, root.NonPrimitiveSubsets.Count);
@@ -59,7 +59,7 @@ namespace Test
 
             // Insert table
             Set t1 = new Set("t1");
-            t1.SuperDim = new DimRoot("super", t1, root);
+            root.AddSubset(t1);
 
             // Insert attributes
             Dim orders = new DimPrimitive<int>("orders", t1, setInteger);
@@ -147,7 +147,7 @@ namespace Test
 
             // Add a new set manualy
             Set emp = new Set("Employees");
-            emp.SuperDim = new DimRoot("super", emp, wsRoot); // Insert the set (no dimensions)
+            wsRoot.AddSubset(emp);
 
             //
             // Import an existing set

@@ -421,7 +421,7 @@ namespace Com.Model
                     superSet = OutputSet != null ? root.MapToLocalSet(OutputSet.SuperSet) : root;
 
                     set = new Set(OutputSetName); // Or OutputSet.Name
-                    set.SuperDim = new DimSuper("super", set, superSet);
+                    superSet.AddSubset(set);
                 }
             }
             else // Operation.FUNCTION or similar

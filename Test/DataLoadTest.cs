@@ -46,7 +46,7 @@ namespace Test
 
             // Insert table
             Set t1 = new Set("t1");
-            t1.SuperDim = new DimRoot("super", t1, root);
+            root.AddSubset(t1);
 
             Dim orders = new DimPrimitive<int>("orders", t1, setInteger);
             t1.AddGreaterDim(orders);

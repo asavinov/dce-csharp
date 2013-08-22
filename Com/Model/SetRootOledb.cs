@@ -115,7 +115,7 @@ namespace Com.Model
             {
                 Set set = new Set(tableName); // Create a set 
                 set.RelationalTableName = tableName;
-                set.SuperDim = new DimRoot("super", set, this); // Add the new set to the schema by setting its super dimension
+                AddSubset(set);
             }
 
             // Load columns and FKs as (complex) paths and (simple) FK-dimensions

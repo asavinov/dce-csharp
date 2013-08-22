@@ -170,9 +170,46 @@ namespace Com.Model
 
         #region Inclusion. Sub.
 
+        public Set AddSubset(Set subset)
+        {
+            Debug.Assert(subset != null, "Wrong use of method parameter. Subset must be non-null.");
+            subset.SuperDim = new DimSuper("super", subset, this);
+            return subset;
+        }
+
+        public Set RemoveSubset(Set subset)
+        {
+            Debug.Assert(subset != null, "Wrong use of method parameter. Subset must be non-null.");
+
+            if(!SubDims.Exists(x => x.LesserSet == subset))
+            {
+                return null; // Nothing to remove
+            }
+
+            subset.SuperDim = null;
+
+            return subset;
+        }
+
         public List<Set> SubSets
         {
-            get { return SubDims.Select(x => x.LesserSet).ToList(); }
+            get { return NonPrimitiveSubsets; }
+        }
+
+        public List<Set> PrimitiveSubsets
+        {
+            get { return SubDims.Where(x => x.LesserSet.IsPrimitive).Select(x => x.LesserSet).ToList(); }
+        }
+
+        public List<Set> NonPrimitiveSubsets
+        {
+            get { return SubDims.Where(x => !x.LesserSet.IsPrimitive).Select(x => x.LesserSet).ToList(); }
+        }
+
+        public Set GetPrimitiveSubset(string name)
+        {
+            Dim dim = SubDims.FirstOrDefault(x => x.LesserSet.IsPrimitive && x.LesserSet.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+            return dim != null ? dim.LesserSet : null;
         }
 
         public List<Set> GetAllSubsets()
@@ -207,22 +244,6 @@ namespace Com.Model
             }
 
             return set;
-        }
-
-        public List<Set> PrimitiveSubsets
-        {
-            get { return SubDims.Where(x => x.LesserSet.IsPrimitive).Select(x => x.LesserSet).ToList(); }
-        }
-
-        public List<Set> NonPrimitiveSubsets
-        {
-            get { return SubDims.Where(x => !x.LesserSet.IsPrimitive).Select(x => x.LesserSet).ToList(); }
-        }
-
-        public Set GetPrimitiveSubset(string name)
-        {
-            Dim dim = SubDims.FirstOrDefault(x => x.LesserSet.IsPrimitive && x.LesserSet.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
-            return dim != null ? dim.LesserSet : null;
         }
 
         #endregion

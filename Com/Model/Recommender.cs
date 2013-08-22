@@ -7,11 +7,39 @@ namespace Com.Model
 {
     public class Recommender
     {
+        public static object RecommendMappings(Set srcSet, Set dstSet, Set lesserSet)
+        {
+            // Find relevant set mappings of the specified set to the destination database. 
+            // Each mappings means specifying a target set as well as dimension mappings which also possibly provide other set mappings.
+            // At the end, each mapping is based upon and formally has to specify primitive set mappings. 
+            // Target sets could be existing or new. A new target set essentially means creating a more or less exact copy of the source set.
 
+            // It is an example of hierarchical space of recommendations (as opposed to multidimensional space). 
+            // Depending on the choise of the parent set mapping, its alternative child set mappings are chosen. 
+            // Moreover, in hierarchical space, the choice of parent determines relevance of children and the whole mapping
+
+            // How alternatives are represented? In multidimensional space, alterantives are represtented as combinations of field values
+            // In hierarchical space, each node has some alternatives. And then depending on the choice, its children have their alternatives and so on. 
+            // Thus it is a tree but it can change its structure depending on the choices of alternatives.
+
+            // Anohter representation is a flat list of mappings between paths. In other words, for each source path we specify alternative target paths. 
+            // Selection propagation is also hierarchical but is represnted in flat space: when some intermediate mapping is selected then all possible paths are restricted.
+            // Or, we can consider path mapping individual independent elements. If one path mapping is selected then other possible paths are also restricted and their relevance is updated. 
+            // The source set is fixed and it is characterized by a fixed set of primitive paths.
+            // One alternative mapping consists of a set of target (existing) paths assigned to the source paths. 
+            // We can find a set of all possible target paths and for each source path a set of possible mappings.
+            // By selecting a possible mapping for one source path, other mapping are updated. 
+            // Thus we have a multidimensional space where one source path is a dimension with many alternaive target paths.
+            // When selecting one path mapping, we actually fix intermediate set mapping. But the question is whether we need set mappings because it is already a hierachical approach.
+
+            return null;
+        }
+
+        /// <summary>
+        /// Find all possible relationship paths from this set to the specified destination set via the specified lesser set.
+        /// </summary>
         public static RecommendedRelationships RecommendRelationships(Set srcSet, Set dstSet, Set lesserSet)
         {
-            // Find all possible relationship paths from this set to the specified destination set via the specified lesser set
-
             //
             // 1. Find all possible lesser sets (relationship sets)
             //

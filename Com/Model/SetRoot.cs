@@ -132,16 +132,16 @@ namespace Com.Model
             // Generate all predefined primitive sets as subsets
             //
             SetInteger setInteger = new SetInteger("Integer");
-            setInteger.SuperDim = new DimRoot("super", setInteger, this);
+            AddSubset(setInteger);
 
             SetDouble setDouble = new SetDouble("Double");
-            setDouble.SuperDim = new DimRoot("super", setDouble, this);
+            AddSubset(setDouble);
 
             SetString setString = new SetString("String");
-            setString.SuperDim = new DimRoot("super", setString, this);
+            AddSubset(setString);
 
             SetBoolean setBoolean = new SetBoolean("Boolean");
-            setBoolean.SuperDim = new DimRoot("super", setBoolean, this);
+            AddSubset(setBoolean);
         }
     }
 
