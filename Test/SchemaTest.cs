@@ -152,9 +152,9 @@ namespace Test
             //
             // Import an existing set
             //
-            DimExport dimExp = new DimExport("export emp", dbRoot.FindSubset("Employees"), emp);
-            dimExp.BuildExpression();
-            dimExp.ExportDimensions();
+            DimImport dimExp = new DimImport("import", emp, dbRoot.FindSubset("Employees"));
+            dimExp.BuildImportExpression();
+            dimExp.ImportDimensions();
 
             // Assert. Check imported dimensions
             Assert.AreEqual(18, emp.GreaterDims.Count); // The existing set had to get all dimensions
@@ -162,9 +162,9 @@ namespace Test
             //
             // Import second non-existing set
             //
-            DimExport dimExp2 = new DimExport("export emp priv", dbRoot.FindSubset("Employee Privileges"), wsRoot);
-            dimExp2.BuildExpression();
-            dimExp2.ExportDimensions();
+            DimImport dimExp2 = new DimImport("import", wsRoot, dbRoot.FindSubset("Employee Privileges"));
+            dimExp2.BuildImportExpression();
+            dimExp2.ImportDimensions();
 
             // Assert. Check imported dimensions
             Set ep = wsRoot.FindSubset("Employee Privileges"); // This set had to be created
@@ -210,7 +210,7 @@ namespace Test
 
             // Test suggestions. From Employees to Customers. 8
             var relationships = Recommender.RecommendRelationships(dbRoot.FindSubset("Employees"), dbRoot.FindSubset("Customers"), null);
-            Assert.AreEqual(8, relationships.Relationships.Count());
+            Assert.AreEqual(8, relationships.Recommendations.Count());
 
         }
 

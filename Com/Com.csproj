@@ -42,7 +42,7 @@
     <Compile Include="Model\Aggregator.cs" />
     <Compile Include="Model\Dim.cs" />
     <Compile Include="Model\DimBool.cs" />
-    <Compile Include="Model\DimExport.cs" />
+    <Compile Include="Model\DimImport.cs" />
     <Compile Include="Model\DimPrimitive.cs" />
     <Compile Include="Model\DimRoot.cs" />
     <Compile Include="Model\DimSet.cs" />

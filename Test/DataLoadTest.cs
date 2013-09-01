@@ -87,11 +87,11 @@ namespace Test
             //
             // Import first set
             //
-            DimExport dimExp = new DimExport("export emp", dbRoot.FindSubset("Employees"), wsRoot);
-            dimExp.BuildExpression();
-            dimExp.ExportDimensions();
-            dimExp.LesserSet.ExportDims.Add(dimExp);
-            dimExp.GreaterSet.ImportDims.Add(dimExp);
+            DimImport dimExp = new DimImport("import", wsRoot, dbRoot.FindSubset("Employees"));
+            dimExp.BuildImportExpression();
+            dimExp.ImportDimensions();
+            dimExp.LesserSet.ImportDims.Add(dimExp);
+            dimExp.GreaterSet.ExportDims.Add(dimExp);
 
             // Import data
             dimExp.Populate();
@@ -107,11 +107,11 @@ namespace Test
             //
             // Import second set
             //
-            DimExport dimExp2 = new DimExport("export emp priv", dbRoot.FindSubset("Inventory Transactions"), wsRoot); // "Employee Privileges"
-            dimExp2.BuildExpression();
-            dimExp2.ExportDimensions();
-            dimExp2.LesserSet.ExportDims.Add(dimExp2);
-            dimExp2.GreaterSet.ImportDims.Add(dimExp2);
+            DimImport dimExp2 = new DimImport("import", wsRoot, dbRoot.FindSubset("Inventory Transactions")); // "Employee Privileges"
+            dimExp2.BuildImportExpression();
+            dimExp2.ImportDimensions();
+            dimExp2.LesserSet.ImportDims.Add(dimExp2);
+            dimExp2.GreaterSet.ExportDims.Add(dimExp2);
 
             // Import data
             dimExp2.Populate();
@@ -142,11 +142,11 @@ namespace Test
             //
             SetRoot wsRoot = new SetRoot("My Mashup");
 
-            DimExport dimExp = new DimExport("export emp", dbRoot.FindSubset("Order Details"), wsRoot);
-            dimExp.BuildExpression();
-            dimExp.ExportDimensions();
-            dimExp.LesserSet.ExportDims.Add(dimExp);
-            dimExp.GreaterSet.ImportDims.Add(dimExp);
+            DimImport dimExp = new DimImport("import", wsRoot, dbRoot.FindSubset("Order Details"));
+            dimExp.BuildImportExpression();
+            dimExp.ImportDimensions();
+            dimExp.LesserSet.ImportDims.Add(dimExp);
+            dimExp.GreaterSet.ExportDims.Add(dimExp);
 
             // Import data
             dimExp.Populate();
@@ -189,11 +189,11 @@ namespace Test
             //
             SetRoot wsRoot = new SetRoot("My Mashup");
 
-            DimExport dimExp = new DimExport("export emp", dbRoot.FindSubset("Order Details"), wsRoot);
-            dimExp.BuildExpression();
-            dimExp.ExportDimensions();
-            dimExp.LesserSet.ExportDims.Add(dimExp);
-            dimExp.GreaterSet.ImportDims.Add(dimExp);
+            DimImport dimExp = new DimImport("import", wsRoot, dbRoot.FindSubset("Order Details"));
+            dimExp.BuildImportExpression();
+            dimExp.ImportDimensions();
+            dimExp.LesserSet.ImportDims.Add(dimExp);
+            dimExp.GreaterSet.ExportDims.Add(dimExp);
 
             // Import data
             dimExp.Populate();

@@ -90,8 +90,8 @@ namespace Com.Model
         public List<DimSuper> SubDims { get; private set; }
         public List<Dim> GreaterDims { get; private set; }
         public List<Dim> LesserDims { get; private set; }
-        public List<DimExport> ExportDims { get; private set; }
-        public List<DimExport> ImportDims { get; private set; }
+        public List<DimImport> ExportDims { get; private set; }
+        public List<DimImport> ImportDims { get; private set; }
 
         #region Inclusion. Super.
 
@@ -615,8 +615,8 @@ namespace Com.Model
             SubDims = new List<DimSuper>();
             GreaterDims = new List<Dim>();
             LesserDims = new List<Dim>();
-            ExportDims = new List<DimExport>();
-            ImportDims = new List<DimExport>();
+            ExportDims = new List<DimImport>();
+            ImportDims = new List<DimImport>();
 
             SuperPaths = new List<DimSuper>();
             SubPaths = new List<DimSuper>();

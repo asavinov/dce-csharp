@@ -468,7 +468,7 @@ namespace Com.Model
             return set;
         }
 
-        private static Expression CreateExportExpression(Dim dim, Expression parent) // It is recursive part of the public method
+        private static Expression CreateImportExpression(Dim dim, Expression parent) // It is recursive part of the public method
         {
             Expression expr = new Expression();
 
@@ -513,18 +513,18 @@ namespace Com.Model
                 Set gSet = dim.GreaterSet;
                 foreach (Dim gDim in gSet.GreaterDims) // Only identity dimensions?
                 {
-                    CreateExportExpression(gDim, expr);
+                    CreateImportExpression(gDim, expr);
                 }
             }
 
             return expr;
         }
 
-        public static Expression CreateExportExpression(Set set)
+        public static Expression CreateImportExpression(Set set)
         {
             Dim dim = new Dim("", null, set); // Workaround - create an auxiliary object
 
-            Expression expr = CreateExportExpression(dim, null); // and then use an existing method
+            Expression expr = CreateImportExpression(dim, null); // and then use an existing method
 
             expr.Name = ""; // Reset unknown parameters
             expr.Dimension = null;
