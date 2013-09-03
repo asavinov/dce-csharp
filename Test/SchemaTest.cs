@@ -208,10 +208,14 @@ namespace Test
             paths = new List<List<Dim>>(pathsEnum);
             Assert.AreEqual(3, paths.Count);
 
-            // Test suggestions. From Employees to Customers. 8
-            var relationships = Recommender.RecommendRelationships(dbRoot.FindSubset("Employees"), dbRoot.FindSubset("Customers"), null);
-            Assert.AreEqual(8, relationships.Recommendations.Count());
+            // Test relationships recommendations. From Employees to Customers. 8
+            RecommendedRelationships recoms = new RecommendedRelationships();
+            recoms.SourceSet = dbRoot.FindSubset("Employees");
+            recoms.TargetSet = dbRoot.FindSubset("Customers");
+            recoms.FactSet = null; // Any
 
+            Recommender.RecommendRelationships(recoms);
+            Assert.AreEqual(8, recoms.Recommendations.Count());
         }
 
     }
