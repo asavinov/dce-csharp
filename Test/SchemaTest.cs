@@ -4,7 +4,7 @@ using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Com.Model;
 
-// http://msdn.microsoft.com/en-us/library/ms182517.aspx
+// Unit test: http://msdn.microsoft.com/en-us/library/ms182517.aspx
 
 namespace Test
 {
@@ -214,8 +214,16 @@ namespace Test
             recoms.TargetSet = dbRoot.FindSubset("Customers");
             recoms.FactSet = null; // Any
 
-            Recommender.RecommendRelationships(recoms);
+            recoms.Recommend();
             Assert.AreEqual(8, recoms.Recommendations.Count());
+
+            // Selection methods
+            Assert.AreEqual(null, recoms.SelectedGroupingPath);
+            recoms.SelectedGroupingPath = recoms.GroupingPaths[6];
+            Assert.AreEqual(recoms.GroupingPaths[6], recoms.SelectedGroupingPath);
+            recoms.SelectedGroupingPath = null;
+            Assert.AreEqual(null, recoms.SelectedGroupingPath);
+
         }
 
     }
