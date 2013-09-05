@@ -175,7 +175,7 @@ namespace Test
         }
 
         [TestMethod]
-        public void RecommenderTest()
+        public void RecommendRelationshipsTest()
         {
             // Create Oldedb root set
             SetRootOledb dbRoot = new SetRootOledb("Root");
@@ -224,6 +224,18 @@ namespace Test
             recoms.SelectedGroupingPath = null;
             Assert.AreEqual(null, recoms.SelectedGroupingPath);
 
+            // Grouping (deproject) expression: (Customers) <- (Orders) <- (Order Details)
+            // Measure (project) expression: (Order Details) -> (Product) -> List Price
+            /*
+                        Set factSet = (Set) relationships.FactSets[0].Fragment;
+                        List<Dim> groupingPath = (List<Dim>) relationships.GroupingPaths[0].Fragment;
+                        List<Dim> measurePath = (List<Dim>)relationships.MeasurePaths[0].Fragment;
+                        Dim aggregColumn = null; // TODO: Append an aggregated attribute chosen by the user
+                        measurePath.Add(aggregColumn); 
+                        string aggregationFunction = "SUM"; // TODO: Read aggregation function chosen by the user
+                        string derivedColumnName = "Average List Price"; // TODO: read the user-provided new column name
+
+            */
         }
 
     }

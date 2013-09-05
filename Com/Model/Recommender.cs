@@ -20,8 +20,6 @@ namespace Com.Model
         // All possible recommendations as a list of complete recommendation objects. 
         public List<RecommendedFragment> Recommendations = new List<RecommendedFragment>();
 
-        public virtual void Recommend() { }
-
         // Incremental part of recommendastion
         // Assume that the specified fragment has changed its selection, update all other fragment selections as well as relevances and other parameters.
         protected virtual void UpdateFragmentSelections(string selected) { }
@@ -54,6 +52,12 @@ namespace Com.Model
 
             UpdateFragmentSelections(name); // Propagate new selection
         }
+
+        public virtual Expression GetExpression() { return null; }
+
+        public virtual string IsValidExpression() { return null; }
+
+        public virtual void Recommend() { }
     }
 
     /// <summary>
@@ -181,6 +185,27 @@ namespace Com.Model
             IsUpdating = false;
         }
 
+        public override Expression GetExpression()
+        {
+            var deprExpr = Com.Model.Expression.CreateDeprojectExpression((Set)SelectedFactSet.Fragment, (List<Dim>)SelectedGroupingPath.Fragment); // Grouping (deproject) expression: (Customers) <- (Orders) <- (Order Details)
+            var projExpr = Com.Model.Expression.CreateProjectExpression((Set)SelectedFactSet.Fragment, (List<Dim>)SelectedMeasurePath.Fragment, Operation.DOT); // Measure (project) expression: (Order Details) -> (Product) -> List Price
+
+            // TODO: here we need a method of Expression class to create a path expression (or relationships expression)
+
+            return null;
+        }
+
+        public override string IsValidExpression()
+        {
+            if (SelectedGroupingPath == null) return "GroupingPaths";
+
+            if (FactSet == null && SelectedFactSet == null) return "FactSets";
+
+            if (SelectedMeasurePath == null) return "MeasurePaths";
+
+            return null;
+        }
+
         /// <summary>
         /// Find all possible relationship paths from this set to the specified destination set via the specified lesser set.
         /// </summary>
@@ -258,6 +283,32 @@ namespace Com.Model
         {
             get { return AggregationFunctions.FirstOrDefault(f => f.IsSelected); }
             set { SetSelectedFragment("AggregationFunctions", value); }
+        }
+
+        public override Expression GetExpression()
+        {
+            var deprExpr = Com.Model.Expression.CreateDeprojectExpression((Set)SelectedFactSet.Fragment, (List<Dim>)SelectedGroupingPath.Fragment); 
+
+            var measureDim = (Dim)SelectedMeasureDimension.Fragment;
+            var measurePath = (List<Dim>)SelectedMeasurePath.Fragment;
+            measurePath.Add(measureDim);
+
+            var projExpr = Com.Model.Expression.CreateProjectExpression((Set)SelectedFactSet.Fragment, measurePath, Operation.DOT);
+
+            var aggregExpr = Com.Model.Expression.CreateAggregateExpression((string)SelectedAggregationFunction.Fragment, deprExpr, projExpr);
+
+            return aggregExpr;
+        }
+
+        public override string IsValidExpression()
+        {
+            if (base.IsValidExpression() != null) return base.IsValidExpression();
+
+            if (SelectedMeasureDimension == null) return "MeasureDimensions";
+
+            if (SelectedAggregationFunction == null) return "AggregationFunctions";
+
+            return null;
         }
 
         public override void Recommend()

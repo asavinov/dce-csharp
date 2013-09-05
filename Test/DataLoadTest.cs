@@ -232,5 +232,66 @@ namespace Test
             Assert.AreEqual(64.0, cust.GetValue("Average List Price", 2));
         }
 
+        [TestMethod]
+        public void RecommendAggregationTest()
+        {
+            // Create Oldedb root set
+            SetRootOledb dbRoot = new SetRootOledb("Root");
+
+            dbRoot.ConnectionString = Northwind;
+
+            dbRoot.Open();
+
+            dbRoot.ImportSchema();
+
+            //
+            // Load test data
+            //
+            SetRoot wsRoot = new SetRoot("My Mashup");
+
+            DimImport dimExp = new DimImport("import", wsRoot, dbRoot.FindSubset("Order Details"));
+            dimExp.BuildImportExpression();
+            dimExp.ImportDimensions();
+            dimExp.LesserSet.ImportDims.Add(dimExp);
+            dimExp.GreaterSet.ExportDims.Add(dimExp);
+
+            // Import data
+            dimExp.Populate();
+
+            Set cust = wsRoot.FindSubset("Customers");
+            Set prod = wsRoot.FindSubset("Products");
+            Set doubleSet = wsRoot.GetPrimitiveSubset("Double");
+
+            //
+            // Test aggregation recommendations. From Customers to Product
+            // Grouping (deproject) expression: (Customers) <- (Orders) <- (Order Details)
+            // Measure (project) expr+ession: (Order Details) -> (Product) -> List Price
+            //
+            RecommendedAggregations recoms = new RecommendedAggregations();
+            recoms.SourceSet = cust;
+            recoms.TargetSet = prod;
+            recoms.FactSet = null; // Any
+
+            recoms.Recommend();
+
+            recoms.SelectedGroupingPath = recoms.GroupingPaths[0];
+            recoms.SelectedFactSet = recoms.FactSets[0];
+            recoms.SelectedMeasurePath = recoms.MeasurePaths[0];
+
+            recoms.SelectedMeasureDimension = recoms.MeasureDimensions.First(f => ((Dim)f.Fragment).Name == "List Price");
+            recoms.SelectedAggregationFunction = recoms.AggregationFunctions.First(f => f.Fragment == "SUM");
+
+            Expression aggreExpr = recoms.GetExpression();
+            Dim derived1 = doubleSet.CreateDefaultLesserDimension("Average List Price", cust);
+            derived1.SelectExpression = aggreExpr;
+            cust.AddGreaterDim(derived1);
+
+            // Update
+            derived1.Populate(); // Call SelectExpression.Evaluate(EvaluationMode.UPDATE);
+
+            Assert.AreEqual(64.0, cust.GetValue("Average List Price", 2));
+
+        }
+
     }
 }
