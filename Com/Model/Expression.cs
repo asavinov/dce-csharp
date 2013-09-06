@@ -398,6 +398,35 @@ namespace Com.Model
 
                     break;
                 }
+                case Operation.PLUS:
+                case Operation.MINUS:
+                case Operation.TIMES:
+                case Operation.DIVIDE:
+                {
+                    Debug.Assert(Input != null, "Wrong use: Arithmetic operation must have at least one expression in Input.");
+
+                    Input.Evaluate(evaluationMode); // Evaluate 'this' object before it can be used
+
+                    double res = (double)Input.Output;
+                    Output = Input.Output;
+
+                    if (Operands != null)
+                    {
+                        foreach (Expression child in Operands) // Evaluate parameters and apply operation
+                        {
+                            child.Evaluate(evaluationMode);
+
+                            if (Operation == Operation.PLUS) res += Convert.ToDouble(child.Output);
+                            else if (Operation == Operation.MINUS) res -= Convert.ToDouble(child.Output);
+                            else if (Operation == Operation.TIMES) res *= Convert.ToDouble(child.Output);
+                            else if (Operation == Operation.DIVIDE) res /= Convert.ToDouble(child.Output);
+                        }
+                    }
+
+                    Output = res;
+
+                    break;
+                }
             }
 
             return Output;
@@ -532,6 +561,7 @@ namespace Com.Model
             return expr;
         }
 
+        // TODO: Do we actually need lesserSet? If not then delete it and use the first segment of the path. 
         public static Expression CreateProjectExpression(Set lesserSet, List<Dim> greaterDims, Operation op)
         {
             Debug.Assert(op == Operation.PROJECTION || op == Operation.DOT, "Wrong use: only PROJECTION or DOT operations are allowed.");
@@ -564,7 +594,7 @@ namespace Com.Model
                 {
                     expr.SetInput(previousExpr); // What will be produced by the previous segment
                 }
-                else 
+                else // First segments in the path is a leaf of the expression tree - will be evaluated first
                 {
                     // The project path starts from some variable which stores the initial value(s) to be projected
                     expr.SetInput(new Expression("this"));
@@ -579,6 +609,7 @@ namespace Com.Model
             return previousExpr;
         }
 
+        // TODO: Do we actually need lesserSet? If not then delete it and use the first segment of the path. 
         public static Expression CreateDeprojectExpression(Set lesserSet, List<Dim> greaterDims)
         {
             Debug.Assert(lesserSet != null && greaterDims != null, "Wrong use: parameters cannot be null.");

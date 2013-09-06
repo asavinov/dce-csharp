@@ -293,5 +293,71 @@ namespace Test
 
         }
 
+        [TestMethod]
+        public void ArithmeticTest()
+        {
+            // Create Oldedb root set
+            SetRootOledb dbRoot = new SetRootOledb("Northwind");
+            dbRoot.ConnectionString = Northwind;
+            dbRoot.Open();
+            dbRoot.ImportSchema();
+
+            //
+            // Load test data
+            //
+            SetRoot wsRoot = new SetRoot("My Mashup");
+
+            DimImport dimExp = new DimImport("import", wsRoot, dbRoot.FindSubset("Order Details"));
+            dimExp.BuildImportExpression();
+            dimExp.ImportDimensions();
+            dimExp.LesserSet.ImportDims.Add(dimExp);
+            dimExp.GreaterSet.ExportDims.Add(dimExp);
+
+            // Import data
+            dimExp.Populate();
+
+            //
+            // Create derived dimensions
+            //
+
+            // "List Price", "Standard Cost", "Target Level"
+            // Column names are function names and they have to be assign to expression node names (DOT)
+            // But where is 'this' variable and 'this' set? This set is Input.OutputSet. And the function will be applied to whatever is stored in Input.Output (interpreted as offset).
+            // So Input.Output has to be assigned explicitly offset in a loop. Or we need to store a variable 'this' which, when evaluated, writes its current value to Input.Output.
+
+
+            Set products = wsRoot.FindSubset("Products");
+            Set doubleSet = wsRoot.GetPrimitiveSubset("Double");
+
+            // Create simple (one-segment) function expressions
+            Dim d1 = products.GetGreaterDim("List Price");
+            Dim d2 = products.GetGreaterDim("Standard Cost");
+            Dim d3 = products.GetGreaterDim("Target Level");
+
+            Expression d1_Expr = Expression.CreateProjectExpression(products, new List<Dim> { d1 }, Operation.DOT);
+            Expression d2_Expr = Expression.CreateProjectExpression(products, new List<Dim> { d2 }, Operation.DOT);
+            Expression d3_Expr = Expression.CreateProjectExpression(products, new List<Dim> { d3 }, Operation.DOT);
+
+            Expression arithmExpr = new Expression("MINUS");
+            arithmExpr.Operation = Operation.MINUS;
+            arithmExpr.Input = d1_Expr;
+
+            Expression plusExpr = new Expression("PLUS");
+            plusExpr.Operation = Operation.PLUS;
+            plusExpr.Input = d2_Expr;
+            plusExpr.AddOperand(d3_Expr);
+
+            arithmExpr.AddOperand(plusExpr);
+
+            // Add derived dimension
+            Dim derived1 = doubleSet.CreateDefaultLesserDimension("Derived Column", products);
+            derived1.SelectExpression = arithmExpr;
+            products.AddGreaterDim(derived1);
+
+            // Update
+            derived1.Populate(); // Call SelectExpression.Evaluate(EvaluationMode.UPDATE);
+
+            Assert.AreEqual(-32.5, products.GetValue("Derived Column", 2));
+        }
     }
 }

@@ -445,7 +445,13 @@ namespace Com.Model
 
     }
 
-
+    public class DimList // Or DimPath
+    {
+        // It should be used where we use List<Dim>
+        // It is more convenient because we can store additional methods, say, concatenate, iterate, append etc.
+        // And DimList can be stored in Dim.Path 
+        // It also can be used when using in DimTree, representing projections/de-projections and in other structures.
+    }
     
     public class DimTree
     {
