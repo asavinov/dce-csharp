@@ -356,8 +356,24 @@ namespace Test
 
             // Update
             derived1.Populate(); // Call SelectExpression.Evaluate(EvaluationMode.UPDATE);
-
             Assert.AreEqual(-32.5, products.GetValue("Derived Column", 2));
+
+            // 
+            // Another (simpler) test
+            //
+            plusExpr = new Expression("PLUS");
+            plusExpr.Operation = Operation.PLUS;
+            plusExpr.Input = d1_Expr;
+            plusExpr.AddOperand(d1_Expr);
+
+            // Add derived dimension
+            Dim derived2 = doubleSet.CreateDefaultLesserDimension("Derived Column 2", products);
+            derived2.SelectExpression = plusExpr;
+            products.AddGreaterDim(derived2);
+
+            // Update
+            derived2.Populate(); // Call SelectExpression.Evaluate(EvaluationMode.UPDATE);
+            Assert.AreEqual(60.0, products.GetValue("Derived Column 2", 2));
         }
     }
 }

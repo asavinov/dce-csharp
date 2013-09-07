@@ -109,6 +109,8 @@ namespace Com.Model
             {
                 case "GroupingPaths":
                     {
+                        if (SelectedGroupingPath == null) break;
+
                         // Update FactSets
                         Set factSet = ((List<Dim>)SelectedGroupingPath.Fragment)[0].LesserSet; // Find the fact set for this path
                         foreach (RecommendedFragment f in FactSets)
@@ -132,6 +134,8 @@ namespace Com.Model
 
                 case "FactSets":
                     {
+                        if (SelectedFactSet == null) break;
+
                         Set factSet = (Set)SelectedFactSet.Fragment;
 
                         // Update GroupingPaths
@@ -159,6 +163,8 @@ namespace Com.Model
 
                 case "MeasurePaths":
                     {
+                        if (SelectedMeasurePath == null) break;
+
                         // Update FactSets
                         Set factSet = ((List<Dim>)SelectedMeasurePath.Fragment)[0].LesserSet; // Find the fact set for this path
                         foreach (RecommendedFragment f in FactSets)

@@ -71,11 +71,37 @@ namespace Com.Model
         /// It can be this identity (offset), remote element (data row), an intermediate element or null/root for global expressions.
         /// The set the input value belongs to is specified in the expression. 
         /// </summary>
+        protected Expression _input;
         public Expression Input
         {
-            get;
-            set;
+            get { return _input; }
+            set
+            {
+                // TODO: We have to semantically check the validity of this child expression in the context of its parent expression (for example, using gramma rules)
+
+                if (_input != null) // Detach our current child
+                {
+                    _input.ParentExpression = null;
+                    _input = null;
+                }
+
+                if (value == null) // Nullify input - done above
+                {
+                    return;
+                }
+
+                // Detach the child from its parent
+                if (value.ParentExpression != null && value.ParentExpression != this)
+                {
+                    value.ParentExpression.Input = null;
+                }
+
+                // Attach a new child
+                _input = value;
+                _input.ParentExpression = this;
+            }
         }
+/*
         public void SetInput(Expression child)
         {
             // TODO: We have to semantically check the validity of this child expression in the context of its parent expression (for example, using gramma rules)
@@ -98,13 +124,14 @@ namespace Com.Model
             Input = child;
             child.ParentExpression = this;
         }
+ */
         public void SetInput(Operation op, Operation inputOp)
         {
             if (op == Operation.ALL || Operation == op) // Assignment is needed
             {
                 if (Input == null)
                 {
-                    SetInput(new Expression("Input"));
+                    Input = new Expression("Input");
                     Input.Operation = inputOp;
                 }
                 else
@@ -527,17 +554,17 @@ namespace Com.Model
                 funcExpr.Name = srcPath != null ? srcPath.Name : null;
 
                 // Add Input of function as a variable the values of which (output) can be assigned during export
-                funcExpr.SetInput(new Expression("source"));
+                funcExpr.Input = new Expression("source");
                 funcExpr.Input.Operation = Operation.VARIABLE;
 
                 // Add function to this expression
-                expr.SetInput(funcExpr);
+                expr.Input = funcExpr;
             }
             else // Recursion on greater dimensions
             {
                 expr.Operation = Operation.TUPLE;
                 expr.Operands = new List<Expression>();
-                expr.SetInput(null);
+                expr.Input = null;
 
                 Set gSet = dim.GreaterSet;
                 foreach (Dim gDim in gSet.GreaterDims) // Only identity dimensions?
@@ -592,12 +619,12 @@ namespace Com.Model
 
                 if(previousExpr != null) // Define the expression to which this expression will be applied
                 {
-                    expr.SetInput(previousExpr); // What will be produced by the previous segment
+                    expr.Input = previousExpr; // What will be produced by the previous segment
                 }
                 else // First segments in the path is a leaf of the expression tree - will be evaluated first
                 {
                     // The project path starts from some variable which stores the initial value(s) to be projected
-                    expr.SetInput(new Expression("this"));
+                    expr.Input = new Expression("this");
                     expr.Input.Operation = Operation.VARIABLE;
                     expr.Input.OutputSet = lesserSet;
                     expr.Input.OutputSetName = lesserSet.Name;
@@ -639,12 +666,12 @@ namespace Com.Model
 
                 if (previousExpr != null) // Define the expression to which this expression will be applied
                 {
-                    expr.SetInput(previousExpr); // What will be produced by the previous segment
+                    expr.Input = previousExpr; // What will be produced by the previous segment
                 }
                 else
                 {
                     // The deproject path starts from some variable which stores the initial value(s) to be deprojected
-                    expr.SetInput(new Expression("this"));
+                    expr.Input = new Expression("this");
                     expr.Input.Operation = Operation.VARIABLE;
                     expr.Input.OutputSet = lesserSet;
                     expr.Input.OutputSetName = lesserSet.Name;
@@ -678,7 +705,7 @@ namespace Com.Model
 
             expr.Operation = Operation.AGGREGATION;
 
-            expr.SetInput(group); // Group specification is Input
+            expr.Input = group; // Group specification is Input
             expr.AddOperand(measure); // Measure specification is an Operand
 
             return expr;
