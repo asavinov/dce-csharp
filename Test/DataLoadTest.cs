@@ -129,6 +129,84 @@ namespace Test
         }
 
         [TestMethod]
+        public void SetDataOperationsTest()
+        {
+            // Create Oldedb root set
+            SetRootOledb dbRoot = new SetRootOledb("Northwind");
+            dbRoot.ConnectionString = Northwind;
+            dbRoot.Open();
+            dbRoot.ImportSchema();
+
+            //
+            // Load test data
+            //
+            SetRoot wsRoot = new SetRoot("My Mashup");
+
+            DimImport dimExp = new DimImport("import", wsRoot, dbRoot.FindSubset("Order Details"));
+            dimExp.BuildImportExpression();
+            dimExp.ImportDimensions();
+            dimExp.LesserSet.ImportDims.Add(dimExp);
+            dimExp.GreaterSet.ExportDims.Add(dimExp);
+
+            // Import data
+            dimExp.Populate();
+
+            Set odet = wsRoot.FindSubset("Order Details");
+            Set orders = wsRoot.FindSubset("Orders");
+            Set cust = wsRoot.FindSubset("Customers");
+            Set doubleSet = wsRoot.GetPrimitiveSubset("Double");
+            Set intSet = wsRoot.GetPrimitiveSubset("Integer");
+            Set strSet = wsRoot.GetPrimitiveSubset("String");
+
+            Expression childExpr;
+
+            //
+            // Find elements
+            //
+            Expression orderExpr = new Expression("", Operation.TUPLE, orders);
+            childExpr = new Expression("Order ID", Operation.PRIMITIVE, intSet);
+            childExpr.Output = 35;
+            orderExpr.AddOperand(childExpr);
+            childExpr = new Expression("Tax Rate", Operation.PRIMITIVE, doubleSet);
+            childExpr.Output = 55.5; // Will be ignored - only identities are used
+            orderExpr.AddOperand(childExpr);
+
+            object offset = orders.Find(orderExpr);
+            Assert.AreEqual(5, offset);
+
+            //
+            // Append elements
+            //
+            orderExpr.GetOperand("Order ID").Output = 1000;
+            orderExpr.GetOperand("Tax Rate").Output = 99.99;
+
+            Expression custExpr = new Expression("Customer ID", Operation.TUPLE, cust);
+            childExpr = new Expression("ID", Operation.PRIMITIVE, intSet);
+            childExpr.Output = 2000;
+            custExpr.AddOperand(childExpr);
+            childExpr = new Expression("Last Name", Operation.PRIMITIVE, strSet);
+            childExpr.Output = "Lennon";
+            custExpr.AddOperand(childExpr);
+
+            orderExpr.AddOperand(custExpr);
+
+            offset = orders.Append(orderExpr);
+            Assert.AreEqual(40, offset);
+            Assert.AreEqual(1000, orders.GetValue("Order ID", (int)offset));
+            Assert.AreEqual(99.99, orders.GetValue("Tax Rate", (int)offset));
+            Assert.AreEqual(2000, cust.GetValue("ID", 15));
+            Assert.AreEqual("Lennon", cust.GetValue("Last Name", 15));
+
+            offset = orders.Find(orderExpr);
+            Assert.AreEqual(orders.Length-1, offset);
+
+            //
+            // Create a subset and populate it (test super-dimension)
+            //
+
+        }
+
+        [TestMethod]
         public void ProjectionTest()
         {
             // Create Oldedb root set
@@ -202,7 +280,7 @@ namespace Test
             // Create derived dimensions
             //
             Set odet = wsRoot.FindSubset("Order Details");
-            Set oders = wsRoot.FindSubset("Orders");
+            Set orders = wsRoot.FindSubset("Orders");
             Set cust = wsRoot.FindSubset("Customers");
             Set doubleSet = wsRoot.GetPrimitiveSubset("Double");
 
@@ -338,12 +416,10 @@ namespace Test
             Expression d2_Expr = Expression.CreateProjectExpression(products, new List<Dim> { d2 }, Operation.DOT);
             Expression d3_Expr = Expression.CreateProjectExpression(products, new List<Dim> { d3 }, Operation.DOT);
 
-            Expression arithmExpr = new Expression("MINUS");
-            arithmExpr.Operation = Operation.MINUS;
+            Expression arithmExpr = new Expression("MINUS", Operation.MINUS);
             arithmExpr.Input = d1_Expr;
 
-            Expression plusExpr = new Expression("PLUS");
-            plusExpr.Operation = Operation.PLUS;
+            Expression plusExpr = new Expression("PLUS", Operation.PLUS);
             plusExpr.Input = d2_Expr;
             plusExpr.AddOperand(d3_Expr);
 
@@ -361,8 +437,7 @@ namespace Test
             // 
             // Another (simpler) test
             //
-            plusExpr = new Expression("PLUS");
-            plusExpr.Operation = Operation.PLUS;
+            plusExpr = new Expression("PLUS", Operation.PLUS);
             plusExpr.Input = d1_Expr;
             plusExpr.AddOperand(d1_Expr);
 
@@ -375,5 +450,59 @@ namespace Test
             derived2.Populate(); // Call SelectExpression.Evaluate(EvaluationMode.UPDATE);
             Assert.AreEqual(60.0, products.GetValue("Derived Column 2", 2));
         }
+
+        [TestMethod]
+        public void SubsettingTest()
+        {
+            // Create Oldedb root set
+            SetRootOledb dbRoot = new SetRootOledb("Northwind");
+            dbRoot.ConnectionString = Northwind;
+            dbRoot.Open();
+            dbRoot.ImportSchema();
+
+            //
+            // Load test data
+            //
+            SetRoot wsRoot = new SetRoot("My Mashup");
+
+            DimImport dimExp = new DimImport("import", wsRoot, dbRoot.FindSubset("Order Details"));
+            dimExp.BuildImportExpression();
+            dimExp.ImportDimensions();
+            dimExp.LesserSet.ImportDims.Add(dimExp);
+            dimExp.GreaterSet.ExportDims.Add(dimExp);
+
+            // Import data
+            dimExp.Populate();
+
+            //
+            // Create logical expression
+            //
+            Set products = wsRoot.FindSubset("Products");
+
+            // Create simple (one-segment) function expressions
+            Dim d1 = products.GetGreaterDim("List Price");
+            Dim d2 = products.GetGreaterDim("Standard Cost");
+            Dim d3 = products.GetGreaterDim("Target Level");
+
+            Expression d1_Expr = Expression.CreateProjectExpression(products, new List<Dim> { d1 }, Operation.DOT);
+            Expression d2_Expr = Expression.CreateProjectExpression(products, new List<Dim> { d2 }, Operation.DOT);
+            Expression d3_Expr = Expression.CreateProjectExpression(products, new List<Dim> { d3 }, Operation.DOT);
+
+            Expression logicalExpr = new Expression("LESS", Operation.LESS);
+
+            logicalExpr.Input = d1_Expr;
+            logicalExpr.AddOperand(d2_Expr);
+
+            // Add subset
+            Set subProducts = new Set("SubProducts");
+            subProducts.WhereExpression = logicalExpr;
+
+            products.AddSubset(subProducts);
+
+            // Update
+//            subProducts.Populate();
+        }
+
+
     }
 }

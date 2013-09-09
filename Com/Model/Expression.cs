@@ -131,8 +131,7 @@ namespace Com.Model
             {
                 if (Input == null)
                 {
-                    Input = new Expression("Input");
-                    Input.Operation = inputOp;
+                    Input = new Expression("Input", inputOp);
                 }
                 else
                 {
@@ -259,7 +258,7 @@ namespace Com.Model
         /// <summary>
         /// Compute output of the expression by applying it to a row of the data table. 
         /// </summary>
-        public object Evaluate(EvaluationMode evaluationMode)
+        public object Evaluate()
         {
 			switch(Operation)
 			{
@@ -267,12 +266,12 @@ namespace Com.Model
 				{
                     if (Input != null)
                     {
-                        Input.Evaluate(evaluationMode);
+                        Input.Evaluate();
                         Output = Input.Output;
                     }
                     else if (Operands != null && Operands.Count > 0)
                     {
-                        Operands[0].Evaluate(evaluationMode);
+                        Operands[0].Evaluate();
                         Output = Operands[0].Output;
                     }
                     break;
@@ -285,35 +284,25 @@ namespace Com.Model
                 }
                 case Operation.TUPLE:
 				{
+                    if (Input != null) Input.Evaluate();
                     foreach (Expression child in Operands) // Evaluate all parameters (recursively)
                     {
-                        child.Evaluate(evaluationMode); // Recursion. Child output will be set
+                        child.Evaluate(); // Recursion. Child output will be set
                     }
                     Output = null; // Reset
                     Debug.Assert(OutputSet != null, "Wrong use: output set must be non-null when evaluating tuple expressions.");
-                    switch(evaluationMode) 
-                    {
-                        case EvaluationMode.FIND:// TODO: Only find with no update and no append 
-                            // Output = OutputSet.Find(); // Only identities will be used
-                            break;
-                        case EvaluationMode.UPDATE: // If an element exists (is found) then update its attributes, otherwise nothing to do
-                            break;
-                        case EvaluationMode.APPEND: // Try to find the element (identity). If not found then append (new identity). Update its attributes.
-                            Output = OutputSet.Append(this); 
-                            break;
-                    }
 
                     break;
                 }
                 case Operation.DOT:
                 case Operation.PROJECTION:
                 {
-                    if (Input != null) Input.Evaluate(evaluationMode); // Evaluate input object(s) before it can be used
+                    if (Input != null) Input.Evaluate(); // Evaluate input object(s) before it can be used
                     if (Operands != null)
                     {
                         foreach (Expression child in Operands) // Evaluate all parameters before they can be used
                         {
-                            child.Evaluate(evaluationMode);
+                            child.Evaluate();
                         }
                     }
 
@@ -378,12 +367,12 @@ namespace Com.Model
                 }
                 case Operation.DEPROJECTION:
                 {
-                    if (Input != null) Input.Evaluate(evaluationMode); // Evaluate 'this' object before it can be used
+                    if (Input != null) Input.Evaluate(); // Evaluate 'this' object before it can be used
                     if (Operands != null)
                     {
                         foreach (Expression child in Operands) // Evaluate all parameters before they can be used
                         {
-                            child.Evaluate(evaluationMode);
+                            child.Evaluate();
                         }
                     }
 
@@ -408,7 +397,7 @@ namespace Com.Model
                     string aggregationFunction = Name;
                     Dim measureDim = measureExpr.Dimension; // It determines the type of the result and it knows how to aggregate its values
 
-                    groupExpr.Evaluate(evaluationMode); // Compute the group
+                    groupExpr.Evaluate(); // Compute the group
 
                     // If group is empty then set null as output
                     if (groupExpr.Output == null || (groupExpr.Output is Array && (groupExpr.Output as Array).Length == 0))
@@ -419,7 +408,7 @@ namespace Com.Model
 
                     measureExpr.SetOutput(Operation.VARIABLE, groupExpr.Output); // Assign output of the group expression to the variable
 
-                    measureExpr.Evaluate(evaluationMode); // Compute the measure group
+                    measureExpr.Evaluate(); // Compute the measure group
 
                     Output = measureDim.Aggregate(measureExpr.Output, aggregationFunction); // The dimension of each type knows how to aggregate its values
 
@@ -430,9 +419,9 @@ namespace Com.Model
                 case Operation.TIMES:
                 case Operation.DIVIDE:
                 {
-                    Debug.Assert(Input != null, "Wrong use: Arithmetic operation must have at least one expression in Input.");
+                    Debug.Assert(Input != null, "Wrong use: Arithmetic operations must have at least one expression in Input.");
 
-                    Input.Evaluate(evaluationMode); // Evaluate 'this' object before it can be used
+                    Input.Evaluate(); // Evaluate 'this' object before it can be used
 
                     double res = (double)Input.Output;
                     Output = Input.Output;
@@ -441,7 +430,7 @@ namespace Com.Model
                     {
                         foreach (Expression child in Operands) // Evaluate parameters and apply operation
                         {
-                            child.Evaluate(evaluationMode);
+                            child.Evaluate();
 
                             if (Operation == Operation.PLUS) res += Convert.ToDouble(child.Output);
                             else if (Operation == Operation.MINUS) res -= Convert.ToDouble(child.Output);
@@ -451,6 +440,29 @@ namespace Com.Model
                     }
 
                     Output = res;
+
+                    break;
+                }
+                case Operation.LESS:
+                case Operation.GREATER:
+                {
+                    Debug.Assert(Input != null, "Wrong use: Logical operations must have at least one expression in Input.");
+                    Debug.Assert(Operands != null && Operands.Count == 1, "Wrong use: Comparison expression must have a second an operand.");
+
+                    Expression op1 = Input;
+                    Expression op2 = Operands[0];
+
+                    op1.Evaluate();
+                    op2.Evaluate();
+
+                    if (Operation == Operation.LESS)
+                    {
+                        Output = ((double)op1.Output < (double)op2.Output);
+                    }
+                    else if (Operation == Operation.GREATER)
+                    {
+                        Output = ((double)op1.Output > (double)op2.Output);
+                    }
 
                     break;
                 }
@@ -554,8 +566,7 @@ namespace Com.Model
                 funcExpr.Name = srcPath != null ? srcPath.Name : null;
 
                 // Add Input of function as a variable the values of which (output) can be assigned during export
-                funcExpr.Input = new Expression("source");
-                funcExpr.Input.Operation = Operation.VARIABLE;
+                funcExpr.Input = new Expression("source", Operation.VARIABLE);
 
                 // Add function to this expression
                 expr.Input = funcExpr;
@@ -623,11 +634,7 @@ namespace Com.Model
                 }
                 else // First segments in the path is a leaf of the expression tree - will be evaluated first
                 {
-                    // The project path starts from some variable which stores the initial value(s) to be projected
-                    expr.Input = new Expression("this");
-                    expr.Input.Operation = Operation.VARIABLE;
-                    expr.Input.OutputSet = lesserSet;
-                    expr.Input.OutputSetName = lesserSet.Name;
+                    expr.Input = new Expression("this", Operation.VARIABLE, lesserSet); // The project path starts from some variable which stores the initial value(s) to be projected
                 }
 
                 previousExpr = expr;
@@ -670,11 +677,7 @@ namespace Com.Model
                 }
                 else
                 {
-                    // The deproject path starts from some variable which stores the initial value(s) to be deprojected
-                    expr.Input = new Expression("this");
-                    expr.Input.Operation = Operation.VARIABLE;
-                    expr.Input.OutputSet = lesserSet;
-                    expr.Input.OutputSetName = lesserSet.Name;
+                    expr.Input = new Expression("this", Operation.VARIABLE, lesserSet); // The deproject path starts from some variable which stores the initial value(s) to be deprojected
                 }
 
                 previousExpr = expr;
@@ -721,6 +724,19 @@ namespace Com.Model
             Name = name;
         }
 
+        public Expression(string name, Operation op)
+            : this(name)
+        {
+            Operation = op;
+        }
+
+        public Expression(string name, Operation op, Set outputSet)
+            : this(name, op)
+        {
+            OutputSet = outputSet;
+            OutputSetName = OutputSet != null ? OutputSet.Name : null;
+        }
+
     }
 
     public enum Operation
@@ -754,6 +770,8 @@ namespace Com.Model
         DIVIDE,
 
         // Logic
+        LESS,
+        GREATER,
         AND,
         OR,
         NEGATE,
@@ -766,10 +784,4 @@ namespace Com.Model
         LOGICAL
     }
 
-    public enum EvaluationMode
-    {
-        FIND, // Only find 
-        UPDATE, // Find and update the found element
-        APPEND, // Find and append and then update
-    }
 }

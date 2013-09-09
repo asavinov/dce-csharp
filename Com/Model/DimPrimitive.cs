@@ -179,7 +179,7 @@ namespace Com.Model
                 {
                     SelectExpression.SetOutput(Operation.VARIABLE, offset); // Initialize 'this'
 
-                    SelectExpression.Evaluate(EvaluationMode.UPDATE); // Compute
+                    SelectExpression.Evaluate(); // Compute
 
                     SetValue(offset, SelectExpression.Output); // Store the final result
                 }

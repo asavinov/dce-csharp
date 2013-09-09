@@ -70,7 +70,7 @@ namespace Com.Model
                     SelectExpression.SetOutput(Operation.VARIABLE, row);
 
                     // Evaluate the expression tree by appending the elements into the sets if absent
-                    SelectExpression.Evaluate(EvaluationMode.APPEND);
+                    SelectExpression.OutputSet.Append(SelectExpression);
                 }
             }
             else if (GreaterSet.Root is SetRootOdata)
@@ -81,7 +81,7 @@ namespace Com.Model
                 for (Offset offset = 0; offset < GreaterSet.Length; offset++)
                 {
                     SelectExpression.SetOutput(Operation.VARIABLE, offset); // Assign value of 'this' variable
-                    SelectExpression.Evaluate(EvaluationMode.APPEND);
+                    SelectExpression.OutputSet.Append(SelectExpression);
                 }
             }
 
