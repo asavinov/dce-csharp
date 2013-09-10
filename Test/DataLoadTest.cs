@@ -201,9 +201,38 @@ namespace Test
             Assert.AreEqual(orders.Length-1, offset);
 
             //
-            // Create a subset and populate it (test super-dimension)
+            // Create a new set as a product and populate it
             //
+            Set ods = wsRoot.FindSubset("Order Details Status"); // 4 elements loaded
+            Set os = wsRoot.FindSubset("Orders Status"); // 3 elements loaded
 
+            Set newSet = new Set("New Set");
+            wsRoot.AddSubset(newSet);
+
+            Dim d1 = ods.CreateDefaultLesserDimension("Order Details Status", newSet);
+            d1.IsIdentity = true;
+            Dim d2 = os.CreateDefaultLesserDimension("Orders Status", newSet);
+            d2.IsIdentity = true;
+
+            newSet.AddGreaterDim(d1);
+            newSet.AddGreaterDim(d2);
+
+            Expression whereExpr = new Expression("EQUAL", Operation.EQUAL);
+
+            Expression d1_Expr = Expression.CreateProjectExpression(newSet, new List<Dim> { d1, ods.GetGreaterDim("Status ID") }, Operation.DOT);
+            Expression d2_Expr = Expression.CreateProjectExpression(newSet, new List<Dim> { d2, os.GetGreaterDim("Status ID") }, Operation.DOT);
+
+            whereExpr.Input = d1_Expr;
+            whereExpr.AddOperand(d2_Expr);
+
+            newSet.WhereExpression = whereExpr;
+
+            newSet.Populate();
+            Assert.AreEqual(2, newSet.Length);
+            Assert.AreEqual(0, newSet.GetValue("Order Details Status", 0));
+            Assert.AreEqual(2, newSet.GetValue("Orders Status", 0));
+            Assert.AreEqual(3, newSet.GetValue("Order Details Status", 1));
+            Assert.AreEqual(1, newSet.GetValue("Orders Status", 1));
         }
 
         [TestMethod]

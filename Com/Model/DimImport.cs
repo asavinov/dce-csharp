@@ -69,7 +69,10 @@ namespace Com.Model
                     // Set the input variable 'source'
                     SelectExpression.SetOutput(Operation.VARIABLE, row);
 
-                    // Evaluate the expression tree by appending the elements into the sets if absent
+                    // Evaluate the expression tree 
+                    SelectExpression.Evaluate();
+
+                    // Append 
                     SelectExpression.OutputSet.Append(SelectExpression);
                 }
             }
@@ -81,6 +84,7 @@ namespace Com.Model
                 for (Offset offset = 0; offset < GreaterSet.Length; offset++)
                 {
                     SelectExpression.SetOutput(Operation.VARIABLE, offset); // Assign value of 'this' variable
+                    SelectExpression.Evaluate();
                     SelectExpression.OutputSet.Append(SelectExpression);
                 }
             }

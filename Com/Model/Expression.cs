@@ -209,15 +209,37 @@ namespace Com.Model
             List<Expression> res = new List<Expression>();
 
             // Proces this element
-            if (Operation == op) res.Add(this);
+            if (Operation == op || op == Operation.ALL) res.Add(this);
 
             // Recursively check all children
-            if (Input != null) res.Add(Input);
+            if (Input != null) res.AddRange(Input.GetOperands(op));
+            if (Operands != null)
+            {
+                Operands.ForEach(e => res.AddRange(e.GetOperands(op)));
+            }
+
+            return res;
+        }
+        public List<Expression> GetOperands(Operation op, string name)
+        {
+            List<Expression> res = new List<Expression>();
+
+            // Proces this element
+            if (Operation == op || op == Operation.ALL)
+            {
+                if (Name == null && name == null)
+                    res.Add(this);
+                else if (Name != null && name != null && Name.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                    res.Add(this);
+            }
+
+            // Recursively check all children
+            if (Input != null) res.AddRange(Input.GetOperands(op, name));
             if (Operands != null)
             {
                 foreach (Expression child in Operands)
                 {
-                    res.AddRange(child.GetOperands(op));
+                    res.AddRange(child.GetOperands(op, name));
                 }
             }
 
@@ -297,6 +319,9 @@ namespace Com.Model
                 case Operation.DOT:
                 case Operation.PROJECTION:
                 {
+                    if (Input != null && !Input.OutputSet.IsPrimitive && Input.Output is Offset && (Offset)Input.Output < 0) // Skip evaluation for non-existing elements
+                        break; // Do not evaluate some functions (e.g., they cannot be evaluated because 'this' element does not exist yet but we know their future output which can be added later).
+
                     if (Input != null) Input.Evaluate(); // Evaluate input object(s) before it can be used
                     if (Operands != null)
                     {
@@ -445,6 +470,7 @@ namespace Com.Model
                 }
                 case Operation.LESS:
                 case Operation.GREATER:
+                case Operation.EQUAL:
                 {
                     Debug.Assert(Input != null, "Wrong use: Logical operations must have at least one expression in Input.");
                     Debug.Assert(Operands != null && Operands.Count == 1, "Wrong use: Comparison expression must have a second an operand.");
@@ -462,6 +488,10 @@ namespace Com.Model
                     else if (Operation == Operation.GREATER)
                     {
                         Output = ((double)op1.Output > (double)op2.Output);
+                    }
+                    else if (Operation == Operation.EQUAL)
+                    {
+                        Output = object.Equals(op1.Output, op2.Output);
                     }
 
                     break;
@@ -557,16 +587,14 @@ namespace Com.Model
                 expr.Operation = Operation.PRIMITIVE; // Leaf of tuple structure is primitive element (which can be computed)
                 expr.Name = dim.Name;
 
-                Expression funcExpr = new Expression();
-                funcExpr.Operation = Operation.DOT;
                 List<Dim> path = expr.GetPath();
                 Set sourceSet = expr.Root.OutputSet; // Or simply expr.Root.OutputSet.ImportDims[0].LesserSet
                 Dim srcPath = sourceSet.GetGreaterPath(path);
                 Debug.Assert(srcPath != null, "Import path not found. Something wrong with import.");
-                funcExpr.Name = srcPath != null ? srcPath.Name : null;
 
+                Expression funcExpr = new Expression(srcPath != null ? srcPath.Name : null, Operation.DOT, dim.GreaterSet);
                 // Add Input of function as a variable the values of which (output) can be assigned during export
-                funcExpr.Input = new Expression("source", Operation.VARIABLE);
+                funcExpr.Input = new Expression("source", Operation.VARIABLE, dim.LesserSet);
 
                 // Add function to this expression
                 expr.Input = funcExpr;
@@ -772,6 +800,7 @@ namespace Com.Model
         // Logic
         LESS,
         GREATER,
+        EQUAL,
         AND,
         OR,
         NEGATE,

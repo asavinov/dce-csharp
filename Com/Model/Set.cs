@@ -158,7 +158,7 @@ namespace Com.Model
         public Set AddSubset(Set subset)
         {
             Debug.Assert(subset != null, "Wrong use of method parameter. Subset must be non-null.");
-            subset.SuperDim = new DimSuper("super", subset, this);
+            subset.SuperDim = new DimSuper("Super", subset, this);
             return subset;
         }
 
@@ -542,7 +542,6 @@ namespace Com.Model
             {
                 Debug.Assert(expr.Operation != Operation.TUPLE, "Wrong use: cannot append TUPLE to a primitive set.");
 
-                expr.Evaluate();
                 // Debug.Assert(expr.Output.GetType().IsPrimitive, "Wrong use: cannot append non-primitive type to a primitive set. ");
                 Debug.Assert(!expr.Output.GetType().IsArray, "Wrong use: cannot append array type to a primitive set. ");
                 return expr.Output; // Primitive sets are supposed to already contain all values (of correct type)
@@ -551,7 +550,6 @@ namespace Com.Model
             if (expr.Operation != Operation.TUPLE) // End of recursion tuples
             {
                 // Instead of finding an offset for a combination of values, we evaluate the offset as output of the expression (say, a variable or some function)
-                expr.Evaluate();
                 return expr.Output;
             }
 
@@ -585,19 +583,7 @@ namespace Com.Model
                 }
                 else
                 {
-                    dim.GreaterSet.Append(childExpr);
-/*
-                    object childOffset = dim.GreaterSet.Find(childExpr);
-
-                    if (childExpr.Operation == Operation.TUPLE) // TODO: Move it to the beginning like in Find()
-                    {
-                        dim.GreaterSet.Append(childExpr);
-                    }
-                    else
-                    {
-                        childExpr.Evaluate();
-                    }
-*/
+                    dim.GreaterSet.Append(childExpr); // Recursion after which we know the offset that has to be appended to this set dimension
                     // OPTIMIZE: Provide positions for the values which have been found during the search (not all positions are known if the search has been broken).
                     dim.Append(childExpr.Output); 
                 }
@@ -618,54 +604,6 @@ namespace Com.Model
 
             Length++;
             return Length;
-        }
-
-        public virtual object Append_Old(Expression expr)
-        {
-            object ret = null;
-            if (IsPrimitive) // Alternatively, if expr.Operation == Operation.PRIMITIVE
-            {
-                ret = expr.Output;
-                return ret; // End of recursion. Here we do not compute the value from greater elemenets but rather get it from the expression as final values
-            }
-
-            // If it is not primitive then we really find/append value in all greater dimensions and then store the found/appended
-            int[] result = Enumerable.Range(0, Length).ToArray(); // All elements of this set (can be quite long)
-            foreach (Dim dim in GreaterDims) // OPTIMIZE: the order of dimensions matters. Use statistics for ordering dimensions. First, use dimensions providing better filtering. 
-            {
-                // First, find or append the value recursively. It will be in Output
-                Expression childExpr = expr.GetOperand(dim.Name);
-                dim.GreaterSet.Append_Old(childExpr);
-
-                if (!dim.IsIdentity) continue;
-
-                // Second, use this value to analyze a combination of values for uniqueness - only for identity dimensions
-                int[] range = dim.GetOffsets(childExpr.Output); // Deproject the value
-                result = result.Intersect(range).ToArray(); // OPTIMIZE: Write our own implementation for various operations. Assume that they are ordered.
-                // OPTIMIZE: Remember the position for the case this value will have to be inserted so we do not have again search for this positin during insertion (optimization)
-            }
-
-            if (result.Length == 0) // Not found - append
-            {
-                foreach (Dim dim in GreaterDims)
-                {
-                    Expression childExpr = expr.GetOperand(dim.Name);
-                    // OPTIMIZE: Provide positions for the values which have been found during the search (not all positions are known if the search has been broken).
-                    dim.Append(childExpr.Output);
-                }
-                Length++;
-                ret = Length - 1;
-            }
-            else if (result.Length == 1) // Found single element - return its offset
-            {
-                ret = result[0];
-            }
-            else // Many elements satisfy these properties (non-unique identities)
-            {
-                ret = null; // TODO: Either return the first offset, or all offsets, or generate error
-            }
-
-            return ret;
         }
 
         public virtual void Insert(int offset)
@@ -713,18 +651,13 @@ namespace Com.Model
         /// </summary>
         public virtual void Populate() 
         { 
-            // The main generation loop is defined by a number of other (greater) sets. 
-            // There are two cases: 
-            // 1. by-reference. we store direct identities of the greater sets (without copying the elements of these sets). it is used for local greater sets
-            // 2. by-value. remote sets are used for generation and their elements are copied. we store identities of the copied elements within local greaer sets which are computed during evaluation of these greater dimensions. 
-
             //
             // Determine the type of generation procedure. If there are remote (import/export) dimensions then it is a remote procedure. 
             //
             bool LocalGeneration = true;
 
             // It is an indirect generation where we build all possible instances and then check if it is what we need by evaluating a predicate
-            if (LocalGeneration)
+            if (LocalGeneration) // Product of local sets
             {
                 //
                 // Find local greater generation sets including the super-set. Create a tuple corresponding to these dimensions
@@ -733,17 +666,17 @@ namespace Com.Model
                 dims.Add(SuperDim);
                 dims.AddRange(GetIdentityDims());
 
-                Expression tupleExpr = new Expression(this.Name, Operation.TUPLE);
+                Expression tupleExpr = new Expression(this.Name, Operation.TUPLE, this); // Represents a record to be appended to the set
                 for(int i=0; i<dims.Count; i++) 
                 {
                     Dim d = dims[i];
-                    Expression childExpr = new Expression(d.Name, Operation.PRIMITIVE, SuperDim.GreaterSet);
+                    Expression childExpr = new Expression(d.Name, Operation.PRIMITIVE, d.GreaterSet);
 
                     if (i == 0) // Super-dimension is stored in expression Input
                     {
                         tupleExpr.Input = childExpr;
                     }
-                    else
+                    else // All other (non-super) dimensions are in operands
                     {
                         tupleExpr.AddOperand(childExpr);
                     }
@@ -752,35 +685,46 @@ namespace Com.Model
                 int dimCount = dims.Count();
 
                 Offset[] offsets = new Offset[dimCount];
-                for (int i=0; i < offsets.Length; i++) offsets[i] = -1;
+                for (int i = 0; i < dimCount; i++) offsets[i] = -1;
 
                 Offset[] lengths = new Offset[dimCount];
-                for (int i = 0; i < lengths.Length; i++) lengths[i] = dims[i].GreaterSet.Length;
+                for (int i = 0; i < dimCount; i++) lengths[i] = dims[i].GreaterSet.Length;
 
-                int top = 0; // The current level or top where we change the offset. Depth of recursion.
+                int top = -1; // The current level or top where we change the offset. Depth of recursion.
+                do ++top; while (top < dimCount && lengths[top] == 0);
                 // Alternative recursive iteration: http://stackoverflow.com/questions/13655299/c-sharp-most-efficient-way-to-iterate-through-multiple-arrays-list
-                while (top < 0) 
+                while (top >= 0) 
                 {
                     if (top == dimCount) // Element is ready. Process new element.
                     {
                         //
-                        // Check if it satisfies the constraints by evaluating WhereExpression. 
+                        // Initialize the where-expression before evaluation by using current offsets
                         //
-                        var vars = WhereExpression.GetOperands(Operation.VARIABLE);
-                        foreach (var v in vars)
+                        for (int i = 0; i < dimCount; i++)
                         {
-                            // Set 'this' and dimension variables (like 'List Price') in the expression (sets should have been already correctly set). Evaluate the expression. 
-                            // Find dimensin with name v.Name
-                            // Set Output to the current offset of this dimension
+                            Dim d = dims[i];
+                            // Find all uses of the dimension in the expression and initialize it before evaluation
+                            List<Expression> dimExpressions = WhereExpression.GetOperands(Operation.DOT, d.Name);
+                            foreach (Expression e in dimExpressions)
+                            {
+                                if (e.Input.OutputSet != d.LesserSet) continue;
+                                if (e.OutputSet != d.GreaterSet) continue;
+                                Debug.Assert(!e.Input.OutputSet.IsPrimitive, "Wrong use: primitive set cannot be used in the product for producing a new set (too many combinations).");
+                                e.Input.Output = -1; // The function will not be evaluated (actually, it should be set only once before the loop)
+                                e.Output = offsets[i]; // Current offset (will be used as is without assignment during evaluation because Input.Output==-1
+                            }
+
+                            // Also initialize an instance for the case it has to be appended
+                            Expression  dimExpression = tupleExpr.GetOperand(d.Name);
+                            if (dimExpression != null) dimExpression.Output = offsets[i];
                         }
 
+                        //
+                        // Check if it satisfies the constraints by evaluating WhereExpression and append
+                        //
                         WhereExpression.Evaluate();
                         bool satisfies = (bool)WhereExpression.Output;
 
-                        //
-                        // Append to the set by using the offsets as identity dimension values. (It seems thta duplications are not possible.)
-                        //
-                        // TODO: for all greater dims including super, set the expression children including input.
                         if (satisfies)
                         {
                             object res = Append(tupleExpr);
