@@ -7,15 +7,12 @@ using Offset = System.Int32;
 namespace Com.Model
 {
     /// <summary>
+    /// It is a special case of super-dimension.
+    /// If super is many-to-one (many extensions exist for one parent) then the subset dimension is one-to-one (zero or one extension exist for one super-element).
     /// 
-    /// Is it a subset? Is it (should it be) implemented via super dimension or a normal special dimension? If it is a special super dimension then probably we need to extend standard super.
-    /// If standard super is one-to-many then the subset dimension is one-to-one.
+    /// This restriction has more efficient implementations of one-to-one mappings and therefore we introduce this class. 
+    /// Also some operations can be implemented more efficiently. For example, projection size is the same as input size. 
     /// 
-    /// A special implementation of int-int mapping with the following features:
-    /// - only one dimension with special meaning
-    /// - this dimension supports one-to-one mapping (project and then de-project produces the same elements) 
-    /// - projection has the same size as input 
-    /// - de-projection are smaller because not all elements are referenced 
     /// </summary>
     public class DimSubset : DimSuper
     {

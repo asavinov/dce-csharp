@@ -193,16 +193,20 @@ namespace Com.Model
 
             return res;
         }
-        public Expression GetOperand(string name)
+        public Expression GetOperand(Dim dim) // Non-recursive - find only in the direct children
         {
-            if (name == null)
+            if (Input != null) 
+                if(Input.Name != null && dim.Name != null && Input.Name.Equals(dim.Name, StringComparison.InvariantCultureIgnoreCase))
+                    return Input;
+
+            foreach(Expression e in Operands) 
             {
-                return Operands.FirstOrDefault(i => i.Name == null);
+                if (e == null) continue;
+                if (e.Name != null && dim.Name != null && e.Name.Equals(dim.Name, StringComparison.InvariantCultureIgnoreCase))
+                    return e;
             }
-            else
-            {
-                return Operands.FirstOrDefault(i => i.Name != null && i.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
-            }
+
+            return null;
         }
         public List<Expression> GetOperands(Operation op)
         {

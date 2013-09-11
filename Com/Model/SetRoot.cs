@@ -123,6 +123,14 @@ namespace Com.Model
             return null;
         }
 
+        public virtual Dim CreateDefaultLesserDimension(string name, Set lesserSet)
+        {
+            Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
+            Debug.Assert(name.Equals("Super", StringComparison.InvariantCultureIgnoreCase), "Wrong use: only super-dimensions can reference a root.");
+
+            return new DimRoot(name, lesserSet, this);
+        }
+
         public SetRoot(string name)
             : base(name) // C#: If nothing specified, then base() will always be called by default
         {

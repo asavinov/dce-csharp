@@ -14,6 +14,7 @@ namespace Com.Model
         public DimSuper(string name, Set lesserSet, Set greaterSet) 
             : base(name, lesserSet, greaterSet)
         {
+            IsIdentity = true;
             // TODO: Check if sets are of correct type.
             // TODO: Parameterize the dimension accordingly. It is super dimension.
 	    }

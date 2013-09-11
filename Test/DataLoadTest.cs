@@ -161,7 +161,7 @@ namespace Test
             Expression childExpr;
 
             //
-            // Find elements
+            // Find operation
             //
             Expression orderExpr = new Expression("", Operation.TUPLE, orders);
             childExpr = new Expression("Order ID", Operation.PRIMITIVE, intSet);
@@ -175,10 +175,10 @@ namespace Test
             Assert.AreEqual(5, offset);
 
             //
-            // Append elements
+            // Append operation
             //
-            orderExpr.GetOperand("Order ID").Output = 1000;
-            orderExpr.GetOperand("Tax Rate").Output = 99.99;
+            orderExpr.GetOperands(Operation.ALL, "Order ID")[0].Output = 1000;
+            orderExpr.GetOperands(Operation.ALL, "Tax Rate")[0].Output = 99.99;
 
             Expression custExpr = new Expression("Customer ID", Operation.TUPLE, cust);
             childExpr = new Expression("ID", Operation.PRIMITIVE, intSet);
@@ -201,22 +201,23 @@ namespace Test
             Assert.AreEqual(orders.Length-1, offset);
 
             //
-            // Create a new set as a product and populate it
+            // Product operation and population of a product
             //
             Set ods = wsRoot.FindSubset("Order Details Status"); // 4 elements loaded
             Set os = wsRoot.FindSubset("Orders Status"); // 3 elements loaded
 
             Set newSet = new Set("New Set");
-            wsRoot.AddSubset(newSet);
 
             Dim d1 = ods.CreateDefaultLesserDimension("Order Details Status", newSet);
             d1.IsIdentity = true;
             Dim d2 = os.CreateDefaultLesserDimension("Orders Status", newSet);
             d2.IsIdentity = true;
 
+            wsRoot.AddSubset(newSet);
             newSet.AddGreaterDim(d1);
             newSet.AddGreaterDim(d2);
 
+            // Define filter
             Expression whereExpr = new Expression("EQUAL", Operation.EQUAL);
 
             Expression d1_Expr = Expression.CreateProjectExpression(newSet, new List<Dim> { d1, ods.GetGreaterDim("Status ID") }, Operation.DOT);
@@ -227,12 +228,45 @@ namespace Test
 
             newSet.WhereExpression = whereExpr;
 
+            // Populate and test
             newSet.Populate();
             Assert.AreEqual(2, newSet.Length);
             Assert.AreEqual(0, newSet.GetValue("Order Details Status", 0));
             Assert.AreEqual(2, newSet.GetValue("Orders Status", 0));
             Assert.AreEqual(3, newSet.GetValue("Order Details Status", 1));
             Assert.AreEqual(1, newSet.GetValue("Orders Status", 1));
+
+            //
+            // Subsetting operation (product with super-dimension)
+            //
+            Set subset_ods = new Set("Subset of ODS");
+
+            d2 = os.CreateDefaultLesserDimension("Orders Status", subset_ods);
+            d2.IsIdentity = true;
+
+            ods.AddSubset(subset_ods); // TODO: Check that super-dim is identity
+            subset_ods.AddGreaterDim(d2);
+
+            // Define filter
+
+            // Populate and test
+            subset_ods.Populate();
+            Assert.AreEqual(12, subset_ods.Length);
+
+            // Define filter
+            whereExpr = new Expression("EQUAL", Operation.EQUAL);
+
+            d1_Expr = Expression.CreateProjectExpression(subset_ods, new List<Dim> { subset_ods.SuperDim, ods.GetGreaterDim("Status ID") }, Operation.DOT);
+            d2_Expr = Expression.CreateProjectExpression(subset_ods, new List<Dim> { d2, os.GetGreaterDim("Status ID") }, Operation.DOT);
+
+            whereExpr.Input = d1_Expr;
+            whereExpr.AddOperand(d2_Expr);
+
+            subset_ods.WhereExpression = whereExpr;
+
+            subset_ods.Unpopulate();
+            subset_ods.Populate();
+            Assert.AreEqual(2, subset_ods.Length);
         }
 
         [TestMethod]

@@ -372,7 +372,7 @@ namespace Com.Model
 
         public virtual void Populate() { return; }
 
-        public virtual void Unpopulate() { return; }
+        public virtual void Unpopulate() { Length = 0; }
 
         #endregion
 

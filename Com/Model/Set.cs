@@ -460,8 +460,16 @@ namespace Com.Model
 
         public virtual object GetValue(string name, int offset)
         {
-            Dim dim = GetGreaterDim(name);
-            return dim.GetValue(offset);
+            Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
+            if (name.Equals("Super", StringComparison.InvariantCultureIgnoreCase))
+            {
+                return SuperDim.GetValue(offset);
+            }
+            else
+            {
+                Dim dim = GetGreaterDim(name);
+                return dim.GetValue(offset);
+            }
         }
 
         public virtual void SetValue(string name, int offset, object value)
@@ -509,7 +517,7 @@ namespace Com.Model
             foreach (Dim dim in GetIdentityDims()) // OPTIMIZE: the order of dimensions matters (use statistics, first dimensins with better filtering). Also, first identity dimensions.
             {
                 // First, find or append the value recursively. It will be in Output
-                Expression childExpr = expr.GetOperand(dim.Name);
+                Expression childExpr = expr.GetOperand(dim);
                 if (childExpr == null) continue;
                 object childOffset = dim.GreaterSet.Find(childExpr);
 
@@ -574,7 +582,7 @@ namespace Com.Model
             // All other dimensions
             foreach (Dim dim in GreaterDims)
             {
-                Expression childExpr = expr.GetOperand(dim.Name);
+                Expression childExpr = expr.GetOperand(dim);
                 Debug.Assert(!(dim.IsIdentity && childExpr == null), "Wrong use: All identity dimensions must be provided for appending an element.");
 
                 if (childExpr == null)
@@ -650,7 +658,7 @@ namespace Com.Model
         /// This method implements the main generation loop and in the body generates one instance. 
         /// </summary>
         public virtual void Populate() 
-        { 
+        {
             //
             // Determine the type of generation procedure. If there are remote (import/export) dimensions then it is a remote procedure. 
             //
@@ -697,37 +705,47 @@ namespace Com.Model
                 {
                     if (top == dimCount) // Element is ready. Process new element.
                     {
-                        //
-                        // Initialize the where-expression before evaluation by using current offsets
-                        //
-                        for (int i = 0; i < dimCount; i++)
+                        bool satisfies = true;
+
+                        if (WhereExpression != null)
                         {
-                            Dim d = dims[i];
-                            // Find all uses of the dimension in the expression and initialize it before evaluation
-                            List<Expression> dimExpressions = WhereExpression.GetOperands(Operation.DOT, d.Name);
-                            foreach (Expression e in dimExpressions)
+                            // Initialize the where-expression before evaluation by using current offsets
+                            for (int i = 0; i < dimCount; i++)
                             {
-                                if (e.Input.OutputSet != d.LesserSet) continue;
-                                if (e.OutputSet != d.GreaterSet) continue;
-                                Debug.Assert(!e.Input.OutputSet.IsPrimitive, "Wrong use: primitive set cannot be used in the product for producing a new set (too many combinations).");
-                                e.Input.Output = -1; // The function will not be evaluated (actually, it should be set only once before the loop)
-                                e.Output = offsets[i]; // Current offset (will be used as is without assignment during evaluation because Input.Output==-1
+                                Dim d = dims[i];
+                                // Find all uses of the dimension in the expression and initialize it before evaluation
+                                List<Expression> dimExpressions = WhereExpression.GetOperands(Operation.DOT, d.Name);
+                                foreach (Expression e in dimExpressions)
+                                {
+                                    if (e.Input.OutputSet != d.LesserSet) continue;
+                                    if (e.OutputSet != d.GreaterSet) continue;
+                                    Debug.Assert(!e.Input.OutputSet.IsPrimitive, "Wrong use: primitive set cannot be used in the product for producing a new set (too many combinations).");
+                                    e.Input.Output = -1; // The function will not be evaluated (actually, it should be set only once before the loop)
+                                    e.Output = offsets[i]; // Current offset (will be used as is without assignment during evaluation because Input.Output==-1
+                                }
+
+                                // Also initialize an instance for the case it has to be appended
+                                Expression dimExpression = tupleExpr.GetOperand(d);
+                                if (dimExpression != null) dimExpression.Output = offsets[i];
                             }
 
-                            // Also initialize an instance for the case it has to be appended
-                            Expression  dimExpression = tupleExpr.GetOperand(d.Name);
-                            if (dimExpression != null) dimExpression.Output = offsets[i];
+                            // Check if it satisfies the constraints by evaluating WhereExpression and append
+                            WhereExpression.Evaluate();
+                            satisfies = (bool)WhereExpression.Output;
                         }
-
-                        //
-                        // Check if it satisfies the constraints by evaluating WhereExpression and append
-                        //
-                        WhereExpression.Evaluate();
-                        bool satisfies = (bool)WhereExpression.Output;
 
                         if (satisfies)
                         {
-                            object res = Append(tupleExpr);
+                            // Initialize an instance for appending
+                            for (int i = 0; i < dimCount; i++)
+                            {
+                                Dim d = dims[i];
+
+                                Expression dimExpression = tupleExpr.GetOperand(d);
+                                if (dimExpression != null) dimExpression.Output = offsets[i];
+                            }
+
+                            Append(tupleExpr);
                         }
 
                         do --top; while (top >= 0 && lengths[top] == 0); // Go up by skipping empty dimensions
@@ -748,14 +766,18 @@ namespace Com.Model
                 }
 
             }
-            else
+            else if (true)
             {
                 // Find remote (impport/export) sets, organize the main loop and evaluate local identity dimensions. 
+                // Also we might use import/export dims for user input with manual specification of records
             }
-            // TODO: Here we might need a direct procedure by building the instances satisfying the condition as opposed to building all possible instances and then checking if they satisfy the condition. 
-            // This direct procedure is used when building subsets of primitive sets or their combinations (it is not possible to generate all possible primitive values). 
-            // The direct procedure can be also used as optimization technique for normal sets where we can directly produce the necessary instances.
-            // We could even mix these two approaches by organizing a loop but skipping some large intervals if they are known to not to satisfy our conditions. Say, if age<30 then we could directly iterate only in this interval (in the presence of indexes). 
+            else
+            {
+                // TODO: Here we might need a direct procedure by building the instances satisfying the condition as opposed to building all possible instances and then checking if they satisfy the condition. 
+                // This direct procedure is used when building subsets of primitive sets or their combinations (it is not possible to generate all possible primitive values). 
+                // The direct procedure can be also used as optimization technique for normal sets where we can directly produce the necessary instances.
+                // We could even mix these two approaches by organizing a loop but skipping some large intervals if they are known to not to satisfy our conditions. Say, if age<30 then we could directly iterate only in this interval (in the presence of indexes). 
+            }
 
         }
 
@@ -763,7 +785,16 @@ namespace Com.Model
         // Empty the set and all its dimensions.
         //
         public virtual void Unpopulate() 
-        { 
+        {
+            SuperDim.Unpopulate();
+
+            foreach(Dim d in GreaterDims) 
+            {
+                d.Unpopulate();
+            }
+
+            Length = 0;
+
             return; 
         }
 
@@ -799,7 +830,15 @@ namespace Com.Model
 
         public virtual Dim CreateDefaultLesserDimension(string name, Set lesserSet)
         {
-            return new DimSet(name, lesserSet, this);
+            Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
+            if (name.Equals("Super", StringComparison.InvariantCultureIgnoreCase))
+            {
+                return new DimSuper(name, lesserSet, this);
+            }
+            else
+            {
+                return new DimSet(name, lesserSet, this);
+            }
         }
 
         public virtual Instance CreateDefaultInstance()

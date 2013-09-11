@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using Offset = System.Int32;
@@ -29,6 +30,7 @@ namespace Com.Model
 
         public override Dim CreateDefaultLesserDimension(string name, Set lesserSet)
         {
+            Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
             return new DimPrimitive<int>(name, lesserSet, this);
         }
 

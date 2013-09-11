@@ -186,10 +186,9 @@ namespace Com.Model
             }
         }
 
-        public override void Unpopulate() // Clean, Empty
+        public override void Unpopulate()
         {
-            // Simply empty the greater set
-            // After this operation the greater set is empty
+            base.Unpopulate();
         }
 
         #endregion
