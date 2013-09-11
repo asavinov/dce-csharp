@@ -220,8 +220,8 @@ namespace Test
             // Define filter
             Expression whereExpr = new Expression("EQUAL", Operation.EQUAL);
 
-            Expression d1_Expr = Expression.CreateProjectExpression(newSet, new List<Dim> { d1, ods.GetGreaterDim("Status ID") }, Operation.DOT);
-            Expression d2_Expr = Expression.CreateProjectExpression(newSet, new List<Dim> { d2, os.GetGreaterDim("Status ID") }, Operation.DOT);
+            Expression d1_Expr = Expression.CreateProjectExpression(new List<Dim> { d1, ods.GetGreaterDim("Status ID") }, Operation.DOT);
+            Expression d2_Expr = Expression.CreateProjectExpression(new List<Dim> { d2, os.GetGreaterDim("Status ID") }, Operation.DOT);
 
             whereExpr.Input = d1_Expr;
             whereExpr.AddOperand(d2_Expr);
@@ -256,8 +256,8 @@ namespace Test
             // Define filter
             whereExpr = new Expression("EQUAL", Operation.EQUAL);
 
-            d1_Expr = Expression.CreateProjectExpression(subset_ods, new List<Dim> { subset_ods.SuperDim, ods.GetGreaterDim("Status ID") }, Operation.DOT);
-            d2_Expr = Expression.CreateProjectExpression(subset_ods, new List<Dim> { d2, os.GetGreaterDim("Status ID") }, Operation.DOT);
+            d1_Expr = Expression.CreateProjectExpression(new List<Dim> { subset_ods.SuperDim, ods.GetGreaterDim("Status ID") }, Operation.DOT);
+            d2_Expr = Expression.CreateProjectExpression(new List<Dim> { d2, os.GetGreaterDim("Status ID") }, Operation.DOT);
 
             whereExpr.Input = d1_Expr;
             whereExpr.AddOperand(d2_Expr);
@@ -303,7 +303,7 @@ namespace Test
             Dim d3 = d2.GreaterSet.GetGreaterDim("Last Name");
             List<Dim> path = new List<Dim> { d1, d2, d3 };
 
-            Expression expr = Expression.CreateProjectExpression(od, path, Operation.PROJECTION);
+            Expression expr = Expression.CreateProjectExpression(path, Operation.PROJECTION);
 
             // Add derived dimension
             Dim derived1 = d3.GreaterSet.CreateDefaultLesserDimension("Customer Last Name", od);
@@ -352,14 +352,14 @@ namespace Test
             Dim d2 = d1.GreaterSet.GetGreaterDim("Customer ID");
             List<Dim> path = new List<Dim> { d1, d2 };
 
-            Expression deprExpr = Expression.CreateDeprojectExpression(odet, path);
+            Expression deprExpr = Expression.CreateDeprojectExpression(path);
 
             // Create project (measure) expression: (Order Details) -> (Product) -> List Price
             Dim d3 = odet.GetGreaterDim("Product ID");
             Dim d4 = d3.GreaterSet.GetGreaterDim("List Price");
             List<Dim> mesPath = new List<Dim> { d3, d4 };
 
-            Expression projExpr = Expression.CreateProjectExpression(odet, mesPath, Operation.DOT);
+            Expression projExpr = Expression.CreateProjectExpression(mesPath, Operation.DOT);
 
             // Add derived dimension
             Expression aggreExpr = Expression.CreateAggregateExpression("SUM", deprExpr, projExpr);
@@ -475,9 +475,9 @@ namespace Test
             Dim d2 = products.GetGreaterDim("Standard Cost");
             Dim d3 = products.GetGreaterDim("Target Level");
 
-            Expression d1_Expr = Expression.CreateProjectExpression(products, new List<Dim> { d1 }, Operation.DOT);
-            Expression d2_Expr = Expression.CreateProjectExpression(products, new List<Dim> { d2 }, Operation.DOT);
-            Expression d3_Expr = Expression.CreateProjectExpression(products, new List<Dim> { d3 }, Operation.DOT);
+            Expression d1_Expr = Expression.CreateProjectExpression(new List<Dim> { d1 }, Operation.DOT);
+            Expression d2_Expr = Expression.CreateProjectExpression(new List<Dim> { d2 }, Operation.DOT);
+            Expression d3_Expr = Expression.CreateProjectExpression(new List<Dim> { d3 }, Operation.DOT);
 
             Expression arithmExpr = new Expression("MINUS", Operation.MINUS);
             arithmExpr.Input = d1_Expr;
@@ -542,30 +542,29 @@ namespace Test
             //
             Set products = wsRoot.FindSubset("Products");
 
+            // Add subset
+            Set subProducts = new Set("SubProducts");
+            products.AddSubset(subProducts);
+
             // Create simple (one-segment) function expressions
             Dim d1 = products.GetGreaterDim("List Price");
             Dim d2 = products.GetGreaterDim("Standard Cost");
             Dim d3 = products.GetGreaterDim("Target Level");
 
-            Expression d1_Expr = Expression.CreateProjectExpression(products, new List<Dim> { d1 }, Operation.DOT);
-            Expression d2_Expr = Expression.CreateProjectExpression(products, new List<Dim> { d2 }, Operation.DOT);
-            Expression d3_Expr = Expression.CreateProjectExpression(products, new List<Dim> { d3 }, Operation.DOT);
+            Expression d1_Expr = Expression.CreateProjectExpression(new List<Dim> { subProducts.SuperDim, d1 }, Operation.DOT);
+            Expression d2_Expr = Expression.CreateProjectExpression(new List<Dim> { subProducts.SuperDim, d2 }, Operation.DOT);
+            Expression d3_Expr = Expression.CreateProjectExpression(new List<Dim> { subProducts.SuperDim, d3 }, Operation.DOT);
 
-            Expression logicalExpr = new Expression("LESS", Operation.LESS);
+            Expression logicalExpr = new Expression("GREATER", Operation.GREATER);
 
             logicalExpr.Input = d1_Expr;
-            logicalExpr.AddOperand(d2_Expr);
-
-            // Add subset
-            Set subProducts = new Set("SubProducts");
-            subProducts.WhereExpression = logicalExpr;
-
-            products.AddSubset(subProducts);
+            logicalExpr.AddOperand(d3_Expr);
 
             // Update
-//            subProducts.Populate();
+            subProducts.WhereExpression = logicalExpr;
+            subProducts.Populate();
+            Assert.AreEqual(2, subProducts.Length);
         }
-
 
     }
 }

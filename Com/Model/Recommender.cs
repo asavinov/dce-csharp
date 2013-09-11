@@ -193,8 +193,8 @@ namespace Com.Model
 
         public override Expression GetExpression()
         {
-            var deprExpr = Com.Model.Expression.CreateDeprojectExpression((Set)SelectedFactSet.Fragment, (List<Dim>)SelectedGroupingPath.Fragment); // Grouping (deproject) expression: (Customers) <- (Orders) <- (Order Details)
-            var projExpr = Com.Model.Expression.CreateProjectExpression((Set)SelectedFactSet.Fragment, (List<Dim>)SelectedMeasurePath.Fragment, Operation.DOT); // Measure (project) expression: (Order Details) -> (Product) -> List Price
+            var deprExpr = Com.Model.Expression.CreateDeprojectExpression((List<Dim>)SelectedGroupingPath.Fragment); // Grouping (deproject) expression: (Customers) <- (Orders) <- (Order Details)
+            var projExpr = Com.Model.Expression.CreateProjectExpression((List<Dim>)SelectedMeasurePath.Fragment, Operation.DOT); // Measure (project) expression: (Order Details) -> (Product) -> List Price
 
             // TODO: here we need a method of Expression class to create a path expression (or relationships expression)
 
@@ -293,13 +293,13 @@ namespace Com.Model
 
         public override Expression GetExpression()
         {
-            var deprExpr = Com.Model.Expression.CreateDeprojectExpression((Set)SelectedFactSet.Fragment, (List<Dim>)SelectedGroupingPath.Fragment); 
+            var deprExpr = Com.Model.Expression.CreateDeprojectExpression((List<Dim>)SelectedGroupingPath.Fragment); 
 
             var measureDim = (Dim)SelectedMeasureDimension.Fragment;
             var measurePath = (List<Dim>)SelectedMeasurePath.Fragment;
             measurePath.Add(measureDim);
 
-            var projExpr = Com.Model.Expression.CreateProjectExpression((Set)SelectedFactSet.Fragment, measurePath, Operation.DOT);
+            var projExpr = Com.Model.Expression.CreateProjectExpression(measurePath, Operation.DOT);
 
             var aggregExpr = Com.Model.Expression.CreateAggregateExpression((string)SelectedAggregationFunction.Fragment, deprExpr, projExpr);
 

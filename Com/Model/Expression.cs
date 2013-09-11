@@ -487,15 +487,15 @@ namespace Com.Model
 
                     if (Operation == Operation.LESS)
                     {
-                        Output = ((double)op1.Output < (double)op2.Output);
+                        Output = (Convert.ToDouble(op1.Output) < Convert.ToDouble(op2.Output));
                     }
                     else if (Operation == Operation.GREATER)
                     {
-                        Output = ((double)op1.Output > (double)op2.Output);
+                        Output = (Convert.ToDouble(op1.Output) > Convert.ToDouble(op2.Output));
                     }
                     else if (Operation == Operation.EQUAL)
                     {
-                        Output = object.Equals(op1.Output, op2.Output);
+                        Output = object.Equals(Convert.ToDouble(op1.Output), Convert.ToDouble(op2.Output));
                     }
 
                     break;
@@ -632,12 +632,13 @@ namespace Com.Model
         }
 
         // TODO: Do we actually need lesserSet? If not then delete it and use the first segment of the path. 
-        public static Expression CreateProjectExpression(Set lesserSet, List<Dim> greaterDims, Operation op)
+        public static Expression CreateProjectExpression(List<Dim> greaterDims, Operation op)
         {
+            Set lesserSet = greaterDims[0].LesserSet;
+
             Debug.Assert(op == Operation.PROJECTION || op == Operation.DOT, "Wrong use: only PROJECTION or DOT operations are allowed.");
             Debug.Assert(lesserSet != null && greaterDims != null, "Wrong use: parameters cannot be null.");
             Debug.Assert(greaterDims.Count != 0, "Wrong use: at least one dimension has to be provided for projection.");
-            Debug.Assert(lesserSet == greaterDims[0].LesserSet, "Wrong use: first dimension must be a greater dimension of the lesser set.");
             for (int i = 1; i < greaterDims.Count; i++)
             {
                 Debug.Assert(greaterDims[i].LesserSet == greaterDims[i - 1].GreaterSet, "Wrong use: only sequential dimensions are allowded");
@@ -676,11 +677,12 @@ namespace Com.Model
         }
 
         // TODO: Do we actually need lesserSet? If not then delete it and use the first segment of the path. 
-        public static Expression CreateDeprojectExpression(Set lesserSet, List<Dim> greaterDims)
+        public static Expression CreateDeprojectExpression(List<Dim> greaterDims)
         {
+            Set lesserSet = greaterDims[0].LesserSet;
+
             Debug.Assert(lesserSet != null && greaterDims != null, "Wrong use: parameters cannot be null.");
             Debug.Assert(greaterDims.Count != 0, "Wrong use: at least one dimension has to be provided for projection.");
-            Debug.Assert(lesserSet == greaterDims[0].LesserSet, "Wrong use: first dimension must be a greater dimension of the lesser set.");
             for (int i = 1; i < greaterDims.Count; i++)
             {
                 Debug.Assert(greaterDims[i].LesserSet == greaterDims[i - 1].GreaterSet, "Wrong use: only sequential dimensions are allowded");
