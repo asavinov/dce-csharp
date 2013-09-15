@@ -128,11 +128,7 @@ namespace Com.Model
             get
             {
                 Set root = this;
-                while (root.SuperSet != null)
-                {
-                    root = root.SuperSet;
-                }
-
+                while (root.SuperSet != null) root = root.SuperSet;
                 return (SetRoot)root;
             }
         }

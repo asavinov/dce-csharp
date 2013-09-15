@@ -228,5 +228,56 @@ namespace Test
             // Measure (project) expression: (Order Details) -> (Product) -> List Price
         }
 
+        [TestMethod]
+        public void RecommendMappingsTest()
+        {
+            // Create Oldedb root set
+            SetRootOledb dbRoot = new SetRootOledb("Root");
+
+            dbRoot.ConnectionString = Northwind;
+
+            dbRoot.Open();
+
+            dbRoot.ImportSchema();
+
+            // Create a DimTree which will be used as a target
+            Set orders = dbRoot.FindSubset("Orders");
+            Set emps = dbRoot.FindSubset("Employees");
+            
+            DimTree targetTree = new DimTree(); // Root
+            DimTree targetChild = new DimTree(orders);
+            targetChild.ExpandTree(); // Build complete primitive tree (up to the primitive sets)
+            targetTree.AddChild(targetChild); // Add some set we want to map to
+            targetChild = new DimTree(emps);
+            targetTree.AddChild(targetChild); // Add second set as a possible target
+            targetChild.ExpandTree(); 
+
+            // Create a MatchDimTree which will be used for matching
+            Set odets = dbRoot.FindSubset("Order Details");
+            Set cust = dbRoot.FindSubset("Customers");
+
+            MatchDimTree sourceTree = new MatchDimTree(targetTree); // Root
+            MatchDimTree sourceChild = new MatchDimTree(odets);
+            sourceChild.ExpandTree(); // Build complete primitive tree (up to the primitive sets)
+            sourceTree.AddChild(sourceChild);
+            sourceChild = new MatchDimTree(cust);
+            sourceTree.AddChild(sourceChild);
+            sourceChild.ExpandTree(); // Build complete primitive tree (up to the primitive sets)
+
+            // Check the generation of recommendations (alternatives)
+            sourceTree.Recommend(); // For this and all child nodes
+
+            // Check that selections (matchings) and the updates of recommendations (selection propagation) work correctly
+            sourceChild = (MatchDimTree)sourceTree.Children[1]; // Customers
+            Assert.AreEqual(7, sourceChild.Matches.Alternatives.Count);
+            Assert.AreEqual(91, ((MatchDimTree)sourceChild.Children[0]).Matches.Alternatives.Count); // All attributes of all possible target sets
+
+            sourceChild.Matches.SelectedObject = targetTree.Children[1]; // Select Employees
+            Assert.AreEqual(targetTree.Children[1], sourceChild.Matches.SelectedObject);
+
+            sourceChild.UpdateSelection();
+            Assert.AreEqual(18, ((MatchDimTree)sourceChild.Children[0]).Matches.Alternatives.Count); // Attributes of the target Employees
+        }
+
     }
 }

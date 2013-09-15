@@ -144,13 +144,9 @@ namespace Com.Model
         {
             get
             {
-                Dim root = this;
-                while (root.ParentDimension != null)
-                {
-                    root = root.ParentDimension;
-                }
-
-                return root;
+                Dim dim = this;
+                while (dim.ParentDimension != null) dim = dim.ParentDimension;
+                return dim;
             }
         }
 

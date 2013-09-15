@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -343,54 +344,6 @@ namespace Com.Model
     }
 
     /// <summary>
-    /// Recommended set and dimension mappings.
-    /// One recommendation is a primitive tree. 
-    /// </summary>
-    public class RecommendedMappings : Recommender
-    {
-        public Set SourceSet { get; set; } // From this (imported) set
-        public Set TargetSet { get; set; } // To this set (can point to root of the database which means that target set has to be suggested)
-
-        // Root of the dimension tree
-        public List<RecommendedFragment> Root { get; set; } // of type Dim?
-
-        public override void Recommend()
-        {
-            // Find relevant set mappings of the specified set to the destination database. 
-            // Each mappings means specifying a target set as well as dimension mappings which also possibly provide other set mappings.
-            // At the end, each mapping is based upon and formally has to specify primitive set mappings. 
-            // Target sets could be existing or new. A new target set essentially means creating a more or less exact copy of the source set.
-
-            // It is an example of hierarchical space of recommendations (as opposed to multidimensional space). 
-            // Depending on the choise of the parent set mapping, its alternative child set mappings are chosen. 
-            // Moreover, in hierarchical space, the choice of parent determines relevance of children and the whole mapping
-
-            // How alternatives are represented? In multidimensional space, alterantives are represtented as combinations of field values
-            // In hierarchical space, each node has some alternatives. And then depending on the choice, its children have their alternatives and so on. 
-            // Thus it is a tree but it can change its structure depending on the choices of alternatives.
-
-            // Anohter representation is a flat list of mappings between paths. In other words, for each source path we specify alternative target paths. 
-            // Selection propagation is also hierarchical but is represnted in flat space: when some intermediate mapping is selected then all possible paths are restricted.
-            // Or, we can consider path mapping individual independent elements. If one path mapping is selected then other possible paths are also restricted and their relevance is updated. 
-            // The source set is fixed and it is characterized by a fixed set of primitive paths.
-            // One alternative mapping consists of a set of target (existing) paths assigned to the source paths. 
-            // We can find a set of all possible target paths and for each source path a set of possible mappings.
-            // By selecting a possible mapping for one source path, other mapping are updated. 
-            // Thus we have a multidimensional space where one source path is a dimension with many alternaive target paths.
-            // When selecting one path mapping, we actually fix intermediate set mapping. But the question is whether we need set mappings because it is already a hierachical approach.
-
-        }
-
-        public RecommendedMappings()
-            : base()
-        {
-            Root = new List<RecommendedFragment>();
-        }
-    }
-
-
-
-    /// <summary>
     /// It is one of many possible fragments within a more complex recommendation for a query, expression or pattern. 
     /// It represents one option among many alteranatives to be chosen by the user, that is, it is a coordinate along one dimension. 
     /// It is independent of the type of recommendation and this type can be stored in a field as enumeration. 
@@ -406,8 +359,8 @@ namespace Com.Model
 
         private string _displayName;
         public string DisplayName // Shown in List view. Can be generated from expression or the object, or set explicitly
-        { 
-            get 
+        {
+            get
             {
                 if (_displayName != null) return _displayName;
 
@@ -451,40 +404,280 @@ namespace Com.Model
 
     }
 
-    public class DimList // Or DimPath
+
+
+
+
+
+
+
+/// *****************************************************************************
+
+
+
+
+
+
+
+
+
+    /// <summary>
+    /// It is one of many possible fragments within a more complex recommendation for a query, expression or pattern. 
+    /// It represents one option among many alteranatives to be chosen by the user, that is, it is a coordinate along one dimension. 
+    /// It is independent of the type of recommendation and this type can be stored in a field as enumeration. 
+    /// If it is necessary to develop a more specific fragment the this class has to be extended by a subclass. 
+    /// </summary>
+    public class RecommendedFragment<T>
     {
-        // It should be used where we use List<Dim>
-        // It is more convenient because we can store additional methods, say, concatenate, iterate, append etc.
-        // And DimList can be stored in Dim.Path 
-        // It also can be used when using in DimTree, representing projections/de-projections and in other structures.
+        // Constant parameters
+        public T Fragment { get; set; } // It is the fragment itself. It can be an expression, set, dimension, function etc.
+        public double Relevance { get; set; } // Unconditional (initial) weight between 0 and 1. Generated by the suggestion procedure. 
+        public int Index { get; set; } // It is the order/rank according to the relevance. 0 index corresponds to highest (best) relevance. 
+
+        private string _displayName;
+        public string DisplayName // Shown in List view. Can be generated from expression or the object, or set explicitly
+        {
+            get
+            {
+                if (_displayName != null) return _displayName;
+
+                if (typeof(T) == typeof(string)) return (string)(object)Fragment;
+                else if (typeof(T) == typeof(Set)) return ((Set)(object)Fragment).Name;
+                else if (typeof(T) == typeof(Dim)) return ((Dim)(object)Fragment).Name;
+                else if (typeof(T) == typeof(List<Dim>))
+                {
+                    string name = "";
+                    ((List<Dim>)(object)Fragment).ForEach(seg => name += "." + seg.Name);
+                    return name;
+                }
+                else if (typeof(T) == typeof(DimPath))
+                {
+                    return ((DimPath)(object)Fragment).ComplexName;
+                }
+                else if (typeof(T) == typeof(DimTree))
+                {
+                    return ((DimTree)(object)Fragment).Set.Name;
+                }
+                else return "<UNKNOWN>";
+            }
+            set { _displayName = value; }
+        }
+
+        // UI (variable)
+        public bool IsSelected { get; set; }
+        public bool IsRelevant { get; set; } // Can be selected under the current constraints
+        public double CurrentRelevance { get; set; } // Conditional relevance/weight depending on the curerent selection and other factors. 0 means that the component is disabled. 
+
+        // We probably need support for soring items according their current weight, that is, getting first, second etc. Maybe some enumerator or support via ListView/WPF (filter/sorting)
+        public int CurrentIndex { get; set; } // What entry number corresponds to this position. 0 for highest relevance. 
+
+        // We might also provide support for coarse-grained categorization like HIGH, MID, LOW, DISABLED (so IsDisabled is a special case). The categories are defined by static parameters or dynamically calculated (equal intervals etc.)
+
+        // We might also provide support for visualization like colors and icons. 
+
+        public RecommendedFragment(T component, double relevance)
+        {
+            Fragment = component;
+            Relevance = relevance;
+
+            IsSelected = false;
+            IsRelevant = true;
+            CurrentRelevance = Relevance;
+        }
     }
-    
-    public class DimTree
+
+    public class Fragments<T>
     {
-        public Dim Dim; // It is essentially the element of the tree. It must be between the parent and all children. 
-        public Set Set { get { return Dim.GreaterSet; } } // Greater set of the dimension
+        public string Name { get; set; }
+        public List<RecommendedFragment<T>> Alternatives { get; set; }
 
-        public DimTree Parent; // Where this node is a child (lesser)
-        public DimTree Root { get { return null; } } // Computes root node
-
-        public List<DimTree> Children; // Child nodes (greater)
-        public DimTree AddChild(Dim dim)
+        public bool IsSelected
         {
-            return null;
-        }
-        public DimTree RemoveChild(Dim dim)
-        {
-            return null;
+            get { return Alternatives.Exists(f => f.IsSelected); }
         }
 
-        public DimTree MatchingNode; // A node in another tree
-        public double MatchingFactor; // Relevance
-
-        // Compute similarity if they are matched
-        // Two trees have to be (correctly) matched, for example, by the user.
-        // This method computes similarity for this match. It can be bad or good depending on the matches. 
-        public static double ComputeMatch(DimTree tree)
+        public RecommendedFragment<T> SelectedFragment // The currently chosen alternative (can be null)
         {
+            get { return Alternatives.FirstOrDefault(f => f.IsSelected); }
+            set 
+            {
+                int sel = -1;
+                if (value != null)
+                {
+                    sel = Alternatives.IndexOf(value); // Find element to be selected
+                    if (sel < 0) return; // Item does not exist
+                }
+
+                Alternatives.ForEach(f => f.IsSelected = false); // Reset the current selection (no selected element)
+                if(sel >= 0) Alternatives[sel].IsSelected = true;
+            }
+        }
+
+        public T SelectedObject
+        {
+            get { return SelectedFragment == null ? default(T) : SelectedFragment.Fragment; }
+            set 
+            {
+                T sel = default(T);
+                if (value != null)
+                {
+                    RecommendedFragment<T> selFrag = Alternatives.FirstOrDefault(f => EqualityComparer<T>.Default.Equals(f.Fragment, value)); // Find element to be selected
+                    if (selFrag == null) return; // Item does not exist
+                    sel = selFrag.Fragment;
+                }
+
+                Alternatives.ForEach(f => f.IsSelected = EqualityComparer<T>.Default.Equals(f.Fragment, sel) ? true : false);
+            }
+        }
+
+        public bool Readonly { get; set; } // Whether the selection can be changed from UI
+
+        public Fragments()
+        {
+            Alternatives = new List<RecommendedFragment<T>>();
+        }
+    }
+
+    /// <summary>
+    /// It it represents one dimension in a dimension tree with associated alternative mappings. 
+    /// </summary>
+    public class MatchDimTree : DimTree
+    {
+        public Fragments<DimTree> Matches { get; set; } // of type DimTree (alternative targets as nodes in a dimension tree)
+
+        //
+        // Tree methods
+        //
+
+        public MatchDimTree ParentMatch // First parent with non-null match.
+        {
+            get
+            {
+                if (IsRoot) return null;
+                MatchDimTree node = (MatchDimTree)Parent;
+                for (; !node.IsRoot && !node.Matches.IsSelected; node = (MatchDimTree)node.Parent) ;
+                return node;
+            }
+        }
+        public int ParentMatchRank // Number of segments from this node up to the next matched (non-skipped) parent. 0 for root and 1 or more for all other nodes.
+        {
+            get
+            {
+                if (IsRoot) return 0;
+                int rank = 1;
+                for (MatchDimTree node = (MatchDimTree)Parent; !node.IsRoot && !node.Matches.IsSelected; node = (MatchDimTree)node.Parent) { rank++; }
+                return rank;
+            }
+        }
+        public DimPath ParentMatchPath // Path from the first matching parent to this node
+        {
+            get
+            {
+                if (IsRoot) return null;
+                DimPath path = new DimPath();
+                path.AddSegment(this.Dim);
+                for (MatchDimTree node = (MatchDimTree)Parent; !node.IsRoot && !node.Matches.IsSelected; node = (MatchDimTree)node.Parent) path.AddSegment(node.Dim);
+                return path;
+            }
+        }
+
+        //
+        // TODO: We need also enumerators like all  (leaf) nodes (for each node we can easily get a path), or all match paths
+        //
+
+        /// <summary>
+        /// Check the validity of the formal structure of this and all child nodes. Used for testing. 
+        /// </summary>
+        /// <returns></returns>
+        public string IsValid()
+        {
+            Debug.Assert(IsRoot || Dim != null, "Wrong structure: Only root has null dimension.");
+            Debug.Assert(Root.Dim == null, "Wrong structure: Root must have null dimension (???).");
+
+            // Check children
+            // 1. Children must have non-null dimension and set (since they have a parent)
+
+            // Check matching structure. 
+            // 1. A matched node must reference this node (pairwise symmetric matching). 
+            // 2. A matched node must be a child of the our parent matching node. 
+            // 3. What about root? Do we require that the root is always matched and always another root? 
+            return null;
+        }
+
+
+        /// <summary>
+        /// Find all formally possible matching sets for this source set and compute their relevance taking into account matches of other source sets in this tree.
+        /// </summary>
+        public void Recommend()
+        {
+            DimTree previousSelection = Matches.SelectedObject;
+
+            if (IsRoot) // Root has to be mapped to the root of the target tree and it is a fixed parameter which is set at construction time
+            {
+                Children.ForEach(c => ((MatchDimTree)c).Recommend());
+                return;
+            }
+
+            //
+            //  Generate a list of all target sets that can be formally assigned to this set
+            //
+            var alternatives = new List<RecommendedFragment<DimTree>>();
+
+            var parentTarget = ParentMatch.Matches.SelectedObject;
+            Debug.Assert(parentTarget != null, "Some parent must have a selected match. At least the root must be always matched (to the root of the target tree).");
+
+            // This set can be mapped to any nested child of our (first matched) parent target excluding it.
+            foreach (DimTree target in parentTarget.Flatten())
+            {
+                if (target == parentTarget) continue; // This element is already a target of our parent and cannot be used
+
+                if (Set.IsPrimitive)
+                {
+                    // This set is primitive. Alternatives can include only primitive target sets (non-primitive targets excluded) that is leaves of the target primitive tree.
+                    if (!target.Set.IsPrimitive) continue;
+                }
+                else
+                {
+                    // This set is non-primitive: Alternatives cannot include primitive target sets (only non-primitive).
+                    if (target.Set.IsPrimitive) continue;
+                }
+
+                // Our longest child path must have place (be shorter than) somewhere among target child paths
+                if (MaxLeafRank > target.MaxLeafRank) continue;
+
+                double relevance = ComputeRelevance(target);
+                alternatives.Add(new RecommendedFragment<DimTree>(target, relevance)); 
+            }
+
+            //
+            // Convert alternatives into a list of fragments with preserving the current selection if possible
+            //
+            Matches.Alternatives.Clear();
+            Matches.Alternatives.AddRange(alternatives);
+            Matches.SelectedObject = previousSelection;
+
+            //
+            // Recommend alternatives for the children recursively
+            //
+            Children.ForEach(c => ((MatchDimTree)c).Recommend());
+        }
+
+        /// <summary>
+        /// This node has changed its selection. Propagate this selection to other nodes by either generating new alternative matches or by adjusting relevance factors for thier existing alternatives. 
+        /// </summary>
+        public void UpdateSelection()
+        {
+            // Generate new alternatives for all our children
+            Children.ForEach(c => ((MatchDimTree)c).Recommend());
+
+            // TODO: theoretically, we need to adjust relevance of alternative for our siblings
+        }
+
+        // Compute similarity by assuming that this node has the specified match
+        private double ComputeRelevance(DimTree target)
+        {
+            DimTree tree = new DimTree();
+
             // Compute own similarity of two pairs <dim, gSet> or, alternatively, two matching dims
             double own = 1.0;
             // tree.Dim vs tree.MatchingNode.Dim
@@ -495,39 +688,290 @@ namespace Com.Model
             double relevance = 0.0;
             foreach (DimTree child in tree.Children) // Aggregate all child matches
             {
-                relevance += ComputeMatch(child); // Recursion
+                //relevance += child.ComputeRelevance(); // Recursion
             }
 
-            relevance /= tree.Children.Count(); // Average
+            // relevance /= tree.Children.Count(); // Average
+            relevance = (relevance + own) / 2;
 
-            return (relevance + own) / 2;
+            return 1.0;
         }
 
-        // Generate best match(es) for this tree among ?
-        // Where do we find possible target nodes (dim, greater set pairs)?
-        // Must they (dimensions, sets) exist or can be created? 
-        // What if the algorithm wants to create a new dimension or set?
-        public static void RecommendMatch(DimTree tree, SetRoot target)
+        /// <summary>
+        /// Create an equivalent expression from this tree taking into account the matchings. 
+        /// </summary>
+        /// <returns></returns>
+        public Expression GetExpression()
         {
-            var candidates = new List<DimTree>();
+            Expression expr = new Expression();
+            return expr;
+        }
 
-            // Create a list of candidates in order to decrease the search space
-            Set targetLesserSet = tree.Parent != null ? tree.Parent.MatchingNode.Dim.LesserSet : null;
-            foreach (Dim dim in targetLesserSet.GreaterDims)
+        public MatchDimTree(Dim dim, DimTree parent = null) 
+            : base(dim, parent)
+        {
+            Matches = new Fragments<DimTree>();
+        }
+
+        public MatchDimTree(Set set, DimTree parent = null)
+            : base(set, parent)
+        {
+            Matches = new Fragments<DimTree>();
+        }
+
+        public MatchDimTree(DimTree target)
+            : base()
+        {
+            // We assume that it is a root node. Some target must be provided
+            Matches = new Fragments<DimTree>();
+            Matches.Name = "Matches";
+            RecommendedFragment<DimTree> targetFragment = new RecommendedFragment<DimTree>(target, 1.0);
+            Matches.Alternatives.Add(targetFragment);
+            Matches.SelectedFragment = targetFragment;
+            Matches.Readonly = true; // The root node should never be shown or edited in any case
+        }
+    }
+
+    public class DimTree : IEnumerable
+    {
+        /// <summary>
+        /// It is one element of the tree. It is null for the bottom (root) and its direct children which do not have lesser dimensions.
+        /// </summary>
+        private Dim _dim;
+        public Dim Dim { get { return _dim; } set { _set = (value != null ? value.GreaterSet : null); _dim = value; } }
+
+        /// <summary>
+        /// It is a set corresponding to the node. If dimension is present then it is equal to the greater set.  
+        /// It is null only for the bottom (root). It can be set only if dimension is null (otherwise set the dimension). 
+        /// </summary>
+        private Set _set;
+        public Set Set { 
+            get { return _set; } 
+            set 
+            { 
+                if (value == _set) return;
+                if (_dim != null) return;
+                _set = value; 
+            } 
+        }
+
+        //
+        // Tree methods
+        //
+        public bool IsRoot { get { return Parent == null; } }
+        public bool IsLeaf { get { return Children == null || Children.Count == 0; } }
+        public DimTree Parent { get; set; }
+        public List<DimTree> Children { get; set; }
+        public void AddChild(DimTree child)
+        {
+            Debug.Assert(!Children.Contains(child), "Wrong use: this child node already exists in the tree.");
+            Debug.Assert((child.Dim == null && Set == null) || child.Dim.LesserSet == Set, "Wrong use: a new dimension must start from this set.");
+            Children.Add(child);
+            child.Parent = this;
+        }
+        public bool RemoveChild(DimTree child)
+        {
+            return Children.Remove(child);
+        }
+
+        public DimTree Root // Find the tree root
+        {
+            get
             {
-                // Compare tree.Dim vs dim and include in candiates if relevance is higher than threshold 
+                DimTree node = this;
+                while (node.Parent != null) node = node.Parent;
+                return node;
             }
-
-            // Start recursive search by find the best option. Sett a candidate and then evaluating the result
-            foreach (DimTree candidate in candidates)
+        }
+        public DimTree SetRoot
+        {
+            get
             {
-                tree.MatchingNode = candidate;
+                DimTree node = this;
+                while (node.Parent != null && node.Parent.Set != null) node = node.Parent;
+                if(node == this || node.Set == null) return null;
+                return  node;
             }
+        }
+        public int DimRank
+        {
+            get
+            {
+                int rank = 0;
+                for (DimTree node = this; node.Dim != null && node.Parent != null; node = node.Parent) rank++;
+                return rank;
+            }
+        }
+        public DimPath DimPath
+        {
+            get
+            {
+                if (Dim == null) return null;
+                DimPath path = new DimPath();
+                for (DimTree node = this; node.Dim != null && node.Parent != null; node = node.Parent) path.AddSegment(node.Dim);
+                return path;
+            }
+        }
+        public int MaxLeafRank
+        {
+            get
+            {
+                var leaves = Flatten().Where(s => s.IsLeaf);
+                int maxRank = 0;
+                foreach (DimTree n in leaves)
+                {
+                    int r = 0;
+                    for (DimTree t = n; t != this; t = t.Parent) r++;
+                    maxRank = r > maxRank ? r : maxRank;
+                }
+                return maxRank;
+            }
+        }
 
+        public IEnumerable<DimTree> Flatten()
+        {
+            return new[] { this }.Union(Children.SelectMany(x => x.Flatten()));
+        }
 
+        //
+        // IEnumerable for accessing children (is needed for the root to serve as ItemsSource)
+        //
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return Children.GetEnumerator();
+        }
+
+        /// <summary>
+        /// Create and add child nodes for all greater dimensions of this set. 
+        /// </summary>
+        public void ExpandTree(bool recursively = true)
+        {
+            if (Set == null) return; // No set - no expansion
+            if (Set.IsPrimitive) return; // No greater sets - nothing to expand
+
+            List<Set> sets = new List<Set>( new[] {Set} );
+            sets.AddRange(Set.GetAllSubsets());
+
+            foreach (Set s in sets)
+            {
+                foreach (Dim d in s.GreaterDims)
+                {
+                    // New child instances need to have the type of this instance (this instance can be an extension of this class so we do not know it)
+                    DimTree child = (DimTree)Activator.CreateInstance(this.GetType(), new Object[] {d, this});
+                    if (recursively) child.ExpandTree(recursively);
+                }
+            }
+        }
+
+        public DimTree(Dim dim, DimTree parent = null)
+        {
+            Dim = dim;
+            Children = new List<DimTree>();
+            if(parent != null) parent.AddChild(this);
+        }
+
+        public DimTree(Set set, DimTree parent = null)
+        {
+            Set = set;
+            Children = new List<DimTree>();
+            if (parent != null) parent.AddChild(this);
+        }
+
+        public DimTree() // Only for root
+        {
+            Children = new List<DimTree>();
+        }
+    }
+
+    /// <summary>
+    /// A sequence of simple dimensions (segments). 
+    /// </summary>
+    public class DimPath : Dim
+    {
+        // It should be used where we use List<Dim>
+        // It is more convenient because we can store additional methods, say, concatenate, iterate, append etc.
+        // It also can be used when using in DimTree, representing projections/de-projections and in other structures.
+
+        // TODO: Copy relevant methods from Dim (like FirstSegment, LastSegment, Rank etc.)
+
+        /// <summary>
+        /// Check the validity of this formal structure. Used for testing. 
+        /// </summary>
+        /// <returns></returns>
+        public string IsValid()
+        {
+            if (Path == null || Path.Count == 0) return null;
+            return null;
+        }
+
+        public DimPath()
+            : base(null)
+        {
+        }
+
+        public DimPath(string name)
+            : base(name)
+        {
         }
 
     }
 
+    /// <summary>
+    /// Generic tree. Copied from: http://stackoverflow.com/questions/66893/tree-data-structure-in-c-sharp
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    public class TreeNode<T>
+    {
+        private readonly T _value;
+        private readonly List<TreeNode<T>> _children = new List<TreeNode<T>>();
+
+        public TreeNode(T value)
+        {
+            _value = value;
+        }
+
+        public TreeNode<T> this[int i]
+        {
+            get { return _children[i]; }
+        }
+
+        public TreeNode<T> Parent { get; private set; }
+
+        public T Value { get { return _value; } }
+
+        public System.Collections.ObjectModel.ReadOnlyCollection<TreeNode<T>> Children
+        {
+            get { return _children.AsReadOnly(); }
+        }
+
+        public TreeNode<T> AddChild(T value)
+        {
+            var node = new TreeNode<T>(value) { Parent = this };
+            _children.Add(node);
+            return node;
+        }
+
+        public TreeNode<T>[] AddChildren(params T[] values)
+        {
+            return values.Select(AddChild).ToArray();
+        }
+
+        public bool RemoveChild(TreeNode<T> node)
+        {
+            return _children.Remove(node);
+        }
+
+        public void Traverse(Action<T> action)
+        {
+            action(Value);
+            foreach (var child in _children)
+                child.Traverse(action);
+        }
+
+        public IEnumerable<T> Flatten()
+        {
+            return new[] { Value }.Union(_children.SelectMany(x => x.Flatten()));
+        }
+    }
 
 }
