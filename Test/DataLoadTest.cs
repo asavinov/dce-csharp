@@ -415,12 +415,12 @@ namespace Test
 
             recoms.Recommend();
 
-            recoms.SelectedGroupingPath = recoms.GroupingPaths[0];
-            recoms.SelectedFactSet = recoms.FactSets[0];
-            recoms.SelectedMeasurePath = recoms.MeasurePaths[0];
+            recoms.GroupingPaths.SelectedFragment = recoms.GroupingPaths.Alternatives[0];
+            recoms.FactSets.SelectedFragment = recoms.FactSets.Alternatives[0];
+            recoms.MeasurePaths.SelectedFragment = recoms.MeasurePaths.Alternatives[0];
 
-            recoms.SelectedMeasureDimension = recoms.MeasureDimensions.First(f => ((Dim)f.Fragment).Name == "List Price");
-            recoms.SelectedAggregationFunction = recoms.AggregationFunctions.First(f => f.Fragment == "SUM");
+            recoms.MeasureDimensions.SelectedFragment = recoms.MeasureDimensions.Alternatives.First(f => ((Dim)f.Fragment).Name == "List Price");
+            recoms.AggregationFunctions.SelectedFragment = recoms.AggregationFunctions.Alternatives.First(f => f.Fragment == "SUM");
 
             Expression aggreExpr = recoms.GetExpression();
             Dim derived1 = doubleSet.CreateDefaultLesserDimension("Average List Price", cust);

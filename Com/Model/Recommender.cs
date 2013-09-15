@@ -19,46 +19,24 @@ namespace Com.Model
         protected string LastUpdated = null;
 
         // All possible recommendations as a list of complete recommendation objects. 
-        public List<RecommendedFragment> Recommendations = new List<RecommendedFragment>();
+        public Fragments<object> Recommendations { get; set; }
 
         // Incremental part of recommendastion
         // Assume that the specified fragment has changed its selection, update all other fragment selections as well as relevances and other parameters.
         protected virtual void UpdateFragmentSelections(string selected) { }
-
-        protected List<RecommendedFragment> GetFragmentList(string name)
-        {
-            System.Reflection.PropertyInfo pi = this.GetType().GetProperty(name);
-            Debug.Assert(pi != null, "Wrong use: Property does not exist");
-
-            object obj = pi.GetValue(this, null);
-            Debug.Assert(obj is List<RecommendedFragment>, "Wrong use: Property has wrong type");
-
-            return (List<RecommendedFragment>)obj;
-        }
-
-        protected void SetSelectedFragment(string name, RecommendedFragment value)
-        {
-            List<RecommendedFragment> list = GetFragmentList(name);
-
-            int sel = -1;
-            if (value != null)
-            {
-                sel = list.IndexOf(value); // Find element to be selected
-            }
-
-            list.ForEach(f => f.IsSelected = false); // Reset the current selection (no selected element)
-
-            if (sel >= 0) // If can select
-                list[sel].IsSelected = true;
-
-            UpdateFragmentSelections(name); // Propagate new selection
-        }
 
         public virtual Expression GetExpression() { return null; }
 
         public virtual string IsValidExpression() { return null; }
 
         public virtual void Recommend() { }
+
+        public virtual void UpdateSelection(string selected) { }
+
+        public Recommender()
+        {
+            Recommendations = new Fragments<object>();
+        }
     }
 
     /// <summary>
@@ -70,51 +48,31 @@ namespace Com.Model
         public Set TargetSet { get; set; }
         public Set FactSet { get; set; }
 
-        public List<RecommendedFragment> GroupingPaths { get; set; } // of type Expression or List (path)
-        public List<RecommendedFragment> FactSets { get; set; } // of type Set
-        public List<RecommendedFragment> MeasurePaths { get; set; } // of type Expression or List (path)
+        public Fragments<List<Dim>> GroupingPaths { get; set; }
+        public Fragments<Set> FactSets { get; set; }
+        public Fragments<List<Dim>> MeasurePaths { get; set; }
 
-        public RecommendedFragment SelectedGroupingPath 
-        {
-            get { return GroupingPaths.FirstOrDefault(f => f.IsSelected); }
-            set { SetSelectedFragment("GroupingPaths", value);  }
-        }
-
-        public RecommendedFragment SelectedFactSet
-        {
-            get { return FactSets.FirstOrDefault(f => f.IsSelected); }
-            set { SetSelectedFragment("FactSets", value); }
-        }
-
-        public RecommendedFragment SelectedMeasurePath
-        {
-            get { return MeasurePaths.FirstOrDefault(f => f.IsSelected); }
-            set { SetSelectedFragment("MeasurePaths", value); }
-        }
-
-        protected override void UpdateFragmentSelections(string selected) 
+        public override void UpdateSelection(string selected) 
         {
             if (IsUpdating == true) return; // Prevent calling this method recursively
 
             IsUpdating = true;
             LastUpdated = selected;
 
-            List<RecommendedFragment> selectedFrag = GetFragmentList(selected);
-
             // Reset all
-            GroupingPaths.ForEach(f => f.IsRelevant = true);
-            FactSets.ForEach(f => f.IsRelevant = true);
-            MeasurePaths.ForEach(f => f.IsRelevant = true);
+            GroupingPaths.Alternatives.ForEach(f => f.IsRelevant = true);
+            FactSets.Alternatives.ForEach(f => f.IsRelevant = true);
+            MeasurePaths.Alternatives.ForEach(f => f.IsRelevant = true);
 
             switch (selected)
             {
                 case "GroupingPaths":
                     {
-                        if (SelectedGroupingPath == null) break;
+                        if (!GroupingPaths.IsSelected) break;
 
                         // Update FactSets
-                        Set factSet = ((List<Dim>)SelectedGroupingPath.Fragment)[0].LesserSet; // Find the fact set for this path
-                        foreach (RecommendedFragment f in FactSets)
+                        Set factSet = GroupingPaths.SelectedObject[0].LesserSet; // Find the fact set for this path
+                        foreach (var f in FactSets.Alternatives)
                         {
                             f.IsRelevant = f.Fragment == factSet ? true : false; // Only one fact set is enabled
                             f.IsSelected = f.Fragment == factSet ? true : false; // And hence it is also selected
@@ -122,53 +80,53 @@ namespace Com.Model
 
                         // Update MeasurePaths
                         int relevantCount = 0;
-                        foreach (RecommendedFragment f in MeasurePaths)
+                        foreach (var f in MeasurePaths.Alternatives)
                         {
                             f.IsRelevant = ((List<Dim>)f.Fragment)[0].LesserSet == factSet ? true : false;
                             if (f.IsRelevant) relevantCount++;
                         }
-                        if (SelectedMeasurePath != null && !SelectedMeasurePath.IsRelevant) SelectedMeasurePath = null;
-                        if (relevantCount == 1) MeasurePaths.ForEach(f => f.IsSelected = (f.IsRelevant ? true : false));
+                        if (MeasurePaths.SelectedFragment != null && !MeasurePaths.SelectedFragment.IsRelevant) MeasurePaths.SelectedFragment = null;
+                        if (relevantCount == 1) MeasurePaths.Alternatives.ForEach(f => f.IsSelected = (f.IsRelevant ? true : false));
 
                         break;
                     }
 
                 case "FactSets":
                     {
-                        if (SelectedFactSet == null) break;
+                        if (!FactSets.IsSelected) break;
 
-                        Set factSet = (Set)SelectedFactSet.Fragment;
+                        Set factSet = FactSets.SelectedObject;
 
                         // Update GroupingPaths
                         int relevantCount = 0;
-                        foreach (RecommendedFragment f in GroupingPaths)
+                        foreach (var f in GroupingPaths.Alternatives)
                         {
                             f.IsRelevant = ((List<Dim>)f.Fragment)[0].LesserSet == factSet ? true : false;
                             if (f.IsRelevant) relevantCount++;
                         }
-                        if (SelectedGroupingPath != null && !SelectedGroupingPath.IsRelevant) SelectedGroupingPath = null;
-                        if (relevantCount == 1) GroupingPaths.ForEach(f => f.IsSelected = (f.IsRelevant ? true : false));
+                        if (GroupingPaths.SelectedFragment != null && !GroupingPaths.SelectedFragment.IsRelevant) GroupingPaths.SelectedFragment = null;
+                        if (relevantCount == 1) GroupingPaths.Alternatives.ForEach(f => f.IsSelected = (f.IsRelevant ? true : false));
 
                         // Update MeasurePaths
                         relevantCount = 0;
-                        foreach (RecommendedFragment f in MeasurePaths)
+                        foreach (var f in MeasurePaths.Alternatives)
                         {
                             f.IsRelevant = ((List<Dim>)f.Fragment)[0].LesserSet == factSet ? true : false;
                             if (f.IsRelevant) relevantCount++;
                         }
-                        if (SelectedMeasurePath != null && !SelectedMeasurePath.IsRelevant) SelectedMeasurePath = null;
-                        if (relevantCount == 1) MeasurePaths.ForEach(f => f.IsSelected = (f.IsRelevant ? true : false));
+                        if (MeasurePaths.SelectedFragment != null && !MeasurePaths.SelectedFragment.IsRelevant) MeasurePaths.SelectedFragment = null;
+                        if (relevantCount == 1) MeasurePaths.Alternatives.ForEach(f => f.IsSelected = (f.IsRelevant ? true : false));
 
                         break;
                     }
 
                 case "MeasurePaths":
                     {
-                        if (SelectedMeasurePath == null) break;
+                        if (!MeasurePaths.IsSelected) break;
 
                         // Update FactSets
-                        Set factSet = ((List<Dim>)SelectedMeasurePath.Fragment)[0].LesserSet; // Find the fact set for this path
-                        foreach (RecommendedFragment f in FactSets)
+                        Set factSet = MeasurePaths.SelectedObject[0].LesserSet; // Find the fact set for this path
+                        foreach (var f in FactSets.Alternatives)
                         {
                             f.IsRelevant = f.Fragment == factSet ? true : false; // Only one fact set is enabled
                             f.IsSelected = f.Fragment == factSet ? true : false; // And hence it is also selected
@@ -176,13 +134,13 @@ namespace Com.Model
 
                         // Update GroupingPaths
                         int relevantCount = 0;
-                        foreach (RecommendedFragment f in GroupingPaths)
+                        foreach (var f in GroupingPaths.Alternatives)
                         {
                             f.IsRelevant = ((List<Dim>)f.Fragment)[0].LesserSet == factSet ? true : false;
                             if (f.IsRelevant) relevantCount++;
                         }
-                        if (SelectedGroupingPath != null && !SelectedGroupingPath.IsRelevant) SelectedGroupingPath = null;
-                        if (relevantCount == 1) GroupingPaths.ForEach(f => f.IsSelected = (f.IsRelevant ? true : false));
+                        if (GroupingPaths.SelectedFragment != null && !GroupingPaths.SelectedFragment.IsRelevant) GroupingPaths.SelectedFragment = null;
+                        if (relevantCount == 1) GroupingPaths.Alternatives.ForEach(f => f.IsSelected = (f.IsRelevant ? true : false));
 
                         break;
                     }
@@ -194,8 +152,8 @@ namespace Com.Model
 
         public override Expression GetExpression()
         {
-            var deprExpr = Com.Model.Expression.CreateDeprojectExpression((List<Dim>)SelectedGroupingPath.Fragment); // Grouping (deproject) expression: (Customers) <- (Orders) <- (Order Details)
-            var projExpr = Com.Model.Expression.CreateProjectExpression((List<Dim>)SelectedMeasurePath.Fragment, Operation.DOT); // Measure (project) expression: (Order Details) -> (Product) -> List Price
+            var deprExpr = Com.Model.Expression.CreateDeprojectExpression(GroupingPaths.SelectedObject); // Grouping (deproject) expression: (Customers) <- (Orders) <- (Order Details)
+            var projExpr = Com.Model.Expression.CreateProjectExpression(MeasurePaths.SelectedObject, Operation.DOT); // Measure (project) expression: (Order Details) -> (Product) -> List Price
 
             // TODO: here we need a method of Expression class to create a path expression (or relationships expression)
 
@@ -204,11 +162,11 @@ namespace Com.Model
 
         public override string IsValidExpression()
         {
-            if (SelectedGroupingPath == null) return "GroupingPaths";
+            if (GroupingPaths.SelectedObject == null) return "GroupingPaths";
 
-            if (FactSet == null && SelectedFactSet == null) return "FactSets";
+            if (FactSet == null && FactSets.SelectedObject == null) return "FactSets";
 
-            if (SelectedMeasurePath == null) return "MeasurePaths";
+            if (MeasurePaths.SelectedObject == null) return "MeasurePaths";
 
             return null;
         }
@@ -241,25 +199,24 @@ namespace Com.Model
             //
             // 2. Given a lesser set, find all relationship paths as pairs of <grouping path, measure path
             //
-            RecommendedFragment frag;
             foreach (Set set in lesserSets)
             {
                 var gPaths = new PathEnumerator(new List<Set> { set }, new List<Set> { this.SourceSet }, false, DimensionType.IDENTITY_ENTITY).ToList();
                 var mPaths = new PathEnumerator(new List<Set> { set }, new List<Set> { this.TargetSet }, false, DimensionType.IDENTITY_ENTITY).ToList();
                 if (gPaths.Count == 0 || mPaths.Count == 0) continue;
 
-                frag = new RecommendedFragment(set, 1.0);
-                this.FactSets.Add(frag);
+                RecommendedFragment<Set> frag = new RecommendedFragment<Set>(set, 1.0);
+                this.FactSets.Alternatives.Add(frag);
 
-                gPaths.ForEach(gp => this.GroupingPaths.Add(new RecommendedFragment(gp, 1.0)));
-                mPaths.ForEach(mp => this.MeasurePaths.Add(new RecommendedFragment(mp, 1.0)));
+                gPaths.ForEach(gp => this.GroupingPaths.Alternatives.Add(new RecommendedFragment<List<Dim>>(gp, 1.0)));
+                mPaths.ForEach(mp => this.MeasurePaths.Alternatives.Add(new RecommendedFragment<List<Dim>>(mp, 1.0)));
 
                 // For each pair of down-up paths build a relationship path
                 foreach (var gp in gPaths)
                 {
                     foreach (var mp in mPaths)
                     {
-                        this.Recommendations.Add(new RecommendedFragment(null, 1.0)); // TODO: build complete path or an object (tuple of indexes) representing a complete path
+                        this.Recommendations.Alternatives.Add(new RecommendedFragment<object>(null, 1.0)); // TODO: build complete path or an object (tuple of indexes) representing a complete path
                     }
                 }
 
@@ -269,40 +226,28 @@ namespace Com.Model
         public RecommendedRelationships()
             : base()
         {
-            GroupingPaths = new List<RecommendedFragment>(); // of type Expression or List (path)
-            FactSets = new List<RecommendedFragment>(); // of type Set
-            MeasurePaths = new List<RecommendedFragment>(); // of type Expression or List (path)
+            GroupingPaths = new Fragments<List<Dim>>();
+            FactSets = new Fragments<Set>();
+            MeasurePaths = new Fragments<List<Dim>>();
         }
     }
 
     public class RecommendedAggregations : RecommendedRelationships
     {
-        public List<RecommendedFragment> MeasureDimensions { get; set; }
-        public List<RecommendedFragment> AggregationFunctions { get; set; }
-
-        public RecommendedFragment SelectedMeasureDimension
-        {
-            get { return MeasureDimensions.FirstOrDefault(f => f.IsSelected); }
-            set { SetSelectedFragment("MeasureDimensions", value); }
-        }
-
-        public RecommendedFragment SelectedAggregationFunction
-        {
-            get { return AggregationFunctions.FirstOrDefault(f => f.IsSelected); }
-            set { SetSelectedFragment("AggregationFunctions", value); }
-        }
+        public Fragments<Dim> MeasureDimensions { get; set; }
+        public Fragments<string> AggregationFunctions { get; set; }
 
         public override Expression GetExpression()
         {
-            var deprExpr = Com.Model.Expression.CreateDeprojectExpression((List<Dim>)SelectedGroupingPath.Fragment); 
+            var deprExpr = Com.Model.Expression.CreateDeprojectExpression(GroupingPaths.SelectedObject);
 
-            var measureDim = (Dim)SelectedMeasureDimension.Fragment;
-            var measurePath = (List<Dim>)SelectedMeasurePath.Fragment;
+            var measureDim = MeasureDimensions.SelectedObject;
+            var measurePath = MeasurePaths.SelectedObject;
             measurePath.Add(measureDim);
 
             var projExpr = Com.Model.Expression.CreateProjectExpression(measurePath, Operation.DOT);
 
-            var aggregExpr = Com.Model.Expression.CreateAggregateExpression((string)SelectedAggregationFunction.Fragment, deprExpr, projExpr);
+            var aggregExpr = Com.Model.Expression.CreateAggregateExpression(AggregationFunctions.SelectedObject, deprExpr, projExpr);
 
             return aggregExpr;
         }
@@ -311,9 +256,9 @@ namespace Com.Model
         {
             if (base.IsValidExpression() != null) return base.IsValidExpression();
 
-            if (SelectedMeasureDimension == null) return "MeasureDimensions";
+            if (MeasureDimensions.SelectedObject == null) return "MeasureDimensions";
 
-            if (SelectedAggregationFunction == null) return "AggregationFunctions";
+            if (AggregationFunctions.SelectedObject == null) return "AggregationFunctions";
 
             return null;
         }
@@ -323,103 +268,25 @@ namespace Com.Model
             base.Recommend();
 
             // Add more for aggregations
-            this.MeasureDimensions = new List<RecommendedFragment>();
+            MeasureDimensions.Alternatives.Clear();
             foreach (Dim dim in this.TargetSet.GreaterDims)
             {
-                var frag = new RecommendedFragment(dim, 1.0);
-                this.MeasureDimensions.Add(frag);
+                var frag = new RecommendedFragment<Dim>(dim, 1.0);
+                MeasureDimensions.Alternatives.Add(frag);
             }
 
-            this.AggregationFunctions = new List<RecommendedFragment>();
-            this.AggregationFunctions.Add(new RecommendedFragment("SUM", 1.0));
-            this.AggregationFunctions.Add(new RecommendedFragment("AVG", 1.0));
+            AggregationFunctions.Alternatives.Clear();
+            AggregationFunctions.Alternatives.Add(new RecommendedFragment<string>("SUM", 1.0));
+            AggregationFunctions.Alternatives.Add(new RecommendedFragment<string>("AVG", 1.0));
         }
 
         public RecommendedAggregations()
             : base()
         {
-            MeasureDimensions = new List<RecommendedFragment>();
-            AggregationFunctions = new List<RecommendedFragment>();
+            MeasureDimensions = new Fragments<Dim>();
+            AggregationFunctions = new Fragments<string>();
         }
     }
-
-    /// <summary>
-    /// It is one of many possible fragments within a more complex recommendation for a query, expression or pattern. 
-    /// It represents one option among many alteranatives to be chosen by the user, that is, it is a coordinate along one dimension. 
-    /// It is independent of the type of recommendation and this type can be stored in a field as enumeration. 
-    /// If it is necessary to develop a more specific fragment the this class has to be extended by a subclass. 
-    /// </summary>
-    public class RecommendedFragment
-    {
-        // Constant parameters
-        public int FragmentType { get; set; } // Fragment is a object so we need its type: enumerator, typeof(Fragment), or subclassing for each type. 
-        public object Fragment { get; set; } // It is the fragment itself. It can be an expression, set, dimension, function etc.
-        public double Relevance { get; set; } // Unconditional (initial) weight between 0 and 1. Generated by the suggestion procedure. 
-        public int Index { get; set; } // It is the order/rank according to the relevance. 0 index corresponds to highest (best) relevance. 
-
-        private string _displayName;
-        public string DisplayName // Shown in List view. Can be generated from expression or the object, or set explicitly
-        {
-            get
-            {
-                if (_displayName != null) return _displayName;
-
-                if (Fragment is string) return (string)Fragment;
-                else if (Fragment is Set) return ((Set)Fragment).Name;
-                else if (Fragment is Dim) return ((Dim)Fragment).Name;
-                else if (Fragment is List<Dim>)
-                {
-                    string name = "";
-                    ((List<Dim>)Fragment).ForEach(seg => name += "." + seg.Name);
-                    return name;
-                }
-                else return "<UNKNOWN>";
-            }
-            set { _displayName = value; }
-        }
-
-        public List<RecommendedFragment> children { get; set; }
-
-        // UI (variable)
-        public bool IsSelected { get; set; }
-        public bool IsRelevant { get; set; } // Can be selected under the current constraints
-        public double CurrentRelevance { get; set; } // Conditional relevance/weight depending on the curerent selection and other factors. 0 means that the component is disabled. 
-
-        // We probably need support for soring items according their current weight, that is, getting first, second etc. Maybe some enumerator or support via ListView/WPF (filter/sorting)
-        public int CurrentIndex { get; set; } // What entry number corresponds to this position. 0 for highest relevance. 
-
-        // We might also provide support for coarse-grained categorization like HIGH, MID, LOW, DISABLED (so IsDisabled is a special case). The categories are defined by static parameters or dynamically calculated (equal intervals etc.)
-
-        // We might also provide support for visualization like colors and icons. 
-
-        public RecommendedFragment(object component, double relevance)
-        {
-            Fragment = component;
-            Relevance = relevance;
-
-            IsSelected = false;
-            IsRelevant = true;
-            CurrentRelevance = Relevance;
-        }
-
-    }
-
-
-
-
-
-
-
-
-/// *****************************************************************************
-
-
-
-
-
-
-
-
 
     /// <summary>
     /// It is one of many possible fragments within a more complex recommendation for a query, expression or pattern. 

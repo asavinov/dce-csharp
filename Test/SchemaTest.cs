@@ -215,14 +215,14 @@ namespace Test
             recoms.FactSet = null; // Any
 
             recoms.Recommend();
-            Assert.AreEqual(8, recoms.Recommendations.Count());
+            Assert.AreEqual(8, recoms.Recommendations.Alternatives.Count());
 
             // Selection methods
-            Assert.AreEqual(null, recoms.SelectedGroupingPath);
-            recoms.SelectedGroupingPath = recoms.GroupingPaths[6];
-            Assert.AreEqual(recoms.GroupingPaths[6], recoms.SelectedGroupingPath);
-            recoms.SelectedGroupingPath = null;
-            Assert.AreEqual(null, recoms.SelectedGroupingPath);
+            Assert.AreEqual(null, recoms.GroupingPaths.SelectedFragment);
+            recoms.GroupingPaths.SelectedFragment = recoms.GroupingPaths.Alternatives[6];
+            Assert.AreEqual(recoms.GroupingPaths.Alternatives[6], recoms.GroupingPaths.SelectedFragment);
+            recoms.GroupingPaths.SelectedFragment = null;
+            Assert.AreEqual(null, recoms.GroupingPaths.SelectedFragment);
 
             // Grouping (deproject) expression: (Customers) <- (Orders) <- (Order Details)
             // Measure (project) expression: (Order Details) -> (Product) -> List Price
