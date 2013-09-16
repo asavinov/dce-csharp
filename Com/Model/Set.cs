@@ -209,6 +209,10 @@ namespace Com.Model
 
             return result;
         }
+        public List<Set> GetLeastSubsets()
+        {
+            return GetAllSubsets().Where(s => s.LesserDims.Count == 0 && !s.IsPrimitive).ToList();
+        }
 
         public Set FindSubset(string name)
         {
@@ -235,7 +239,7 @@ namespace Com.Model
         {
             get
             {
-                return GreaterDims.Count == 0;
+                return IsPrimitive || GreaterDims.Count == 0; // All primitive sets are greatest by definition
             }
         }
 

@@ -252,15 +252,15 @@ namespace Test
             targetTree.AddChild(targetChild); // Add second set as a possible target
             targetChild.ExpandTree(); 
 
-            // Create a MatchDimTree which will be used for matching
+            // Create a MatchTree which will be used for matching
             Set odets = dbRoot.FindSubset("Order Details");
             Set cust = dbRoot.FindSubset("Customers");
 
-            MatchDimTree sourceTree = new MatchDimTree(targetTree); // Root
-            MatchDimTree sourceChild = new MatchDimTree(odets);
+            MatchTree sourceTree = new MatchTree(targetTree); // Root
+            MatchTree sourceChild = new MatchTree(odets);
             sourceChild.ExpandTree(); // Build complete primitive tree (up to the primitive sets)
             sourceTree.AddChild(sourceChild);
-            sourceChild = new MatchDimTree(cust);
+            sourceChild = new MatchTree(cust);
             sourceTree.AddChild(sourceChild);
             sourceChild.ExpandTree(); // Build complete primitive tree (up to the primitive sets)
 
@@ -268,15 +268,15 @@ namespace Test
             sourceTree.Recommend(); // For this and all child nodes
 
             // Check that selections (matchings) and the updates of recommendations (selection propagation) work correctly
-            sourceChild = (MatchDimTree)sourceTree.Children[1]; // Customers
+            sourceChild = (MatchTree)sourceTree.Children[1]; // Customers
             Assert.AreEqual(7, sourceChild.Matches.Alternatives.Count);
-            Assert.AreEqual(91, ((MatchDimTree)sourceChild.Children[0]).Matches.Alternatives.Count); // All attributes of all possible target sets
+            Assert.AreEqual(91, ((MatchTree)sourceChild.Children[0]).Matches.Alternatives.Count); // All attributes of all possible target sets
 
             sourceChild.Matches.SelectedObject = targetTree.Children[1]; // Select Employees
             Assert.AreEqual(targetTree.Children[1], sourceChild.Matches.SelectedObject);
 
             sourceChild.UpdateSelection();
-            Assert.AreEqual(18, ((MatchDimTree)sourceChild.Children[0]).Matches.Alternatives.Count); // Attributes of the target Employees
+            Assert.AreEqual(18, ((MatchTree)sourceChild.Children[0]).Matches.Alternatives.Count); // Attributes of the target Employees
         }
 
     }

@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -323,7 +326,7 @@ namespace Com.Model
                 }
                 else if (typeof(T) == typeof(DimTree))
                 {
-                    return ((DimTree)(object)Fragment).Set.Name;
+                    return ((DimTree)(object)Fragment).Dim.LesserSet.Name + ":" + ((DimTree)(object)Fragment).Dim.Name + ":" + ((DimTree)(object)Fragment).Set.Name;
                 }
                 else return "<UNKNOWN>";
             }
@@ -408,7 +411,7 @@ namespace Com.Model
     /// <summary>
     /// It it represents one dimension in a dimension tree with associated alternative mappings. 
     /// </summary>
-    public class MatchDimTree : DimTree
+    public class MatchTree : DimTree
     {
         public Fragments<DimTree> Matches { get; set; } // of type DimTree (alternative targets as nodes in a dimension tree)
 
@@ -416,13 +419,13 @@ namespace Com.Model
         // Tree methods
         //
 
-        public MatchDimTree ParentMatch // First parent with non-null match.
+        public MatchTree ParentMatch // First parent with non-null match.
         {
             get
             {
                 if (IsRoot) return null;
-                MatchDimTree node = (MatchDimTree)Parent;
-                for (; !node.IsRoot && !node.Matches.IsSelected; node = (MatchDimTree)node.Parent) ;
+                MatchTree node = (MatchTree)Parent;
+                for (; !node.IsRoot && !node.Matches.IsSelected; node = (MatchTree)node.Parent) ;
                 return node;
             }
         }
@@ -432,7 +435,7 @@ namespace Com.Model
             {
                 if (IsRoot) return 0;
                 int rank = 1;
-                for (MatchDimTree node = (MatchDimTree)Parent; !node.IsRoot && !node.Matches.IsSelected; node = (MatchDimTree)node.Parent) { rank++; }
+                for (MatchTree node = (MatchTree)Parent; !node.IsRoot && !node.Matches.IsSelected; node = (MatchTree)node.Parent) { rank++; }
                 return rank;
             }
         }
@@ -443,7 +446,7 @@ namespace Com.Model
                 if (IsRoot) return null;
                 DimPath path = new DimPath();
                 path.AddSegment(this.Dim);
-                for (MatchDimTree node = (MatchDimTree)Parent; !node.IsRoot && !node.Matches.IsSelected; node = (MatchDimTree)node.Parent) path.AddSegment(node.Dim);
+                for (MatchTree node = (MatchTree)Parent; !node.IsRoot && !node.Matches.IsSelected; node = (MatchTree)node.Parent) path.AddSegment(node.Dim);
                 return path;
             }
         }
@@ -481,7 +484,7 @@ namespace Com.Model
 
             if (IsRoot) // Root has to be mapped to the root of the target tree and it is a fixed parameter which is set at construction time
             {
-                Children.ForEach(c => ((MatchDimTree)c).Recommend());
+                foreach (DimTree c in Children) ((MatchTree)c).Recommend();
                 return;
             }
 
@@ -526,7 +529,7 @@ namespace Com.Model
             //
             // Recommend alternatives for the children recursively
             //
-            Children.ForEach(c => ((MatchDimTree)c).Recommend());
+            foreach (DimTree c in Children) ((MatchTree)c).Recommend();
         }
 
         /// <summary>
@@ -535,7 +538,7 @@ namespace Com.Model
         public void UpdateSelection()
         {
             // Generate new alternatives for all our children
-            Children.ForEach(c => ((MatchDimTree)c).Recommend());
+            foreach (DimTree c in Children) ((MatchTree)c).Recommend();
 
             // TODO: theoretically, we need to adjust relevance of alternative for our siblings
         }
@@ -574,19 +577,19 @@ namespace Com.Model
             return expr;
         }
 
-        public MatchDimTree(Dim dim, DimTree parent = null) 
+        public MatchTree(Dim dim, DimTree parent = null) 
             : base(dim, parent)
         {
             Matches = new Fragments<DimTree>();
         }
 
-        public MatchDimTree(Set set, DimTree parent = null)
+        public MatchTree(Set set, DimTree parent = null)
             : base(set, parent)
         {
             Matches = new Fragments<DimTree>();
         }
 
-        public MatchDimTree(DimTree target)
+        public MatchTree(DimTree target)
             : base()
         {
             // We assume that it is a root node. Some target must be provided
@@ -599,7 +602,7 @@ namespace Com.Model
         }
     }
 
-    public class DimTree : IEnumerable
+    public class DimTree : IEnumerable<DimTree>, INotifyCollectionChanged
     {
         /// <summary>
         /// It is one element of the tree. It is null for the bottom (root) and its direct children which do not have lesser dimensions.
@@ -632,13 +635,27 @@ namespace Com.Model
         public void AddChild(DimTree child)
         {
             Debug.Assert(!Children.Contains(child), "Wrong use: this child node already exists in the tree.");
-            Debug.Assert((child.Dim == null && Set == null) || child.Dim.LesserSet == Set, "Wrong use: a new dimension must start from this set.");
+            Debug.Assert(Set == null || child.Dim == null || child.Dim.LesserSet == Set, "Wrong use: a new dimension must start from this set.");
             Children.Add(child);
             child.Parent = this;
+
+            OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, child));
         }
         public bool RemoveChild(DimTree child)
         {
-            return Children.Remove(child);
+            bool ret = Children.Remove(child);
+
+            OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, child));
+
+            return ret;
+        }
+        public bool ExistsChild(Set set)
+        {
+            return Children.Exists(c => c.Set == set);
+        }
+        public bool ExistsChild(Dim dim)
+        {
+            return Children.Exists(c => c.Dim == dim);
         }
 
         public DimTree Root // Find the tree root
@@ -703,9 +720,22 @@ namespace Com.Model
         //
         // IEnumerable for accessing children (is needed for the root to serve as ItemsSource)
         //
+        IEnumerator<DimTree> IEnumerable<DimTree>.GetEnumerator()
+        {
+            return Children.GetEnumerator();
+        }
         IEnumerator IEnumerable.GetEnumerator()
         {
             return Children.GetEnumerator();
+        }
+
+        public event NotifyCollectionChangedEventHandler CollectionChanged;
+        protected virtual void OnCollectionChanged(NotifyCollectionChangedEventArgs e)
+        {
+            if (CollectionChanged != null)
+            {
+                CollectionChanged(this, e);
+            }
         }
 
         /// <summary>
@@ -713,8 +743,14 @@ namespace Com.Model
         /// </summary>
         public void ExpandTree(bool recursively = true)
         {
-            if (Set == null) return; // No set - no expansion
-            if (Set.IsPrimitive) return; // No greater sets - nothing to expand
+            if (Set == null) // We cannot expand the set but try to expand the existing children
+            {
+                if (!recursively) return;
+                Children.ForEach(c => c.ExpandTree(recursively));
+                return;
+            }
+
+            if (Set.IsGreatest) return; // No greater sets - nothing to expand
 
             List<Set> sets = new List<Set>( new[] {Set} );
             sets.AddRange(Set.GetAllSubsets());
@@ -723,6 +759,7 @@ namespace Com.Model
             {
                 foreach (Dim d in s.GreaterDims)
                 {
+                    if (ExistsChild(d)) continue;
                     // New child instances need to have the type of this instance (this instance can be an extension of this class so we do not know it)
                     DimTree child = (DimTree)Activator.CreateInstance(this.GetType(), new Object[] {d, this});
                     if (recursively) child.ExpandTree(recursively);
