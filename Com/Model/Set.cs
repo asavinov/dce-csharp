@@ -480,10 +480,10 @@ namespace Com.Model
 
         public virtual object Find(Expression expr) // Use only identity dims (for general case use Search which returns a subset of elements)
         {
+            Debug.Assert(expr.OutputSet == this, "Wrong use: expression OutputSet must be equal to the set its value is appended/found.");
+
             if (IsPrimitive)
             {
-                Debug.Assert(expr.Operation != Operation.TUPLE, "Wrong use: cannot find TUPLE in a primitive set. Need a primitive value.");
-
                 expr.Evaluate();
                 Debug.Assert(expr.Output.GetType().IsPrimitive, "Wrong use: cannot find non-primitive type in a primitive set. Need a primitive value.");
                 Debug.Assert(!expr.Output.GetType().IsArray, "Wrong use: cannot find array type in a primitive set. Need a primitive value.");
@@ -546,11 +546,10 @@ namespace Com.Model
 
         public virtual object Append(Expression expr) // Identity dims must be set (for uniqueness). Entity dims are also used when appending.
         {
+            Debug.Assert(expr.OutputSet == this, "Wrong use: expression OutputSet must be equal to the set its value is appended/found.");
+
             if (IsPrimitive)
             {
-                Debug.Assert(expr.Operation != Operation.TUPLE, "Wrong use: cannot append TUPLE to a primitive set.");
-
-                // Debug.Assert(expr.Output.GetType().IsPrimitive, "Wrong use: cannot append non-primitive type to a primitive set. ");
                 Debug.Assert(!expr.Output.GetType().IsArray, "Wrong use: cannot append array type to a primitive set. ");
                 return expr.Output; // Primitive sets are supposed to already contain all values (of correct type)
             }
@@ -644,6 +643,11 @@ namespace Com.Model
         public bool IsAutoPopulated { get; set; }
 
         /// <summary>
+        /// Definition of this set tuples in terms of import dimension tuples. This expression is used to populate this set by using data from other sets via import dimensions. 
+        /// </summary>
+        public Expression ImportExpression { get; set; }
+
+        /// <summary>
         /// Constraints on all possible instances. Only instances satisfying these constraints can exist. 
         /// </summary>
         public Expression WhereExpression { get; set; }
@@ -659,13 +663,7 @@ namespace Com.Model
         /// </summary>
         public virtual void Populate() 
         {
-            //
-            // Determine the type of generation procedure. If there are remote (import/export) dimensions then it is a remote procedure. 
-            //
-            bool LocalGeneration = true;
-
-            // It is an indirect generation where we build all possible instances and then check if it is what we need by evaluating a predicate
-            if (LocalGeneration) // Product of local sets
+            if (ImportExpression == null) // Product of local sets
             {
                 //
                 // Find local greater generation sets including the super-set. Create a tuple corresponding to these dimensions
@@ -766,10 +764,42 @@ namespace Com.Model
                 }
 
             }
-            else if (true)
+            else if (ImportDims.Count > 0)
             {
+                Debug.Assert(ImportExpression.OutputSet == this, "OutputSet of import expression must be equal to the set where it is stored.");
+                
                 // Find remote (impport/export) sets, organize the main loop and evaluate local identity dimensions. 
-                // Also we might use import/export dims for user input with manual specification of records
+                DimImport importDim = ImportDims[0];
+                Set remoteSet = importDim.GreaterSet;
+
+                if (remoteSet.Root is SetRootOledb)
+                {
+                    // Request a (flat) result set from the remote set (data table)
+                    DataTable dataTable = ((SetRootOledb)remoteSet.Root).ExportAll(remoteSet);
+
+// CHECK: is it needed                    ImportExpression.SetInput(Operation.PROJECTION, Operation.VARIABLE); // ??? CHECK: Set the necessary input expression for all functions
+
+                    // For each row, evaluate the expression and append the new element
+                    foreach (DataRow row in dataTable.Rows) // A row is <colName, primValue> collection
+                    {
+                        ImportExpression.SetOutput(Operation.VARIABLE, row); // Set the input variable 'source'
+                        ImportExpression.Evaluate(); // Evaluate the expression tree by computing primtive tuple values
+                        Append(ImportExpression); // Append an element using the tuple composed of primitive values
+                    }
+                }
+                else if (remoteSet.Root is SetRootOdata)
+                {
+                }
+                else if (remoteSet.Root == this.Root) // Direct access using offsets
+                {
+                    for (Offset offset = 0; offset < remoteSet.Length; offset++)
+                    {
+                        ImportExpression.SetOutput(Operation.VARIABLE, offset); // Assign value of 'this' variable
+                        ImportExpression.Evaluate();
+                        Append(ImportExpression);
+                    }
+                }
+
             }
             else
             {
@@ -777,6 +807,8 @@ namespace Com.Model
                 // This direct procedure is used when building subsets of primitive sets or their combinations (it is not possible to generate all possible primitive values). 
                 // The direct procedure can be also used as optimization technique for normal sets where we can directly produce the necessary instances.
                 // We could even mix these two approaches by organizing a loop but skipping some large intervals if they are known to not to satisfy our conditions. Say, if age<30 then we could directly iterate only in this interval (in the presence of indexes). 
+
+                // Also we might use import/export dims for user input with manual specification of records
             }
 
         }

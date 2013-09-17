@@ -87,14 +87,14 @@ namespace Test
             //
             // Import first set
             //
-            DimImport dimExp = new DimImport("import", wsRoot, dbRoot.FindSubset("Employees"));
-            dimExp.BuildImportExpression();
-            dimExp.ImportDimensions();
-            dimExp.LesserSet.ImportDims.Add(dimExp);
-            dimExp.GreaterSet.ExportDims.Add(dimExp);
+            DimImport dimImp = new DimImport("import", wsRoot, dbRoot.FindSubset("Employees"));
+            dimImp.BuildImportExpression();
+            dimImp.ImportDimensions();
+            dimImp.LesserSet.ImportDims.Add(dimImp);
+            dimImp.GreaterSet.ExportDims.Add(dimImp);
 
             // Import data
-            dimExp.Populate();
+            dimImp.Populate();
 
             // Assert. Check imported data
             Set emp = wsRoot.FindSubset("Employees");
@@ -107,14 +107,14 @@ namespace Test
             //
             // Import second set
             //
-            DimImport dimExp2 = new DimImport("import", wsRoot, dbRoot.FindSubset("Inventory Transactions")); // "Employee Privileges"
-            dimExp2.BuildImportExpression();
-            dimExp2.ImportDimensions();
-            dimExp2.LesserSet.ImportDims.Add(dimExp2);
-            dimExp2.GreaterSet.ExportDims.Add(dimExp2);
+            DimImport dimImp2 = new DimImport("import", wsRoot, dbRoot.FindSubset("Inventory Transactions")); // "Employee Privileges"
+            dimImp2.BuildImportExpression();
+            dimImp2.ImportDimensions();
+            dimImp2.LesserSet.ImportDims.Add(dimImp2);
+            dimImp2.GreaterSet.ExportDims.Add(dimImp2);
 
             // Import data
-            dimExp2.Populate();
+            dimImp2.Populate();
 
             // Assert. Check imported data
             Set it = wsRoot.FindSubset("Inventory Transactions");
@@ -142,14 +142,14 @@ namespace Test
             //
             SetRoot wsRoot = new SetRoot("My Mashup");
 
-            DimImport dimExp = new DimImport("import", wsRoot, dbRoot.FindSubset("Order Details"));
-            dimExp.BuildImportExpression();
-            dimExp.ImportDimensions();
-            dimExp.LesserSet.ImportDims.Add(dimExp);
-            dimExp.GreaterSet.ExportDims.Add(dimExp);
+            DimImport dimImp = new DimImport("import", wsRoot, dbRoot.FindSubset("Order Details"));
+            dimImp.BuildImportExpression();
+            dimImp.ImportDimensions();
+            dimImp.LesserSet.ImportDims.Add(dimImp);
+            dimImp.GreaterSet.ExportDims.Add(dimImp);
 
             // Import data
-            dimExp.Populate();
+            dimImp.Populate();
 
             Set odet = wsRoot.FindSubset("Order Details");
             Set orders = wsRoot.FindSubset("Orders");
@@ -283,14 +283,14 @@ namespace Test
             //
             SetRoot wsRoot = new SetRoot("My Mashup");
 
-            DimImport dimExp = new DimImport("import", wsRoot, dbRoot.FindSubset("Order Details"));
-            dimExp.BuildImportExpression();
-            dimExp.ImportDimensions();
-            dimExp.LesserSet.ImportDims.Add(dimExp);
-            dimExp.GreaterSet.ExportDims.Add(dimExp);
+            DimImport dimImp = new DimImport("import", wsRoot, dbRoot.FindSubset("Order Details"));
+            dimImp.BuildImportExpression();
+            dimImp.ImportDimensions();
+            dimImp.LesserSet.ImportDims.Add(dimImp);
+            dimImp.GreaterSet.ExportDims.Add(dimImp);
 
             // Import data
-            dimExp.Populate();
+            dimImp.Populate();
 
             //
             // Create derived dimensions
@@ -330,14 +330,14 @@ namespace Test
             //
             SetRoot wsRoot = new SetRoot("My Mashup");
 
-            DimImport dimExp = new DimImport("import", wsRoot, dbRoot.FindSubset("Order Details"));
-            dimExp.BuildImportExpression();
-            dimExp.ImportDimensions();
-            dimExp.LesserSet.ImportDims.Add(dimExp);
-            dimExp.GreaterSet.ExportDims.Add(dimExp);
+            DimImport dimImp = new DimImport("import", wsRoot, dbRoot.FindSubset("Order Details"));
+            dimImp.BuildImportExpression();
+            dimImp.ImportDimensions();
+            dimImp.LesserSet.ImportDims.Add(dimImp);
+            dimImp.GreaterSet.ExportDims.Add(dimImp);
 
             // Import data
-            dimExp.Populate();
+            dimImp.Populate();
 
             //
             // Create derived dimensions
@@ -390,14 +390,14 @@ namespace Test
             //
             SetRoot wsRoot = new SetRoot("My Mashup");
 
-            DimImport dimExp = new DimImport("import", wsRoot, dbRoot.FindSubset("Order Details"));
-            dimExp.BuildImportExpression();
-            dimExp.ImportDimensions();
-            dimExp.LesserSet.ImportDims.Add(dimExp);
-            dimExp.GreaterSet.ExportDims.Add(dimExp);
+            DimImport dimImp = new DimImport("import", wsRoot, dbRoot.FindSubset("Order Details"));
+            dimImp.BuildImportExpression();
+            dimImp.ImportDimensions();
+            dimImp.LesserSet.ImportDims.Add(dimImp);
+            dimImp.GreaterSet.ExportDims.Add(dimImp);
 
             // Import data
-            dimExp.Populate();
+            dimImp.Populate();
 
             Set cust = wsRoot.FindSubset("Customers");
             Set prod = wsRoot.FindSubset("Products");
@@ -448,14 +448,14 @@ namespace Test
             //
             SetRoot wsRoot = new SetRoot("My Mashup");
 
-            DimImport dimExp = new DimImport("import", wsRoot, dbRoot.FindSubset("Order Details"));
-            dimExp.BuildImportExpression();
-            dimExp.ImportDimensions();
-            dimExp.LesserSet.ImportDims.Add(dimExp);
-            dimExp.GreaterSet.ExportDims.Add(dimExp);
+            DimImport dimImp = new DimImport("import", wsRoot, dbRoot.FindSubset("Order Details"));
+            dimImp.BuildImportExpression();
+            dimImp.ImportDimensions();
+            dimImp.LesserSet.ImportDims.Add(dimImp);
+            dimImp.GreaterSet.ExportDims.Add(dimImp);
 
             // Import data
-            dimExp.Populate();
+            dimImp.Populate();
 
             //
             // Create derived dimensions
@@ -528,14 +528,14 @@ namespace Test
             //
             SetRoot wsRoot = new SetRoot("My Mashup");
 
-            DimImport dimExp = new DimImport("import", wsRoot, dbRoot.FindSubset("Order Details"));
-            dimExp.BuildImportExpression();
-            dimExp.ImportDimensions();
-            dimExp.LesserSet.ImportDims.Add(dimExp);
-            dimExp.GreaterSet.ExportDims.Add(dimExp);
+            DimImport dimImp = new DimImport("import", wsRoot, dbRoot.FindSubset("Order Details"));
+            dimImp.BuildImportExpression();
+            dimImp.ImportDimensions();
+            dimImp.LesserSet.ImportDims.Add(dimImp);
+            dimImp.GreaterSet.ExportDims.Add(dimImp);
 
             // Import data
-            dimExp.Populate();
+            dimImp.Populate();
 
             //
             // Create logical expression
@@ -564,6 +564,86 @@ namespace Test
             subProducts.WhereExpression = logicalExpr;
             subProducts.Populate();
             Assert.AreEqual(2, subProducts.Length);
+        }
+
+        [TestMethod]
+        public void MatchingOperationsTest()
+        {
+            // Create Oldedb root set
+            SetRootOledb dbRoot = new SetRootOledb("Northwind");
+            dbRoot.ConnectionString = Northwind;
+            dbRoot.Open();
+            dbRoot.ImportSchema();
+
+            //
+            // Load test data
+            //
+            SetRoot wsRoot = new SetRoot("My Mashup");
+
+            DimImport dimImp = new DimImport("import", wsRoot, dbRoot.FindSubset("Order Details"));
+            dimImp.BuildImportExpression();
+            dimImp.ImportDimensions();
+            dimImp.LesserSet.ImportDims.Add(dimImp);
+            dimImp.GreaterSet.ExportDims.Add(dimImp);
+
+            // Import data
+            dimImp.Populate();
+
+            Set intSet = wsRoot.GetPrimitiveSubset("Integer");
+            Set stringSet = wsRoot.GetPrimitiveSubset("String");
+
+            //
+            // Create new table Workers, define matching to Employees, create import dimension and populate it
+            //
+
+            // Create a new set
+            Set workers = new Set("Workers"); 
+            wsRoot.AddSubset(workers);
+
+            Dim d1 = intSet.CreateDefaultLesserDimension("Worder ID", workers);
+            d1.IsIdentity = true;
+            Dim d2 = stringSet.CreateDefaultLesserDimension("Worker Name", workers);
+            d2.IsIdentity = false;
+
+            workers.AddGreaterDim(d1);
+            workers.AddGreaterDim(d2);
+
+            // Define matching to Employees
+            Set emps = wsRoot.FindSubset("Employees");
+
+            DimTree targetTree = new DimTree(); // Root
+            DimTree targetChild = new DimTree(emps);
+            targetChild.ExpandTree(); // Build complete primitive tree (up to the primitive sets)
+            targetTree.AddChild(targetChild); // Add some set we want to map to
+
+            MatchTree sourceTree = new MatchTree(targetTree); // Root
+            MatchTree sourceChild = new MatchTree(workers);
+            sourceChild.ExpandTree(); // Build complete primitive tree (up to the primitive sets)
+            sourceTree.AddChild(sourceChild);
+
+            // Specify matchings for all dimensions (leaves of the tree)
+            sourceTree.Recommend();
+            sourceChild.Matches.SelectedObject = targetChild; // Workers -> Employees
+            ((MatchTree)sourceChild.Children[0]).Matches.SelectedObject = targetChild.Children[10]; // Worker ID -> Employee ID
+            ((MatchTree)sourceChild.Children[1]).Matches.SelectedObject = targetChild.Children[12]; // Worker Name -> Employee Last Name
+            
+            // Create import dimension with import expression and populate the set
+            Expression expr = sourceChild.GetExpression();
+            workers.ImportExpression = expr;
+            DimImport importDim = new DimImport("import", workers, emps);
+            workers.ImportDims.Add(importDim);
+            emps.ExportDims.Add(dimImp);
+
+            workers.Populate();
+
+            //
+            // Create new table Bestellungen, define matching to Orders (nested using new table Workers), create import dimension and populate it
+            //
+
+            //
+            // Change column type for an existing table (say, Customer ID, Employee ID, Order ID etc.)
+            //
+
         }
 
     }

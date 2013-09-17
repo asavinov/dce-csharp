@@ -52,7 +52,6 @@ namespace Com.Model
 
         public override void Populate()
         {
-            // Local population procedure without importing (without external extensional)
             if (GreaterSet.Root is SetRootOledb)
             {
                 // Request a (flat) result set from the remote set (data table)

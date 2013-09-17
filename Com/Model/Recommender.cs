@@ -445,8 +445,8 @@ namespace Com.Model
             {
                 if (IsRoot) return null;
                 DimPath path = new DimPath();
-                path.AddSegment(this.Dim);
-                for (MatchTree node = (MatchTree)Parent; !node.IsRoot && !node.Matches.IsSelected; node = (MatchTree)node.Parent) path.AddSegment(node.Dim);
+                path.AppendSegment(this.Dim);
+                for (MatchTree node = (MatchTree)Parent; !node.IsRoot && !node.Matches.IsSelected; node = (MatchTree)node.Parent) path.AppendSegment(node.Dim);
                 return path;
             }
         }
@@ -540,7 +540,7 @@ namespace Com.Model
             // Generate new alternatives for all our children
             foreach (DimTree c in Children) ((MatchTree)c).Recommend();
 
-            // TODO: theoretically, we need to adjust relevance of alternative for our siblings
+            // TODO: theoretically, we should also adjust relevance of alternatives for our siblings
         }
 
         // Compute similarity by assuming that this node has the specified match
@@ -573,7 +573,44 @@ namespace Com.Model
         /// <returns></returns>
         public Expression GetExpression()
         {
-            Expression expr = new Expression();
+            // Create a tuple structure equivalent to the match tree stucture (or the corresponding set dimension structure)
+
+            // This expression has to be built from two trees and describe transformation (conversion) of data from one set (one root) to another set (another root). 
+            // Conversion is performed by the population procedure: either set population or dimension population. 
+            // During this conversion (population) new elements can be appended to the sets of the second tree.
+
+            //
+            // Create a tuple expression object for this node of the tree only
+            //
+            Expression expr = new Expression(Dim != null ? Dim.Name : null, Operation.TUPLE, Set);
+            expr.Dimension = Dim;
+
+            DimTree target = Matches.SelectedObject;
+
+            // For a leaf, define the primitive value in terms of the matching tree (it is a DOT expression representing a primitive path in the target tree)
+            if (IsLeaf && target != null)
+            {
+                Debug.Assert(Set.IsPrimitive, "Wrong structure: Leaves of the match tree have to be primitive sets.");
+
+                // Build function expression for computing a primitive value from the matched target tree
+                DimPath targetPath = target.DimPath;
+                Expression funcExpr = Expression.CreateProjectExpression(targetPath.Path, Operation.DOT);
+                funcExpr.Input = new Expression("source", Operation.VARIABLE, targetPath.LesserSet); // Add Input of function as a variable the values of which (output) can be assigned during export
+
+                expr.Input = funcExpr; // Add function to the leaf expression
+            }
+
+            // Recursion: create a tuple expressions for all children and add them to the parent tuple
+            foreach (MatchTree c in Children)
+            {
+                if(c.Dim != null && c.Dim is DimSuper)
+                    expr.Input = c.GetExpression();
+                else
+                    expr.AddOperand(c.GetExpression());
+            }
+
+            // TODO: Remove VARIABLE/PRIMITIVE as a leaf of TUPLE and use normal TUPLE but detect that its OutputSet is primitive (alternatively, use TUPLE_PRIMITIVE)
+            // TEST !!!
             return expr;
         }
 
@@ -692,7 +729,7 @@ namespace Com.Model
             {
                 if (Dim == null) return null;
                 DimPath path = new DimPath();
-                for (DimTree node = this; node.Dim != null && node.Parent != null; node = node.Parent) path.AddSegment(node.Dim);
+                for (DimTree node = this; node.Dim != null && node.Parent != null; node = node.Parent) path.InsertSegment(node.Dim);
                 return path;
             }
         }

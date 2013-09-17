@@ -310,13 +310,24 @@ namespace Com.Model
                 }
                 case Operation.TUPLE:
 				{
-                    if (Input != null) Input.Evaluate();
-                    foreach (Expression child in Operands) // Evaluate all parameters (recursively)
-                    {
-                        child.Evaluate(); // Recursion. Child output will be set
-                    }
-                    Output = null; // Reset
                     Debug.Assert(OutputSet != null, "Wrong use: output set must be non-null when evaluating tuple expressions.");
+
+                    if (Input != null) Input.Evaluate();
+
+                    if (OutputSet.IsPrimitive) // Leaf of the tuple structure - here we need to really find a concrete value by evaluating Input
+                    {
+                        Debug.Assert(Input.OutputSet == OutputSet, "Wrong use: leaf nodes of tuple expression get their value from Input and hence Input set has to be equal to the leaf set.");
+                        Output = Input.Output;
+                    }
+                    else // It is a non-leaf tuple and its value is by definition a combination of its children
+                    {
+                        foreach (Expression child in Operands) // Evaluate all parameters (recursively)
+                        {
+                            child.Evaluate(); // Recursion. Child output will be set
+                        }
+
+                        Output = null;
+                    }
 
                     break;
                 }
@@ -591,17 +602,16 @@ namespace Com.Model
                 expr.Operation = Operation.PRIMITIVE; // Leaf of tuple structure is primitive element (which can be computed)
                 expr.Name = dim.Name;
 
+                // Build function expression for computing a primitive value
                 List<Dim> path = expr.GetPath();
                 Set sourceSet = expr.Root.OutputSet; // Or simply expr.Root.OutputSet.ImportDims[0].LesserSet
                 Dim srcPath = sourceSet.GetGreaterPath(path);
                 Debug.Assert(srcPath != null, "Import path not found. Something wrong with import.");
 
                 Expression funcExpr = new Expression(srcPath != null ? srcPath.Name : null, Operation.DOT, dim.GreaterSet);
-                // Add Input of function as a variable the values of which (output) can be assigned during export
-                funcExpr.Input = new Expression("source", Operation.VARIABLE, dim.LesserSet);
+                funcExpr.Input = new Expression("source", Operation.VARIABLE, dim.LesserSet); // Add Input of function as a variable the values of which (output) can be assigned during export
 
-                // Add function to this expression
-                expr.Input = funcExpr;
+                expr.Input = funcExpr; // Add function to this expression
             }
             else // Recursion on greater dimensions
             {
@@ -631,7 +641,6 @@ namespace Com.Model
             return expr;
         }
 
-        // TODO: Do we actually need lesserSet? If not then delete it and use the first segment of the path. 
         public static Expression CreateProjectExpression(List<Dim> greaterDims, Operation op)
         {
             Set lesserSet = greaterDims[0].LesserSet;
@@ -751,9 +760,11 @@ namespace Com.Model
         public Expression()
             : this("")
         {
+            Operands = new List<Expression>();
         }
 
-        public Expression(string name)
+        public Expression(string name) 
+            : base()
         {
             Name = name;
         }

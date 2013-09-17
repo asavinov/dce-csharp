@@ -155,16 +155,30 @@ namespace Com.Model
         /// </summary>
         public List<Dim> Path { get; set; }
 
-        public void AddSegment(Dim dim)
+        public void AppendSegment(Dim dim) // Append a new segment to the end of the path
         {
             if (Path == null)
             {
                 Path = new List<Dim>();
             }
+            Debug.Assert(Path.Count == 0 || dim.LesserSet == GreaterSet, "A new segment appended to a path must continue the previous segments");
 
             Path.Add(dim);
-            dim.LesserSet = GreaterSet; // We can add only to the end
             GreaterSet = dim.GreaterSet;
+            if (LesserSet == null) LesserSet = dim.LesserSet;
+        }
+
+        public void InsertSegment(Dim dim) // Insert a new segment at the beginning of the path
+        {
+            if (Path == null)
+            {
+                Path = new List<Dim>();
+            }
+            Debug.Assert(Path.Count == 0 || dim.GreaterSet == LesserSet, "A path must continue the first segment inserted in the beginning.");
+
+            Path.Insert(0, dim);
+            LesserSet = dim.LesserSet;
+            if (GreaterSet == null) GreaterSet = dim.GreaterSet;
         }
 
         public Dim RemoveSegment()
