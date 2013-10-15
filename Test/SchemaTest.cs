@@ -145,26 +145,19 @@ namespace Test
             //
             SetRoot wsRoot = new SetRoot("My Mashup");
 
-            // Add a new set manualy
-            Set emp = new Set("Employees");
-            wsRoot.AddSubset(emp);
-
             //
-            // Import an existing set
+            // Import a set
             //
-            DimImport dimExp = new DimImport("import", emp, dbRoot.FindSubset("Employees"));
-            dimExp.BuildImportExpression();
-            dimExp.ImportDimensions();
+            Set targetSet = Mapper.ImportSet(dbRoot.FindSubset("Employees"), wsRoot);
 
             // Assert. Check imported dimensions
+            Set emp = wsRoot.FindSubset("Employees"); // This set had to be created
             Assert.AreEqual(18, emp.GreaterDims.Count); // The existing set had to get all dimensions
 
             //
-            // Import second non-existing set
+            // Import second set which uses the first set
             //
-            DimImport dimExp2 = new DimImport("import", wsRoot, dbRoot.FindSubset("Employee Privileges"));
-            dimExp2.BuildImportExpression();
-            dimExp2.ImportDimensions();
+            targetSet = Mapper.ImportSet(dbRoot.FindSubset("Employee Privileges"), wsRoot);
 
             // Assert. Check imported dimensions
             Set ep = wsRoot.FindSubset("Employee Privileges"); // This set had to be created
@@ -181,9 +174,7 @@ namespace Test
             SetRootOledb dbRoot = new SetRootOledb("Root");
 
             dbRoot.ConnectionString = Northwind;
-
             dbRoot.Open();
-
             dbRoot.ImportSchema();
 
             // Test path enumerators
@@ -235,20 +226,18 @@ namespace Test
             SetRootOledb dbRoot = new SetRootOledb("Root");
 
             dbRoot.ConnectionString = Northwind;
-
             dbRoot.Open();
-
             dbRoot.ImportSchema();
 
             // Create a DimTree which will be used as a target
             Set orders = dbRoot.FindSubset("Orders");
             Set emps = dbRoot.FindSubset("Employees");
             
-            DimTree targetTree = new DimTree(); // Root
-            DimTree targetChild = new DimTree(orders);
+            MatchTree targetTree = new MatchTree(); // Root
+            MatchTree targetChild = new MatchTree(orders);
             targetChild.ExpandTree(); // Build complete primitive tree (up to the primitive sets)
             targetTree.AddChild(targetChild); // Add some set we want to map to
-            targetChild = new DimTree(emps);
+            targetChild = new MatchTree(emps);
             targetTree.AddChild(targetChild); // Add second set as a possible target
             targetChild.ExpandTree(); 
 
@@ -269,14 +258,14 @@ namespace Test
 
             // Check that selections (matchings) and the updates of recommendations (selection propagation) work correctly
             sourceChild = (MatchTree)sourceTree.Children[1]; // Customers
-            Assert.AreEqual(7, sourceChild.Matches.Alternatives.Count);
-            Assert.AreEqual(91, ((MatchTree)sourceChild.Children[0]).Matches.Alternatives.Count); // All attributes of all possible target sets
+            Assert.AreEqual(8, sourceChild.DimMatches.Alternatives.Count);
+            Assert.AreEqual(91, ((MatchTree)sourceChild.Children[0]).DimMatches.Alternatives.Count); // All attributes of all possible target sets
 
-            sourceChild.Matches.SelectedObject = targetTree.Children[1]; // Select Employees
-            Assert.AreEqual(targetTree.Children[1], sourceChild.Matches.SelectedObject);
+            sourceChild.DimMatches.SelectedObject = (MatchTree)targetTree.Children[1]; // Select Employees
+            Assert.AreEqual(targetTree.Children[1], sourceChild.DimMatches.SelectedObject);
 
             sourceChild.UpdateSelection();
-            Assert.AreEqual(18, ((MatchTree)sourceChild.Children[0]).Matches.Alternatives.Count); // Attributes of the target Employees
+            Assert.AreEqual(18, ((MatchTree)sourceChild.Children[0]).DimMatches.Alternatives.Count); // Attributes of the target Employees
         }
 
     }

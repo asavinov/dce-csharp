@@ -18,32 +18,52 @@ namespace Com.Model
     {
         #region Schema methods
 
-        /// <summary>
-        /// Create (clone) an expression for importing greater (input) set values into lesser (output) set values.
-        /// The created experession describes both structure and values.
-        /// </summary>
-        public virtual void BuildImportExpression()
+        public override bool IsInGreaterSet
         {
-            Debug.Assert(GreaterSet != null, "Wrong use: greater set cannot be null for import.");
-
-            SelectExpression = Expression.CreateImportExpression(GreaterSet);
-
-            SelectExpression.Name = "import";
-            SelectExpression.Dimension = this;
+            get
+            {
+                if (GreaterSet == null) return true;
+                var dimList = GreaterSet.ExportDims; // Only this line will be changed in this class extensions for other dimension types
+                return dimList.Contains(this);
+            }
+            set
+            {
+                if (GreaterSet == null) return;
+                var dimList = GreaterSet.ExportDims; // Only this line will be changed in this class extensions for other dimension types
+                if (value == true) // Include
+                {
+                    if (IsInGreaterSet) return;
+                    dimList.Add(this);
+                }
+                else // Exclude
+                {
+                    dimList.Remove(this);
+                }
+            }
         }
 
-        /// <summary>
-        /// Use the expression to create/clone output (lesser) set structure.  
-        /// A default mapping (name equality) is used to match sets by finding similar sets. If not found, a new set is created. 
-        /// </summary>
-        public virtual void ImportDimensions()
+        public override bool IsInLesserSet
         {
-            Debug.Assert(SelectExpression != null, "Wrong use: exprssion cannot be null for import.");
-            Debug.Assert(LesserSet != null, "Wrong use: lesser set cannot be null for import.");
-
-            Set set = SelectExpression.FindOrCreateSet(LesserSet.Root);
-
-            LesserSet = set;
+            get
+            {
+                if (LesserSet == null) return true;
+                var dimList = LesserSet.ImportDims; // Only this line will be changed in this class extensions for other dimension types
+                return dimList.Contains(this);
+            }
+            set
+            {
+                if (LesserSet == null) return;
+                var dimList = LesserSet.ImportDims; // Only this line will be changed in this class extensions for other dimension types
+                if (value == true) // Include
+                {
+                    if (IsInLesserSet) return;
+                    dimList.Add(this);
+                }
+                else // Exclude
+                {
+                    dimList.Remove(this);
+                }
+            }
         }
 
         #endregion
@@ -97,6 +117,34 @@ namespace Com.Model
         }
 
         #endregion
+
+        /// <summary>
+        /// Create (clone) an expression for importing greater (input) set values into lesser (output) set values.
+        /// The created experession describes both structure and values.
+        /// </summary>
+        public virtual void BuildImportExpression()
+        {
+            Debug.Assert(GreaterSet != null, "Wrong use: greater set cannot be null for import.");
+
+            SelectExpression = Expression.CreateImportExpression(GreaterSet);
+
+            SelectExpression.Name = "import";
+            SelectExpression.Dimension = this;
+        }
+
+        /// <summary>
+        /// Use the expression to create/clone output (lesser) set structure.  
+        /// A default mapping (name equality) is used to match sets by finding similar sets. If not found, a new set is created. 
+        /// </summary>
+        public virtual void ImportDimensions()
+        {
+            Debug.Assert(SelectExpression != null, "Wrong use: exprssion cannot be null for import.");
+            Debug.Assert(LesserSet != null, "Wrong use: lesser set cannot be null for import.");
+
+            Set set = SelectExpression.FindOrCreateSet(LesserSet.Root);
+
+            LesserSet = set;
+        }
 
         public DimImport(string name, Set lesserSet, Set greaterSet) 
             : base(name, lesserSet, greaterSet)

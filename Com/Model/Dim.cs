@@ -128,6 +128,93 @@ namespace Com.Model
         public Set LesserSet { get; set; }
 
         /// <summary>
+        /// false if this dimension references the greaer set but is not included into it (not part of the schema).
+        /// </summary>
+        public virtual bool IsInGreaterSet 
+        {
+            get
+            {
+                if (GreaterSet == null) return true;
+                var dimList = GreaterSet.LesserDims; // Only this line will be changed in this class extensions for other dimension types
+                return dimList.Contains(this);
+            }
+            set
+            {
+                if (GreaterSet == null) return;
+                var dimList = GreaterSet.LesserDims; // Only this line will be changed in this class extensions for other dimension types
+                if (value == true) // Include
+                {
+                    if (IsInGreaterSet) return;
+                    dimList.Add(this);
+                }
+                else // Exclude
+                {
+                    dimList.Remove(this);
+                }
+            }
+        }
+
+        /// <summary>
+        /// false if this dimension references the lesser set but is not included into it (not part of the schema).
+        /// </summary>
+        public virtual bool IsInLesserSet 
+        {
+            get
+            {
+                if (LesserSet == null) return true;
+                var dimList = LesserSet.GreaterDims; // Only this line will be changed in this class extensions for other dimension types
+                return dimList.Contains(this);
+            }
+            set
+            {
+                if (LesserSet == null) return;
+                var dimList = LesserSet.GreaterDims; // Only this line will be changed in this class extensions for other dimension types
+                if (value == true) // Include
+                {
+                    if (IsInLesserSet) return;
+                    dimList.Add(this);
+                }
+                else // Exclude
+                {
+                    dimList.Remove(this);
+                }
+            }
+        }
+
+        /// <summary>
+        /// true if it is included in both lesser and greater sets. Depends on the dimension type.
+        /// </summary>
+        public bool IsHanging
+        {
+            get
+            {
+                return IsInLesserSet && IsInGreaterSet;
+            }
+        }
+
+        /// <summary>
+        /// Add (attach) to its lesser and greater sets if not added yet. Depends on the dimension type.
+        /// </summary>
+        public void Add()
+        {
+            IsInLesserSet = true;
+            IsInGreaterSet = true;
+        }
+
+        /// <summary>
+        /// Remove (detach) from its lesser and greater sets if it is there. Depends on the dimension type.
+        /// </summary>
+        public void Remove()
+        {
+            IsInLesserSet = false;
+            IsInGreaterSet = false;
+        }
+
+        #endregion
+
+        #region Path methods
+
+        /// <summary>
         /// Parent dimension. 
         /// It is null for original complex dimensions of a set which point to a direct greater set.
         /// </summary>
@@ -166,6 +253,25 @@ namespace Com.Model
             Path.Add(dim);
             GreaterSet = dim.GreaterSet;
             if (LesserSet == null) LesserSet = dim.LesserSet;
+        }
+
+        public void AppendPath(Dim path) // Append all segments of the specified path to the end of this path
+        {
+            if (Path == null)
+            {
+                Path = new List<Dim>();
+            }
+            Debug.Assert(Path.Count == 0 || path.LesserSet == GreaterSet, "A an appended path must continue this path.");
+
+            if (path == null || path.Path == null || path.Path.Count == 0) return;
+
+            for (int i = 0; i < path.Path.Count; i++)
+            {
+                Path.Add(path.Path[i]);
+            }
+
+            GreaterSet = path.GreaterSet;
+            if (LesserSet == null) LesserSet = path.LesserSet;
         }
 
         public void InsertSegment(Dim dim) // Insert a new segment at the beginning of the path
@@ -449,6 +555,39 @@ namespace Com.Model
         }
 
         #endregion
+
+    }
+
+    /// <summary>
+    /// A sequence of simple dimensions (segments). 
+    /// </summary>
+    public class DimPath : Dim
+    {
+        // It should be used where we use List<Dim>
+        // It is more convenient because we can store additional methods, say, concatenate, iterate, append etc.
+        // It also can be used when using in DimTree, representing projections/de-projections and in other structures.
+
+        // TODO: Copy relevant methods from Dim (like FirstSegment, LastSegment, Rank etc.)
+
+        /// <summary>
+        /// Check the validity of this formal structure. Used for testing. 
+        /// </summary>
+        /// <returns></returns>
+        public string IsValid()
+        {
+            if (Path == null || Path.Count == 0) return null;
+            return null;
+        }
+
+        public DimPath()
+            : base(null)
+        {
+        }
+
+        public DimPath(string name)
+            : base(name)
+        {
+        }
 
     }
 

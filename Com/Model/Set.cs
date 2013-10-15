@@ -251,6 +251,35 @@ namespace Com.Model
             }
         }
 
+        public int MaxRank // Number of segments in the longest primitive path (0 for primitive sets or with no greater dimensions)
+        {
+            get
+            {
+                int maxRank = 0;
+                var paths = new PathEnumerator(this, DimensionType.IDENTITY_ENTITY);
+                foreach (List<Dim> path in paths)
+                {
+                    if (path.Count > maxRank) maxRank = path.Count;
+                }
+                return maxRank;
+            }
+        }
+
+        public int MinRank // Number of segments in the shortest primitive path (0 for primitive sets or with no greater dimensions)
+        {
+            get
+            {
+                int minRank = Int16.MaxValue;
+                var paths = new PathEnumerator(this, DimensionType.IDENTITY_ENTITY);
+                foreach (List<Dim> path in paths)
+                {
+                    if (path.Count < minRank) minRank = path.Count;
+                }
+                if (minRank == Int16.MaxValue) return 0;
+                return minRank;
+            }
+        }
+
         public int IdentityPrimitiveArity
         {
             get // It is computed recursively - we sum up greater set arities of all our identity dimensions up to the prmitive sets with arity 1
@@ -284,11 +313,17 @@ namespace Com.Model
 */
         public void AddGreaterDim(Dim dim)
         {
-            RemoveGreaterDim(dim);
             Debug.Assert(dim.GreaterSet != null && dim.LesserSet != null, "Wrong use: dimension must specify a lesser and greater sets before it can be added to a set.");
-            dim.SetLength(this.Length);
+
+            // Remove or enusre that this dimension has not been added before
+            RemoveGreaterDim(dim);
+            dim.GreaterSet.LesserDims.Remove(dim);
+
+            // Add this dimension to both lesser and greater sets
             dim.GreaterSet.LesserDims.Add(dim);
             dim.LesserSet.GreaterDims.Add(dim);
+
+            dim.SetLength(this.Length);
         }
         public void RemoveGreaterDim(Dim dim)
         {
@@ -485,8 +520,8 @@ namespace Com.Model
             if (IsPrimitive)
             {
                 expr.Evaluate();
-                Debug.Assert(expr.Output.GetType().IsPrimitive, "Wrong use: cannot find non-primitive type in a primitive set. Need a primitive value.");
-                Debug.Assert(!expr.Output.GetType().IsArray, "Wrong use: cannot find array type in a primitive set. Need a primitive value.");
+                Debug.Assert(expr.Output == null || expr.Output.GetType().IsPrimitive, "Wrong use: cannot find non-primitive type in a primitive set. Need a primitive value.");
+                Debug.Assert(expr.Output == null || !expr.Output.GetType().IsArray, "Wrong use: cannot find array type in a primitive set. Need a primitive value.");
                 return expr.Output; // It is assumed that the value (of correct type) exists and is found
             }
 
@@ -550,7 +585,7 @@ namespace Com.Model
 
             if (IsPrimitive)
             {
-                Debug.Assert(!expr.Output.GetType().IsArray, "Wrong use: cannot append array type to a primitive set. ");
+                Debug.Assert(expr.Output == null || !expr.Output.GetType().IsArray, "Wrong use: cannot append array type to a primitive set. ");
                 return expr.Output; // Primitive sets are supposed to already contain all values (of correct type)
             }
 

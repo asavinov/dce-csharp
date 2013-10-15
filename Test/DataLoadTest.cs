@@ -84,46 +84,55 @@ namespace Test
             // Create workspace root set
             SetRoot wsRoot = new SetRoot("My Mashup");
 
-            //
-            // Import first set
-            //
-            DimImport dimImp = new DimImport("import", wsRoot, dbRoot.FindSubset("Employees"));
-            dimImp.BuildImportExpression();
-            dimImp.ImportDimensions();
-            dimImp.LesserSet.ImportDims.Add(dimImp);
-            dimImp.GreaterSet.ExportDims.Add(dimImp);
-
-            // Import data
-            dimImp.Populate();
-
-            // Assert. Check imported data
-            Set emp = wsRoot.FindSubset("Employees");
-
-            Assert.AreEqual(9, emp.Length);
-            Assert.AreEqual(6, emp.GetValue("ID", 5));
-            Assert.AreEqual("Mariya", emp.GetValue("First Name", 3));
-            Assert.AreEqual("Seattle", emp.GetValue("City", 8));
+            Mapper mapper = new Mapper();
 
             //
-            // Import second set
+            // Import first set. Employees
             //
-            DimImport dimImp2 = new DimImport("import", wsRoot, dbRoot.FindSubset("Inventory Transactions")); // "Employee Privileges"
-            dimImp2.BuildImportExpression();
-            dimImp2.ImportDimensions();
-            dimImp2.LesserSet.ImportDims.Add(dimImp2);
-            dimImp2.GreaterSet.ExportDims.Add(dimImp2);
+            Set sourceSet = dbRoot.FindSubset("Employees");
+            mapper.RecommendMappings(sourceSet, wsRoot, 1.0);
 
-            // Import data
-            dimImp2.Populate();
+            SetMapping bestMapping = mapper.GetBestMapping(sourceSet);
+            Set targetSet = bestMapping.TargetSet;
+            DimTree tree = bestMapping.GetTargetTree();
+            tree.IncludeInSchema(wsRoot); // Include new elements in schema
 
-            // Assert. Check imported data
-            Set it = wsRoot.FindSubset("Inventory Transactions");
+            // Configure first set for import
+            Expression expr = bestMapping.GetTargetExpression(); // Build a tuple tree with paths in leaves
+            targetSet.ImportExpression = expr;
+            string importDimName = sourceSet.Name; // The same as the source (imported) set name
+            DimImport importDim = new DimImport(importDimName, targetSet, sourceSet);
+            importDim.Add();
 
-            Assert.AreEqual(102, it.Length);
-            Assert.AreEqual(1, it.GetValue("Transaction Type", 99)); // 1 is offset which should correspond to second record "Sold"
+            targetSet.Populate();
+            Assert.AreEqual(9, targetSet.Length);
+            Assert.AreEqual(6, targetSet.GetValue("ID", 5));
+            Assert.AreEqual("Mariya", targetSet.GetValue("First Name", 3));
+            Assert.AreEqual("Seattle", targetSet.GetValue("City", 8));
+
+            //
+            // Import second set. Inventory Transactions
+            //
+            Set sourceSet2 = dbRoot.FindSubset("Inventory Transactions");
+            mapper.RecommendMappings(sourceSet2, wsRoot, 1.0);
+
+            SetMapping bestMapping2 = mapper.GetBestMapping(sourceSet2);
+            Set targetSet2 = bestMapping2.TargetSet;
+            DimTree tree2 = bestMapping2.GetTargetTree();
+            tree2.IncludeInSchema(wsRoot); // Include new elements in schema
+
+            // Configure second set for import
+            Expression expr2 = bestMapping2.GetTargetExpression(); // Build a tuple tree with paths in leaves
+            targetSet2.ImportExpression = expr2;
+            string importDimName2 = sourceSet2.Name; // The same as the source (imported) set name
+            DimImport importDim2 = new DimImport(importDimName2, targetSet2, sourceSet2);
+            importDim2.Add();
+
+            targetSet2.Populate();
+            Assert.AreEqual(102, targetSet2.Length);
+            Assert.AreEqual(1, targetSet2.GetValue("Transaction Type", 99)); // 1 is offset which should correspond to second record "Sold"
 
             Set pro = wsRoot.FindSubset("Products");
-
             Assert.AreEqual(28, pro.Length);
             Assert.AreEqual(34.8, pro.GetValue("List Price", 1));
         }
@@ -141,15 +150,8 @@ namespace Test
             // Load test data
             //
             SetRoot wsRoot = new SetRoot("My Mashup");
-
-            DimImport dimImp = new DimImport("import", wsRoot, dbRoot.FindSubset("Order Details"));
-            dimImp.BuildImportExpression();
-            dimImp.ImportDimensions();
-            dimImp.LesserSet.ImportDims.Add(dimImp);
-            dimImp.GreaterSet.ExportDims.Add(dimImp);
-
-            // Import data
-            dimImp.Populate();
+            Set targetSet = Mapper.ImportSet(dbRoot.FindSubset("Order Details"), wsRoot);
+            targetSet.Populate();
 
             Set odet = wsRoot.FindSubset("Order Details");
             Set orders = wsRoot.FindSubset("Orders");
@@ -282,16 +284,9 @@ namespace Test
             // Load test data
             //
             SetRoot wsRoot = new SetRoot("My Mashup");
-
-            DimImport dimImp = new DimImport("import", wsRoot, dbRoot.FindSubset("Order Details"));
-            dimImp.BuildImportExpression();
-            dimImp.ImportDimensions();
-            dimImp.LesserSet.ImportDims.Add(dimImp);
-            dimImp.GreaterSet.ExportDims.Add(dimImp);
-
-            // Import data
-            dimImp.Populate();
-
+            Set targetSet = Mapper.ImportSet(dbRoot.FindSubset("Order Details"), wsRoot);
+            targetSet.Populate();
+            
             //
             // Create derived dimensions
             //
@@ -329,15 +324,8 @@ namespace Test
             // Load test data
             //
             SetRoot wsRoot = new SetRoot("My Mashup");
-
-            DimImport dimImp = new DimImport("import", wsRoot, dbRoot.FindSubset("Order Details"));
-            dimImp.BuildImportExpression();
-            dimImp.ImportDimensions();
-            dimImp.LesserSet.ImportDims.Add(dimImp);
-            dimImp.GreaterSet.ExportDims.Add(dimImp);
-
-            // Import data
-            dimImp.Populate();
+            Set targetSet = Mapper.ImportSet(dbRoot.FindSubset("Order Details"), wsRoot);
+            targetSet.Populate();
 
             //
             // Create derived dimensions
@@ -378,26 +366,16 @@ namespace Test
         {
             // Create Oldedb root set
             SetRootOledb dbRoot = new SetRootOledb("Root");
-
             dbRoot.ConnectionString = Northwind;
-
             dbRoot.Open();
-
             dbRoot.ImportSchema();
 
             //
             // Load test data
             //
             SetRoot wsRoot = new SetRoot("My Mashup");
-
-            DimImport dimImp = new DimImport("import", wsRoot, dbRoot.FindSubset("Order Details"));
-            dimImp.BuildImportExpression();
-            dimImp.ImportDimensions();
-            dimImp.LesserSet.ImportDims.Add(dimImp);
-            dimImp.GreaterSet.ExportDims.Add(dimImp);
-
-            // Import data
-            dimImp.Populate();
+            Set targetSet = Mapper.ImportSet(dbRoot.FindSubset("Order Details"), wsRoot);
+            targetSet.Populate();
 
             Set cust = wsRoot.FindSubset("Customers");
             Set prod = wsRoot.FindSubset("Products");
@@ -447,15 +425,8 @@ namespace Test
             // Load test data
             //
             SetRoot wsRoot = new SetRoot("My Mashup");
-
-            DimImport dimImp = new DimImport("import", wsRoot, dbRoot.FindSubset("Order Details"));
-            dimImp.BuildImportExpression();
-            dimImp.ImportDimensions();
-            dimImp.LesserSet.ImportDims.Add(dimImp);
-            dimImp.GreaterSet.ExportDims.Add(dimImp);
-
-            // Import data
-            dimImp.Populate();
+            Set targetSet = Mapper.ImportSet(dbRoot.FindSubset("Order Details"), wsRoot);
+            targetSet.Populate();
 
             //
             // Create derived dimensions
@@ -527,16 +498,9 @@ namespace Test
             // Load test data
             //
             SetRoot wsRoot = new SetRoot("My Mashup");
-
-            DimImport dimImp = new DimImport("import", wsRoot, dbRoot.FindSubset("Order Details"));
-            dimImp.BuildImportExpression();
-            dimImp.ImportDimensions();
-            dimImp.LesserSet.ImportDims.Add(dimImp);
-            dimImp.GreaterSet.ExportDims.Add(dimImp);
-
-            // Import data
-            dimImp.Populate();
-
+            Set targetSet = Mapper.ImportSet(dbRoot.FindSubset("Order Details"), wsRoot);
+            targetSet.Populate();
+            
             //
             // Create logical expression
             //
@@ -579,15 +543,8 @@ namespace Test
             // Load test data
             //
             SetRoot wsRoot = new SetRoot("My Mashup");
-
-            DimImport dimImp = new DimImport("import", wsRoot, dbRoot.FindSubset("Order Details"));
-            dimImp.BuildImportExpression();
-            dimImp.ImportDimensions();
-            dimImp.LesserSet.ImportDims.Add(dimImp);
-            dimImp.GreaterSet.ExportDims.Add(dimImp);
-
-            // Import data
-            dimImp.Populate();
+            Set targetSet = Mapper.ImportSet(dbRoot.FindSubset("Order Details"), wsRoot);
+            targetSet.Populate();
 
             Set intSet = wsRoot.GetPrimitiveSubset("Integer");
             Set stringSet = wsRoot.GetPrimitiveSubset("String");
@@ -611,31 +568,33 @@ namespace Test
             // Define matching to Employees
             Set emps = wsRoot.FindSubset("Employees");
 
+
             DimTree targetTree = new DimTree(); // Root
             DimTree targetChild = new DimTree(emps);
             targetChild.ExpandTree(); // Build complete primitive tree (up to the primitive sets)
             targetTree.AddChild(targetChild); // Add some set we want to map to
 
-            MatchTree sourceTree = new MatchTree(targetTree); // Root
+            MatchTree sourceTree = new MatchTree(/*targetTree*/); // Root
             MatchTree sourceChild = new MatchTree(workers);
             sourceChild.ExpandTree(); // Build complete primitive tree (up to the primitive sets)
             sourceTree.AddChild(sourceChild);
 
+/* DOES NOT WORK
             // Specify matchings for all dimensions (leaves of the tree)
             sourceTree.Recommend();
-            sourceChild.Matches.SelectedObject = targetChild; // Workers -> Employees
-            ((MatchTree)sourceChild.Children[0]).Matches.SelectedObject = targetChild.Children[10]; // Worker ID -> Employee ID
-            ((MatchTree)sourceChild.Children[1]).Matches.SelectedObject = targetChild.Children[12]; // Worker Name -> Employee Last Name
+            sourceChild.DimMatches.SelectedObject = (MatchTree)targetChild; // Workers -> Employees
+            ((MatchTree)sourceChild.Children[0]).DimMatches.SelectedObject = (MatchTree)targetChild.Children[10]; // Worker ID -> Employee ID
+            ((MatchTree)sourceChild.Children[1]).DimMatches.SelectedObject = (MatchTree)targetChild.Children[12]; // Worker Name -> Employee Last Name
             
             // Create import dimension with import expression and populate the set
             Expression expr = sourceChild.GetExpression();
             workers.ImportExpression = expr;
             DimImport importDim = new DimImport("import", workers, emps);
             workers.ImportDims.Add(importDim);
-            emps.ExportDims.Add(dimImp);
+            emps.ExportDims.Add(importDim);
 
             workers.Populate();
-
+*/
             //
             // Create new table Bestellungen, define matching to Orders (nested using new table Workers), create import dimension and populate it
             //

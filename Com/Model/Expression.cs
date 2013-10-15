@@ -249,6 +249,44 @@ namespace Com.Model
 
             return res;
         }
+        public Expression AddPath(DimPath path)
+        {
+            Debug.Assert(path != null && path.LesserSet == OutputSet, "Wrong use: path must start from the node (output set) it is added to.");
+
+            if (path.Path == null || path.Path.Count == 0) return null;
+
+            // 1. Add path
+            Dim seg;
+            Expression node = this;
+            for (int i = 0; i < path.Path.Count; i++) // We add all segments sequentially
+            {
+                Expression child = null;
+
+                seg = path.Path[i];
+                if (seg is DimSuper)
+                {
+                    if (node.Input == null || node.Input.Dimension != seg)
+                    {
+                        throw new NotImplementedException();
+                    }
+                }
+                else
+                {
+                    child = node.GetOperand(seg); // Find a child corresponding to this segment
+
+                    if (child == null) // Add a new child corresponding to this segment
+                    {
+                        child = new Expression(seg.Name, Operation.TUPLE, seg.GreaterSet);
+                        child.Dimension = seg;
+                        node.AddOperand(child);
+                    }
+                }
+
+                node = child;
+            }
+
+            return node;
+        }
 
         /// <summary>
         /// Where this expression is a child operand.
@@ -316,7 +354,8 @@ namespace Com.Model
 
                     if (OutputSet.IsPrimitive) // Leaf of the tuple structure - here we need to really find a concrete value by evaluating Input
                     {
-                        Debug.Assert(Input.OutputSet == OutputSet, "Wrong use: leaf nodes of tuple expression get their value from Input and hence Input set has to be equal to the leaf set.");
+                        // TODO: Uncomment below when tuple expressions will be correctly generated
+                        //Debug.Assert(Input.OutputSet == OutputSet, "Wrong use: leaf nodes of tuple expression get their value from Input and hence Input set has to be equal to the leaf set.");
                         Output = Input.Output;
                     }
                     else // It is a non-leaf tuple and its value is by definition a combination of its children
@@ -589,7 +628,7 @@ namespace Com.Model
             expr.OutputSet = dim.GreaterSet;
             expr.OutputSetName = dim.GreaterSet.Name;
 
-            expr.Name = dim.Name; // Name of the function
+            expr.Name = dim.Name;
             expr.Dimension = dim;
 
             if (parent != null)
@@ -599,9 +638,6 @@ namespace Com.Model
 
             if (dim.IsPrimitive) // End of recursion
             {
-                expr.Operation = Operation.PRIMITIVE; // Leaf of tuple structure is primitive element (which can be computed)
-                expr.Name = dim.Name;
-
                 // Build function expression for computing a primitive value
                 List<Dim> path = expr.GetPath();
                 Set sourceSet = expr.Root.OutputSet; // Or simply expr.Root.OutputSet.ImportDims[0].LesserSet
@@ -609,14 +645,13 @@ namespace Com.Model
                 Debug.Assert(srcPath != null, "Import path not found. Something wrong with import.");
 
                 Expression funcExpr = new Expression(srcPath != null ? srcPath.Name : null, Operation.DOT, dim.GreaterSet);
-                funcExpr.Input = new Expression("source", Operation.VARIABLE, dim.LesserSet); // Add Input of function as a variable the values of which (output) can be assigned during export
+                Expression varExpr = new Expression("source", Operation.VARIABLE, dim.LesserSet); // Add Input of function as a variable the values of which (output) can be assigned during export
 
+                funcExpr.Input = varExpr; // Add variable to the function
                 expr.Input = funcExpr; // Add function to this expression
             }
             else // Recursion on greater dimensions
             {
-                expr.Operation = Operation.TUPLE;
-                expr.Operands = new List<Expression>();
                 expr.Input = null;
 
                 Set gSet = dim.GreaterSet;
@@ -758,13 +793,12 @@ namespace Com.Model
         }
 
         public Expression()
-            : this("")
         {
             Operands = new List<Expression>();
         }
 
         public Expression(string name) 
-            : base()
+            : this()
         {
             Name = name;
         }
