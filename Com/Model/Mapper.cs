@@ -18,6 +18,26 @@ namespace Com.Model
     {
         public List<SetMapping> Mappings { get; private set; }
 
+        public SetMapping GetBestMapping(Set sourceSet, Set targetSet = null)
+        {
+            SetMapping bestMapping = null;
+            var setMappings = Mappings.Where(m => m.SourceSet == sourceSet); // Try to find available mappings
+
+            if (setMappings.Count() > 0)
+            {
+                double bestSimilarity = setMappings.Max(m => m.Similarity);
+                bestMapping = setMappings.First(m => m.Similarity == bestSimilarity);
+            }
+
+            return bestMapping;
+        }
+
+        public Set GetBestTarget(Set sourceSet, Set targetSet = null)
+        {
+            SetMapping bestMapping = GetBestMapping(sourceSet, targetSet);
+            return bestMapping == null ? null : bestMapping.TargetSet;
+        }
+
         /// <summary>
         /// Create target mappings for the specified set and store them in the mapper. Mappings for all greater sets will be used and created if they do not exist in the mapper. 
         /// </summary>
@@ -150,26 +170,6 @@ namespace Com.Model
             }
         }
 
-        public SetMapping GetBestMapping(Set sourceSet, Set targetSet = null)
-        {
-            SetMapping bestMapping = null;
-            var setMappings = Mappings.Where(m => m.SourceSet == sourceSet); // Try to find available mappings
-
-            if (setMappings.Count() > 0)
-            {
-                double bestSimilarity = setMappings.Max(m => m.Similarity);
-                bestMapping = setMappings.First(m => m.Similarity == bestSimilarity);
-            }
-
-            return bestMapping;
-        }
-
-        public Set GetBestTarget(Set sourceSet, Set targetSet = null)
-        {
-            SetMapping bestMapping = GetBestMapping(sourceSet, targetSet);
-            return bestMapping == null ? null : bestMapping.TargetSet;
-        }
-
         /// <summary>
         /// Import the specified set along with all its greater sets as a subset of the specified parent set (normally root). 
         /// The set is not populated but is ready to be populated. 
@@ -199,6 +199,7 @@ namespace Com.Model
         {
             Mappings = new List<SetMapping>();
         }
+
     }
 
     /// <summary>
@@ -206,10 +207,63 @@ namespace Com.Model
     /// </summary>
     public class SetMapping
     {
-        public Set SourceSet { get; private set; }
-        public Set TargetSet { get; private set; }
-        public List<PathMatch> Mapping { get; private set; }
+        public List<PathMatch> Matches { get; private set; }
+
         public double Similarity { get; set; }
+
+        private Set _sourceSet;
+        public Set SourceSet 
+        {
+            get { return _sourceSet; }
+            set
+            {
+                if (_sourceSet == null) { _sourceSet = value; return; }
+                if (_sourceSet == value) return;
+                List<DimPath> lesserSegs = value.GetGreaterPaths(_sourceSet);
+                List<DimPath> greaterSegs = _sourceSet.GetGreaterPaths(value);
+                if (lesserSegs != null && lesserSegs.Count > 0) // New set is a lesser set for the current
+                {
+                    foreach (PathMatch m in Matches) // Insert new segments
+                    {
+                        m.SourcePath.InsertPrefix(lesserSegs[0]);
+                    }
+                }
+                else if (greaterSegs != null && greaterSegs.Count > 0) // New set is a greater set for the current
+                {
+                    foreach (PathMatch m in Matches) // Remove segments
+                    {
+                        if (m.SourcePath.StartsWith(greaterSegs[0])) m.SourcePath.RemovePrefix(greaterSegs[0]);
+                        else Matches.Remove(m);
+                    }
+                }
+                else // Otherwise
+                {
+                    Matches.Clear();
+                }
+                _sourceSet = value;
+            }
+        }
+
+        private Set _targetSet;
+        public Set TargetSet
+        {
+            get { return _targetSet; }
+            set
+            {
+                // TODO: The same implementation as for the source set (think on reuse, e.g., introduce one method and then only determine what is source and what is target)
+                _targetSet = value;
+            }
+        }
+
+        public PathMatch GetMatchForSource(DimPath path)
+        {
+            throw new NotImplementedException();
+        }
+
+        public PathMatch GetMatchForTarget(DimPath path)
+        {
+            throw new NotImplementedException();
+        }
 
         public void AddPaths(Dim sd, Dim td, SetMapping gMapping) // Add this pair by expanding it using the mapping
         {
@@ -219,7 +273,7 @@ namespace Com.Model
             Debug.Assert(sd != null && sd.GreaterSet == gMapping.SourceSet, "Wrong use: source path must end where the mapping starts.");
             Debug.Assert(td != null && td.GreaterSet == gMapping.TargetSet, "Wrong use: target path must end where the mapping starts.");
 
-            if (gMapping.Mapping.Count == 0) // If there are no continuations then add only the starting segments (for example, for mappings between primitive sets)
+            if (gMapping.Matches.Count == 0) // If there are no continuations then add only the starting segments (for example, for mappings between primitive sets)
             {
                 DimPath sp = new DimPath(); // A path consists of one segment
                 sp.AppendSegment(sd);
@@ -228,10 +282,10 @@ namespace Com.Model
                 tp.AppendSegment(td);
 
                 PathMatch match = new PathMatch(sp, tp);
-                Mapping.Add(match);
+                Matches.Add(match);
             }
 
-            foreach (PathMatch gMatch in gMapping.Mapping)
+            foreach (PathMatch gMatch in gMapping.Matches)
             {
                 DimPath sp = new DimPath(); // Create source path by concatenating one segment and continuation path from the mapping
                 sp.AppendSegment(sd);
@@ -242,7 +296,7 @@ namespace Com.Model
                 tp.AppendPath(gMatch.TargetPath);
 
                 PathMatch match = new PathMatch(sp, tp);
-                Mapping.Add(match);
+                Matches.Add(match);
             }
         }
 
@@ -251,22 +305,61 @@ namespace Com.Model
             Debug.Assert(match != null && match.SourceSet == SourceSet, "Wrong use: source path must start from the source set.");
             Debug.Assert(match != null && match.TargetSet == TargetSet, "Wrong use: target path must start from the target set.");
 
-            // TODO: Check that the added paths do not cover existing paths and are not covered by existing paths
+            // TODO: Check coverage between paths and mappings (pairs of paths)
+            // Rule 1: more specific (longer) path covers and merges a more general (shorter) path. So shorter paths are not needed and can be removed 
+            // Rule 2: Yet, if we remove them we lose information because they represent intermediate independent mappings. For example, when the added (long, specific) mapping is again removed then we cannot find the merged mappings so the operation is not reversible. 
+            // Thus we should retain more general mappings for future use. 
+            // Rule 3: The question is what to do if a more general mapping is deleted? Should we delete also more specific mappings?
+            // Rule 4: Is it important to have roles: primary/secondary? If yes, then we should use adding path pairs. 
 
-            Mapping.Add(match);
+            // Rule 0: What we have to delete are contradicting/incompatible matches which are overwritten by this match (where we get more than one alternative matching path for this path).
+            // What incompatible means? 
+            // - For one path (one means all covered or all continuations?), different other paths are present
+
+            foreach(PathMatch m in Matches)
+            {
+                // - If one path is covered (but not equal) then the second path must be also covered (so this match always continues existing matches)
+                //   - coverage means continuation of the *whole* path (so any path covers the root which empty path)
+                //   - if one path covers then the other has to be fit into the second, that is, covered by force or by cutting it until it is covered (if the second is also covered then nothing has to be done)
+                //   - if one path is covered then - ?
+
+
+                // - in the case of no coverage, they have a point of intersection. Then - ? Should this point of intersection be within the seconad path or otherwise constrained?
+
+                // if two sets (that is, paths) are matched, then only their continuations are possible
+                // problem: two sets can be matched explcitly or implicitly, that is, their match logically follows from other path matches.
+                // Implicit match: intersections of two paths produce a more general match
+
+                // One possible approach is to try to add a match by adding its path segments and checking consistency conditions
+
+            }
+
+            Matches.Add(match);
+        }
+
+        public bool AreMatched(PathMatch match) // Determine if both paths are matched (true if there exist the same or more specific match)
+        {
+            foreach (PathMatch m in Matches)
+            {
+                if(!m.SourcePath.StartsWith(match.SourcePath)) continue;
+                if(!m.TargetPath.StartsWith(match.TargetPath)) continue;
+                return true;
+            }
+
+            return false; // Not found
         }
 
         public DimTree GetSourceTree() // Convert all source paths into a dimension tree where the source set will be a root. The tree can contain non-existing elements if they are used in the mapping. 
         {
             DimTree tree = new DimTree(SourceSet);
-            Mapping.ForEach(p => tree.AddPath(p.SourcePath));
+            Matches.ForEach(p => tree.AddPath(p.SourcePath));
             return tree;
         }
 
         public DimTree GetTargetTree() // Convert all target paths into a dimension tree where the target set will be a root. The tree can contain non-existing elements if they are used in the mapping. 
         {
             DimTree tree = new DimTree(TargetSet);
-            Mapping.ForEach(p => tree.AddPath(p.TargetPath));
+            Matches.ForEach(p => tree.AddPath(p.TargetPath));
             return tree;
         }
 
@@ -278,7 +371,7 @@ namespace Com.Model
         public Expression GetTargetExpression()
         {
             Expression expr = new Expression(null, Operation.TUPLE, TargetSet); // Create a root tuple expression object 
-            foreach (PathMatch match in Mapping)
+            foreach (PathMatch match in Matches)
             {
                 Expression varExpr = new Expression("source", Operation.VARIABLE, match.TargetSet); // Add Input of function as a variable the values of which (output) can be assigned for evaluation of the function during export/import
 
@@ -307,7 +400,7 @@ namespace Com.Model
         {
             Debug.Assert((sourceSet.IsPrimitive && targetSet.IsPrimitive) || (!sourceSet.IsPrimitive && !targetSet.IsPrimitive), "Wrong use: cannot create a mapping between a primitive set and a non-primitive set.");
 
-            Mapping = new List<PathMatch>();
+            Matches = new List<PathMatch>();
 
             SourceSet = sourceSet;
             TargetSet = targetSet;
@@ -327,674 +420,165 @@ namespace Com.Model
         public Set SourceSet { get { return SourcePath == null ? null : SourcePath.LesserSet; } }
         public Set TargetSet { get { return TargetPath == null ? null : TargetPath.LesserSet; } }
 
-        public int IsInSourcePath(Set set)
-        {
-            int rank = -1;
-            return rank;
-        }
-        public int IsInTargetPath(Set set)
-        {
-            int rank = -1;
-            return rank;
-        }
-
-        public bool AreMatched(Set sourceSet, Set targetSet)
-        {
-            return IsInSourcePath(sourceSet) >= 0 && IsInTargetPath(targetSet) >= 0;
-        }
-
         public PathMatch(DimPath sourcePath, DimPath targetPath)
         {
             SourcePath = sourcePath;
             TargetPath = targetPath;
+            Similarity = 1.0;
         }
     }
 
-
-    //
-    // ====================================================================================================
-    // ======================================== OLD =======================================================
-    // ====================================================================================================
-    //
-/*
     /// <summary>
-    /// The class describes a mapping from one set to another set.
+    /// It displays the current state of mapping between two sets as properties of the tree nodes depending on the role of the tree. 
     /// </summary>
-    public class SetMapping_OLD
+    public class MatchTreeRoot : MatchTreeNode
     {
-        public MatchTree SourceTree { get; private set; }
+        public SetMapping Mapping { get; set; } // Where matches are stored between paths of this tree (note that paths start from the children of this root element - not from this root)
 
-        public MatchTree TargetTree { get; private set; }
+        public bool IsSource { get; set; } // Whether this tree corresponds to source paths (or target paths) in the mappings. It determines the semantics/direction of mapping (import/export). 
+        public bool IsPrimary { get; set; } // Defines how the node properties are computed and displayed as well as the logic of the tree. 
+        public bool OnlyPrimitive { get; set; } // Only primitive dimensions/paths can be matched (not intermediate). So intermediate elemens are not matched (but might display information about matches derived from primitive elements).
+        public bool CanChangeSet { get; set; } // Whether it is possible to change the set being mapped in the mapping object.
 
-        public void AddSet(Set set, MappingDirection direction) // Add and expand set
-        {
-            MatchTree setTree = null;
-            if (direction == MappingDirection.SOURCE)
+        // This is important for generation of the current status: disabled/enabled, relevance etc.
+        public MatchTreeNode SelectedNode { get; set; } // Selected in this tree
+        public MatchTreeNode SelectedCounterNode { get; set; } // In another tree
+
+        public DimPath SelectedPath // Selected in this tree
+        { 
+            get 
             {
-                setTree = new MatchTree(set);
-                setTree.ExpandTree();
-                SourceTree.AddChild(setTree);
-            }
-            else if(direction == MappingDirection.TARGET)
-            {
-                setTree = new MatchTree(set);
-                setTree.ExpandTree();
-                TargetTree.AddChild(setTree);
-            }
-        }
-
-        public void AddSets(List<Set> sets, MappingDirection direction) // Add and expand all sets from the list
-        {
-        }
-
-        public void AddAllSets(MappingDirection direction) // Add and expand all sets in the schema
-        {
-        }
-
-        public void RecommendCreation(MappingDirection direction) // Create new sets in the target tree identical to all source sets in the source tree
-        {
-            if (direction == MappingDirection.SOURCE)
-            {
-            }
-            else if (direction == MappingDirection.TARGET)
-            {
-            }
-        }
-
-        /// <summary>
-        /// For each source set, create a new target set.
-        /// </summary>
-        public void ImportSourceTree()
-        {
-            Debug.Assert(SourceTree != null, "Wrong use: Source tree cannot be null.");
-            Debug.Assert(TargetTree != null, "Wrong use: Target tree cannot be null.");
-
-        }
-
-        public void RecommendTargets(MatchTree source) {
-
-            MatchTree target = source.DimMatches.SelectedObject;
-
-            Debug.Assert(target != null && SourceTree != null, "Wrong use: the source node has to be matched.");
-
-            foreach (MatchTree n in source.Children)
-            {
-                n.DimMatches.Alternatives.Clear();
-
-                // Find target nodes with the best matching set
-                var targetNodes = TargetTree.Flatten().Where(x => x.Set == ((MatchTree)n).SetMatches.SelectedObject).ToList();
-
-                // Add all possible target nodes to the list of alternatives - 
-                // !!! we cannot do it because nodes represent dimension matches rather than set matches, so we need to reconstruct matches between dimensions of similar sets
-
-                // Select the best alternative
-            }
-
-        }
-
-        public void AddToSchema(MappingDirection direction) // Really integrate new elements into the schema by adding new dimensions (including super) to the existing and new sets so that all new elements are reachable
-        {
-            if (direction == MappingDirection.SOURCE)
-            {
-            }
-            else if (direction == MappingDirection.TARGET)
-            {
-                // Traverse through the children
-                List<DimTree> allNodes = TargetTree.Flatten().ToList();
-
-                // Check only selected elements (used in mapping). Skip non-selected nodes
-                List<DimTree> selectedNodes = allNodes.Where(n => ((MatchTree)n).DimMatches.IsSelected).ToList();
-
-                foreach(MatchTree n in selectedNodes)
+                if (SelectedNode == null) return null;
+                DimPath selectedPath = SelectedNode.DimPath;
+                if (IsSource)
                 {
-                    Dim dim = n.Dim; // Or SelectedObject ???? 
-
-                    // Add hanging dimensions to the sets they reference
-                    if (!dim.GreaterSet.LesserDims.Contains(dim))
-                    {
-                        dim.GreaterSet.LesserDims.Add(dim);
-                    }
-                    if (!dim.LesserSet.GreaterDims.Contains(dim))
-                    {
-                        dim.LesserSet.GreaterDims.Add(dim);
-                    }
-
-                    // Any set must have a super-set with super-dimension. By default (if not specified) a set is included directly in the root. 
-                    if (dim.GreaterSet.SuperDim == null)
-                    {
-//                        TargetTop.AddSubset(dim.GreaterSet);
-                    }
-                    if (dim.LesserSet.SuperDim == null)
-                    {
-//                        TargetTop.AddSubset(dim.LesserSet);
-                    }
+                    selectedPath.TrimPrefix(Mapping.SourceSet);
                 }
-
-            }
+                else
+                {
+                    selectedPath.TrimPrefix(Mapping.TargetSet);
+                }
+                return selectedPath;
+            } 
         }
-
-        public Expression GetExpression(MappingDirection direction) // Get expression according to the current selected mappings
+        public DimPath SelectedCounterPath // In another tree
         {
-            Expression expr = null;
-            if (direction == MappingDirection.SOURCE)
+            get
             {
-                expr = SourceTree.GetExpression();
+                if (SelectedCounterNode == null) return null;
+                DimPath selectedCounterPath = SelectedCounterNode.DimPath;
+                if (IsSource)
+                {
+                    selectedCounterPath.TrimPrefix(Mapping.SourceSet);
+                }
+                else
+                {
+                    selectedCounterPath.TrimPrefix(Mapping.TargetSet);
+                }
+                return selectedCounterPath;
             }
-            else if (direction == MappingDirection.TARGET)
-            {
-                expr = TargetTree.GetExpression();
-            }
-            return expr;
         }
 
         /// <summary>
-        /// Import the specified set along with all its greater sets as a subset of the specified parent set (normally root). 
-        /// It is a convenience method simplifying a typical operation. The set is not populated but is ready to be populated. 
+        /// Primary: returns true if this node has any match and false otherwise (not assigned). 
+        /// Secondary: returns true if this node is matched against the currently selected primary node and false otherwise (so only one node in the whole secondary tree is true).
         /// </summary>
-        public static Set ImportSet(Set sourceSet, Set parentSet)
+        /// <returns></returns>
+        public bool IsMatched()
         {
-            // Configure mapper
-            var map = new SetMapping_OLD(sourceSet.Root, parentSet.Root);
-            map.AddSet(sourceSet, MappingDirection.SOURCE);
-            map.RecommendCreation(MappingDirection.TARGET);
-            map.AddToSchema(MappingDirection.TARGET);
+            PathMatch match;
+            DimPath counterPath;
+            if (IsSource)
+            {
+                match = Mapping.GetMatchForSource(SelectedPath);
+                counterPath = match != null ? match.TargetPath : null;
+            }
+            else
+            {
+                match = Mapping.GetMatchForTarget(SelectedPath);
+                counterPath = match != null ? match.SourcePath : null;
+            }
 
-            // Parameterize created set
-            Expression importExpr = map.GetExpression(MappingDirection.TARGET);
-            Set targetSet = ((MatchTree)map.SourceTree.Children[0]).DimMatches.SelectedObject.Set;
-            targetSet.ImportExpression = importExpr;
-
-            string importDimName = sourceSet.Name; // The same as the source (imported) set name
-            DimImport importDim = new DimImport(importDimName, targetSet, sourceSet);
-            importDim.Add();
-
-            return targetSet;
+            if (IsPrimary)
+            {
+                return match != null;
+            }
+            else
+            {
+                if (match == null) return false;
+                return counterPath.StartsWith(SelectedCounterPath);
+            }
         }
 
         /// <summary>
-        /// Return several possible mappings from the specified set to the target schema.  
+        /// Primary: does not do anything (or calls the same method of the secondary tree). 
+        /// Secondary: takes the currently selected primary node and this secondary node and adds this match to the list. Previous match is deleted. Contradictory matches are removed. Match status of nodes needs to be redrawn.
         /// </summary>
-        public static List<SetMapping_OLD> RecommendMappings(Set sourceSet, SetRoot targetSchema, double setCreationThreshold)
+        public PathMatch AddMatch()
         {
-            var mappings = new List<SetMapping_OLD>();
-
-            // Content DELETED
-
-            return mappings;
-        }
-
-        public SetMapping_OLD()
-        {
-            SourceTree = new MatchTree();
-            TargetTree = new MatchTree();
-        }
-
-        public SetMapping_OLD(Set sourceSet, Set targetSet)
-        {
-            Debug.Assert(sourceSet != targetSet, "Wrong use: mapping to the same set is not permitted.");
-
-            SourceTree = new MatchTree(sourceSet);
-            TargetTree = new MatchTree(targetSet);
-        }
-
-        public SetMapping_OLD(Set sourceSet, SetRoot targetSchema)
-        {
-            SourceTree = new MatchTree(sourceSet);
-
-            TargetTree = new MatchTree();
-            foreach (Set s in targetSchema.GetLeastSubsets()) 
+            PathMatch match;
+            if (IsSource)
             {
-                MatchTree n = new MatchTree(s, TargetTree);
-                n.ExpandTree();
+                match = new PathMatch(SelectedPath, SelectedCounterPath);
             }
+            else
+            {
+                match = new PathMatch(SelectedCounterPath, SelectedPath);
+            }
+
+            match.Similarity = 1.0;
+            Mapping.AddPathMatch(match); // Some existing matches (which contradict to the added one) can be removed
+
+            return match;
         }
     }
-*/
 
     /// <summary>
-    /// It it represents one dimension in a dimension tree with associated alternative mappings. 
+    /// It provides methods and propoerties for a node which depend on the current mappings and role of the tree. 
+    /// The class assumes that the root of the tree is a special node storing mappings, tree roles and other necessary data. 
     /// </summary>
-    public class MatchTree : DimTree
+    public class MatchTreeNode : DimTree
     {
-        // TO_DELETE: not needed because we use direction in a mapping structure with two trees (which anyway is represented by field names source and target)
-//        public MappingDirection Direction { get; set; }
+        // For all these methods, if we really want the status of this node, then SelectedNode=this should be assigned in the root
 
-        public Fragments<MatchTree> DimMatches { get; set; } // Which dimension are similar to this dimension
-
-        public Fragments<Set> SetMatches { get; set; } // Which sets are similar to this set
-
-        //
-        // Tree methods
-        //
-
-        public MatchTree DimSelectedParent // First parent with selected dimension
+        public bool IsMatched()
         {
-            get
-            {
-                if (IsRoot) return null;
-                MatchTree node = (MatchTree)Parent;
-                for (; !node.IsRoot && !node.DimMatches.IsSelected; node = (MatchTree)node.Parent) ;
-                return node;
-            }
+            return ((MatchTreeRoot)Root).IsMatched();
         }
 
-        public MatchTree SetSelectedParent // First parent with selected set
+        public PathMatch AddMatch()
         {
-            get
-            {
-                if (IsRoot) return null;
-                MatchTree node = (MatchTree)Parent;
-                for (; !node.IsRoot && !node.SetMatches.IsSelected; node = (MatchTree)node.Parent) ;
-                return node;
-            }
-        }
-
-/*
-        public int ParentMatchRank // Number of segments from this node up to the next matched (non-skipped) parent. 0 for root and 1 or more for all other nodes.
-        {
-            get
-            {
-                if (IsRoot) return 0;
-                int rank = 1;
-                for (MatchTree node = (MatchTree)Parent; !node.IsRoot && !node.DimMatches.IsSelected; node = (MatchTree)node.Parent) { rank++; }
-                return rank;
-            }
-        }
-        public DimPath ParentMatchPath // Path from the first matching parent to this node
-        {
-            get
-            {
-                if (IsRoot) return null;
-                DimPath path = new DimPath();
-                path.AppendSegment(this.Dim);
-                for (MatchTree node = (MatchTree)Parent; !node.IsRoot && !node.DimMatches.IsSelected; node = (MatchTree)node.Parent) path.AppendSegment(node.Dim);
-                return path;
-            }
-        }
-*/
-        /// <summary>
-        /// Check the validity of the formal structure of this and all child nodes. Used for testing. 
-        /// </summary>
-        /// <returns></returns>
-        public string IsValid()
-        {
-            Debug.Assert(IsRoot || Dim != null, "Wrong structure: Only root has null dimension.");
-            Debug.Assert(Root.Dim == null, "Wrong structure: Root must have null dimension (???).");
-
-            // Check children
-            // 1. Children must have non-null dimension and set (since they have a parent)
-
-            // Check matching structure. 
-            // 1. A matched node must reference this node (pairwise symmetric matching). 
-            // 2. A matched node must be a child of the our parent matching node. 
-            // 3. What about root? Do we require that the root is always matched and always another root? 
-            return null;
-        }
-
-/*
-        /// <summary>
-        /// Find alternative similar (matching) sets for this set with their relevance. 
-        /// A new set will be created (but not added to the schema) if existing sets have relevance lower than the specified threashold.  
-        /// </summary>
-        public void RecommendOrCreateSets(double setCreationThreshold = 0)
-        {
-            MatchTree targetNode = DimMatches.SelectedObject;
-            Debug.Assert(targetNode != null, "To fit a tree into another tree (match), this tree (root) has to be matched.");
-
-            MatchTree targetRoot = targetNode;
-            Debug.Assert(targetRoot.IsRoot, "For recomending sets, target tree has to be represented by its root node (it will be used for inserting new nodes).");
-
-            // We find matches (fit) for each rank starting from 0 (primitive) and ending with this set
-            var rankedSets = GetRankedSets();
-            var targetRankedSets = targetNode.GetRankedSets();
-
-            var alternatives = new Dictionary<Set, List<RecommendedFragment<Set>>>();
-
-            for (int sr = 0; sr < rankedSets.Count; sr++)
-            {
-                foreach(Set ss in rankedSets[sr]) 
-                {
-                    alternatives.Add(ss, new List<RecommendedFragment<Set>>());
-                    for (int tr = sr; tr < targetRankedSets.Count; tr++) // We assume that sets with lower rank do not match
-                    {
-                        if (sr == 0 && tr > 0) break; // For primitive sets with rank 0 we consider only target sets with rank 0 (primitive)
-
-                        double bestSetSimilarity = 0.0;
-
-                        foreach (Set ts in targetRankedSets[tr])
-                        {
-                            double nameSimilarity = StringSimilarity.computeNGramSimilarity(ss.Name, ts.Name, 3);
-                            double rankSimilarity = Math.Pow(0.5, tr - sr);
-                            double similarity = nameSimilarity * rankSimilarity;
-                            bestSetSimilarity = Math.Max(bestSetSimilarity, similarity);
-                            alternatives[ss].Add(new RecommendedFragment<Set>(ts, similarity));
-                        }
-
-                        if (bestSetSimilarity < setCreationThreshold && targetRoot.Direction == MappingDirection.TARGET) // Modify the dimension tree by adding new nodes
-                        {
-                            //
-                            // Add a new set
-                            //
-                            Set newSet = new Set(ss.Name);
-                            MatchTree newSetNode = new MatchTree(newSet, targetRoot); // Add this set to the dimension tree (root) as a new node
-
-                            //
-                            // Add new dimensions
-                            //
-                            foreach (Dim d in ss.GreaterDims)
-                            {
-                                // Find the best target greater set
-                                Set sourceGreaterSet = d.GreaterSet;
-                                double bestGreaterRelevance = alternatives[sourceGreaterSet].Max(f => f.Relevance);
-                                RecommendedFragment<Set> bestGreaterFragment = alternatives[sourceGreaterSet].First(f => f.Relevance == bestGreaterRelevance);
-                                Set targetGreaterSet = bestGreaterFragment.Fragment;
-
-                                // Create a cloned dimension
-                                Dim newDim = targetGreaterSet.CreateDefaultLesserDimension(d.Name, newSet);
-                                newSet.AddGreaterDim(newDim); // We add only to the lesser set (for the possibility to expand and build a tree) and not to the greater set (in order not to add to the schema)
-
-                                // Find bottom (unused) or create a node for this target greater set
-                                MatchTree targetGreaterNode = (MatchTree) targetRoot.Children.Find(c => c.Set == targetGreaterSet);
-                                if (targetGreaterNode == null) // Create a new dimension tree for the (new usage of the) greater set
-                                {
-                                    targetGreaterNode = new MatchTree(newDim, targetRoot);
-                                    targetGreaterNode.ExpandTree();
-                                }
-                                else // Reuse the existing (bottom) set with its dimension tree
-                                {
-                                    targetGreaterNode.Dim = newDim;
-                                }
-                                
-                            }
-
-                            // TODO: Add this new set to our analyzed list of sets (taking into account the rank - the same as the source set) in order to take it into account in the next similarity checks
-
-                            alternatives[ss].Add(new RecommendedFragment<Set>(newSet, 1.0));
-                        }
-                    }
-                }
-            }
-
-            // Now store these alternatives for all nodes
-            foreach (MatchTree n in Flatten())
-            {
-                n.SetMatches.Alternatives.Clear();
-                n.SetMatches.Alternatives.AddRange(alternatives[n.Set]);
-                n.SetMatches.SelectBest();
-            }
-        }
-*/
-
-        /// <summary>
-        /// Find alternative similar (matching) dimensions for this node which are compatible with the current set selections but independent of the dim selections. 
-        /// </summary>
-        public void RecommendDims(double dimCreationThreshold = 0)
-        {
-            var targetSet = SetMatches.SelectedObject; // Any alternative dimension must end in this selected set
-            if (targetSet == null)
-            {
-                // If no selection then empty list of dimensions (skipped)
-            }
-
-            var parentTargetSetNode = SetSelectedParent;
-            if (parentTargetSetNode == null)
-            {
-                // If no parent with selected set then empty list (or all sets)
-            }
-            var parentTargetSet = parentTargetSetNode.Set; // Any alternative dimension must start from first parent with selected set
-            
-
+            return ((MatchTreeRoot)Root).AddMatch();
         }
 
         /// <summary>
-        /// Find all formally possible matching sets for this set and compute their relevance taking into account matches of other sets in this tree.
+        /// Primary: does not do anything (or calls the same method of the secondary tree). 
+        /// Secondary: remove the current match so this secondary is node (and the corresponding primary node) are not matched anymore. Works only if the two nodes are currently matched. 
         /// </summary>
-        public void Recommend(double setCreationThreshold = 0)
+        public PathMatch RemoveMatch()
         {
-            RecommendTargets(setCreationThreshold);
+            throw new NotImplementedException();
         }
 
         /// <summary>
-        /// Find all formally possible matching alternative target sets for this source set. 
-        /// Compute relevance for each alternative target taking into account matches of other sets in this tree.
-        /// Add new target set if the existing alternatives have similarity lower than the specified threshold. Threshold 1.0 means always create new target sets independent of the existing alternatives. 
+        /// Enabled/disabled status of a secondary node. Whether the current paths can be added as a new match without contradiction to the existing matches.
+        /// Primary: always true. 
+        /// Secondary: given a primary currently selected node, compute if a match with this secondary node does not contradict to existing matches (so it can be added). Alternatively, if relevances are precomputed then we find if relevance is higher than 0.
         /// </summary>
-        public void RecommendTargets(double setCreationThreshold = 0)
+        public bool CanAddMatch()
         {
-//            Debug.Assert(Direction == MappingDirection.SOURCE, "This method can be called only for SOURCE tree nodes.");
-
-            MatchTree previousSelection = DimMatches.SelectedObject; // In order to restore the previous selection after new alternatives are generated at the end
-
-            if (IsRoot) // We do not change the root because it is a fixed parameter set at construction time. It has to be mapped to the root of the target tree. 
-            {
-                foreach (DimTree c in Children) ((MatchTree)c).Recommend();
-                return;
-            }
-
-            //
-            //  Generate a list of all target sets that can be formally assigned to this set
-            //
-            var alternatives = new List<RecommendedFragment<MatchTree>>();
-            double bestSetSimilarity = 0.0;
-            MatchTree bestMatch = null;
-
-            var parentMatch = DimSelectedParent.DimMatches.SelectedObject;
-            Debug.Assert(parentMatch != null, "Some parent must have a selected match. At least the root must be always matched (to the root of the target tree).");
-
-            // This set can be mapped to any nested child of our (first matched) parent target (excluding it).
-            foreach (MatchTree match in parentMatch.Flatten())
-            {
-                if (match == parentMatch) continue; // This element is already a target of our parent and cannot be used
-
-                if (Set.IsPrimitive) // This set is primitive. 
-                {
-                    // This set is primitive. Alternatives can include only primitive target sets (non-primitive targets excluded) that is leaves of the target primitive tree.
-                    if (!match.Set.IsPrimitive) continue;
-                }
-                else // This set is primitive. 
-                {
-                    // Alternatives cannot include primitive target sets (only non-primitive).
-                    if (match.Set.IsPrimitive) continue;
-                }
-
-                // Our longest child path must have place (be shorter than) somewhere among target child paths
-                // TODO: In fact, it is not so if we can add additional dimensions and sets in the target on next steps
-                // if (MaxLeafRank > match.MaxLeafRank) continue;
-
-                double setSimilarity = StringSimilarity.computeNGramSimilarity(Set.Name, match.Set.Name, 3);
-                if (setSimilarity > bestSetSimilarity)
-                {
-                    bestSetSimilarity = setSimilarity;
-                    bestMatch = match;
-                }
-
-                alternatives.Add(new RecommendedFragment<MatchTree>(match, setSimilarity)); 
-            }
-
-            // If no good alternatives have been found then add them as new elements
-            if (bestSetSimilarity <= setCreationThreshold || alternatives.Count == 0)
-            {
-                // Create a new node for new matching element with the same parameters as this element (clone)
-
-                Set newSet = new Set(Set.Name); // Clone of this set (we cannot clone primitive sets - this possibility must be excluded)
-
-                Dim newDim = newSet.CreateDefaultLesserDimension(Dim.Name, Set); // Clone this dimension (it is not included in its lesser/greater sets yet)
-
-                // Create a new target node and add it to the parent node
-                MatchTree newMatch = new MatchTree(newDim, parentMatch);
-
-                // Add the new element to alternatives
-                alternatives.Add(new RecommendedFragment<MatchTree>(newMatch, 1.0));
-            }
-
-            //
-            // Convert alternatives into a list of fragments with preserving the current selection if possible
-            //
-            DimMatches.Alternatives.Clear();
-            DimMatches.Alternatives.AddRange(alternatives);
-            DimMatches.SelectedObject = previousSelection;
-
-            //
-            // Recommend alternatives for the children recursively
-            //
-            foreach (DimTree c in Children) ((MatchTree)c).Recommend();
+            throw new NotImplementedException();
         }
 
         /// <summary>
-        /// Assign best matchs from the available alternatives. 
-        /// The parameters specify thresholds for preferring new elements instead of using existing alternatives (with low relevance). 
-        /// 0 means no creation of new elements and 1 means always create new elements (do not use any alternatives). 
+        /// Primary: either not shown or 1.0 or relevance of the current (existing) match if it exists for this element retrieved from the mapper. 
+        /// Secondary: if it is already matched then relevance of existing match (the same as for primary) and if it is not chosen (not current) then the relevance computed by the recommender. 
         /// </summary>
-        public void SelectBestMatches(double dimCreation = 0, double setCreation = 0)
+        public double GetMatchRelevance()
         {
-            // Choose the best match for this element. Theoretically, we need to consider and choose from all combinations of matches at least among siblings.
-            double maxRelevance = DimMatches.Alternatives.Max(f => f.Relevance);
-            RecommendedFragment<MatchTree> maxFragment = DimMatches.Alternatives.First(f => f.Relevance == maxRelevance);
-            if (maxRelevance < dimCreation) // Or no alternative exists at all
-            {
-                // Create new dimension instead of reusing the proposed match
-            }
-            if (maxRelevance < setCreation) // Or no alternative exists at all
-            {
-                // Create new set instead of reusing the proposed match
-            }
-
-            // After each selection we need to update recommended alternatives (for children).
-            DimMatches.SelectedFragment = maxFragment;
-            UpdateSelection();
-
-            // Choose the best match for child elements
-            foreach (MatchTree c in Children) c.SelectBestMatches(dimCreation, setCreation);
+            throw new NotImplementedException();
         }
 
-        /// <summary>
-        /// This node has changed its selection. Propagate this selection to other nodes by either generating new alternative matches or by adjusting relevance factors for thier existing alternatives. 
-        /// </summary>
-        public void UpdateSelection()
-        {
-            // Generate new alternatives for all our children
-            foreach (DimTree c in Children) ((MatchTree)c).Recommend();
-
-            // TODO: theoretically, we should also adjust relevance of alternatives for our siblings
-        }
-
-        // Compute similarity by assuming that this node has the specified match
-        private double ComputeRelevance(DimTree target)
-        {
-            DimTree tree = new DimTree();
-
-            // Compute own similarity of two pairs <dim, gSet> or, alternatively, two matching dims
-            double own = 1.0;
-            // tree.Dim vs tree.MatchingNode.Dim
-            // tree.Set vs tree.MatchingNode.Set - can be primitive
-            // A new (non-existing) dimension or set should be qualified as a perfect match because it is supposed to be created by the user or otherwise for this concrete purpose (independent of its name)
-
-            // Aggregate similarities between children. If primitive then a predefined similarity
-            double relevance = 0.0;
-            foreach (DimTree child in tree.Children) // Aggregate all child matches
-            {
-                //relevance += child.ComputeRelevance(); // Recursion
-            }
-
-            // relevance /= tree.Children.Count(); // Average
-            relevance = (relevance + own) / 2;
-
-            return 1.0;
-        }
-
-        /// <summary>
-        /// Create an equivalent expression using matching from this tree to the referenced dimensions tree. 
-        /// The expression will have the structure of this match tree (not the referenced dimension tree).
-        /// </summary>
-        /// <returns></returns>
-        public Expression GetExpression()
-        {
-            //
-            // Create a tuple expression object for this node of the tree only
-            //
-            Expression expr = new Expression(Dim != null ? Dim.Name : null, Operation.TUPLE, Set);
-            expr.Dimension = Dim;
-
-            DimTree target = DimMatches.SelectedObject;
-
-            // For a leaf, define the primitive value in terms of the matching tree (it is a DOT expression representing a primitive path in the target tree)
-            if (IsLeaf && target != null)
-            {
-                Debug.Assert(Set.IsPrimitive, "Wrong structure: Leaves of the match tree have to be primitive sets.");
-
-                // Build function expression for computing a primitive value from the matched target tree
-                DimPath targetPath = target.DimPath;
-                Expression funcExpr = Expression.CreateProjectExpression(targetPath.Path, Operation.DOT);
-                funcExpr.Input = new Expression("source", Operation.VARIABLE, targetPath.LesserSet); // Add Input of function as a variable the values of which (output) can be assigned during export
-
-                expr.Input = funcExpr; // Add function to the leaf expression
-            }
-            else // Recursion: create a tuple expression for each child and add them to the parent tuple
-            {
-                foreach (MatchTree c in Children)
-                {
-                    if (c.Dim != null && c.Dim is DimSuper)
-                        expr.Input = c.GetExpression();
-                    else
-                        expr.AddOperand(c.GetExpression());
-                }
-            }
-
-            return expr;
-        }
-
-        public MatchTree CreateEmptyTree(SetRoot topSet)
-        {
-            MatchTree bottomSet = new MatchTree(null);
-
-            return bottomSet;
-        }
-
-        public MatchTree CreatePrimitiveTree(SetRoot topSet)
-        {
-            MatchTree bottomSet = new MatchTree(null);
-
-            return bottomSet;
-        }
-
-        public MatchTree(Dim dim, DimTree parent = null) 
-            : base(dim, parent)
-        {
-            DimMatches = new Fragments<MatchTree>();
-        }
-
-        public MatchTree(Set set, DimTree parent = null)
-            : base(set, parent)
-        {
-            DimMatches = new Fragments<MatchTree>();
-        }
-
-        public MatchTree(MatchTree target)
-            : base()
-        {
-            // We assume that it is a root node. Some target must be provided
-            DimMatches = new Fragments<MatchTree>();
-            DimMatches.Name = "Matches";
-            RecommendedFragment<MatchTree> targetFragment = new RecommendedFragment<MatchTree>(target, 1.0);
-            DimMatches.Alternatives.Add(targetFragment);
-            DimMatches.SelectedFragment = targetFragment;
-            DimMatches.Readonly = true; // The root node should never be shown or edited in any case
-
-            // TODO: Initialize SetMatches
-        
-        }
-
-        public MatchTree()
-            : base()
-        {
-            // We assume that it is a root node. Some target must be provided
-            DimMatches = new Fragments<MatchTree>();
-            DimMatches.Name = "Matches";
-            DimMatches.Readonly = true; // The root node should never be shown or edited in any case
-
-            // TODO: Initialize SetMatches
-
-        }
     }
 
     public class DimTree : IEnumerable<DimTree>, INotifyCollectionChanged

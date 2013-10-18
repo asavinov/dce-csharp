@@ -242,6 +242,42 @@ namespace Com.Model
         /// </summary>
         public List<Dim> Path { get; set; }
 
+        public DimPath SubPath(int index, int count = 0) // Return a new path consisting of the specified segments
+        {
+            DimPath ret = new DimPath();
+            if (Path == null)
+            {
+                Path = new List<Dim>();
+                return ret;
+            }
+
+            if (count == 0) count = Path.Count - index;
+
+            for (int i = 0; i < count; i++)
+            {
+                ret.Path.Add(Path[index+i]);
+            }
+
+            ret.GreaterSet = ret.Path[0].LesserSet;
+            ret.LesserSet = ret.Path[ret.Path.Count-1].GreaterSet;
+
+            return ret;
+        }
+
+        public int IndexOf(Set set) // Return index of the set in the path
+        {
+            for (int i = 0; i < Path.Count; i++)
+            {
+                if (Path[i].LesserSet == set) return i;
+            }
+            return -1;
+        }
+
+        public int IndexOf(DimPath path) // Return index of the beginning of the specified path in this path
+        {
+            throw new NotImplementedException();
+        }
+
         public void AppendSegment(Dim dim) // Append a new segment to the end of the path
         {
             if (Path == null)
@@ -286,8 +322,20 @@ namespace Com.Model
             LesserSet = dim.LesserSet;
             if (GreaterSet == null) GreaterSet = dim.GreaterSet;
         }
+        public void InsertPrefix(DimPath path) // Insert new segments from the specified path at the beginning of the path
+        {
+            if (Path == null)
+            {
+                Path = new List<Dim>();
+            }
+            Debug.Assert(Path.Count == 0 || path.GreaterSet == LesserSet, "A path must continue the first segment inserted in the beginning.");
 
-        public Dim RemoveSegment()
+            Path.InsertRange(0, path.Path);
+            LesserSet = path.LesserSet;
+            if (GreaterSet == null) GreaterSet = path.GreaterSet;
+        }
+
+        public Dim RemoveSegment() // Remove last segment
         {
             if (Path == null)
             {
@@ -301,6 +349,39 @@ namespace Com.Model
             Dim result = Path[Path.Count - 1];
             Path.RemoveAt(Path.Count - 1);
             return result;
+        }
+        public void RemovePrefix(DimPath path) // Remove first segments
+        {
+            if (Path == null)
+            {
+                Path = new List<Dim>();
+                return;
+            }
+
+            if (Path.Count < path.Path.Count) return; // Nothing to remove
+            if (!this.StartsWith(path)) return;
+
+            Path.RemoveRange(0, path.Path.Count);
+
+            if (Path.Count > 0) LesserSet = Path[0].LesserSet;
+            else LesserSet = GreaterSet;
+        }
+        public void TrimPrefix(Set set) // Remove first segments till this set (the new path will start from the specified set if trimmed)
+        {
+            if (Path == null)
+            {
+                Path = new List<Dim>();
+                return;
+            }
+
+            // Find a path to the specified set
+            int index = IndexOf(set);
+            if (index < 0) return;
+
+            Path.RemoveRange(0, index - 1);
+
+            if (Path.Count > 0) LesserSet = Path[0].LesserSet;
+            else LesserSet = GreaterSet;
         }
 
         public int Rank
@@ -325,6 +406,10 @@ namespace Com.Model
             }
         }
 
+        public bool StartsWith(Dim path)
+        {
+            return StartsWith(path.Path);
+        }
         public bool StartsWith(List<Dim> path)
         {
             if (Path.Count < path.Count) return false;
@@ -335,6 +420,10 @@ namespace Com.Model
             return true;
         }
 
+        public bool SamePath(Dim path)
+        {
+            return SamePath(path.Path);
+        }
         public bool SamePath(List<Dim> path)
         {
             if (Path == null || path == null) return false;
@@ -587,6 +676,12 @@ namespace Com.Model
         public DimPath(string name)
             : base(name)
         {
+        }
+
+        public DimPath(List<Dim> segments)
+            : this()
+        {
+            segments.ForEach(s => AppendSegment(s));
         }
 
     }

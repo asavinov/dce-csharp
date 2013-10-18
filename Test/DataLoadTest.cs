@@ -574,34 +574,6 @@ namespace Test
             targetChild.ExpandTree(); // Build complete primitive tree (up to the primitive sets)
             targetTree.AddChild(targetChild); // Add some set we want to map to
 
-            MatchTree sourceTree = new MatchTree(/*targetTree*/); // Root
-            MatchTree sourceChild = new MatchTree(workers);
-            sourceChild.ExpandTree(); // Build complete primitive tree (up to the primitive sets)
-            sourceTree.AddChild(sourceChild);
-
-/* DOES NOT WORK
-            // Specify matchings for all dimensions (leaves of the tree)
-            sourceTree.Recommend();
-            sourceChild.DimMatches.SelectedObject = (MatchTree)targetChild; // Workers -> Employees
-            ((MatchTree)sourceChild.Children[0]).DimMatches.SelectedObject = (MatchTree)targetChild.Children[10]; // Worker ID -> Employee ID
-            ((MatchTree)sourceChild.Children[1]).DimMatches.SelectedObject = (MatchTree)targetChild.Children[12]; // Worker Name -> Employee Last Name
-            
-            // Create import dimension with import expression and populate the set
-            Expression expr = sourceChild.GetExpression();
-            workers.ImportExpression = expr;
-            DimImport importDim = new DimImport("import", workers, emps);
-            workers.ImportDims.Add(importDim);
-            emps.ExportDims.Add(importDim);
-
-            workers.Populate();
-*/
-            //
-            // Create new table Bestellungen, define matching to Orders (nested using new table Workers), create import dimension and populate it
-            //
-
-            //
-            // Change column type for an existing table (say, Customer ID, Employee ID, Order ID etc.)
-            //
 
         }
 

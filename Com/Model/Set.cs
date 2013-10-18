@@ -243,6 +243,18 @@ namespace Com.Model
             }
         }
 
+        public bool IsGreater(Set set)
+        {
+            var paths = new PathEnumerator(set, this, DimensionType.IDENTITY_ENTITY);
+            return paths.Count() > 0;
+        }
+
+        public bool IsLesser(Set set)
+        {
+            var paths = new PathEnumerator(this, set, DimensionType.IDENTITY_ENTITY);
+            return paths.Count() > 0;
+        }
+
         public int IdentityArity
         {
             get
@@ -414,6 +426,18 @@ namespace Com.Model
         public Dim GetGreaterPathByColumnName(string name)
         {
             return GreaterPaths.FirstOrDefault(d => d.RelationalColumnName.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+        }
+        public List<DimPath> GetGreaterPaths(Set greaterSet) // Differences between this set and the specified set
+        {
+            if (greaterSet == null) return null;
+            var paths = new PathEnumerator(this, greaterSet, DimensionType.IDENTITY_ENTITY);
+            var ret = new List<DimPath>();
+            foreach (var p in paths)
+            {
+                ret.Add(new DimPath(p)); // Create a path for each list of dimensions
+            }
+
+            return ret;
         }
         public Dim GetGreaterPath(Dim path)
         {
