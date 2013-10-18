@@ -127,7 +127,7 @@ namespace Com.Model
             List<Set> sets = GetAllSubsets();
             foreach (Set set in sets)
             {
-                foreach (Dim path in set.GreaterPaths)
+                foreach (DimPath path in set.GreaterPaths)
                 {
                     path.ExpandPath();
                 }
@@ -163,10 +163,10 @@ namespace Com.Model
                 string columnName = col["COLUMN_NAME"].ToString();
                 string columnType = MapToLocalType(((OleDbType)col["DATA_TYPE"]).ToString());
 
-                Dim path = tableSet.GetGreaterPathByColumnName(columnName); // It might have been already added
+                DimPath path = tableSet.GetGreaterPathByColumnName(columnName); // It might have been already added
                 if (path == null)
                 {
-                    path = new Dim(columnName);
+                    path = new DimPath(columnName);
                     path.RelationalColumnName = columnName;
                     path.LesserSet = tableSet; // Assign domain set give the table name
                     path.GreaterSet = Root.GetPrimitiveSubset(columnType);
@@ -229,10 +229,10 @@ namespace Com.Model
                     //
 
                     string fkTargetColumnName = (string)fk["PK_COLUMN_NAME"]; // Next path name belonging to the target set
-                    Dim fkTargetPath = fkTargetSet.GetGreaterPathByColumnName(fkTargetColumnName); // This column might have been created
+                    DimPath fkTargetPath = fkTargetSet.GetGreaterPathByColumnName(fkTargetColumnName); // This column might have been created
                     if (fkTargetPath == null)
                     {
-                        fkTargetPath = new Dim(fkTargetColumnName);
+                        fkTargetPath = new DimPath(fkTargetColumnName);
                         fkTargetPath.RelationalColumnName = fkTargetColumnName;
                         fkTargetPath.IsIdentity = path.IsIdentity;
                         fkTargetPath.LesserSet = fkTargetSet;
@@ -285,7 +285,7 @@ namespace Com.Model
 
             // Generate query for our database engine by including at least all identity dimensions
             string select = ""; // Attribute names or their definitions stored in the dimensions
-            List<Dim> attributes = set.GreaterPaths; // We need our custom aliases with target platform definitions as db-specific column names
+            List<DimPath> attributes = set.GreaterPaths; // We need our custom aliases with target platform definitions as db-specific column names
             foreach (Dim dim in attributes)
             {
                 select += "[" + dim.Name + "]" + ", ";
@@ -405,7 +405,7 @@ namespace Com.Model
             // We do not select from intermediate tables which cosists of only FKs. 
 
             string res = "";
-            foreach (Dim att in set.GreaterPaths)
+            foreach (DimPath att in set.GreaterPaths)
             {
                 string tableAlias = GetTableAlias(att.LastSegment.LesserSet.RelationalTableName, GetPathHash(att.Path, att.Path.Count - 1));
                 tableAlias = "[" + tableAlias + "]";
@@ -502,22 +502,22 @@ namespace Com.Model
             // Equality is specified using table names because attribute names are not unique: T.Id = gT.Id
 
             Set gSet = gDim.GreaterSet;
-            List<Dim> fkAtts = set.GetGreaterPathsStartingWith(new List<Dim>(new Dim[] {gDim})); // All columns belonging to this FK
+            List<DimPath> fkAtts = set.GetGreaterPathsStartingWith(new List<Dim>(new Dim[] { gDim })); // All columns belonging to this FK
             
             string res = "";
-            foreach (Dim att in fkAtts)
+            foreach (DimPath att in fkAtts)
             {
                 // Debug.Assert(att.RelationalPkName == gSet.RelationalPkName, "Wrong use: dimension/path relational attributes are not set correctly.");
                 // Debug.Assert(att.RelationalFkName == gDim.RelationalFkName, "Wrong use: dimension/path relational attributes are not set correctly.");
 
                 // Build tail by excluding the first segment (gDim)
-                Dim tail = new Dim(gDim.Name);
+                DimPath tail = new DimPath(gDim.Name);
                 tail.Path = new List<Dim>(att.Path);
                 tail.Path.RemoveAt(0);
                 tail.LesserSet = tail.Path[0].LesserSet;
 
                 // Find a path in the greater set which has this same tail
-                Dim gAtt = gSet.GetGreaterPath(tail);
+                DimPath gAtt = gSet.GetGreaterPath(tail);
                 Debug.Assert(gAtt != null, "Wrong use: Tail path must exist.");
 
                 if (!gAtt.IsIdentity) continue; // Join is made on only values (OPTIMIZE: we can retrieve only value-attributes before the loop rather than all possible paths, and then Assert here that it is identity path.)

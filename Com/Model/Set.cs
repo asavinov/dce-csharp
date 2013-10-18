@@ -394,36 +394,36 @@ namespace Com.Model
 
         #region Complex dimensions (paths)
 
-        public List<DimSuper> SuperPaths { get; private set; }
-        public List<DimSuper> SubPaths { get; private set; }
-        public List<Dim> GreaterPaths { get; private set; }
-        public List<Dim> LesserPaths { get; private set; }
+        public List<DimPath> SuperPaths { get; private set; }
+        public List<DimPath> SubPaths { get; private set; }
+        public List<DimPath> GreaterPaths { get; private set; }
+        public List<DimPath> LesserPaths { get; private set; }
 
-        public void AddGreaterPath(Dim path)
+        public void AddGreaterPath(DimPath path)
         {
             Debug.Assert(path.GreaterSet != null && path.LesserSet != null, "Wrong use: path must specify a lesser and greater sets before it can be added to a set.");
             RemoveGreaterPath(path);
             path.GreaterSet.LesserPaths.Add(path);
             path.LesserSet.GreaterPaths.Add(path);
         }
-        public void RemoveGreaterPath(Dim path)
+        public void RemoveGreaterPath(DimPath path)
         {
             if (path.GreaterSet != null) path.GreaterSet.LesserPaths.Remove(path);
             if (path.LesserSet != null) path.LesserSet.GreaterPaths.Remove(path);
         }
         public void RemoveGreaterPath(string name)
         {
-            Dim path = GetGreaterPath(name);
+            DimPath path = GetGreaterPath(name);
             if (path != null)
             {
                 RemoveGreaterPath(path);
             }
         }
-        public Dim GetGreaterPath(string name)
+        public DimPath GetGreaterPath(string name)
         {
             return GreaterPaths.FirstOrDefault(d => d.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
         }
-        public Dim GetGreaterPathByColumnName(string name)
+        public DimPath GetGreaterPathByColumnName(string name)
         {
             return GreaterPaths.FirstOrDefault(d => d.RelationalColumnName.Equals(name, StringComparison.InvariantCultureIgnoreCase));
         }
@@ -439,15 +439,15 @@ namespace Com.Model
 
             return ret;
         }
-        public Dim GetGreaterPath(Dim path)
+        public DimPath GetGreaterPath(DimPath path)
         {
             if (path == null || path.Path == null) return null;
             return GetGreaterPath(path.Path);
         }
-        public Dim GetGreaterPath(List<Dim> path)
+        public DimPath GetGreaterPath(List<Dim> path)
         {
             if (path == null ) return null;
-            foreach (Dim p in GreaterPaths)
+            foreach (DimPath p in GreaterPaths)
             {
                 if (p.Path == null) continue;
                 if (p.Path.Count != path.Count) continue; // Different lengths => not equal
@@ -462,15 +462,15 @@ namespace Com.Model
             }
             return null;
         }
-        public List<Dim> GetGreaterPathsStartingWith(Dim path)
+        public List<DimPath> GetGreaterPathsStartingWith(DimPath path)
         {
-            if (path == null || path.Path == null) return new List<Dim>();
+            if (path == null || path.Path == null) return new List<DimPath>();
             return GetGreaterPathsStartingWith(path.Path);
         }
-        public List<Dim> GetGreaterPathsStartingWith(List<Dim> path)
+        public List<DimPath> GetGreaterPathsStartingWith(List<Dim> path)
         {
-            var result = new List<Dim>();
-            foreach (Dim p in GreaterPaths)
+            var result = new List<DimPath>();
+            foreach (DimPath p in GreaterPaths)
             {
                 if (p.Path == null) continue;
                 if (p.Path.Count < path.Count) continue; // Too short path (cannot include the input path)
@@ -486,7 +486,7 @@ namespace Com.Model
         {
             int pathCounter = 0;
 
-            Dim path = new Dim("");
+            DimPath path = new DimPath("");
             foreach (List<Dim> p in GetGreaterPrimitiveDims(DimensionType.IDENTITY_ENTITY))
             {
                 if (p.Count < 2) continue; // All primitive paths are stored in this set. We need at least 2 segments.
@@ -497,7 +497,7 @@ namespace Com.Model
 
                 string pathName = "__inherited__" + ++pathCounter;
 
-                Dim newPath = new Dim(pathName);
+                DimPath newPath = new DimPath(pathName);
                 newPath.Path = new List<Dim>(p);
                 newPath.Name = newPath.ComplexName; // Overwrite previous pathName (so previous is not needed actually)
                 newPath.RelationalColumnName = newPath.Name; // It actually will be used for relational queries
@@ -950,10 +950,10 @@ namespace Com.Model
             ExportDims = new List<DimImport>();
             ImportDims = new List<DimImport>();
 
-            SuperPaths = new List<DimSuper>();
-            SubPaths = new List<DimSuper>();
-            GreaterPaths = new List<Dim>();
-            LesserPaths = new List<Dim>();
+            SuperPaths = new List<DimPath>();
+            SubPaths = new List<DimPath>();
+            GreaterPaths = new List<DimPath>();
+            LesserPaths = new List<DimPath>();
 
             // TODO: Parameterize depending on the reserved names: Integer, Double etc. (or exclude these names)
             IsInstantiable = true;

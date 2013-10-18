@@ -376,7 +376,7 @@ namespace Com.Model
                 Expression varExpr = new Expression("source", Operation.VARIABLE, match.TargetSet); // Add Input of function as a variable the values of which (output) can be assigned for evaluation of the function during export/import
 
                 Expression funcExpr = null;
-                Dim srcPath = match.SourceSet.GetGreaterPath(match.SourcePath.Path); // First, we try to find a direct path/function 
+                DimPath srcPath = match.SourceSet.GetGreaterPath(match.SourcePath.Path); // First, we try to find a direct path/function 
                 if (srcPath == null) // No direct path
                 {
                     srcPath = match.SourcePath; // use a sequence of dimensions/functions
