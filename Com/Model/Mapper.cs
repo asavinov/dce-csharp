@@ -431,7 +431,7 @@ namespace Com.Model
     /// <summary>
     /// It displays the current state of mapping between two sets as properties of the tree nodes depending on the role of the tree. 
     /// </summary>
-    public class MatchTreeRoot : MatchTreeNode
+    public class MatchTree : MatchTreeNode
     {
         public SetMapping Mapping { get; set; } // Where matches are stored between paths of this tree (note that paths start from the children of this root element - not from this root)
 
@@ -543,12 +543,12 @@ namespace Com.Model
 
         public bool IsMatched()
         {
-            return ((MatchTreeRoot)Root).IsMatched();
+            return ((MatchTree)Root).IsMatched();
         }
 
         public PathMatch AddMatch()
         {
-            return ((MatchTreeRoot)Root).AddMatch();
+            return ((MatchTree)Root).AddMatch();
         }
 
         /// <summary>
