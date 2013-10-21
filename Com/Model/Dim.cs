@@ -258,6 +258,24 @@ namespace Com.Model
 
         #region Constructors and initializers.
 
+        public Dim()
+        {
+            Id = Guid.NewGuid();
+        }
+
+        public Dim(Dim dim)
+            : this()
+        {
+            Name = dim.Name;
+
+            IsIdentity = dim.IsIdentity;
+            IsReversed = dim.IsReversed;
+            IsInstantiable = dim.IsInstantiable;
+
+            LesserSet = dim.LesserSet;
+            GreaterSet = dim.GreaterSet;
+        }
+
         public Dim(string name)
             : this(name, null, null)
         {
@@ -269,8 +287,8 @@ namespace Com.Model
         }
 
         public Dim(string name, Set lesserSet, Set greaterSet, bool isIdentity, bool isReversed, bool isInstantiable)
+            : this()
         {
-            Id = Guid.NewGuid();
             Name = name;
 
             IsIdentity = isIdentity;

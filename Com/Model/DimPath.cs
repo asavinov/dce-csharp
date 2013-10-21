@@ -12,7 +12,6 @@ namespace Com.Model
     /// </summary>
     public class DimPath : Dim
     {
-
         public string ComplexName
         {
             get
@@ -359,7 +358,6 @@ namespace Com.Model
         }
 
         public DimPath()
-            : base(null)
         {
             Path = new List<Dim>();
         }
@@ -373,9 +371,19 @@ namespace Com.Model
         public DimPath(List<Dim> segments)
             : this()
         {
-            segments.ForEach(s => AppendSegment(s));
+            if(segments == null && segments.Count == 0) return;
+
+            Path.AddRange(segments);
+            LesserSet = Path[0].LesserSet;
+            GreaterSet = Path[Path.Count - 1].GreaterSet;
         }
 
+        public DimPath(DimPath path)
+            : base(path)
+        {
+            Path = new List<Dim>();
+            Path.AddRange(path.Path);
+        }
     }
 
     /// <summary>

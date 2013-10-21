@@ -530,52 +530,5 @@ namespace Test
             Assert.AreEqual(2, subProducts.Length);
         }
 
-        [TestMethod]
-        public void MatchingOperationsTest()
-        {
-            // Create Oldedb root set
-            SetRootOledb dbRoot = new SetRootOledb("Northwind");
-            dbRoot.ConnectionString = Northwind;
-            dbRoot.Open();
-            dbRoot.ImportSchema();
-
-            //
-            // Load test data
-            //
-            SetRoot wsRoot = new SetRoot("My Mashup");
-            Set targetSet = Mapper.ImportSet(dbRoot.FindSubset("Order Details"), wsRoot);
-            targetSet.Populate();
-
-            Set intSet = wsRoot.GetPrimitiveSubset("Integer");
-            Set stringSet = wsRoot.GetPrimitiveSubset("String");
-
-            //
-            // Create new table Workers, define matching to Employees, create import dimension and populate it
-            //
-
-            // Create a new set
-            Set workers = new Set("Workers"); 
-            wsRoot.AddSubset(workers);
-
-            Dim d1 = intSet.CreateDefaultLesserDimension("Worder ID", workers);
-            d1.IsIdentity = true;
-            Dim d2 = stringSet.CreateDefaultLesserDimension("Worker Name", workers);
-            d2.IsIdentity = false;
-
-            workers.AddGreaterDim(d1);
-            workers.AddGreaterDim(d2);
-
-            // Define matching to Employees
-            Set emps = wsRoot.FindSubset("Employees");
-
-
-            DimTree targetTree = new DimTree(); // Root
-            DimTree targetChild = new DimTree(emps);
-            targetChild.ExpandTree(); // Build complete primitive tree (up to the primitive sets)
-            targetTree.AddChild(targetChild); // Add some set we want to map to
-
-
-        }
-
     }
 }

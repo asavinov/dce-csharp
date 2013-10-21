@@ -255,14 +255,42 @@ namespace Com.Model
             }
         }
 
-        public PathMatch GetMatchForSource(DimPath path)
+        public bool IsSourcePathValid(DimPath path)
         {
-            throw new NotImplementedException();
+            if (path.LesserSet != SourceSet && !path.LesserSet.IsGreater(SourceSet)) return false;
+            return true;
+        }
+        public bool IsTargetPathValid(DimPath path)
+        {
+            if (path.LesserSet != TargetSet && !path.LesserSet.IsGreater(TargetSet)) return false;
+            return true;
         }
 
-        public PathMatch GetMatchForTarget(DimPath path)
+        public bool AreMatched(PathMatch match) // Determine if both paths are matched (true if there exist the same or more specific match)
         {
-            throw new NotImplementedException();
+            foreach (PathMatch m in Matches)
+            {
+                if (m.Matches(match)) return true;
+            }
+            return false; // Not found
+        }
+
+        public PathMatch GetMatchForSource(DimPath path) // Find a match with this path
+        {
+            foreach(PathMatch m in Matches) 
+            {
+                if (m.MatchesSource(path)) return m;
+            }
+            return null;
+        }
+
+        public PathMatch GetMatchForTarget(DimPath path) // Find a match with this path
+        {
+            foreach (PathMatch m in Matches)
+            {
+                if (m.MatchesTarget(path)) return m;
+            }
+            return null;
         }
 
         public void AddPaths(Dim sd, Dim td, SetMapping gMapping) // Add this pair by expanding it using the mapping
@@ -300,7 +328,7 @@ namespace Com.Model
             }
         }
 
-        public void AddPathMatch(PathMatch match)
+        public void AddMatch(PathMatch match)
         {
             Debug.Assert(match != null && match.SourceSet == SourceSet, "Wrong use: source path must start from the source set.");
             Debug.Assert(match != null && match.TargetSet == TargetSet, "Wrong use: target path must start from the target set.");
@@ -316,7 +344,7 @@ namespace Com.Model
             // What incompatible means? 
             // - For one path (one means all covered or all continuations?), different other paths are present
 
-            foreach(PathMatch m in Matches)
+            foreach (PathMatch m in Matches)
             {
                 // - If one path is covered (but not equal) then the second path must be also covered (so this match always continues existing matches)
                 //   - coverage means continuation of the *whole* path (so any path covers the root which empty path)
@@ -337,16 +365,13 @@ namespace Com.Model
             Matches.Add(match);
         }
 
-        public bool AreMatched(PathMatch match) // Determine if both paths are matched (true if there exist the same or more specific match)
+        public void AddMatches(List<PathMatch> matches) // Import all path matches (as new objects) that fit into this mapping
         {
-            foreach (PathMatch m in Matches)
+            foreach (PathMatch m in matches)
             {
-                if(!m.SourcePath.StartsWith(match.SourcePath)) continue;
-                if(!m.TargetPath.StartsWith(match.TargetPath)) continue;
-                return true;
+                PathMatch match = new PathMatch(m);
+                AddMatch(match);
             }
-
-            return false; // Not found
         }
 
         public DimTree GetSourceTree() // Convert all source paths into a dimension tree where the source set will be a root. The tree can contain non-existing elements if they are used in the mapping. 
@@ -355,11 +380,40 @@ namespace Com.Model
             Matches.ForEach(p => tree.AddPath(p.SourcePath));
             return tree;
         }
+        public DimTree GetSourceTree(Set set) // Convert all paths of the specified set into a dimension tree where the source set will be a root. The tree can contain non-existing elements if they are used in the mapping. 
+        {
+            DimTree tree = new DimTree(set);
+            foreach (PathMatch m in Matches)
+            {
+                // if(m.SourcePath.LesserSet != set) continue; // Use this if we want to take into account only paths *starting* from this set (rather than crossing this set)
+                int index = m.SourcePath.IndexOf(set);
+                if (index < 0) continue; // The path does not cross this set
+
+                tree.AddPath(m.SourcePath.SubPath(index));
+            }
+
+            return tree;
+        }
+
 
         public DimTree GetTargetTree() // Convert all target paths into a dimension tree where the target set will be a root. The tree can contain non-existing elements if they are used in the mapping. 
         {
             DimTree tree = new DimTree(TargetSet);
             Matches.ForEach(p => tree.AddPath(p.TargetPath));
+            return tree;
+        }
+        public DimTree GetTargetTree(Set set) // Convert all target paths into a dimension tree where the target set will be a root. The tree can contain non-existing elements if they are used in the mapping. 
+        {
+            DimTree tree = new DimTree(set);
+            foreach (PathMatch m in Matches)
+            {
+                // if(m.TargetPath.LesserSet != set) continue; // Use this if we want to take into account only paths *starting* from this set (rather than crossing this set)
+                int index = m.TargetPath.IndexOf(set);
+                if (index < 0) continue; // The path does not cross this set
+
+                tree.AddPath(m.TargetPath.SubPath(index));
+            }
+
             return tree;
         }
 
@@ -398,7 +452,8 @@ namespace Com.Model
 
         public SetMapping(Set sourceSet, Set targetSet)
         {
-            Debug.Assert((sourceSet.IsPrimitive && targetSet.IsPrimitive) || (!sourceSet.IsPrimitive && !targetSet.IsPrimitive), "Wrong use: cannot create a mapping between a primitive set and a non-primitive set.");
+            // Debug.Assert((sourceSet.IsPrimitive && targetSet.IsPrimitive) || (!sourceSet.IsPrimitive && !targetSet.IsPrimitive), "Wrong use: cannot create a mapping between a primitive set and a non-primitive set.");
+            Debug.Assert(sourceSet != null && targetSet != null, "Wrong use: parametes cannot be null.");
 
             Matches = new List<PathMatch>();
 
@@ -420,62 +475,93 @@ namespace Com.Model
         public Set SourceSet { get { return SourcePath == null ? null : SourcePath.LesserSet; } }
         public Set TargetSet { get { return TargetPath == null ? null : TargetPath.LesserSet; } }
 
+        public bool MatchesSource(DimPath path)
+        {
+            return SourcePath.StartsWith(path);
+        }
+
+        public bool MatchesTarget(DimPath path)
+        {
+            return TargetPath.StartsWith(path);
+        }
+
+        public bool Matches(PathMatch match)
+        {
+            return MatchesSource(match.SourcePath) && MatchesTarget(match.TargetPath);
+        }
+
+        public PathMatch(PathMatch m)
+        {
+            SourcePath = new DimPath(m.SourcePath);
+            TargetPath = new DimPath(m.TargetPath);
+            Similarity = m.Similarity;
+        }
+
         public PathMatch(DimPath sourcePath, DimPath targetPath)
         {
             SourcePath = sourcePath;
             TargetPath = targetPath;
             Similarity = 1.0;
         }
+
+        public PathMatch(DimPath sourcePath, DimPath targetPath, double similarity)
+            : this(sourcePath, targetPath)
+        {
+            Similarity = 1.0;
+        }
     }
 
     /// <summary>
-    /// It displays the current state of mapping between two sets as properties of the tree nodes depending on the role of the tree. 
+    /// It stores all necessary information for editing a mapping and the current state of mapping. 
     /// </summary>
-    public class MatchTree : MatchTreeNode
+    public class MappingModel
     {
-        public SetMapping Mapping { get; set; } // Where matches are stored between paths of this tree (note that paths start from the children of this root element - not from this root)
+        public MatchTree SourceTree { get; private set; }
+        public MatchTree TargetTree { get; private set; }
 
-        public bool IsSource { get; set; } // Whether this tree corresponds to source paths (or target paths) in the mappings. It determines the semantics/direction of mapping (import/export). 
-        public bool IsPrimary { get; set; } // Defines how the node properties are computed and displayed as well as the logic of the tree. 
-        public bool OnlyPrimitive { get; set; } // Only primitive dimensions/paths can be matched (not intermediate). So intermediate elemens are not matched (but might display information about matches derived from primitive elements).
-        public bool CanChangeSet { get; set; } // Whether it is possible to change the set being mapped in the mapping object.
+        public SetMapping Mapping { get; set; } // It is the current state of the mapping. And it is what is initialized and returned. 
 
-        // This is important for generation of the current status: disabled/enabled, relevance etc.
-        public MatchTreeNode SelectedNode { get; set; } // Selected in this tree
-        public MatchTreeNode SelectedCounterNode { get; set; } // In another tree
-
-        public DimPath SelectedPath // Selected in this tree
-        { 
-            get 
-            {
-                if (SelectedNode == null) return null;
-                DimPath selectedPath = SelectedNode.DimPath;
-                if (IsSource)
-                {
-                    selectedPath.TrimPrefix(Mapping.SourceSet);
-                }
-                else
-                {
-                    selectedPath.TrimPrefix(Mapping.TargetSet);
-                }
-                return selectedPath;
-            } 
-        }
-        public DimPath SelectedCounterPath // In another tree
+        private Set _sourceSet;
+        public Set SourceSet 
         {
-            get
+            get { return _sourceSet; }
+            set 
             {
-                if (SelectedCounterNode == null) return null;
-                DimPath selectedCounterPath = SelectedCounterNode.DimPath;
-                if (IsSource)
-                {
-                    selectedCounterPath.TrimPrefix(Mapping.SourceSet);
-                }
-                else
-                {
-                    selectedCounterPath.TrimPrefix(Mapping.TargetSet);
-                }
-                return selectedCounterPath;
+                Debug.Assert(value != null, "Wrong use: a set in mapping cannot be null (use root instead).");
+                if (_sourceSet == value) return;
+                _sourceSet = value;
+
+                Mapping.SourceSet = SourceSet; // Update mapper
+
+                // Update tree
+                SourceTree.Children.Clear();
+                if (_sourceSet.IsRoot) return;
+                MatchTreeNode node = new MatchTreeNode();
+                node.Set = SourceSet;
+                node.ExpandTree();
+                SourceTree.AddChild(node);
+            }
+        }
+
+        private Set _targetSet;
+        public Set TargetSet
+        {
+            get { return _targetSet; }
+            set
+            {
+                Debug.Assert(value != null, "Wrong use: a set in mapping cannot be null (use root instead).");
+                if (_targetSet == value) return;
+                _targetSet = value;
+
+                Mapping.TargetSet = TargetSet; // Update mapper
+
+                // Update tree
+                TargetTree.Children.Clear();
+                if (_targetSet.IsRoot) return;
+                MatchTreeNode node = new MatchTreeNode();
+                node.Set = TargetSet;
+                node.ExpandTree();
+                TargetTree.AddChild(node);
             }
         }
 
@@ -484,29 +570,40 @@ namespace Com.Model
         /// Secondary: returns true if this node is matched against the currently selected primary node and false otherwise (so only one node in the whole secondary tree is true).
         /// </summary>
         /// <returns></returns>
-        public bool IsMatched()
+        public bool IsSourceMatched()
         {
-            PathMatch match;
-            DimPath counterPath;
-            if (IsSource)
-            {
-                match = Mapping.GetMatchForSource(SelectedPath);
-                counterPath = match != null ? match.TargetPath : null;
-            }
-            else
-            {
-                match = Mapping.GetMatchForTarget(SelectedPath);
-                counterPath = match != null ? match.SourcePath : null;
-            }
+            PathMatch match = Mapping.GetMatchForSource(SourceTree.SelectedPath);
 
-            if (IsPrimary)
+            if (match == null) return false;
+
+            if (SourceTree.IsPrimary)
             {
                 return match != null;
             }
             else
             {
-                if (match == null) return false;
-                return counterPath.StartsWith(SelectedCounterPath);
+                return match.TargetPath.StartsWith(TargetTree.SelectedPath);
+            }
+        }
+
+        /// <summary>
+        /// Primary: returns true if this node has any match and false otherwise (not assigned). 
+        /// Secondary: returns true if this node is matched against the currently selected primary node and false otherwise (so only one node in the whole secondary tree is true).
+        /// </summary>
+        /// <returns></returns>
+        public bool IsTargetMatched()
+        {
+            PathMatch match = Mapping.GetMatchForTarget(TargetTree.SelectedPath);
+
+            if (match == null) return false;
+
+            if (TargetTree.IsPrimary)
+            {
+                return match != null;
+            }
+            else
+            {
+                return match.SourcePath.StartsWith(SourceTree.SelectedPath);
             }
         }
 
@@ -516,20 +613,56 @@ namespace Com.Model
         /// </summary>
         public PathMatch AddMatch()
         {
-            PathMatch match;
-            if (IsSource)
-            {
-                match = new PathMatch(SelectedPath, SelectedCounterPath);
-            }
-            else
-            {
-                match = new PathMatch(SelectedCounterPath, SelectedPath);
-            }
-
-            match.Similarity = 1.0;
-            Mapping.AddPathMatch(match); // Some existing matches (which contradict to the added one) can be removed
+            PathMatch match = new PathMatch(SourceTree.SelectedPath, TargetTree.SelectedPath, 1.0);
+            Mapping.AddMatch(match); // Some existing matches (which contradict to the added one) can be removed
 
             return match;
+        }
+
+        public MappingModel(Set sourceSet, Set targetSet) // Pass root if you want to include all least sets in mapping
+        {
+            SourceTree = new MatchTree();
+            TargetTree = new MatchTree();
+
+            Mapping = new SetMapping(sourceSet, targetSet);
+
+            SourceSet = sourceSet; // Here also the tree will be constructed
+            TargetSet = targetSet;
+        }
+
+    }
+
+    /// <summary>
+    /// It displays the current state of mapping between two sets as properties of the tree nodes depending on the role of the tree. 
+    /// </summary>
+    public class MatchTree : MatchTreeNode
+    {
+        public MappingModel MappingModel { get; set; }
+
+        public bool IsSource { get { return MappingModel.SourceTree == this;  } } // Whether this tree corresponds to source paths in the mappings.
+        public bool IsTarget { get { return MappingModel.TargetTree == this; } } // Whether this tree corresponds to target paths in the mappings. 
+
+        public bool IsPrimary { get; set; } // Defines how the node properties are computed and displayed as well as the logic of the tree. 
+        public bool OnlyPrimitive { get; set; } // Only primitive dimensions/paths can be matched (not intermediate). So intermediate elemens are not matched (but might display information about matches derived from primitive elements).
+
+        // This is important for generation of the current status: disabled/enabled, relevance etc.
+        public MatchTreeNode SelectedNode { get; set; } // Selected in this tree. Bind tree view selected item to this field.
+        public DimPath SelectedPath // Transform selected node into valid selected path
+        {
+            get
+            {
+                if (SelectedNode == null) return null;
+                DimPath selectedPath = SelectedNode.DimPath;
+                // TODO: Here we might need to trim this selected path by fitting it into the constraints of the mapping (between least and greatest sets)
+                return selectedPath;
+            }
+        }
+
+        public MatchTree CounterTree { get { return IsSource ? MappingModel.TargetTree : MappingModel.SourceTree; } } // Another tree
+
+        public MatchTree()
+            : base()
+        {
         }
     }
 
@@ -543,12 +676,14 @@ namespace Com.Model
 
         public bool IsMatched()
         {
-            return ((MatchTree)Root).IsMatched();
+            MatchTree root = (MatchTree)Root;
+            if (root.IsSource) return root.MappingModel.IsSourceMatched();
+            else return root.MappingModel.IsTargetMatched();
         }
 
         public PathMatch AddMatch()
         {
-            return ((MatchTree)Root).AddMatch();
+            return ((MatchTree)Root).MappingModel.AddMatch();
         }
 
         /// <summary>
@@ -579,9 +714,23 @@ namespace Com.Model
             throw new NotImplementedException();
         }
 
+        public MatchTreeNode(Dim dim, DimTree parent = null)
+            : base(dim, parent)
+        {
+        }
+
+        public MatchTreeNode(Set set, DimTree parent = null)
+            : base(set, parent)
+        {
+        }
+
+        public MatchTreeNode()
+            : base()
+        {
+        }
     }
 
-    public class DimTree : IEnumerable<DimTree>, INotifyCollectionChanged
+   public class DimTree : IEnumerable<DimTree>, INotifyCollectionChanged
     {
         /// <summary>
         /// It is one element of the tree. It is null for the bottom (root) and its direct children which do not have lesser dimensions.
@@ -804,7 +953,9 @@ namespace Com.Model
                 {
                     if (ExistsChild(d)) continue;
                     // New child instances need to have the type of this instance (this instance can be an extension of this class so we do not know it)
-                    DimTree child = (DimTree)Activator.CreateInstance(this.GetType(), new Object[] {d, this});
+                    DimTree child = (DimTree)Activator.CreateInstance(this.GetType());
+                    child.Dim = d;
+                    this.AddChild(child);
                     if (recursively) child.ExpandTree(recursively);
                 }
             }
@@ -833,70 +984,6 @@ namespace Com.Model
             }
         }
 
-/*
-        /// <summary>
-        /// Find first element in the specified match tree (exclusive) that references this element. Start from children and skip null matches. 
-        /// </summary>
-        public MatchTree FindFirstMatchFor(MatchTree matchTree)
-        {
-            foreach (MatchTree c in matchTree.Children)
-            {
-                if (c.DimMatches.SelectedObject == null) // Recursion if null match
-                {
-                    MatchTree childTree = this.FindFirstMatchFor(c);
-                    if (childTree != null) return childTree;
-                }
-                else if (c.DimMatches.SelectedObject == this)
-                {
-                    return c;
-                }
-            }
-            return null; // No element from this subtree references (matches) the specified element
-        }
-*/
-/*
-        /// <summary>
-        /// Create an equivalent expression for matching from this tree to the specified match tree. 
-        /// The expression will have the structure of this dimension tree (not the specified match tree).
-        /// </summary>
-        /// <returns></returns>
-        public Expression GetInverseExpression(MatchTree matchTree)
-        {
-            //
-            // Create a tuple expression object for this node of the tree only
-            //
-            Expression expr = new Expression(Dim != null ? Dim.Name : null, Operation.TUPLE, Set);
-            expr.Dimension = Dim;
-
-            MatchTree source = FindFirstMatchFor(matchTree); // Who references us from match tree?
-
-            // For a leaf, define the primitive value in terms of the matching tree (it is a DOT expression representing a primitive path in the target tree)
-            if (IsLeaf && source != null)
-            {
-                Debug.Assert(Set.IsPrimitive, "Wrong structure: Leaves of the match tree have to be primitive sets.");
-
-                // Build function expression for computing a primitive value from the matched target tree
-                DimPath targetPath = source.DimPath;
-                Expression funcExpr = Expression.CreateProjectExpression(targetPath.Path, Operation.DOT);
-                funcExpr.Input = new Expression("source", Operation.VARIABLE, targetPath.LesserSet); // Add Input of function as a variable the values of which (output) can be assigned during export
-
-                expr.Input = funcExpr; // Add function to the leaf expression
-            }
-            else // Recursion: create a tuple expressions for all children and add them to the parent tuple
-            {
-                foreach (MatchTree c in Children)
-                {
-                    if (c.Dim != null && c.Dim is DimSuper)
-                        expr.Input = c.GetInverseExpression(source == null ? matchTree : source);
-                    else
-                        expr.AddOperand(c.GetInverseExpression(source == null ? matchTree : source));
-                }
-            }
-
-
-            return expr;
-        }
-*/
         public DimTree(Dim dim, DimTree parent = null)
         {
             Dim = dim;
@@ -915,7 +1002,6 @@ namespace Com.Model
         {
             Children = new List<DimTree>();
         }
-
     }
 
     /// <summary>
@@ -1052,56 +1138,178 @@ namespace Com.Model
 
 /*
     /// <summary>
-    /// The class describes a mapping from one set to another set.
+    /// The class stores matches between arbitrary paths in consistent state. 
     /// </summary>
-    public class SetMapping
+    public class PathMapping
     {
-        public Set SourceSet { get; private set; }
-        public Set TargetSet { get; private set; }
+        public List<PathMatch> Matches { get; private set; }
 
-        public double Similarity { get; private set; }
+        public double Similarity { get; set; } // Do we need it?
 
-        public List<DimPath> SourcePaths { get; private set; }
-        public List<DimPath> TargetPaths { get; private set; }
-
-        public void Add(DimPath sourcePath, DimPath targetPath)
+        private DimPath _sourcePrefix;
+        public DimPath SourcePrefix
         {
-            Debug.Assert(sourcePath.LesserSet == SourceSet, "Wrong use: Source path must have its lesser set equal to the source set of the mapping.");
-            Debug.Assert(targetPath.LesserSet == TargetSet, "Wrong use: Target path must have its lesser set equal to the target set of the mapping.");
-
-            // TODO: Check if these paths already exists or they cover some existing paths
-
-            SourcePaths.Add(sourcePath);
-            TargetPaths.Add(targetPath);
+            get { return _sourcePrefix; }
+        }
+        public Set SourceSet
+        {
+            get { return SourcePrefix != null ? SourcePrefix.GreaterSet : null; }
         }
 
-        public void Remove(int index)
+        private DimPath _targetPrefix;
+        public DimPath TargetPrefix
         {
+            get { return _targetPrefix; }
+        }
+        public Set TargetSet
+        {
+            get { return TargetPrefix != null ? TargetPrefix.GreaterSet : null; }
         }
 
-        public void Remove(DimPath path) // Either source or target
+        public List<Set> SourceLeastSets { get; set; } // Bottom if null
+        public List<Set> SourceGreatestSets { get; set; } // Cannot be null. References schema (top, root) in the case of no constraints. 
+
+        public List<Set> TargetLeastSets { get; set; } // Bottom if null
+        public List<Set> TargetGreatestSets { get; set; } // Cannot be null. References schema (top, root) in the case of no constraints. 
+
+        public bool IsSourcePathValid(DimPath path) 
         {
+            if(SourceLeastSets != null) 
+            {
+                foreach(Set set in SourceLeastSets) 
+                {
+                    if(path.LesserSet != set && !path.LesserSet.IsGreater(set)) return false;
+                }
+            }
+
+            foreach(Set set in SourceGreatestSets) 
+            {
+                if(path.GreaterSet != set && !path.GreaterSet.IsLesser(set)) return false;
+            }
+
+            return true;
+        }
+        public bool IsTargetPathValid(DimPath path) 
+        {
+            // TODO: Copy-paste from IsSourcePathValid after testing
+            return true;
+        }
+        
+        public PathMatch GetMatchForSource(DimPath path)
+        {
+            throw new NotImplementedException();
         }
 
-        public void Reverse() // Changa the direction
+        public PathMatch GetMatchForTarget(DimPath path)
         {
+            throw new NotImplementedException();
         }
 
-        // TODO: we need to have a direction (semantics) somewhere: either in parameters or in how the result is stored
-        public static List<SetMapping> RecommendSetMappings(Set sourceSet, SetRoot targetSets, double setCreationThreshold)
+        public void AddMatch(PathMatch match) // Add this match (no new object is created)
         {
-            var mappings = new List<SetMapping>();
 
-            return mappings;
+            // TODO: Check coverage between paths and mappings (pairs of paths)
+            // Rule 1: more specific (longer) path covers and merges a more general (shorter) path. So shorter paths are not needed and can be removed 
+            // Rule 2: Yet, if we remove them we lose information because they represent intermediate independent mappings. For example, when the added (long, specific) mapping is again removed then we cannot find the merged mappings so the operation is not reversible. 
+            // Thus we should retain more general mappings for future use. 
+            // Rule 3: The question is what to do if a more general mapping is deleted? Should we delete also more specific mappings?
+            // Rule 4: Is it important to have roles: primary/secondary? If yes, then we should use adding path pairs. 
+
+            // Rule 0: What we have to delete are contradicting/incompatible matches which are overwritten by this match (where we get more than one alternative matching path for this path).
+            // What incompatible means? 
+            // - For one path (one means all covered or all continuations?), different other paths are present
+
+            foreach (PathMatch m in Matches)
+            {
+                // - If one path is covered (but not equal) then the second path must be also covered (so this match always continues existing matches)
+                //   - coverage means continuation of the *whole* path (so any path covers the root which empty path)
+                //   - if one path covers then the other has to be fit into the second, that is, covered by force or by cutting it until it is covered (if the second is also covered then nothing has to be done)
+                //   - if one path is covered then - ?
+
+
+                // - in the case of no coverage, they have a point of intersection. Then - ? Should this point of intersection be within the seconad path or otherwise constrained?
+
+                // if two sets (that is, paths) are matched, then only their continuations are possible
+                // problem: two sets can be matched explcitly or implicitly, that is, their match logically follows from other path matches.
+                // Implicit match: intersections of two paths produce a more general match
+
+                // One possible approach is to try to add a match by adding its path segments and checking consistency conditions
+
+            }
+
+            Matches.Add(match);
         }
 
-        public SetMapping(Set sourceSet, Set targetSet)
+        public void AddMatches(List<PathMatch> matches) // Import all path matches (as new objects) that fit into this mapping
         {
-            Debug.Assert(sourceSet != targetSet, "Wrong use: mapping to the same set is not permitted.");
-            SourceSet = sourceSet;
-            TargetSet = targetSet;
+            foreach (PathMatch m in matches)
+            {
+                PathMatch match = new PathMatch(m);
+                AddMatch(match);
+            }
         }
 
+        public bool AreMatched(PathMatch match) // Determine if both paths are matched (true if there exist the same or more specific match)
+        {
+            foreach (PathMatch m in Matches)
+            {
+                if (!m.SourcePath.StartsWith(match.SourcePath)) continue;
+                if (!m.TargetPath.StartsWith(match.TargetPath)) continue;
+                return true;
+            }
+
+            return false; // Not found
+        }
+
+        public DimTree GetSourceTree(Set set) // Convert all paths of the specified set into a dimension tree where the source set will be a root. The tree can contain non-existing elements if they are used in the mapping. 
+        {
+            DimTree tree = new DimTree(set);
+            foreach(PathMatch m in Matches) 
+            {
+                // if(m.SourcePath.LesserSet != set) continue; // Use this if we want to take into account only paths *starting* from this set (rather than crossing this set)
+                int index = m.SourcePath.IndexOf(set);
+                if(index < 0) continue; // The path does not cross this set
+
+                tree.AddPath(m.SourcePath.SubPath(index));
+            }
+
+            return tree;
+        }
+
+        public DimTree GetTargetTree(Set set) // Convert all target paths into a dimension tree where the target set will be a root. The tree can contain non-existing elements if they are used in the mapping. 
+        {
+            DimTree tree = new DimTree(set);
+            foreach(PathMatch m in Matches) 
+            {
+                // if(m.TargetPath.LesserSet != set) continue; // Use this if we want to take into account only paths *starting* from this set (rather than crossing this set)
+                int index = m.TargetPath.IndexOf(set);
+                if(index < 0) continue; // The path does not cross this set
+
+                tree.AddPath(m.TargetPath.SubPath(index));
+            }
+
+            return tree;
+        }
+
+        public PathMapping(SetRoot sourceSchema, SetRoot targetSchema)
+            : this()
+        {
+            SourceGreatestSets.Add(sourceSchema);
+            TargetGreatestSets.Add(targetSchema);
+        }
+
+        public PathMapping()
+        {
+            Matches = new List<PathMatch>();
+
+            SourceLeastSets = new List<Set>();
+            SourceGreatestSets = new List<Set>();
+
+            TargetLeastSets = new List<Set>();
+            TargetLeastSets = new List<Set>();
+        }
     }
+
+
 */
 }

@@ -220,20 +220,40 @@ namespace Test
         }
 
         [TestMethod]
-        public void RecommendMappingsTest()
+        public void MatchingOperationsTest()
         {
-            // Create Oldedb root set
-            SetRootOledb dbRoot = new SetRootOledb("Root");
-
+            // Create Oldedb root new set
+            SetRootOledb dbRoot = new SetRootOledb("Northwind");
             dbRoot.ConnectionString = Northwind;
             dbRoot.Open();
             dbRoot.ImportSchema();
 
-            // Create a DimTree which will be used as a target
-            Set orders = dbRoot.FindSubset("Orders");
-            Set emps = dbRoot.FindSubset("Employees");
-            
-        }
+            //
+            // Load test data
+            //
+            Set ordersSource = dbRoot.FindSubset("Orders");
 
+            SetRoot wsRoot = new SetRoot("My Mashup");
+            Set ordersTarget = Mapper.ImportSet(ordersSource, wsRoot);
+
+            //
+            // Initialize a mapping model and trees for editing
+            //
+            MappingModel model = new MappingModel(ordersSource, ordersTarget);
+            model.SourceTree.IsPrimary = true;
+            model.TargetTree.IsPrimary = false;
+
+
+            //
+            // Use the output of the mapping model: create new suggested elements, create expression for importing a set, create expression for importing data
+            //
+
+            //
+            // Find recommended mappings
+            //
+            Mapper mapper = new Mapper();
+            mapper.RecommendMappings(ordersSource, wsRoot, 1.0);
+
+        }
     }
 }
