@@ -16,7 +16,7 @@ namespace Com.Model
         {
             get
             {
-                if (Path == null || Path.Count == 0) return "";
+                if (Path.Count == 0) return "";
                 string complexName = "";
                 foreach (Dim seg in Path) complexName += "_" + seg.Name;
                 return complexName;
@@ -26,7 +26,7 @@ namespace Com.Model
         {
             get
             {
-                if (Path == null || Path.Count == 0) return "0";
+                if (Path.Count == 0) return "0";
                 int hash = 0;
                 foreach (Dim seg in Path) hash += seg.Id.GetHashCode();
 
@@ -46,11 +46,6 @@ namespace Com.Model
         public DimPath SubPath(int index, int count = 0) // Return a new path consisting of the specified segments
         {
             DimPath ret = new DimPath();
-            if (Path == null)
-            {
-                Path = new List<Dim>();
-                return ret;
-            }
 
             if (count == 0) count = Path.Count - index;
 
@@ -81,10 +76,6 @@ namespace Com.Model
 
         public void AppendSegment(Dim dim) // Append a new segment to the end of the path
         {
-            if (Path == null)
-            {
-                Path = new List<Dim>();
-            }
             Debug.Assert(Path.Count == 0 || dim.LesserSet == GreaterSet, "A new segment appended to a path must continue the previous segments");
 
             Path.Add(dim);
@@ -94,13 +85,9 @@ namespace Com.Model
 
         public void AppendPath(DimPath path) // Append all segments of the specified path to the end of this path
         {
-            if (Path == null)
-            {
-                Path = new List<Dim>();
-            }
             Debug.Assert(Path.Count == 0 || path.LesserSet == GreaterSet, "A an appended path must continue this path.");
 
-            if (path == null || path.Path == null || path.Path.Count == 0) return;
+            if (path == null || path.Path.Count == 0) return;
 
             for (int i = 0; i < path.Path.Count; i++)
             {
@@ -113,10 +100,6 @@ namespace Com.Model
 
         public void InsertSegment(Dim dim) // Insert a new segment at the beginning of the path
         {
-            if (Path == null)
-            {
-                Path = new List<Dim>();
-            }
             Debug.Assert(Path.Count == 0 || dim.GreaterSet == LesserSet, "A path must continue the first segment inserted in the beginning.");
 
             Path.Insert(0, dim);
@@ -125,10 +108,6 @@ namespace Com.Model
         }
         public void InsertPrefix(DimPath path) // Insert new segments from the specified path at the beginning of the path
         {
-            if (Path == null)
-            {
-                Path = new List<Dim>();
-            }
             Debug.Assert(Path.Count == 0 || path.GreaterSet == LesserSet, "A path must continue the first segment inserted in the beginning.");
 
             Path.InsertRange(0, path.Path);
@@ -138,12 +117,6 @@ namespace Com.Model
 
         public Dim RemoveSegment() // Remove last segment
         {
-            if (Path == null)
-            {
-                Path = new List<Dim>();
-                return null;
-            }
-
             if (Path.Count == 0) return null; // Nothing to remove
 
             GreaterSet = Path[Path.Count - 1].LesserSet;
@@ -153,12 +126,6 @@ namespace Com.Model
         }
         public void RemovePrefix(DimPath path) // Remove first segments
         {
-            if (Path == null)
-            {
-                Path = new List<Dim>();
-                return;
-            }
-
             if (Path.Count < path.Path.Count) return; // Nothing to remove
             if (!this.StartsWith(path)) return;
 
@@ -169,12 +136,6 @@ namespace Com.Model
         }
         public void TrimPrefix(Set set) // Remove first segments till this set (the new path will start from the specified set if trimmed)
         {
-            if (Path == null)
-            {
-                Path = new List<Dim>();
-                return;
-            }
-
             // Find a path to the specified set
             int index = IndexOf(set);
             if (index < 0) return;
@@ -189,7 +150,7 @@ namespace Com.Model
         {
             get
             {
-                if (Path == null || Path.Count == 0) return 1; // Simple dimension
+                if (Path.Count == 0) return 1; // Simple dimension
                 int r = 0;
                 foreach (Dim dim in Path)
                 {
@@ -221,13 +182,13 @@ namespace Com.Model
             return true;
         }
 
-        public bool SamePath(DimPath path)
+        public bool SamePath(DimPath path) // Equals (the same segments)
         {
             return SamePath(path.Path);
         }
-        public bool SamePath(List<Dim> path)
+        public bool SamePath(List<Dim> path) // Equals (the same segments)
         {
-            if (Path == null || path == null) return false;
+            if (path == null) return false;
 
             if (Path.Count != path.Count) return false;
 
@@ -242,7 +203,7 @@ namespace Com.Model
         {
             get
             {
-                return Path == null || Path.Count == 0 ? null : Path[0];
+                return Path.Count == 0 ? null : Path[0];
             }
         }
 
@@ -250,7 +211,7 @@ namespace Com.Model
         {
             get
             {
-                return Path == null || Path.Count == 0 ? null : Path[Path.Count - 1];
+                return Path.Count == 0 ? null : Path[Path.Count - 1];
             }
         }
 
@@ -294,7 +255,6 @@ namespace Com.Model
 
         private List<Dim> GetAllSegments()
         {
-            if (Path == null) return null;
             List<Dim> result = new List<Dim>();
             for (int i = 0; i < Path.Count; i++)
             {
@@ -353,13 +313,20 @@ namespace Com.Model
         /// <returns></returns>
         public string IsValid()
         {
-            if (Path == null || Path.Count == 0) return null;
+            if (Path.Count == 0) return null;
             return null;
         }
 
         public DimPath()
         {
             Path = new List<Dim>();
+        }
+
+        public DimPath(Set set)
+            : this()
+        {
+            LesserSet = set;
+            GreaterSet = set;
         }
 
         public DimPath(string name)

@@ -94,15 +94,7 @@ namespace Test
 
             SetMapping bestMapping = mapper.GetBestMapping(sourceSet);
             Set targetSet = bestMapping.TargetSet;
-            DimTree tree = bestMapping.GetTargetTree();
-            tree.IncludeInSchema(wsRoot); // Include new elements in schema
-
-            // Configure first set for import
-            Expression expr = bestMapping.GetTargetExpression(); // Build a tuple tree with paths in leaves
-            targetSet.ImportExpression = expr;
-            string importDimName = sourceSet.Name; // The same as the source (imported) set name
-            DimImport importDim = new DimImport(importDimName, targetSet, sourceSet);
-            importDim.Add();
+            targetSet.ImportMapping = bestMapping; // Configure first set for import
 
             targetSet.Populate();
             Assert.AreEqual(9, targetSet.Length);
@@ -118,15 +110,7 @@ namespace Test
 
             SetMapping bestMapping2 = mapper.GetBestMapping(sourceSet2);
             Set targetSet2 = bestMapping2.TargetSet;
-            DimTree tree2 = bestMapping2.GetTargetTree();
-            tree2.IncludeInSchema(wsRoot); // Include new elements in schema
-
-            // Configure second set for import
-            Expression expr2 = bestMapping2.GetTargetExpression(); // Build a tuple tree with paths in leaves
-            targetSet2.ImportExpression = expr2;
-            string importDimName2 = sourceSet2.Name; // The same as the source (imported) set name
-            DimImport importDim2 = new DimImport(importDimName2, targetSet2, sourceSet2);
-            importDim2.Add();
+            targetSet2.ImportMapping = bestMapping2; // Configure second set for import
 
             targetSet2.Populate();
             Assert.AreEqual(102, targetSet2.Length);

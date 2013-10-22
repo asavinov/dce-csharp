@@ -180,17 +180,9 @@ namespace Com.Model
             Mapper mapper = new Mapper();
             mapper.RecommendMappings(sourceSet, targetSchema, 1.0);
             SetMapping bestMapping = mapper.GetBestMapping(sourceSet);
+
             Set targetSet = bestMapping.TargetSet;
-            DimTree tree = bestMapping.GetTargetTree();
-
-            tree.IncludeInSchema(targetSchema); // Include new elements in schema
-
-            // Configure set for import
-            Expression expr = bestMapping.GetTargetExpression(); // Build a tuple tree with paths in leaves
-            targetSet.ImportExpression = expr;
-            string importDimName = sourceSet.Name; // The same as the source (imported) set name
-            DimImport importDim = new DimImport(importDimName, targetSet, sourceSet);
-            importDim.Add();
+            targetSet.ImportMapping = bestMapping; // Configure set for import
 
             return targetSet;
         }
@@ -570,12 +562,12 @@ namespace Com.Model
         /// Secondary: returns true if this node is matched against the currently selected primary node and false otherwise (so only one node in the whole secondary tree is true).
         /// </summary>
         /// <returns></returns>
-        public bool IsSourceMatched()
+        public bool IsMatchedSource()
         {
             if (SourceTree.SelectedPath == null) return false;
-            return IsSourceMatched(SourceTree.SelectedPath);
+            return IsMatchedSource(SourceTree.SelectedPath);
         }
-        public bool IsSourceMatched(DimPath path)
+        public bool IsMatchedSource(DimPath path)
         {
             PathMatch match = Mapping.GetMatchForSource(path);
 
@@ -597,12 +589,12 @@ namespace Com.Model
         /// Secondary: returns true if this node is matched against the currently selected primary node and false otherwise (so only one node in the whole secondary tree is true).
         /// </summary>
         /// <returns></returns>
-        public bool IsTargetMatched()
+        public bool IsMatchedTarget()
         {
             if (TargetTree.SelectedPath == null) return false;
-            return IsTargetMatched(TargetTree.SelectedPath);
+            return IsMatchedTarget(TargetTree.SelectedPath);
         }
-        public bool IsTargetMatched(DimPath path)
+        public bool IsMatchedTarget(DimPath path)
         {
             PathMatch match = Mapping.GetMatchForTarget(path);
 
@@ -617,6 +609,34 @@ namespace Com.Model
                 if (SourceTree.SelectedPath == null) return false;
                 return match.MatchesSource(SourceTree.SelectedPath);
             }
+        }
+
+        /// <summary>
+        /// Secondary: Enabled/disabled status of a secondary node. Whether the current paths can be added as a new match without contradiction to the existing matches.
+        /// Primary: always true (if there is at least one possible secondary match). 
+        /// Secondary: given a primary currently selected node, compute if a match with this secondary node does not contradict to existing matches (so it can be added). Alternatively, if relevances are precomputed then we find if relevance is higher than 0.
+        /// </summary>
+        public bool CanMatchTarget(DimPath path)
+        {
+            if (TargetTree.IsPrimary)
+            {
+                return true;
+            }
+            else
+            {
+                DimPath priPath = SourceTree.SelectedPath;
+                if (priPath == null) return false; // Primary node is not selected
+
+                if (!priPath.IsPrimitive || !path.IsPrimitive) return false; // Only primitive paths can be matchd
+
+                return true;
+            }
+        }
+
+        public bool CanMatchSource(DimPath path)
+        {
+            // TODO: Copy-paste when ready
+            return true;
         }
 
         /// <summary>
@@ -638,7 +658,7 @@ namespace Com.Model
             SourceTree = new MatchTree(this);
             SourceTree.IsPrimary = true;
             TargetTree = new MatchTree(this);
-            SourceTree.IsPrimary = false;
+            TargetTree.IsPrimary = false;
 
             SourceSet = sourceSet; // Here also the tree will be constructed
             TargetSet = targetSet;
@@ -649,7 +669,9 @@ namespace Com.Model
             Mapping = mapping;
 
             SourceTree = new MatchTree(this);
+            SourceTree.IsPrimary = true;
             TargetTree = new MatchTree(this);
+            TargetTree.IsPrimary = false;
 
             SourceSet = mapping.SourceSet; // Here also the tree will be constructed
             TargetSet = mapping.TargetSet;
@@ -714,23 +736,18 @@ namespace Com.Model
             get
             {
                 MatchTree root = (MatchTree)Root;
-                if (root.IsSource) return root.MappingModel.IsSourceMatched();
-                else return root.MappingModel.IsTargetMatched();
+                if (root.IsSource) return root.MappingModel.IsMatchedSource(DimPath);
+                else return root.MappingModel.IsMatchedTarget(DimPath);
             }
         }
 
-        /// <summary>
-        /// Enabled/disabled status of a secondary node. Whether the current paths can be added as a new match without contradiction to the existing matches.
-        /// Primary: always true. 
-        /// Secondary: given a primary currently selected node, compute if a match with this secondary node does not contradict to existing matches (so it can be added). Alternatively, if relevances are precomputed then we find if relevance is higher than 0.
-        /// </summary>
         public bool CanMatch
         {
             get
             {
-                // TODO: It is for testing purposes only
-                if (Parent != null) return (Parent.Children.IndexOf(this) % 2) == 0;
-                return true;
+                MatchTree root = (MatchTree)Root;
+                if (root.IsSource) return root.MappingModel.CanMatchSource(DimPath);
+                else return root.MappingModel.CanMatchTarget(DimPath);
             }
         }
 
@@ -764,7 +781,7 @@ namespace Com.Model
         }
     }
 
-   public class DimTree : IEnumerable<DimTree>, INotifyCollectionChanged
+    public class DimTree : IEnumerable<DimTree>, INotifyCollectionChanged, INotifyPropertyChanged
     {
         /// <summary>
         /// It is one element of the tree. It is null for the bottom (root) and its direct children which do not have lesser dimensions.
@@ -892,8 +909,8 @@ namespace Com.Model
         {
             get
             {
-                if (Dim == null) return null;
-                DimPath path = new DimPath();
+                DimPath path = new DimPath(Set);
+                if (Dim == null) return path;
                 for (DimTree node = this; node.Dim != null && node.Parent != null; node = node.Parent) path.InsertSegment(node.Dim);
                 return path;
             }
@@ -967,6 +984,9 @@ namespace Com.Model
             return Children.GetEnumerator();
         }
 
+        //
+        // NotifyCollectionChanged Members
+        //
         public event NotifyCollectionChangedEventHandler CollectionChanged;
         protected virtual void OnCollectionChanged(NotifyCollectionChangedEventArgs e)
         {
@@ -974,6 +994,23 @@ namespace Com.Model
             {
                 CollectionChanged(this, e);
             }
+        }
+
+        //
+        // INotifyPropertyChanged Members
+        //
+        public event PropertyChangedEventHandler PropertyChanged;
+        private void OnPropertyChanged(String propertyName = "")
+        {
+            if (PropertyChanged != null)
+            {
+                PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
+            }
+        }
+        public void NotifyAllOnPropertyChanged(string propertyName)
+        {
+            OnPropertyChanged(propertyName);
+            Children.ForEach(c => c.NotifyAllOnPropertyChanged(propertyName));
         }
 
         /// <summary>

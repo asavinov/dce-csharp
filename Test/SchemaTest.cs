@@ -232,17 +232,33 @@ namespace Test
             // Load test data
             //
             Set ordersSource = dbRoot.FindSubset("Orders");
-
             SetRoot wsRoot = new SetRoot("My Mashup");
-            Set ordersTarget = Mapper.ImportSet(ordersSource, wsRoot);
 
             //
             // Initialize a mapping model and trees for editing
             //
-            MappingModel model = new MappingModel(ordersSource, ordersTarget);
-            model.SourceTree.IsPrimary = true;
-            model.TargetTree.IsPrimary = false;
+            Mapper mapper = new Mapper();
+            mapper.RecommendMappings(ordersSource, wsRoot, 1.0);
+            SetMapping mapping = mapper.GetBestMapping(ordersSource);
 
+            MappingModel model = new MappingModel(mapping);
+
+            MatchTreeNode priNode = (MatchTreeNode)model.SourceTree.Children[0].Children[5];
+            Assert.AreEqual(true, priNode.IsMatched); // Is matched with some other path
+            model.SourceTree.SelectedNode = priNode;
+
+            MatchTreeNode secNode = (MatchTreeNode)model.TargetTree.Children[0].Children[5];
+            Assert.AreEqual(true, secNode.IsMatched); // Is matched with the selected primary
+            secNode = (MatchTreeNode)model.TargetTree.Children[0].Children[6];
+            Assert.AreEqual(false, secNode.IsMatched); // Is NOT matched with the new selected primary
+
+            bool aaa = secNode.CanMatch; // Both are primitive so can match
+            secNode = (MatchTreeNode)model.TargetTree.Children[0].Children[0];
+            bool bbb = secNode.CanMatch; // Non-primitive cannot be matched
+
+
+            Set targetSet = mapping.TargetSet;
+            targetSet.ImportMapping = mapping; // Configure set for import
 
             //
             // Use the output of the mapping model: create new suggested elements, create expression for importing a set, create expression for importing data
@@ -251,9 +267,6 @@ namespace Test
             //
             // Find recommended mappings
             //
-            Mapper mapper = new Mapper();
-            mapper.RecommendMappings(ordersSource, wsRoot, 1.0);
-
         }
     }
 }
