@@ -181,10 +181,10 @@ namespace Com.Model
             mapper.RecommendMappings(sourceSet, targetSchema, 1.0);
             SetMapping bestMapping = mapper.GetBestMapping(sourceSet);
 
-            Set targetSet = bestMapping.TargetSet;
-            targetSet.ImportMapping = bestMapping; // Configure set for import
-
-            return targetSet;
+            DimImport dimImport = new DimImport(bestMapping);
+            dimImport.Add();
+            
+            return bestMapping.TargetSet;
         }
 
         public Mapper()

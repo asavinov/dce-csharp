@@ -94,7 +94,8 @@ namespace Test
 
             SetMapping bestMapping = mapper.GetBestMapping(sourceSet);
             Set targetSet = bestMapping.TargetSet;
-            targetSet.ImportMapping = bestMapping; // Configure first set for import
+            DimImport dimImport = new DimImport(bestMapping); // Configure first set for import
+            dimImport.Add();
 
             targetSet.Populate();
             Assert.AreEqual(9, targetSet.Length);
@@ -110,7 +111,8 @@ namespace Test
 
             SetMapping bestMapping2 = mapper.GetBestMapping(sourceSet2);
             Set targetSet2 = bestMapping2.TargetSet;
-            targetSet2.ImportMapping = bestMapping2; // Configure second set for import
+            DimImport dimImport2 = new DimImport(bestMapping2); // Configure first set for import
+            dimImport2.Add();
 
             targetSet2.Populate();
             Assert.AreEqual(102, targetSet2.Length);

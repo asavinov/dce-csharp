@@ -702,40 +702,6 @@ namespace Com.Model
         public bool IsAutoPopulated { get; set; }
 
         /// <summary>
-        /// Definition of this set tuples in terms of import dimension tuples. It is used to populate this set by using data from other sets via import dimensions. 
-        /// </summary>
-        public SetMapping _importMapping;
-        public SetMapping ImportMapping // We store mapping instead of expression because it is easier to maintain (edit)
-        {
-            get { return _importMapping; }
-            set
-            {
-                if(value == null) 
-                {
-                    _importMapping = value;
-                    // TODO: we have to remove import dimension but we do not know which of them
-                }
-
-                if (_importMapping == value) return;
-
-                Debug.Assert(value.TargetSet == this, "Wrong use: target of the mapping must be equal to the set where it is defined.");
-
-                DimTree tree = value.GetTargetTree();
-
-                PathMatch match = value.Matches.FirstOrDefault(m => m.TargetPath.GreaterSet.IsPrimitive);
-                SetRoot schema = match != null ? match.TargetPath.GreaterSet.Root : null; // We assume that primitive sets always have root defined (other sets might not have been added yet).
-
-                tree.IncludeInSchema(schema); // Include new elements in schema
-
-                string importDimName = value.SourceSet.Name; // The same as the source (imported) set name
-                DimImport importDim = new DimImport(importDimName, value.TargetSet, value.SourceSet);
-
-                importDim.Add();
-                _importMapping = value; // Configure set for import
-            }
-        }
-
-        /// <summary>
         /// Constraints on all possible instances. Only instances satisfying these constraints can exist. 
         /// </summary>
         public Expression WhereExpression { get; set; }
@@ -751,7 +717,7 @@ namespace Com.Model
         /// </summary>
         public virtual void Populate() 
         {
-            if (ImportMapping == null || ImportDims.Count == 0) // Product of local sets
+            if (ImportDims.Count == 0) // Product of local sets
             {
                 //
                 // Find local greater generation sets including the super-set. Create a tuple corresponding to these dimensions
@@ -852,11 +818,19 @@ namespace Com.Model
                 }
 
             }
-            else if (ImportDims.Count > 0)
+            else if(true) // There are import dimensions so copy data from another set
             {
-                Debug.Assert(ImportMapping.TargetSet == this, "Target/Output of import mapping/expression must be equal to the set where it is stored.");
+                foreach (DimImport dim in ImportDims)
+                {
+                    dim.Populate();
+                }
 
-                Expression importExpression = ImportMapping.GetTargetExpression(); // Build a tuple tree with paths in leaves
+/*
+                SetMapping mapping = ImportDims[0].ImportMapping;
+
+                Debug.Assert(mapping != null && mapping.TargetSet == this, "Target/Output of import mapping/expression must be equal to the set where it is stored.");
+
+                Expression importExpression = mapping.GetTargetExpression(); // Build a tuple tree with paths in leaves
 
                 // Find remote (impport/export) sets, organize the main loop and evaluate local identity dimensions. 
                 DimImport importDim = ImportDims[0];
@@ -889,7 +863,7 @@ namespace Com.Model
                         Append(importExpression);
                     }
                 }
-
+*/
             }
             else
             {

@@ -258,7 +258,8 @@ namespace Test
 
 
             Set targetSet = mapping.TargetSet;
-            targetSet.ImportMapping = mapping; // Configure set for import
+            DimImport dimImport = new DimImport(mapping); // Configure first set for import
+            dimImport.Add();
 
             //
             // Use the output of the mapping model: create new suggested elements, create expression for importing a set, create expression for importing data
