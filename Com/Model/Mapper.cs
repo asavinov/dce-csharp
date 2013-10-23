@@ -527,11 +527,10 @@ namespace Com.Model
 
                 // Update tree
                 SourceTree.Children.Clear();
-                MatchTreeNode node = new MatchTreeNode();
-                node.Set = SourceSet;
+                MatchTreeNode node = new MatchTreeNode(SourceSet);
+                SourceTree.AddChild(node);
                 node.ExpandTree();
                 node.AddSourcePaths(Mapping);
-                SourceTree.AddChild(node);
             }
         }
 
@@ -549,8 +548,7 @@ namespace Com.Model
 
                 // Update tree
                 TargetTree.Children.Clear();
-                MatchTreeNode node = new MatchTreeNode();
-                node.Set = TargetSet;
+                MatchTreeNode node = new MatchTreeNode(TargetSet);
                 node.ExpandTree();
                 node.AddTargetPaths(Mapping);
                 TargetTree.AddChild(node);
@@ -787,21 +785,20 @@ namespace Com.Model
         /// It is one element of the tree. It is null for the bottom (root) and its direct children which do not have lesser dimensions.
         /// </summary>
         private Dim _dim;
-        public Dim Dim { get { return _dim; } set { _set = (value != null ? value.GreaterSet : null); _dim = value; } }
+        public Dim Dim { get { return _dim; } set { _dim = value; } }
 
         /// <summary>
         /// It is a set corresponding to the node. If dimension is present then it is equal to the greater set.  
         /// It is null only for the bottom (root). It can be set only if dimension is null (otherwise set the dimension). 
         /// </summary>
-        private Set _set;
-        public Set Set { 
-            get { return _set; } 
-            set 
-            { 
-                if (value == _set) return;
-                if (_dim != null) return;
-                _set = value; 
-            } 
+        public Set Set
+        {
+            get { return Dim != null ? Dim.GreaterSet : null; }
+        }
+
+        public bool IsEmpty
+        {
+            get { return Dim == null || Dim.IsEmpty; }
         }
 
         //
@@ -814,7 +811,7 @@ namespace Com.Model
         public void AddChild(DimTree child)
         {
             Debug.Assert(!Children.Contains(child), "Wrong use: this child node already exists in the tree.");
-            Debug.Assert(Set == null || child.Dim == null || child.Dim.LesserSet == Set, "Wrong use: a new dimension must start from this set.");
+            Debug.Assert(Set == null || child.IsEmpty || child.Dim.LesserSet == Set, "Wrong use: a new dimension must start from this set.");
             Children.Add(child);
             child.Parent = this;
 
@@ -901,7 +898,7 @@ namespace Com.Model
             get
             {
                 int rank = 0;
-                for (DimTree node = this; node.Dim != null && node.Parent != null; node = node.Parent) rank++;
+                for (DimTree node = this; !node.IsEmpty && node.Parent != null; node = node.Parent) rank++;
                 return rank;
             }
         }
@@ -910,8 +907,8 @@ namespace Com.Model
             get
             {
                 DimPath path = new DimPath(Set);
-                if (Dim == null) return path;
-                for (DimTree node = this; node.Dim != null && node.Parent != null; node = node.Parent) path.InsertSegment(node.Dim);
+                if (IsEmpty) return path;
+                for (DimTree node = this; !node.IsEmpty && node.Parent != null; node = node.Parent) path.InsertSegment(node.Dim);
                 return path;
             }
         }
@@ -1049,7 +1046,7 @@ namespace Com.Model
         /// </summary>
         public bool IsInSchema()
         {
-            return Dim != null ? !Dim.IsHanging : true;
+            return !IsEmpty ? !Dim.IsHanging : true;
         }
 
         /// <summary>
@@ -1066,7 +1063,7 @@ namespace Com.Model
 
             foreach (DimTree node in Children)
             {
-                if (node.Dim == null) continue; // Root has null dimension
+                if (node.IsEmpty) continue; // Root has null dimension
 
                 if (!node.Dim.IsInLesserSet) node.Dim.IsInLesserSet = true;
                 if (!node.Dim.IsInGreaterSet) node.Dim.IsInGreaterSet = true;
@@ -1084,7 +1081,7 @@ namespace Com.Model
 
         public DimTree(Set set, DimTree parent = null)
         {
-            Set = set;
+            Dim = new Dim(set);
             Children = new List<DimTree>();
             if (parent != null) parent.AddChild(this);
         }
@@ -1226,181 +1223,4 @@ namespace Com.Model
         }
 
     }
-
-/*
-    /// <summary>
-    /// The class stores matches between arbitrary paths in consistent state. 
-    /// </summary>
-    public class PathMapping
-    {
-        public List<PathMatch> Matches { get; private set; }
-
-        public double Similarity { get; set; } // Do we need it?
-
-        private DimPath _sourcePrefix;
-        public DimPath SourcePrefix
-        {
-            get { return _sourcePrefix; }
-        }
-        public Set SourceSet
-        {
-            get { return SourcePrefix != null ? SourcePrefix.GreaterSet : null; }
-        }
-
-        private DimPath _targetPrefix;
-        public DimPath TargetPrefix
-        {
-            get { return _targetPrefix; }
-        }
-        public Set TargetSet
-        {
-            get { return TargetPrefix != null ? TargetPrefix.GreaterSet : null; }
-        }
-
-        public List<Set> SourceLeastSets { get; set; } // Bottom if null
-        public List<Set> SourceGreatestSets { get; set; } // Cannot be null. References schema (top, root) in the case of no constraints. 
-
-        public List<Set> TargetLeastSets { get; set; } // Bottom if null
-        public List<Set> TargetGreatestSets { get; set; } // Cannot be null. References schema (top, root) in the case of no constraints. 
-
-        public bool IsSourcePathValid(DimPath path) 
-        {
-            if(SourceLeastSets != null) 
-            {
-                foreach(Set set in SourceLeastSets) 
-                {
-                    if(path.LesserSet != set && !path.LesserSet.IsGreater(set)) return false;
-                }
-            }
-
-            foreach(Set set in SourceGreatestSets) 
-            {
-                if(path.GreaterSet != set && !path.GreaterSet.IsLesser(set)) return false;
-            }
-
-            return true;
-        }
-        public bool IsTargetPathValid(DimPath path) 
-        {
-            // TODO: Copy-paste from IsSourcePathValid after testing
-            return true;
-        }
-        
-        public PathMatch GetMatchForSource(DimPath path)
-        {
-            throw new NotImplementedException();
-        }
-
-        public PathMatch GetMatchForTarget(DimPath path)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void AddMatch(PathMatch match) // Add this match (no new object is created)
-        {
-
-            // TODO: Check coverage between paths and mappings (pairs of paths)
-            // Rule 1: more specific (longer) path covers and merges a more general (shorter) path. So shorter paths are not needed and can be removed 
-            // Rule 2: Yet, if we remove them we lose information because they represent intermediate independent mappings. For example, when the added (long, specific) mapping is again removed then we cannot find the merged mappings so the operation is not reversible. 
-            // Thus we should retain more general mappings for future use. 
-            // Rule 3: The question is what to do if a more general mapping is deleted? Should we delete also more specific mappings?
-            // Rule 4: Is it important to have roles: primary/secondary? If yes, then we should use adding path pairs. 
-
-            // Rule 0: What we have to delete are contradicting/incompatible matches which are overwritten by this match (where we get more than one alternative matching path for this path).
-            // What incompatible means? 
-            // - For one path (one means all covered or all continuations?), different other paths are present
-
-            foreach (PathMatch m in Matches)
-            {
-                // - If one path is covered (but not equal) then the second path must be also covered (so this match always continues existing matches)
-                //   - coverage means continuation of the *whole* path (so any path covers the root which empty path)
-                //   - if one path covers then the other has to be fit into the second, that is, covered by force or by cutting it until it is covered (if the second is also covered then nothing has to be done)
-                //   - if one path is covered then - ?
-
-
-                // - in the case of no coverage, they have a point of intersection. Then - ? Should this point of intersection be within the seconad path or otherwise constrained?
-
-                // if two sets (that is, paths) are matched, then only their continuations are possible
-                // problem: two sets can be matched explcitly or implicitly, that is, their match logically follows from other path matches.
-                // Implicit match: intersections of two paths produce a more general match
-
-                // One possible approach is to try to add a match by adding its path segments and checking consistency conditions
-
-            }
-
-            Matches.Add(match);
-        }
-
-        public void AddMatches(List<PathMatch> matches) // Import all path matches (as new objects) that fit into this mapping
-        {
-            foreach (PathMatch m in matches)
-            {
-                PathMatch match = new PathMatch(m);
-                AddMatch(match);
-            }
-        }
-
-        public bool AreMatched(PathMatch match) // Determine if both paths are matched (true if there exist the same or more specific match)
-        {
-            foreach (PathMatch m in Matches)
-            {
-                if (!m.SourcePath.StartsWith(match.SourcePath)) continue;
-                if (!m.TargetPath.StartsWith(match.TargetPath)) continue;
-                return true;
-            }
-
-            return false; // Not found
-        }
-
-        public DimTree GetSourceTree(Set set) // Convert all paths of the specified set into a dimension tree where the source set will be a root. The tree can contain non-existing elements if they are used in the mapping. 
-        {
-            DimTree tree = new DimTree(set);
-            foreach(PathMatch m in Matches) 
-            {
-                // if(m.SourcePath.LesserSet != set) continue; // Use this if we want to take into account only paths *starting* from this set (rather than crossing this set)
-                int index = m.SourcePath.IndexOf(set);
-                if(index < 0) continue; // The path does not cross this set
-
-                tree.AddPath(m.SourcePath.SubPath(index));
-            }
-
-            return tree;
-        }
-
-        public DimTree GetTargetTree(Set set) // Convert all target paths into a dimension tree where the target set will be a root. The tree can contain non-existing elements if they are used in the mapping. 
-        {
-            DimTree tree = new DimTree(set);
-            foreach(PathMatch m in Matches) 
-            {
-                // if(m.TargetPath.LesserSet != set) continue; // Use this if we want to take into account only paths *starting* from this set (rather than crossing this set)
-                int index = m.TargetPath.IndexOf(set);
-                if(index < 0) continue; // The path does not cross this set
-
-                tree.AddPath(m.TargetPath.SubPath(index));
-            }
-
-            return tree;
-        }
-
-        public PathMapping(SetRoot sourceSchema, SetRoot targetSchema)
-            : this()
-        {
-            SourceGreatestSets.Add(sourceSchema);
-            TargetGreatestSets.Add(targetSchema);
-        }
-
-        public PathMapping()
-        {
-            Matches = new List<PathMatch>();
-
-            SourceLeastSets = new List<Set>();
-            SourceGreatestSets = new List<Set>();
-
-            TargetLeastSets = new List<Set>();
-            TargetLeastSets = new List<Set>();
-        }
-    }
-
-
-*/
 }

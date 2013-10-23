@@ -90,6 +90,14 @@ namespace Com.Model
             }
         }
 
+        public bool IsEmpty
+        {
+            get
+            {
+                return GreaterSet == null || LesserSet==null || GreaterSet == LesserSet;
+            }
+        }
+
         #endregion
 
         #region Schema methods.
@@ -261,6 +269,11 @@ namespace Com.Model
         public Dim()
         {
             Id = Guid.NewGuid();
+        }
+
+        public Dim(Set set) // Empty dimension
+            : this("", set, set)
+        {
         }
 
         public Dim(Dim dim)
