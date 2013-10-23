@@ -110,15 +110,15 @@ namespace Test
 
             // Test enumerators
             int pathCount = 0;
-            foreach (List<Dim> p in empSet.GetGreaterPrimitiveDims(DimensionType.IDENTITY_ENTITY))
+            foreach (DimPath p in empSet.GetGreaterPrimitiveDims(DimensionType.IDENTITY_ENTITY))
             {
-                Assert.AreEqual(1, p.Count);
+                Assert.AreEqual(1, p.Length);
                 pathCount++;
             }
             Assert.AreEqual(18, pathCount);
 
             pathCount = 0;
-            foreach (List<Dim> p in epSet.GetGreaterPrimitiveDims(DimensionType.IDENTITY_ENTITY))
+            foreach (DimPath p in epSet.GetGreaterPrimitiveDims(DimensionType.IDENTITY_ENTITY))
             {
                 pathCount++;
             }
@@ -192,11 +192,11 @@ namespace Test
 
             // 3 paths exist. POD -> PO -> E; POD -> IT -> PO -> E; POD -> O -> E
             pathsEnum = new PathEnumerator(new List<Set>() { dbRoot.FindSubset("Purchase Order Details") }, new List<Set> { dbRoot.FindSubset("Employees") }, false, DimensionType.IDENTITY_ENTITY);
-            paths = new List<List<Dim>>(pathsEnum);
+            paths = new List<DimPath>(pathsEnum);
             Assert.AreEqual(3, paths.Count);
 
             pathsEnum = new PathEnumerator(new List<Set>() { dbRoot.FindSubset("Purchase Order Details") }, new List<Set> { dbRoot.FindSubset("Employees") }, true, DimensionType.IDENTITY_ENTITY);
-            paths = new List<List<Dim>>(pathsEnum);
+            paths = new List<DimPath>(pathsEnum);
             Assert.AreEqual(3, paths.Count);
 
             // Test relationships recommendations. From Employees to Customers. 8

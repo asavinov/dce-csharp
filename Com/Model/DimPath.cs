@@ -389,19 +389,17 @@ namespace Com.Model
     /// - study how to use nested classes for iterators 
     /// - implement many different kinds of iterators: depth-first, bredth-first, leafs-only etc.
     /// </summary>
-    public abstract class DimEnumerator : DimPath, IEnumerator<List<Dim>>, IEnumerable<List<Dim>>
+    public abstract class DimEnumerator : DimPath, IEnumerator<DimPath>, IEnumerable<DimPath>
     {
 
         public DimEnumerator(Set set)
-            : base("")
+            : base(set)
         {
             Path = new List<Dim>();
-            LesserSet = set;
-            GreaterSet = set;
         }
 
         // Get the explicit current node.
-        public List<Dim> Current { get { return new List<Dim>(Path); } }
+        public DimPath Current { get { return new DimPath(Path); } }
 
         // Get the implicit current node.
         object System.Collections.IEnumerator.Current
@@ -429,9 +427,9 @@ namespace Com.Model
         }
 
         // Get the underlying enumerator.
-        public virtual IEnumerator<List<Dim>> GetEnumerator()
+        public virtual IEnumerator<DimPath> GetEnumerator()
         {
-            return (IEnumerator<List<Dim>>)this;
+            return (IEnumerator<DimPath>)this;
         }
 
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()

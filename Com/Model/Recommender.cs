@@ -192,7 +192,7 @@ namespace Com.Model
                 var allPaths = new PathEnumerator(null, new List<Set> { this.SourceSet }, true, DimensionType.IDENTITY_ENTITY).ToList();
                 foreach (var path in allPaths)
                 {
-                    foreach (Dim seg in path)
+                    foreach (Dim seg in path.Path)
                     {
                         if (!lesserSets.Contains(seg.LesserSet)) lesserSets.Add(seg.LesserSet);
                     }
@@ -211,8 +211,8 @@ namespace Com.Model
                 RecommendedFragment<Set> frag = new RecommendedFragment<Set>(set, 1.0);
                 this.FactSets.Alternatives.Add(frag);
 
-                gPaths.ForEach(gp => this.GroupingPaths.Alternatives.Add(new RecommendedFragment<List<Dim>>(gp, 1.0)));
-                mPaths.ForEach(mp => this.MeasurePaths.Alternatives.Add(new RecommendedFragment<List<Dim>>(mp, 1.0)));
+                gPaths.ForEach(gp => this.GroupingPaths.Alternatives.Add(new RecommendedFragment<List<Dim>>(gp.Path, 1.0)));
+                mPaths.ForEach(mp => this.MeasurePaths.Alternatives.Add(new RecommendedFragment<List<Dim>>(mp.Path, 1.0)));
 
                 // For each pair of down-up paths build a relationship path
                 foreach (var gp in gPaths)

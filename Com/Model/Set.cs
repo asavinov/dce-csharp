@@ -269,9 +269,9 @@ namespace Com.Model
             {
                 int maxRank = 0;
                 var paths = new PathEnumerator(this, DimensionType.IDENTITY_ENTITY);
-                foreach (List<Dim> path in paths)
+                foreach (DimPath path in paths)
                 {
-                    if (path.Count > maxRank) maxRank = path.Count;
+                    if (path.Length > maxRank) maxRank = path.Length;
                 }
                 return maxRank;
             }
@@ -283,9 +283,9 @@ namespace Com.Model
             {
                 int minRank = Int16.MaxValue;
                 var paths = new PathEnumerator(this, DimensionType.IDENTITY_ENTITY);
-                foreach (List<Dim> path in paths)
+                foreach (DimPath path in paths)
                 {
-                    if (path.Count < minRank) minRank = path.Count;
+                    if (path.Length < minRank) minRank = path.Length;
                 }
                 if (minRank == Int16.MaxValue) return 0;
                 return minRank;
@@ -487,24 +487,24 @@ namespace Com.Model
             int pathCounter = 0;
 
             DimPath path = new DimPath("");
-            foreach (List<Dim> p in GetGreaterPrimitiveDims(DimensionType.IDENTITY_ENTITY))
+            foreach (DimPath p in GetGreaterPrimitiveDims(DimensionType.IDENTITY_ENTITY))
             {
-                if (p.Count < 2) continue; // All primitive paths are stored in this set. We need at least 2 segments.
+                if (p.Length < 2) continue; // All primitive paths are stored in this set. We need at least 2 segments.
 
                 // Check if this path already exists
-                path.Path = p;
+                path.Path = p.Path;
                 if (GetGreaterPath(path) != null) continue; // Already exists
 
                 string pathName = "__inherited__" + ++pathCounter;
 
                 DimPath newPath = new DimPath(pathName);
-                newPath.Path = new List<Dim>(p);
+                newPath.Path = new List<Dim>(p.Path);
                 newPath.Name = newPath.ComplexName; // Overwrite previous pathName (so previous is not needed actually)
                 newPath.RelationalColumnName = newPath.Name; // It actually will be used for relational queries
                 newPath.RelationalFkName = path.RelationalFkName; // Belongs to the same FK
                 newPath.RelationalPkName = null;
                 newPath.LesserSet = this;
-                newPath.GreaterSet = p[p.Count - 1].GreaterSet;
+                newPath.GreaterSet = p.Path[p.Length - 1].GreaterSet;
 
                 AddGreaterPath(newPath);
             }
