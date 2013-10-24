@@ -217,14 +217,14 @@ namespace Com.Model
                 {
                     foreach (PathMatch m in Matches) // Insert new segments
                     {
-                        m.SourcePath.InsertPrefix(lesserSegs[0]);
+                        m.SourcePath.InsertFirst(lesserSegs[0]);
                     }
                 }
                 else if (greaterSegs != null && greaterSegs.Count > 0) // New set is a greater set for the current
                 {
                     foreach (PathMatch m in Matches) // Remove segments
                     {
-                        if (m.SourcePath.StartsWith(greaterSegs[0])) m.SourcePath.RemovePrefix(greaterSegs[0]);
+                        if (m.SourcePath.StartsWith(greaterSegs[0])) m.SourcePath.RemoveFirst(greaterSegs[0]);
                         else Matches.Remove(m);
                     }
                 }
@@ -296,10 +296,10 @@ namespace Com.Model
             if (gMapping.Matches.Count == 0) // If there are no continuations then add only the starting segments (for example, for mappings between primitive sets)
             {
                 DimPath sp = new DimPath(); // A path consists of one segment
-                sp.AppendSegment(sd);
+                sp.InsertLast(sd);
 
                 DimPath tp = new DimPath(); // A path consists of one segment
-                tp.AppendSegment(td);
+                tp.InsertLast(td);
 
                 PathMatch match = new PathMatch(sp, tp);
                 Matches.Add(match);
@@ -308,12 +308,12 @@ namespace Com.Model
             foreach (PathMatch gMatch in gMapping.Matches)
             {
                 DimPath sp = new DimPath(); // Create source path by concatenating one segment and continuation path from the mapping
-                sp.AppendSegment(sd);
-                sp.AppendPath(gMatch.SourcePath);
+                sp.InsertLast(sd);
+                sp.InsertLast(gMatch.SourcePath);
 
                 DimPath tp = new DimPath(); // Create target path by concatenating one segment and continuation path from the mapping
-                tp.AppendSegment(td);
-                tp.AppendPath(gMatch.TargetPath);
+                tp.InsertLast(td);
+                tp.InsertLast(gMatch.TargetPath);
 
                 PathMatch match = new PathMatch(sp, tp);
                 Matches.Add(match);
@@ -908,7 +908,7 @@ namespace Com.Model
             {
                 DimPath path = new DimPath(Set);
                 if (IsEmpty) return path;
-                for (DimTree node = this; !node.IsEmpty && node.Parent != null; node = node.Parent) path.InsertSegment(node.Dim);
+                for (DimTree node = this; !node.IsEmpty && node.Parent != null; node = node.Parent) path.InsertFirst(node.Dim);
                 return path;
             }
         }

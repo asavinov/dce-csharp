@@ -36,8 +36,6 @@ namespace Com.Model
             }
         }
 
-        #region Path methods
-
         /// <summary>
         /// A dimension can be defined as a sequence of other dimensions. For simple dimensions the path is empty.
         /// </summary>
@@ -51,124 +49,20 @@ namespace Com.Model
             }
         }
 
-        public DimPath SubPath(int index, int count = 0) // Return a new path consisting of the specified segments
+        public Dim FirstSegment
         {
-            DimPath ret = new DimPath();
-
-            if (count == 0) count = Path.Count - index;
-
-            for (int i = 0; i < count; i++)
+            get
             {
-                ret.Path.Add(Path[index + i]);
+                return Length == 0 ? null : Path[0];
             }
-
-            ret.GreaterSet = ret.Path[0].LesserSet;
-            ret.LesserSet = ret.Path[ret.Path.Count - 1].GreaterSet;
-
-            return ret;
         }
 
-        public int IndexOf(Set set) // Return index of the set in the path
+        public Dim LastSegment
         {
-            for (int i = 0; i < Path.Count; i++)
+            get
             {
-                if (Path[i].LesserSet == set) return i;
+                return Length == 0 ? null : Path[Path.Count - 1];
             }
-            return -1;
-        }
-
-        public int IndexOf(DimPath path) // Return index of the beginning of the specified path in this path
-        {
-            throw new NotImplementedException();
-        }
-
-        public void AppendSegment(Dim dim) // Append a new segment to the end of the path
-        {
-            Debug.Assert(Length == 0 || dim.LesserSet == GreaterSet, "A new segment appended to a path must continue the previous segments");
-
-            Path.Add(dim);
-            GreaterSet = dim.GreaterSet;
-            if (LesserSet == null) LesserSet = dim.LesserSet;
-        }
-
-        public void AppendPath(DimPath path) // Append all segments of the specified path to the end of this path
-        {
-            Debug.Assert(Length == 0 || path.LesserSet == GreaterSet, "A an appended path must continue this path.");
-
-            if (path == null || path.Length == 0) return;
-
-            for (int i = 0; i < path.Path.Count; i++)
-            {
-                Path.Add(path.Path[i]);
-            }
-
-            GreaterSet = path.GreaterSet;
-            if (LesserSet == null) LesserSet = path.LesserSet;
-        }
-
-        public void InsertSegment(Dim dim) // Insert a new segment at the beginning of the path
-        {
-            Debug.Assert(Length == 0 || dim.GreaterSet == LesserSet, "A path must continue the first segment inserted in the beginning.");
-
-            Path.Insert(0, dim);
-            LesserSet = dim.LesserSet;
-            if (GreaterSet == null) GreaterSet = dim.GreaterSet;
-        }
-        public void InsertPrefix(DimPath path) // Insert new segments from the specified path at the beginning of the path
-        {
-            Debug.Assert(Length == 0 || path.GreaterSet == LesserSet, "A path must continue the first segment inserted in the beginning.");
-
-            Path.InsertRange(0, path.Path);
-            LesserSet = path.LesserSet;
-            if (GreaterSet == null) GreaterSet = path.GreaterSet;
-        }
-
-        public Dim RemoveSegment() // Remove last segment
-        {
-            if (Length == 0) return null; // Nothing to remove
-            return RemoveAt(Path.Count - 1);
-        }
-        public Dim RemoveAt(int index) // TODO: Implement an additional argument with the number of segments to remove
-        {
-            if (Length == 0) return null; // Nothing to remove
-            if (index < 0 || index >= Path.Count) return null;
-
-            Dim result = Path[index];
-            Path.RemoveAt(index);
-
-            if (Path.Count == 0)
-            {
-                LesserSet = result.LesserSet;
-                GreaterSet = result.LesserSet;
-            }
-            else
-            {
-                LesserSet = Path[0].LesserSet;
-                GreaterSet = Path[Path.Count - 1].GreaterSet;
-            }
-
-            return result;
-        }
-        public void RemovePrefix(DimPath path) // Remove first segments
-        {
-            if (Path.Count < path.Path.Count) return; // Nothing to remove
-            if (!this.StartsWith(path)) return;
-
-            Path.RemoveRange(0, path.Path.Count);
-
-            if (Path.Count > 0) LesserSet = Path[0].LesserSet;
-            else LesserSet = GreaterSet;
-        }
-        public void TrimPrefix(Set set) // Remove first segments till this set (the new path will start from the specified set if trimmed)
-        {
-            // Find a path to the specified set
-            int index = IndexOf(set);
-            if (index < 0) return;
-
-            Path.RemoveRange(0, index - 1);
-
-            if (Path.Count > 0) LesserSet = Path[0].LesserSet;
-            else LesserSet = GreaterSet;
         }
 
         public int Rank
@@ -193,6 +87,28 @@ namespace Com.Model
             }
         }
 
+        public int IndexOf(Set set) // Return index of the set in the path
+        {
+            for (int i = 0; i < Path.Count; i++)
+            {
+                if (Path[i].LesserSet == set) return i;
+            }
+            return -1;
+        }
+        public int IndexOf(Dim dim) // Return index of the specified dimension in this path
+        {
+            return Path.IndexOf(dim);
+        }
+        public int IndexOf(DimPath path) // Return index of the beginning of the specified path in this path
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool StartsWith(Dim dim)
+        {
+            if(Length == 0) return false;
+            return Path[0] == dim;
+        }
         public bool StartsWith(DimPath path)
         {
             return StartsWith(path.Path);
@@ -224,21 +140,165 @@ namespace Com.Model
             return true;
         }
 
-        public Dim FirstSegment
+        public DimPath SubPath(int index, int count = 0) // Return a new path consisting of the specified segments
         {
-            get
+            DimPath ret = new DimPath();
+
+            if (count == 0) count = Path.Count - index;
+
+            for (int i = 0; i < count; i++)
             {
-                return Length == 0 ? null : Path[0];
+                ret.Path.Add(Path[index + i]);
             }
+
+            ret.GreaterSet = ret.Path[0].LesserSet;
+            ret.LesserSet = ret.Path[ret.Path.Count - 1].GreaterSet;
+
+            return ret;
         }
 
-        public Dim LastSegment
+        #region Add segments
+
+        public void InsertAt(Dim dim) // Insert a new segment at the specified position
         {
-            get
-            {
-                return Length == 0 ? null : Path[Path.Count - 1];
-            }
+            throw new NotImplementedException();
         }
+        public void InsertAt(DimPath path) // Insert a new segment at the specified position
+        {
+            throw new NotImplementedException();
+        }
+
+        public void InsertFirst(Dim dim) // Insert a new segment at the beginning of the path
+        {
+            Debug.Assert(Length == 0 || dim.GreaterSet == LesserSet, "A path must continue the first segment inserted in the beginning.");
+
+            Path.Insert(0, dim);
+            LesserSet = dim.LesserSet;
+            if (GreaterSet == null) GreaterSet = dim.GreaterSet;
+        }
+        public void InsertFirst(DimPath path) // Insert new segments from the specified path at the beginning of the path
+        {
+            Debug.Assert(Length == 0 || path.GreaterSet == LesserSet, "A path must continue the first segment inserted in the beginning.");
+
+            Path.InsertRange(0, path.Path);
+            LesserSet = path.LesserSet;
+            if (GreaterSet == null) GreaterSet = path.GreaterSet;
+        }
+
+        public void InsertLast(Dim dim) // Append a new segment to the end of the path
+        {
+            Debug.Assert(Length == 0 || dim.LesserSet == GreaterSet, "A new segment appended to a path must continue the previous segments");
+
+            Path.Add(dim);
+            GreaterSet = dim.GreaterSet;
+            if (LesserSet == null) LesserSet = dim.LesserSet;
+        }
+        public void InsertLast(DimPath path) // Append all segments of the specified path to the end of this path
+        {
+            Debug.Assert(Length == 0 || path.LesserSet == GreaterSet, "A an appended path must continue this path.");
+
+            if (path == null || path.Length == 0) return;
+
+            for (int i = 0; i < path.Path.Count; i++)
+            {
+                Path.Add(path.Path[i]);
+            }
+
+            GreaterSet = path.GreaterSet;
+            if (LesserSet == null) LesserSet = path.LesserSet;
+        }
+
+        #endregion // Add segments
+
+        #region Remove segments
+
+        private Dim RemoveAt(int index)
+        {
+            if (Length == 0) return null; // Nothing to remove
+            if (index < 0 || index >= Path.Count) return null; // Bad index
+
+            Dim result = Path[index];
+            Path.RemoveAt(index);
+
+            if (Path.Count != 0)
+            {
+                LesserSet = Path[0].LesserSet;
+                GreaterSet = Path[Path.Count - 1].GreaterSet;
+            }
+            else
+            {
+                // Note: LesserSet and GreaterSets are not set - this must be done in public methods and depends on whether it is removed as first or last segment (it is important for some algorithms)
+            }
+
+            return result;
+        }
+
+        public Dim RemoveFirst()
+        {
+            return RemoveFirstAt(0);
+        }
+        public Dim RemoveFirstAt(int index) // TODO: Implement an additional argument with the number of segments to remove
+        {
+            Dim result = RemoveAt(index);
+            if (result == null) return result;
+
+            if (Path.Count == 0) // This where removal of the first and the last segments is different
+            {
+                LesserSet = result.GreaterSet;
+                GreaterSet = result.GreaterSet;
+            }
+
+            return result;
+        }
+        public void RemoveFirst(DimPath path) // Remove first segments
+        {
+            if (Path.Count < path.Path.Count) return; // Nothing to remove
+            if (!this.StartsWith(path)) return;
+
+            Path.RemoveRange(0, path.Path.Count);
+
+            if (Path.Count > 0) LesserSet = Path[0].LesserSet;
+            else LesserSet = GreaterSet;
+        }
+        public void RemoveFirst(Set set) // Remove first segments till this set (the new path will start from the specified set if trimmed)
+        {
+            // Find a path to the specified set
+            int index = IndexOf(set);
+            if (index < 0) return;
+
+            Path.RemoveRange(0, index - 1);
+
+            if (Path.Count > 0) LesserSet = Path[0].LesserSet;
+            else LesserSet = GreaterSet;
+        }
+
+        public Dim RemoveLast() // Remove last segment
+        {
+            return RemoveLastAt(Path.Count - 1);
+        }
+        public Dim RemoveLastAt(int index) // TODO: Implement an additional argument with the number of segments to remove
+        {
+            Dim result = RemoveAt(index);
+            if (result == null) return result;
+
+            if (Path.Count == 0) // This where removal of the first and the last segments is different
+            {
+                LesserSet = result.LesserSet;
+                GreaterSet = result.LesserSet;
+            }
+
+            return result;
+        }
+        public void RemoveLast(DimPath path) // Remove last segments (suffix)
+        {
+            throw new NotImplementedException();
+        }
+        public void RemoveLast(Set set) // Remove last segments starting from this set (the new path will end with the specified set if trimmed)
+        {
+            throw new NotImplementedException();
+        }
+
+        #endregion // Remove segments
 
         /// <summary>
         /// Convert nested path to a flat canonical representation as a sequence of simple dimensions which do not contain other dimensions.
@@ -310,27 +370,6 @@ namespace Com.Model
             Debug.Assert(rank >= 0, "Wrong use of method parameter. Rank cannot be negative.");
             return rank < Path.Count ? Path[rank] : null; // TODO: take into account the nested structure of complex dimensions
         }
-
-        public void Concatenate(List<Dim> path)
-        {
-            Debug.Assert(path != null);
-            if (Path[0].LesserSet == path[path.Count - 1].GreaterSet) // Insert as prefix
-            {
-                Path.InsertRange(0, path);
-                LesserSet = path[0].LesserSet;
-            }
-            else if (Path[Path.Count - 1].GreaterSet == path[0].LesserSet) // Append as suffix
-            {
-                Path.AddRange(path);
-                GreaterSet = path[path.Count - 1].GreaterSet;
-            }
-            else
-            {
-                // Wrong use: two paths must be adjacent
-            }
-        }
-
-        #endregion
 
         /// <summary>
         /// Check the validity of this formal structure. Used for testing. 
@@ -596,17 +635,11 @@ namespace Com.Model
             Dim segment = null;
             if (!isInverse)
             {
-                segment = RemoveSegment();
+                segment = RemoveLast();
             }
             else
             {
-                segment = RemoveAt(0);
-                if (Length == 0)
-                {
-                    // The removal method will set it to lesser set while for inverse dims we need greater set
-                    LesserSet = segment.GreaterSet;
-                    GreaterSet = segment.GreaterSet;
-                }
+                segment = RemoveFirst();
             }
             return segment;
         }
@@ -614,11 +647,11 @@ namespace Com.Model
         {
             if (!isInverse)
             {
-                AppendSegment(segment);
+                InsertLast(segment);
             }
             else
             {
-                InsertSegment(segment);
+                InsertFirst(segment);
             }
         }
         private bool AtDestination()
