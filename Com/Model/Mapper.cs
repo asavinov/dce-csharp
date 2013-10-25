@@ -416,10 +416,13 @@ namespace Com.Model
 
         public Expression GetTargetExpression()
         {
+            return GetTargetExpression(null, null);
+/* _DEL
             Expression expr = new Expression(null, Operation.TUPLE, TargetSet); // Create a root tuple expression object 
             foreach (PathMatch match in Matches)
             {
-                Expression varExpr = new Expression("source", Operation.VARIABLE, match.TargetSet); // Add Input of function as a variable the values of which (output) can be assigned for evaluation of the function during export/import
+                // Add Input of function as a variable the values of which (output) can be assigned for evaluation of the function during export/import
+                Expression varExpr = new Expression("source", Operation.VARIABLE, match.SourceSet); 
 
                 Expression funcExpr = null;
                 DimPath srcPath = match.SourceSet.GetGreaterPath(match.SourcePath.Path); // First, we try to find a direct path/function 
@@ -434,6 +437,38 @@ namespace Com.Model
                 }
 
                 funcExpr.Input = varExpr;
+
+                Expression leafTuple = expr.AddPath(match.TargetPath);
+                leafTuple.Input = funcExpr;
+            }
+
+            return expr;
+*/
+        }
+
+        public Expression GetTargetExpression(Dim sourceDim, Dim targetDim) // Prefix effectively changes the source set and will be added as a prefix to all paths. It is used for dimension mapping (type change).
+        {
+            Expression expr = new Expression(null, Operation.TUPLE, TargetSet); // Create a root tuple expression object 
+            if (targetDim != null) expr.Dimension = targetDim;
+
+            foreach (PathMatch match in Matches)
+            {
+                // Add Input of function as a variable the values of which (output) can be assigned for evaluation of the function during export/import
+                Expression varExpr = new Expression("source", Operation.VARIABLE, sourceDim == null ? match.SourceSet : sourceDim.LesserSet);
+
+                Expression funcExpr = null;
+                DimPath srcPath = match.SourceSet.GetGreaterPath(match.SourcePath.Path); // First, we try to find a direct path/function 
+                if (srcPath == null) // No direct path
+                {
+                    srcPath = match.SourcePath; // use a sequence of dimensions/functions
+                    if (sourceDim != null) srcPath.InsertFirst(sourceDim);
+                    funcExpr = Expression.CreateProjectExpression(srcPath.Path, Operation.DOT, varExpr);
+                }
+                else // There is a direct path (relation attribute in a relational data source). Use attribute name as function name
+                {
+                    funcExpr = new Expression(srcPath.Name, Operation.DOT, match.TargetPath.GreaterSet);
+                    funcExpr.Input = varExpr;
+                }
 
                 Expression leafTuple = expr.AddPath(match.TargetPath);
                 leafTuple.Input = funcExpr;
@@ -798,7 +833,7 @@ namespace Com.Model
 
         public bool IsEmpty
         {
-            get { return Dim == null || Dim.IsEmpty; }
+            get { return Dim == null || Dim.GreaterSet == null || Dim.LesserSet == null || Dim.GreaterSet == Dim.LesserSet; }
         }
 
         //

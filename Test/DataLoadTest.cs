@@ -81,14 +81,13 @@ namespace Test
             dbRoot.Open();
             dbRoot.ImportSchema();
 
-            // Create workspace root set
             SetRoot wsRoot = new SetRoot("My Mashup");
-
-            Mapper mapper = new Mapper();
 
             //
             // Import first set. Employees
             //
+            Mapper mapper = new Mapper();
+
             Set sourceSet = dbRoot.FindSubset("Employees");
             mapper.RecommendMappings(sourceSet, wsRoot, 1.0);
 
@@ -132,10 +131,11 @@ namespace Test
             dbRoot.Open();
             dbRoot.ImportSchema();
 
+            SetRoot wsRoot = new SetRoot("My Mashup");
+
             //
             // Load test data
             //
-            SetRoot wsRoot = new SetRoot("My Mashup");
             Set targetSet = Mapper.ImportSet(dbRoot.FindSubset("Order Details"), wsRoot);
             targetSet.Populate();
 
@@ -266,10 +266,11 @@ namespace Test
             dbRoot.Open();
             dbRoot.ImportSchema();
 
+            SetRoot wsRoot = new SetRoot("My Mashup");
+
             //
             // Load test data
             //
-            SetRoot wsRoot = new SetRoot("My Mashup");
             Set targetSet = Mapper.ImportSet(dbRoot.FindSubset("Order Details"), wsRoot);
             targetSet.Populate();
             
@@ -292,7 +293,7 @@ namespace Test
             od.AddGreaterDim(derived1);
 
             // Update
-            derived1.Populate(); // Call SelectExpression.Evaluate(EvaluationMode.UPDATE);
+            derived1.Populate();
 
             Assert.AreEqual("Axen", od.GetValue("Customer Last Name", 10));
         }
@@ -306,10 +307,11 @@ namespace Test
             dbRoot.Open();
             dbRoot.ImportSchema();
 
+            SetRoot wsRoot = new SetRoot("My Mashup");
+
             //
             // Load test data
             //
-            SetRoot wsRoot = new SetRoot("My Mashup");
             Set targetSet = Mapper.ImportSet(dbRoot.FindSubset("Order Details"), wsRoot);
             targetSet.Populate();
 
@@ -342,7 +344,7 @@ namespace Test
             cust.AddGreaterDim(derived1);
 
             // Update
-            derived1.Populate(); // Call SelectExpression.Evaluate(EvaluationMode.UPDATE);
+            derived1.Populate();
 
             Assert.AreEqual(64.0, cust.GetValue("Average List Price", 2));
         }
@@ -356,10 +358,11 @@ namespace Test
             dbRoot.Open();
             dbRoot.ImportSchema();
 
+            SetRoot wsRoot = new SetRoot("My Mashup");
+
             //
             // Load test data
             //
-            SetRoot wsRoot = new SetRoot("My Mashup");
             Set targetSet = Mapper.ImportSet(dbRoot.FindSubset("Order Details"), wsRoot);
             targetSet.Populate();
 
@@ -392,7 +395,7 @@ namespace Test
             cust.AddGreaterDim(derived1);
 
             // Update
-            derived1.Populate(); // Call SelectExpression.Evaluate(EvaluationMode.UPDATE);
+            derived1.Populate();
 
             Assert.AreEqual(64.0, cust.GetValue("Average List Price", 2));
 
@@ -407,10 +410,11 @@ namespace Test
             dbRoot.Open();
             dbRoot.ImportSchema();
 
+            SetRoot wsRoot = new SetRoot("My Mashup");
+
             //
             // Load test data
             //
-            SetRoot wsRoot = new SetRoot("My Mashup");
             Set targetSet = Mapper.ImportSet(dbRoot.FindSubset("Order Details"), wsRoot);
             targetSet.Populate();
 
@@ -451,7 +455,7 @@ namespace Test
             products.AddGreaterDim(derived1);
 
             // Update
-            derived1.Populate(); // Call SelectExpression.Evaluate(EvaluationMode.UPDATE);
+            derived1.Populate();
             Assert.AreEqual(-32.5, products.GetValue("Derived Column", 2));
 
             // 
@@ -467,7 +471,7 @@ namespace Test
             products.AddGreaterDim(derived2);
 
             // Update
-            derived2.Populate(); // Call SelectExpression.Evaluate(EvaluationMode.UPDATE);
+            derived2.Populate();
             Assert.AreEqual(60.0, products.GetValue("Derived Column 2", 2));
         }
 
@@ -480,10 +484,11 @@ namespace Test
             dbRoot.Open();
             dbRoot.ImportSchema();
 
+            SetRoot wsRoot = new SetRoot("My Mashup");
+
             //
             // Load test data
             //
-            SetRoot wsRoot = new SetRoot("My Mashup");
             Set targetSet = Mapper.ImportSet(dbRoot.FindSubset("Order Details"), wsRoot);
             targetSet.Populate();
             
@@ -515,6 +520,88 @@ namespace Test
             subProducts.Populate();
             Assert.AreEqual(2, subProducts.Length);
         }
+
+        [TestMethod]
+        public void ChangeTypeTest()
+        {
+            // Create Oldedb root set
+            SetRootOledb dbRoot = new SetRootOledb("Northwind");
+            dbRoot.ConnectionString = Northwind;
+            dbRoot.Open();
+            dbRoot.ImportSchema();
+
+            SetRoot wsRoot = new SetRoot("My Mashup");
+
+            //
+            // Load test data. 
+            //
+            Set orderStatus = Mapper.ImportSet(dbRoot.FindSubset("Orders Status"), wsRoot); // We load it to get more (target) data
+            orderStatus.Populate();
+
+            Set mainSet = Mapper.ImportSet(dbRoot.FindSubset("Order Details"), wsRoot);
+            mainSet.Populate();
+
+            //
+            // Define mapping (Orders Details) -> Status ID: From (Order Details Status) To (Orders Status)
+            //
+            Dim sourceDim = mainSet.GetGreaterDim("Status ID");
+            Set sourceSet = wsRoot.FindSubset("Order Details Status");
+            Set targetSet = wsRoot.FindSubset("Orders Status");
+            SetMapping mapping = new SetMapping(sourceSet, targetSet);
+            mapping.AddMatch(new PathMatch( // Add two primitive paths each having one primitive dimension
+                new DimPath(sourceSet.GetGreaterDim("Status ID")),
+                new DimPath(targetSet.GetGreaterDim("Status ID")))
+                );
+
+            //
+            // Populate new dimension and delete old one
+            //
+            Dim targetDim = targetSet.CreateDefaultLesserDimension(sourceDim.Name, mainSet); // TODO: set also other properties so that new dim is identical to the old one
+            Expression expr = mapping.GetTargetExpression(sourceDim, targetDim);
+            targetDim.SelectExpression = expr;
+
+            targetDim.Populate(); // Evaluate tuple expression on the same set (not remove set), that is, move data from one dimension to the new dimension
+
+            sourceDim.Remove(); // Remove old dimension (detach) and attach new dimension (if not attached)
+            targetDim.Add();
+
+            Assert.AreEqual(2, targetDim.GetValue(14));
+            Assert.AreEqual(1, targetDim.GetValue(15));
+
+            //
+            // Define mapping (Orders) -> Employee ID: From (Employees) To (Suppliers)
+            //
+            targetSet = Mapper.ImportSet(dbRoot.FindSubset("Suppliers"), wsRoot);
+            targetSet.Populate();
+
+            mainSet = wsRoot.FindSubset("Orders");
+
+            sourceDim = mainSet.GetGreaterDim("Employee ID");
+            sourceSet = wsRoot.FindSubset("Employees");
+            targetSet = wsRoot.FindSubset("Suppliers");
+            mapping = new SetMapping(sourceSet, targetSet);
+            mapping.AddMatch(new PathMatch( // Add two primitive paths each having one primitive dimension
+                new DimPath(sourceSet.GetGreaterDim("ID")),
+                new DimPath(targetSet.GetGreaterDim("ID")))
+                );
+
+            //
+            // Populate new dimension and delete old one
+            //
+            targetDim = targetSet.CreateDefaultLesserDimension(sourceDim.Name, mainSet); // TODO: set also other properties so that new dim is identical to the old one
+            expr = mapping.GetTargetExpression(sourceDim, targetDim);
+            targetDim.SelectExpression = expr;
+
+            targetDim.Populate(); // Evaluate tuple expression on the same set (not remove set), that is, move data from one dimension to the new dimension
+
+            sourceDim.Remove(); // Remove old dimension (detach) and attach new dimension (if not attached)
+            targetDim.Add();
+
+            Assert.AreEqual(8, targetDim.GetValue(0));
+            Assert.AreEqual(2, targetDim.GetValue(1));
+            Assert.AreEqual(3, targetDim.GetValue(2));
+            Assert.AreEqual(5, targetDim.GetValue(3));
+        }            
 
     }
 }

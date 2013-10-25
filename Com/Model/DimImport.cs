@@ -98,12 +98,6 @@ namespace Com.Model
                 SetRoot schema = match != null ? match.TargetPath.GreaterSet.Root : null; // We assume that primitive sets always have root defined (other sets might not have been added yet).
                 tree.IncludeInSchema(schema); // Include new elements in schema
 
-/*
-               string importDimName = value.SourceSet.Name; // The same as the source (imported) set name
-                DimImport importDim = new DimImport(importDimName, value.TargetSet, value.SourceSet);
-
-                importDim.Add();
-*/
                 _importMapping = value; // Configure set for import
             }
         }

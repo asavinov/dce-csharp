@@ -352,19 +352,17 @@ namespace Com.Model
 
                     if (Input != null) Input.Evaluate();
 
+                    foreach (Expression child in Operands) // Evaluate all parameters (recursively)
+                    {
+                        child.Evaluate(); // Recursion. Child output will be set
+                    }
+
                     if (OutputSet.IsPrimitive) // Leaf of the tuple structure - here we need to really find a concrete value by evaluating Input
                     {
-                        // TODO: Uncomment below when tuple expressions will be correctly generated
-                        //Debug.Assert(Input.OutputSet == OutputSet, "Wrong use: leaf nodes of tuple expression get their value from Input and hence Input set has to be equal to the leaf set.");
-                        Output = Input.Output;
+                        Output = Input.Output; // Ignore child expression output
                     }
                     else // It is a non-leaf tuple and its value is by definition a combination of its children
                     {
-                        foreach (Expression child in Operands) // Evaluate all parameters (recursively)
-                        {
-                            child.Evaluate(); // Recursion. Child output will be set
-                        }
-
                         Output = null;
                     }
 
@@ -555,7 +553,7 @@ namespace Com.Model
             return Output;
 		}
 
-        public static Expression CreateProjectExpression(List<Dim> greaterDims, Operation op)
+        public static Expression CreateProjectExpression(List<Dim> greaterDims, Operation op, Expression leafExpr = null)
         {
             Set lesserSet = greaterDims[0].LesserSet;
 
@@ -590,7 +588,9 @@ namespace Com.Model
                 }
                 else // First segments in the path is a leaf of the expression tree - will be evaluated first
                 {
-                    expr.Input = new Expression("this", Operation.VARIABLE, lesserSet); // The project path starts from some variable which stores the initial value(s) to be projected
+                    // The leaf expression produces initial value(s) to be projected and by default it is a variable
+                    if (leafExpr == null) leafExpr = new Expression("this", Operation.VARIABLE, lesserSet);
+                    expr.Input = leafExpr;
                 }
 
                 previousExpr = expr;

@@ -824,46 +824,6 @@ namespace Com.Model
                 {
                     dim.Populate();
                 }
-
-/*
-                SetMapping mapping = ImportDims[0].ImportMapping;
-
-                Debug.Assert(mapping != null && mapping.TargetSet == this, "Target/Output of import mapping/expression must be equal to the set where it is stored.");
-
-                Expression importExpression = mapping.GetTargetExpression(); // Build a tuple tree with paths in leaves
-
-                // Find remote (impport/export) sets, organize the main loop and evaluate local identity dimensions. 
-                DimImport importDim = ImportDims[0];
-                Set remoteSet = importDim.GreaterSet;
-
-                if (remoteSet.Root is SetRootOledb)
-                {
-                    // Request a (flat) result set from the remote set (data table)
-                    DataTable dataTable = ((SetRootOledb)remoteSet.Root).ExportAll(remoteSet);
-
-// CHECK: is it needed                    ImportExpression.SetInput(Operation.PROJECTION, Operation.VARIABLE); // ??? CHECK: Set the necessary input expression for all functions
-
-                    // For each row, evaluate the expression and append the new element
-                    foreach (DataRow row in dataTable.Rows) // A row is <colName, primValue> collection
-                    {
-                        importExpression.SetOutput(Operation.VARIABLE, row); // Set the input variable 'source'
-                        importExpression.Evaluate(); // Evaluate the expression tree by computing primtive tuple values
-                        Append(importExpression); // Append an element using the tuple composed of primitive values
-                    }
-                }
-                else if (remoteSet.Root is SetRootOdata)
-                {
-                }
-                else if (remoteSet.Root == this.Root) // Direct access using offsets
-                {
-                    for (Offset offset = 0; offset < remoteSet.Length; offset++)
-                    {
-                        importExpression.SetOutput(Operation.VARIABLE, offset); // Assign value of 'this' variable
-                        importExpression.Evaluate();
-                        Append(importExpression);
-                    }
-                }
-*/
             }
             else
             {
@@ -874,7 +834,6 @@ namespace Com.Model
 
                 // Also we might use import/export dims for user input with manual specification of records
             }
-
         }
 
         //

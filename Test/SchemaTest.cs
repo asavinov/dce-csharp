@@ -140,9 +140,6 @@ namespace Test
             dbRoot.Open();
             dbRoot.ImportSchema();
 
-            //
-            // Create workspace root set
-            //
             SetRoot wsRoot = new SetRoot("My Mashup");
 
             //
@@ -228,14 +225,15 @@ namespace Test
             dbRoot.Open();
             dbRoot.ImportSchema();
 
+            SetRoot wsRoot = new SetRoot("My Mashup");
+
             //
             // Load test data
             //
             Set ordersSource = dbRoot.FindSubset("Orders");
-            SetRoot wsRoot = new SetRoot("My Mashup");
 
             //
-            // Initialize a mapping model and trees for editing
+            // Initialize a mapping model 
             //
             Mapper mapper = new Mapper();
             mapper.RecommendMappings(ordersSource, wsRoot, 1.0);

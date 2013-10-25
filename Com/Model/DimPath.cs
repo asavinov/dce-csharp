@@ -399,6 +399,16 @@ namespace Com.Model
             Path = new List<Dim>();
         }
 
+        public DimPath(Dim segment)
+            : this()
+        {
+            if (segment == null) return;
+
+            Path.Add(segment);
+            LesserSet = Path[0].LesserSet;
+            GreaterSet = Path[Path.Count - 1].GreaterSet;
+        }
+
         public DimPath(List<Dim> segments)
             : this()
         {

@@ -32,11 +32,15 @@ namespace Com.Model
         {
             // TODO: Check if output (greater) set is of correct type
 
-            // In fact, we know the input set size and hence can allocate the exact number of elements in the array
             Length = 0;
             allocatedSize = initialSize;
             _cells = new T[allocatedSize];
             _offsets = new int[allocatedSize];
+
+            if (IsInstantiable)
+            {
+                SetLength(lesserSet.Length);
+            }
 
             if (typeof(T) == typeof(int))
             {
@@ -178,10 +182,17 @@ namespace Com.Model
                 for (Offset offset = 0; offset < LesserSet.Length; offset++) // Compute the output function value for each input value (offset)
                 {
                     SelectExpression.SetOutput(Operation.VARIABLE, offset); // Initialize 'this'
-
                     SelectExpression.Evaluate(); // Compute
-
-                    SetValue(offset, SelectExpression.Output); // Store the final result
+                    object val = null;
+                    if (SelectExpression.Operation == Operation.TUPLE)
+                    {
+                        val = SelectExpression.OutputSet.Find(SelectExpression);
+                    }
+                    else
+                    {
+                        val = SelectExpression.Output;
+                    }
+                    SetValue(offset, val); // Store the final result
                 }
             }
         }

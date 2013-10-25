@@ -48,9 +48,20 @@ namespace Com.Model
         }
 
         public virtual int Length { get; protected set; } // How many instances. It is the same for all dimensions of the lesser set. 
+        /// <summary>
+        /// Whether this function is has a primitive range (greater set). 
+        /// </summary>
+        public bool IsPrimitive { get { return GreaterSet == null ? false : GreaterSet.IsPrimitive; } }
 
         /// <summary>
-        /// Is identity dimension.
+        /// Whether this dimension is supposed (able) to have instances. Some dimensions are used for conceptual purposes. 
+        /// It is not about having zero instances - it is about the ability to have instances (essentially supporting the corresponding interface for working with instances).
+        /// It characterizes and depends on the domain (lesser set). 
+        /// </summary>
+        public bool IsInstantiable { get { return LesserSet == null ? false : LesserSet.IsInstantiable; } }
+
+        /// <summary>
+        /// Whether it is an identity dimension.
         /// </summary>
         public bool IsIdentity { get; set; }
 
@@ -62,16 +73,7 @@ namespace Com.Model
         public bool IsReversed { get; set; }
 
         /// <summary>
-        /// Whether this dimension is supposed (able) to have instances. Some dimensions are used for conceptual purposes. 
-        /// It is not about having zero instances - it is about the ability to have instances (essentially supporting the corresponding interface for working with instances).
-        /// This flag is true for extensions which implement data-related methods (and in this sense it is reduntant because duplicates 'instance of').
-        /// Different interpretations: the power of the domain can increase; the power of the domain is not 0; 
-        /// </summary>
-        private bool _instantiable;
-        public bool IsInstantiable { get { return LesserSet.IsInstantiable; } private set { _instantiable = value; } }
-
-        /// <summary>
-        /// Whether this dimension is allowed to take no values.
+        /// Whether this function is allowed to store nulls as output values, that is, to have no output assigned to inputs.
         /// </summary>
         public bool IsNullable { get; set; }
 
@@ -81,22 +83,6 @@ namespace Com.Model
         /// It can be created in the scope of some other dimension, expression or query, and then it is automatically deleted when the process exits this scope.
         /// </summary>
         public bool IsTemporary { get; set; }
-
-        public bool IsPrimitive
-        {
-            get
-            {
-                return GreaterSet.IsPrimitive;
-            }
-        }
-
-        public bool IsEmpty
-        {
-            get
-            {
-                return GreaterSet == null || LesserSet==null || GreaterSet == LesserSet;
-            }
-        }
 
         #endregion
 
@@ -283,7 +269,6 @@ namespace Com.Model
 
             IsIdentity = dim.IsIdentity;
             IsReversed = dim.IsReversed;
-            IsInstantiable = dim.IsInstantiable;
 
             LesserSet = dim.LesserSet;
             GreaterSet = dim.GreaterSet;
@@ -295,18 +280,17 @@ namespace Com.Model
         }
 
         public Dim(string name, Set lesserSet, Set greaterSet)
-            : this(name, lesserSet, greaterSet, false, false, true)
+            : this(name, lesserSet, greaterSet, false, false)
         {
         }
 
-        public Dim(string name, Set lesserSet, Set greaterSet, bool isIdentity, bool isReversed, bool isInstantiable)
+        public Dim(string name, Set lesserSet, Set greaterSet, bool isIdentity, bool isReversed)
             : this()
         {
             Name = name;
 
             IsIdentity = isIdentity;
             IsReversed = isReversed;
-            IsInstantiable = isInstantiable;
 
             LesserSet = lesserSet;
             GreaterSet = greaterSet;
