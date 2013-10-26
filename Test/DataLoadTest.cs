@@ -544,9 +544,11 @@ namespace Test
             //
             // Define mapping (Orders Details) -> Status ID: From (Order Details Status) To (Orders Status)
             //
-            Dim sourceDim = mainSet.GetGreaterDim("Status ID");
             Set sourceSet = wsRoot.FindSubset("Order Details Status");
+            Dim sourceDim = mainSet.GetGreaterDim("Status ID");
             Set targetSet = wsRoot.FindSubset("Orders Status");
+            Dim targetDim = targetSet.CreateDefaultLesserDimension(sourceDim.Name, mainSet); // TODO: set also other properties so that new dim is identical to the old one
+
             SetMapping mapping = new SetMapping(sourceSet, targetSet);
             mapping.AddMatch(new PathMatch( // Add two primitive paths each having one primitive dimension
                 new DimPath(sourceSet.GetGreaterDim("Status ID")),
@@ -556,7 +558,6 @@ namespace Test
             //
             // Populate new dimension and delete old one
             //
-            Dim targetDim = targetSet.CreateDefaultLesserDimension(sourceDim.Name, mainSet); // TODO: set also other properties so that new dim is identical to the old one
             Expression expr = mapping.GetTargetExpression(sourceDim, targetDim);
             targetDim.SelectExpression = expr;
 
@@ -576,9 +577,11 @@ namespace Test
 
             mainSet = wsRoot.FindSubset("Orders");
 
-            sourceDim = mainSet.GetGreaterDim("Employee ID");
             sourceSet = wsRoot.FindSubset("Employees");
+            sourceDim = mainSet.GetGreaterDim("Employee ID");
             targetSet = wsRoot.FindSubset("Suppliers");
+            targetDim = targetSet.CreateDefaultLesserDimension(sourceDim.Name, mainSet); // TODO: set also other properties so that new dim is identical to the old one
+
             mapping = new SetMapping(sourceSet, targetSet);
             mapping.AddMatch(new PathMatch( // Add two primitive paths each having one primitive dimension
                 new DimPath(sourceSet.GetGreaterDim("ID")),
@@ -588,7 +591,6 @@ namespace Test
             //
             // Populate new dimension and delete old one
             //
-            targetDim = targetSet.CreateDefaultLesserDimension(sourceDim.Name, mainSet); // TODO: set also other properties so that new dim is identical to the old one
             expr = mapping.GetTargetExpression(sourceDim, targetDim);
             targetDim.SelectExpression = expr;
 

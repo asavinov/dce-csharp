@@ -266,7 +266,7 @@ namespace Com.Model
             int index = IndexOf(set);
             if (index < 0) return;
 
-            Path.RemoveRange(0, index - 1);
+            Path.RemoveRange(0, index);
 
             if (Path.Count > 0) LesserSet = Path[0].LesserSet;
             else LesserSet = GreaterSet;

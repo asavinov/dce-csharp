@@ -12,7 +12,7 @@ namespace Com.Model
 {
 
     /// <summary>
-    /// Mappings for many source and target sets. 
+    /// It implements mapping recommendations. 
     /// </summary>
     public class Mapper
     {
@@ -366,6 +366,21 @@ namespace Com.Model
             }
         }
 
+        public void RemoveMatch(DimPath sourcePath, DimPath targetPath)
+        {
+            Debug.Assert(sourcePath.LesserSet == SourceSet, "Wrong use: source path must start from the source set.");
+            Debug.Assert(targetPath.LesserSet == TargetSet, "Wrong use: target path must start from the target set.");
+
+            List<PathMatch> toRemove = new List<PathMatch>();
+            foreach (PathMatch m in Matches)
+            {
+                if (!m.MatchesSource(sourcePath) || !m.MatchesTarget(targetPath)) continue;
+                toRemove.Add(m);
+            }
+
+            toRemove.ForEach(m => Matches.Remove(m));
+        }
+
         public DimTree GetSourceTree() // Convert all source paths into a dimension tree where the source set will be a root. The tree can contain non-existing elements if they are used in the mapping. 
         {
             DimTree tree = new DimTree(SourceSet);
@@ -417,35 +432,7 @@ namespace Com.Model
         public Expression GetTargetExpression()
         {
             return GetTargetExpression(null, null);
-/* _DEL
-            Expression expr = new Expression(null, Operation.TUPLE, TargetSet); // Create a root tuple expression object 
-            foreach (PathMatch match in Matches)
-            {
-                // Add Input of function as a variable the values of which (output) can be assigned for evaluation of the function during export/import
-                Expression varExpr = new Expression("source", Operation.VARIABLE, match.SourceSet); 
-
-                Expression funcExpr = null;
-                DimPath srcPath = match.SourceSet.GetGreaterPath(match.SourcePath.Path); // First, we try to find a direct path/function 
-                if (srcPath == null) // No direct path
-                {
-                    srcPath = match.SourcePath; // use a sequence of dimensions/functions
-                    funcExpr = Expression.CreateProjectExpression(srcPath.Path, Operation.DOT);
-                }
-                else // There is a direct path (relation attribute in a relational data source). Use attribute name as function name
-                {
-                    funcExpr = new Expression(srcPath.Name, Operation.DOT, match.TargetPath.GreaterSet);
-                }
-
-                funcExpr.Input = varExpr;
-
-                Expression leafTuple = expr.AddPath(match.TargetPath);
-                leafTuple.Input = funcExpr;
-            }
-
-            return expr;
-*/
         }
-
         public Expression GetTargetExpression(Dim sourceDim, Dim targetDim) // Prefix effectively changes the source set and will be added as a prefix to all paths. It is used for dimension mapping (type change).
         {
             Expression expr = new Expression(null, Operation.TUPLE, TargetSet); // Create a root tuple expression object 
@@ -678,13 +665,31 @@ namespace Com.Model
         /// </summary>
         public PathMatch AddMatch()
         {
+            if (SourceTree.SelectedPath == null || TargetTree.SelectedPath == null) return null;
+
             PathMatch match = new PathMatch(SourceTree.SelectedPath, TargetTree.SelectedPath, 1.0);
-            Mapping.AddMatch(match); // Some existing matches (which contradict to the added one) can be removed
+            Mapping.AddMatch(match); // Some existing matches (which contradict to the added one) will be removed
 
             return match;
         }
 
-        public MappingModel(Set sourceSet, Set targetSet) // Pass root if you want to include all least sets in mapping
+        /// <summary>
+        /// Remove the mathc corresponding to the current selections. 
+        /// </summary>
+        public void RemoveMatch()
+        {
+            if (SourceTree.SelectedPath == null || TargetTree.SelectedPath == null) return;
+
+            Mapping.RemoveMatch(SourceTree.SelectedPath, TargetTree.SelectedPath); // Also other matches can be removed
+        }
+        public MappingModel(Dim sourceDim, Dim targetDim)
+            : this(sourceDim.GreaterSet, targetDim.GreaterSet)
+        {
+            SourceTree.Children[0].Dim = sourceDim;
+            TargetTree.Children[0].Dim = targetDim;
+        }
+
+        public MappingModel(Set sourceSet, Set targetSet)
         {
             Mapping = new SetMapping(sourceSet, targetSet);
 
@@ -732,7 +737,13 @@ namespace Com.Model
             {
                 if (SelectedNode == null) return null;
                 DimPath selectedPath = SelectedNode.DimPath;
-                // TODO: Here we might need to trim this selected path by fitting it into the constraints of the mapping (between least and greatest sets)
+
+                // Trimm to source or target set of the mapping in the root
+                if(IsSource)
+                    selectedPath.RemoveFirst(MappingModel.SourceSet);
+                else
+                    selectedPath.RemoveFirst(MappingModel.TargetSet);
+
                 return selectedPath;
             }
         }
@@ -752,6 +763,20 @@ namespace Com.Model
     /// </summary>
     public class MatchTreeNode : DimTree
     {
+        public DimPath MappingPath // Trimmed to source or target set of the mapping in the root
+        {
+            get
+            {
+                MatchTree root = (MatchTree)Root;
+                DimPath path = DimPath;
+                if (root.IsSource)
+                    path.RemoveFirst(root.MappingModel.SourceSet);
+                else
+                    path.RemoveFirst(root.MappingModel.TargetSet);
+                return path;
+            }
+        }
+
         /// <summary>
         /// Primary: either not shown or 1.0 or relevance of the current (existing) match if it exists for this element retrieved from the mapper. 
         /// Secondary: if it is already matched then relevance of existing match (the same as for primary) and if it is not chosen (not current) then the relevance computed by the recommender. 
@@ -769,8 +794,10 @@ namespace Com.Model
             get
             {
                 MatchTree root = (MatchTree)Root;
-                if (root.IsSource) return root.MappingModel.IsMatchedSource(DimPath);
-                else return root.MappingModel.IsMatchedTarget(DimPath);
+                MappingModel model = root.MappingModel;
+
+                if (root.IsSource) return model.IsMatchedSource(MappingPath);
+                else return model.IsMatchedTarget(MappingPath);
             }
         }
 
@@ -779,14 +806,17 @@ namespace Com.Model
             get
             {
                 MatchTree root = (MatchTree)Root;
-                if (root.IsSource) return root.MappingModel.CanMatchSource(DimPath);
-                else return root.MappingModel.CanMatchTarget(DimPath);
+                MappingModel model = root.MappingModel;
+
+                if (root.IsSource) return model.CanMatchSource(MappingPath);
+                else return model.CanMatchTarget(MappingPath);
             }
         }
 
         public PathMatch AddMatch()
         {
-            return ((MatchTree)Root).MappingModel.AddMatch();
+            MatchTree root = (MatchTree)Root;
+            return root.MappingModel.AddMatch();
         }
 
         /// <summary>
