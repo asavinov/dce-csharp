@@ -39,7 +39,7 @@ namespace Com.Model
 
             if (IsInstantiable)
             {
-                SetLength(lesserSet.Length);
+                Length = lesserSet.Length;
             }
 
             if (typeof(T) == typeof(int))
@@ -87,30 +87,39 @@ namespace Com.Model
             }
         }
 
-        #region Manipulate function (slow). Inherited object-based interface. Not generic. 
-
-        public override void SetLength(Offset length)
+        protected Offset _length; // It is only used if lesser set is not set, that is, for hanging dimension (theoretically, we should not use hanging dimensions and do not need then this field)
+        public override Offset Length
         {
-            if (length == Length) return;
-
-            // Ensure that there is enough memory
-            if (allocatedSize < length) // Not enough storage for the new element
+            get
             {
-                allocatedSize += incrementSize * ((length - allocatedSize) / incrementSize + 1);
-                System.Array.Resize<T>(ref _cells, allocatedSize); // Resize the storage for values
-                System.Array.Resize(ref _offsets, allocatedSize); // Resize the indeex
+                return _length;
             }
+            protected set
+            {
+                if (value == Length) return;
 
-            // Update data and index in the case of increase (append to last) and decrease (delete last)
-            if (length > Length)
-            {
-                while (length > Length) AppendIndex(ObjectToGeneric(0)); // OPTIMIZE: Instead of appending individual values, write a method for appending an interval of offset (with default value)
-            }
-            else if (length < Length)
-            {
-                // TODO: remove last elements
+                // Ensure that there is enough memory
+                if (allocatedSize < value) // Not enough storage for the new element
+                {
+                    allocatedSize += incrementSize * ((value - allocatedSize) / incrementSize + 1);
+                    System.Array.Resize<T>(ref _cells, allocatedSize); // Resize the storage for values
+                    System.Array.Resize(ref _offsets, allocatedSize); // Resize the indeex
+                }
+
+                // Update data and index in the case of increase (append to last) and decrease (delete last)
+                if (value > Length)
+                {
+                    // !!! TODO: We actually have to append NULLs rather than 0
+                    while (value > Length) AppendIndex(ObjectToGeneric(0)); // OPTIMIZE: Instead of appending individual values, write a method for appending an interval of offset (with default value)
+                }
+                else if (value < Length)
+                {
+                    // TODO: remove last elements
+                }
             }
         }
+
+        #region Manipulate function (slow). Inherited object-based interface. Not generic. 
 
         public override void Append(object value)
         {
@@ -219,7 +228,7 @@ namespace Com.Model
             _offsets[pos] = Length;
             _cells[Length] = value;
 
-            Length++;
+            _length = _length + 1;
         }
 
         private void UpdateIndex(int offset, T value)
@@ -292,9 +301,9 @@ namespace Com.Model
 
             // Now find min and max positions for the interval of equal values
             // Optimization: such search is not efficient - it is simple scan. One option would be use binary serach within interval [first, mid] and [mid, last]
-            for (first = mid; first >= 0 && _cells[_offsets[first]].Equals(target); first--) 
+            for (first = mid; first >= 0 && EqualityComparer<T>.Default.Equals(target, _cells[_offsets[first]]); first--)
                 ;
-            for (last = mid; last < Length && _cells[_offsets[last]].Equals(target); last++) 
+            for (last = mid; last < Length && EqualityComparer<T>.Default.Equals(target, _cells[_offsets[last]]); last++) 
                 ;
 
             return new Tuple<int, int>(first+1, last);

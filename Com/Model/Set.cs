@@ -334,8 +334,6 @@ namespace Com.Model
             // Add this dimension to both lesser and greater sets
             dim.GreaterSet.LesserDims.Add(dim);
             dim.LesserSet.GreaterDims.Add(dim);
-
-            dim.SetLength(this.Length);
         }
         public void RemoveGreaterDim(Dim dim)
         {

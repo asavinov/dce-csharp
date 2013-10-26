@@ -47,7 +47,18 @@ namespace Com.Model
             get { return GreaterSet != null ? GreaterSet.Width : 0; }
         }
 
-        public virtual int Length { get; protected set; } // How many instances. It is the same for all dimensions of the lesser set. 
+        public virtual Offset Length // How many instances. 
+        {
+            get // Dimensions to not have their own instandes and this number if the number of elements in the lesser set (the same for all dimensions of the set).
+            {
+                return LesserSet != null ? LesserSet.Length : 0;
+            }
+            protected set // Setter is not for public API - only a whole set length can be changed. This setter is used to reallocate.
+            { 
+                // Do nothing because this implementation does not manage elements but it can be overriden in sub-classes
+            } 
+        } 
+
         /// <summary>
         /// Whether this function is has a primitive range (greater set). 
         /// </summary>
@@ -184,8 +195,6 @@ namespace Com.Model
         #endregion
 
         #region Function methods (abstract)
-
-        public virtual void SetLength(Offset length) { } // Not for public API - only a whole set length can be changed so a Set method has to be used
 
         public virtual void Append(object value) { } // Not for public API - we can append only a whole record so a Set method has to be used
 
