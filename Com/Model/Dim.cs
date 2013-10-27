@@ -196,34 +196,30 @@ namespace Com.Model
 
         #region Function methods (abstract)
 
-        public virtual void Append(object value) { } // Not for public API - we can append only a whole record so a Set method has to be used
-
-        public virtual void Insert(Offset offset, object value) { } // Not for public API
-
-
         public virtual object GetValue(Offset offset) { return null; }
 
         public virtual void SetValue(Offset offset, object value) { }
 
-        public virtual Offset[] GetOffsets(object value) { return null; } // Accepts both a single object or an array
-
-        public virtual object GetValues(Offset[] offsets) { return null; }
-
-        public virtual object Aggregate(object values, string function) { return null; } // It is actually static but we cannot use static virtual methods in C#
-
-        #endregion
-
-        #region Function definition and expression evaluation
+        public virtual void NullifyValues() { } // Note that import dimension implement it by removing instances.
 
         /// <summary>
-        /// It is a formula defining a function from the lesser set to the greater set. 
-        /// When evaluated, it returs a (new) identity value of the greater set given an identity value of the lesser set.
+        /// It is a formula defining a function for this dimension. When evaluated, it returs a value of the greater set for the identity value of the lesser set.
         /// </summary>
         public Expression SelectExpression { get; set; }
 
-        public virtual void Populate() { return; }
+        public virtual void ComputeValues() { return; } // Set output values of the function by evaluating an expression (or using other means)
 
-        public virtual void Unpopulate() { Length = 0; }
+
+        public virtual void Append(object value) { } // Increment length and set the value (or insert last)
+
+        public virtual void Insert(Offset offset, object value) { }
+
+
+        public virtual object Aggregate(object values, string function) { return null; } // It is actually static but we cannot use static virtual methods in C#
+
+        public virtual object ProjectValues(Offset[] offsets) { return null; }
+
+        public virtual Offset[] DeprojectValue(object value) { return null; } // Accepts both a single object or an array. Do we need it as public?
 
         #endregion
 

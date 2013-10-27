@@ -23,40 +23,9 @@ namespace Com.Model
 
         protected int allocatedSize; // How many elements (maximum) fit into the allocated memory
 
-        protected T NullValue; // One possible implementation of Nulls (not the best)
+        protected T NullValue; // It is what is written in cell instead of null if null is not supported by the type. If null is supported then null is stored (instead, we can use NullValue=null).
 
         protected static IAggregator<T> Aggregator;
-
-        public DimPrimitive(string name, Set lesserSet, Set greaterSet)
-            : base(name, lesserSet, greaterSet)
-        {
-            // TODO: Check if output (greater) set is of correct type
-
-            Length = 0;
-            allocatedSize = initialSize;
-            _cells = new T[allocatedSize];
-            _offsets = new int[allocatedSize];
-
-            if (IsInstantiable)
-            {
-                Length = lesserSet.Length;
-            }
-
-            if (typeof(T) == typeof(int))
-            {
-                NullValue = ObjectToGeneric(int.MaxValue);
-                Aggregator = new IntAggregator() as IAggregator<T>;
-            }
-            else if (typeof(T) == typeof(double))
-            {
-                NullValue = ObjectToGeneric(double.NaN);
-                Aggregator = new DoubleAggregator() as IAggregator<T>;
-            }
-            else
-            {
-                NullValue = default(T);
-            }
-        }
 
         public override Type SystemType
         {
@@ -121,24 +90,6 @@ namespace Com.Model
 
         #region Manipulate function (slow). Inherited object-based interface. Not generic. 
 
-        public override void Append(object value)
-        {
-            // Ensure that there is enough memory
-            if (allocatedSize == Length) // Not enough storage for the new element (we need Length+1)
-            {
-                allocatedSize += incrementSize;
-                System.Array.Resize<T>(ref _cells, allocatedSize); // Resize the storage for values
-                System.Array.Resize(ref _offsets, allocatedSize); // Resize the indeex
-            }
-
-            AppendIndex(ObjectToGeneric(value));
-        }
-
-        public override void Insert(Offset offset, object value)
-        {
-            // TODO
-        }
-
         public override object GetValue(Offset offset)
         {
             T cell = _cells[offset]; // We do not check the range of offset - the caller must guarantee its validity
@@ -156,35 +107,12 @@ namespace Com.Model
                 UpdateIndex(offset, ObjectToGeneric(value));
         }
 
-        public override Offset[] GetOffsets(object value)
+        public override void NullifyValues() 
         {
-            if (value.GetType().IsArray) return deproject(ObjectToGenericArray(value));
-            else return deproject(ObjectToGeneric(value));
+            // Reset values and index to initial state.
         }
 
-        public override object GetValues(Offset[] offsets)
-        {
-            return project(offsets);
-            // Returns an array. We cannot case between array types (that is, int[] is not object[]) and therefore we return object.
-            // Alternatives for changing type and using array type:
-            // Cast return array type T[] -> object[]
-            // return (object[])Convert.ChangeType(project(offsets), typeof(object[])); // Will fail at run time in the case of wrong type
-            // return project(offsets).Cast<object>().ToArray();
-        }
-
-        public override object Aggregate(object values, string function) // It is actually static but we cannot use static virtual methods in C#
-        {
-            if (values == null) return default(T);
-
-            T[] array = ObjectToGenericArray(values);
-            return Aggregate(array, function, Aggregator);
-        } 
-
-        #endregion
-
-        #region Data methods
-
-        public override void Populate()
+        public override void ComputeValues()
         {
             if (SelectExpression != null) // Derived dimension the values of which have to be computed and stored
             {
@@ -206,9 +134,46 @@ namespace Com.Model
             }
         }
 
-        public override void Unpopulate()
+        public override void Append(object value)
         {
-            base.Unpopulate();
+            // Ensure that there is enough memory
+            if (allocatedSize == Length) // Not enough storage for the new element (we need Length+1)
+            {
+                allocatedSize += incrementSize;
+                System.Array.Resize<T>(ref _cells, allocatedSize); // Resize the storage for values
+                System.Array.Resize(ref _offsets, allocatedSize); // Resize the indeex
+            }
+
+            AppendIndex(ObjectToGeneric(value));
+        }
+
+        public override void Insert(Offset offset, object value)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override object Aggregate(object values, string function) // It is actually static but we cannot use static virtual methods in C#
+        {
+            if (values == null) return default(T);
+
+            T[] array = ObjectToGenericArray(values);
+            return Aggregate(array, function, Aggregator);
+        }
+
+        public override object ProjectValues(Offset[] offsets)
+        {
+            return project(offsets);
+            // Returns an array but we delcare it as object (rather than array of objects) because we cannot case between array types (that is, int[] is not object[]) and therefore we return object.
+            // Alternatives for changing type and using array type:
+            // Cast return array type T[] -> object[]
+            // return (object[])Convert.ChangeType(project(offsets), typeof(object[])); // Will fail at run time in the case of wrong type
+            // return project(offsets).Cast<object>().ToArray();
+        }
+
+        public override Offset[] DeprojectValue(object value)
+        {
+            if (value.GetType().IsArray) return deproject(ObjectToGenericArray(value));
+            else return deproject(ObjectToGeneric(value));
         }
 
         #endregion
@@ -533,6 +498,47 @@ namespace Com.Model
             // Array.ConvertAll<object, T>(values, Convert.ToChar);
         }
 
+        public DimPrimitive(string name, Set lesserSet, Set greaterSet)
+            : base(name, lesserSet, greaterSet)
+        {
+            // TODO: Check if output (greater) set is of correct type
+
+            Length = 0;
+            allocatedSize = initialSize;
+            _cells = new T[allocatedSize];
+            _offsets = new int[allocatedSize];
+
+            if (IsInstantiable)
+            {
+                Length = lesserSet.Length;
+            }
+
+            // Initialize what representative value will be used instead of nulls
+            Type type = typeof(T);
+            if (type == typeof(int))
+            {
+                NullValue = ObjectToGeneric(int.MaxValue);
+                Aggregator = new IntAggregator() as IAggregator<T>;
+            }
+            else if (type == typeof(double))
+            {
+                NullValue = ObjectToGeneric(double.NaN);
+                Aggregator = new DoubleAggregator() as IAggregator<T>;
+            }
+            else if (!type.IsValueType) // Reference type
+            {
+                NullValue = default(T);
+            }
+            else if (Nullable.GetUnderlyingType(type) != null) // Nullable<T> (like int?)
+            {
+                NullValue = default(T);
+            }
+            else
+            {
+                // Check if type is nullable: http://stackoverflow.com/questions/374651/how-to-check-if-an-object-is-nullable
+                NullValue = default(T);
+            }
+        }
 
     }
 }

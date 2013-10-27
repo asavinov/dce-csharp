@@ -102,7 +102,7 @@ namespace Com.Model
             }
         }
 
-        public override void Populate()
+        public override void ComputeValues()
         {
             Debug.Assert(ImportMapping != null && ImportMapping.SourceSet == GreaterSet && ImportMapping.TargetSet == LesserSet, "Target/Output of import mapping/expression must be equal to the set where it is stored.");
 
@@ -134,12 +134,6 @@ namespace Com.Model
                     LesserSet.Append(importExpression);
                 }
             }
-        }
-
-        public override void Unpopulate() // Clean, Empty
-        {
-            // Simply empty the greater set
-            // After this operation the greater set is empty
         }
 
         #endregion

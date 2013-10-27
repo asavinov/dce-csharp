@@ -566,7 +566,7 @@ namespace Com.Model
             {
                 object childOffset = SuperSet.Find(expr.Input);
 
-                Offset[] range = SuperDim.GetOffsets(childOffset);
+                Offset[] range = SuperDim.DeprojectValue(childOffset);
                 result = result.Intersect(range).ToArray();
             }
             
@@ -579,7 +579,7 @@ namespace Com.Model
                 object childOffset = dim.GreaterSet.Find(childExpr);
 
                 // Second, use this value to analyze a combination of values for uniqueness - only for identity dimensions
-                Offset[] range = dim.GetOffsets(childOffset); // Deproject the value
+                Offset[] range = dim.DeprojectValue(childOffset); // Deproject the value
                 result = result.Intersect(range).ToArray(); // OPTIMIZE: Write our own implementation for various operations. Assume that they are ordered.
                 // OPTIMIZE: Remember the position for the case this value will have to be inserted so we do not have again search for this positin during insertion (optimization)
 
@@ -711,7 +711,6 @@ namespace Com.Model
 
         /// <summary>
         /// Create all instances of this set. 
-        /// This method implements the main generation loop and in the body generates one instance. 
         /// </summary>
         public virtual void Populate() 
         {
@@ -820,7 +819,7 @@ namespace Com.Model
             {
                 foreach (DimImport dim in ImportDims)
                 {
-                    dim.Populate();
+                    dim.ComputeValues();
                 }
             }
             else
@@ -834,16 +833,16 @@ namespace Com.Model
             }
         }
 
-        //
-        // Empty the set and all its dimensions.
-        //
+        /// <summary>
+        /// Remove all instances.
+        /// </summary>
         public virtual void Unpopulate() 
         {
-            SuperDim.Unpopulate();
+            // TODO: SuperDim.Length = 0;
 
             foreach(Dim d in GreaterDims) 
             {
-                d.Unpopulate();
+                // TODO: d.Length = 0;
             }
 
             Length = 0;

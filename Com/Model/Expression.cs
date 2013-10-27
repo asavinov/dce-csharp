@@ -423,7 +423,7 @@ namespace Com.Model
                         // Debug.Assert(Input.Output is Offset[], "Wrong use: projection/dot can be applied to only an array of offsets - not any other type.");
                         if (Operation == Operation.PROJECTION)
                         {
-                            Output = dim.GetValues((Offset[])Input.Output);
+                            Output = dim.ProjectValues((Offset[])Input.Output);
                         }
                         else if (Operation == Operation.DOT)
                         {
@@ -459,7 +459,7 @@ namespace Com.Model
                     dim = OutputSet != null ? OutputSet.GetGreaterDim(functionName) : null;
 
                     // Compute the function. 
-                    Output = dim.GetOffsets(Input.Output);
+                    Output = dim.DeprojectValue(Input.Output);
 
                     break;
                 }

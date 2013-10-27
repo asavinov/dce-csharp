@@ -25,12 +25,15 @@ namespace Test
             dim.Append(30);
             dim.Append(20);
             Assert.AreEqual(3, dim.Length);
+            Assert.AreEqual(30, dim.GetValue(1));
 
             dim.SetValue(0, 50);
             dim.SetValue(1, 50);
             dim.SetValue(2, 50);
+            Assert.AreEqual(50, dim.GetValue(1));
 
             dim.SetValue(1, 10);
+            Assert.AreEqual(10, dim.GetValue(1));
         }
 
         [TestMethod]
@@ -293,7 +296,7 @@ namespace Test
             od.AddGreaterDim(derived1);
 
             // Update
-            derived1.Populate();
+            derived1.ComputeValues();
 
             Assert.AreEqual("Axen", od.GetValue("Customer Last Name", 10));
         }
@@ -344,7 +347,7 @@ namespace Test
             cust.AddGreaterDim(derived1);
 
             // Update
-            derived1.Populate();
+            derived1.ComputeValues();
 
             Assert.AreEqual(64.0, cust.GetValue("Average List Price", 2));
         }
@@ -395,7 +398,7 @@ namespace Test
             cust.AddGreaterDim(derived1);
 
             // Update
-            derived1.Populate();
+            derived1.ComputeValues();
 
             Assert.AreEqual(64.0, cust.GetValue("Average List Price", 2));
 
@@ -455,7 +458,7 @@ namespace Test
             products.AddGreaterDim(derived1);
 
             // Update
-            derived1.Populate();
+            derived1.ComputeValues();
             Assert.AreEqual(-32.5, products.GetValue("Derived Column", 2));
 
             // 
@@ -471,7 +474,7 @@ namespace Test
             products.AddGreaterDim(derived2);
 
             // Update
-            derived2.Populate();
+            derived2.ComputeValues();
             Assert.AreEqual(60.0, products.GetValue("Derived Column 2", 2));
         }
 
@@ -561,7 +564,7 @@ namespace Test
             Expression expr = mapping.GetTargetExpression(sourceDim, targetDim);
             targetDim.SelectExpression = expr;
 
-            targetDim.Populate(); // Evaluate tuple expression on the same set (not remove set), that is, move data from one dimension to the new dimension
+            targetDim.ComputeValues(); // Evaluate tuple expression on the same set (not remove set), that is, move data from one dimension to the new dimension
 
             sourceDim.Remove(); // Remove old dimension (detach) and attach new dimension (if not attached)
             targetDim.Add();
@@ -594,7 +597,7 @@ namespace Test
             expr = mapping.GetTargetExpression(sourceDim, targetDim);
             targetDim.SelectExpression = expr;
 
-            targetDim.Populate(); // Evaluate tuple expression on the same set (not remove set), that is, move data from one dimension to the new dimension
+            targetDim.ComputeValues(); // Evaluate tuple expression on the same set (not remove set), that is, move data from one dimension to the new dimension
 
             sourceDim.Remove(); // Remove old dimension (detach) and attach new dimension (if not attached)
             targetDim.Add();
