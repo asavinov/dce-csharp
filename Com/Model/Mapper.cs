@@ -325,36 +325,23 @@ namespace Com.Model
             Debug.Assert(match != null && match.SourceSet == SourceSet, "Wrong use: source path must start from the source set.");
             Debug.Assert(match != null && match.TargetSet == TargetSet, "Wrong use: target path must start from the target set.");
 
-            // TODO: Check coverage between paths and mappings (pairs of paths)
-            // Rule 1: more specific (longer) path covers and merges a more general (shorter) path. So shorter paths are not needed and can be removed 
-            // Rule 2: Yet, if we remove them we lose information because they represent intermediate independent mappings. For example, when the added (long, specific) mapping is again removed then we cannot find the merged mappings so the operation is not reversible. 
-            // Thus we should retain more general mappings for future use. 
-            // Rule 3: The question is what to do if a more general mapping is deleted? Should we delete also more specific mappings?
-            // Rule 4: Is it important to have roles: primary/secondary? If yes, then we should use adding path pairs. 
 
-            // Rule 0: What we have to delete are contradicting/incompatible matches which are overwritten by this match (where we get more than one alternative matching path for this path).
-            // What incompatible means? 
-            // - For one path (one means all covered or all continuations?), different other paths are present
+            // In the case of coverage we do nothing. We want to keep more general matches (between sets) while more specific can be added/removed independently (if they satisfy them). 
+            // ??? in the case of no coverage, they have a point of intersection. Then - ? Should this point of intersection be within the seconad path or otherwise constrained?
+            // Problem: two sets can be matched explcitly or implicitly, that is, their match logically follows from other path matches.
+            // Implicit match: intersections of two paths produce a more general match
+            // Alternative approach: Incrementally add path segments and checking consistency conditions
 
+            List<PathMatch> toRemove = new List<PathMatch>();
             foreach (PathMatch m in Matches)
             {
-                // - If one path is covered (but not equal) then the second path must be also covered (so this match always continues existing matches)
-                //   - coverage means continuation of the *whole* path (so any path covers the root which empty path)
-                //   - if one path covers then the other has to be fit into the second, that is, covered by force or by cutting it until it is covered (if the second is also covered then nothing has to be done)
-                //   - if one path is covered then - ?
-
-
-                // - in the case of no coverage, they have a point of intersection. Then - ? Should this point of intersection be within the seconad path or otherwise constrained?
-
-                // if two sets (that is, paths) are matched, then only their continuations are possible
-                // problem: two sets can be matched explcitly or implicitly, that is, their match logically follows from other path matches.
-                // Implicit match: intersections of two paths produce a more general match
-
-                // One possible approach is to try to add a match by adding its path segments and checking consistency conditions
-
+                if (!m.Compatible(match))
+                {
+                    toRemove.Add(m);
+                }
             }
 
-            Matches.Add(match);
+            Matches.Add(match); // Now it is guaranteed to be compatible with all existing matches
         }
 
         public void AddMatches(List<PathMatch> matches) // Import all path matches (as new objects) that fit into this mapping
@@ -366,7 +353,7 @@ namespace Com.Model
             }
         }
 
-        public void RemoveMatch(DimPath sourcePath, DimPath targetPath)
+        public void RemoveMatch(DimPath sourcePath, DimPath targetPath) // Remove the specified and all more specific matches (continuations)
         {
             Debug.Assert(sourcePath.LesserSet == SourceSet, "Wrong use: source path must start from the source set.");
             Debug.Assert(targetPath.LesserSet == TargetSet, "Wrong use: target path must start from the target set.");
@@ -374,8 +361,11 @@ namespace Com.Model
             List<PathMatch> toRemove = new List<PathMatch>();
             foreach (PathMatch m in Matches)
             {
-                if (!m.MatchesSource(sourcePath) || !m.MatchesTarget(targetPath)) continue;
-                toRemove.Add(m);
+                // If existing match is the same or more specific than the specified match to be removed
+                if (m.MatchesSource(sourcePath) && m.MatchesTarget(targetPath)) 
+                {
+                    toRemove.Add(m);
+                }
             }
 
             toRemove.ForEach(m => Matches.Remove(m));
@@ -489,19 +479,50 @@ namespace Com.Model
         public Set SourceSet { get { return SourcePath == null ? null : SourcePath.LesserSet; } }
         public Set TargetSet { get { return TargetPath == null ? null : TargetPath.LesserSet; } }
 
-        public bool MatchesSource(DimPath path)
+        public bool MatchesSource(DimPath path) // This is more specific (longer) than argument
         {
             return SourcePath.StartsWith(path);
         }
 
-        public bool MatchesTarget(DimPath path)
+        public bool MatchesTarget(DimPath path) // This is more specific (longer) than argument
         {
             return TargetPath.StartsWith(path);
         }
 
-        public bool Matches(PathMatch match)
+        public bool Matches(PathMatch match) // This is more specific (longer) than argument
         {
             return MatchesSource(match.SourcePath) && MatchesTarget(match.TargetPath);
+        }
+
+        public bool Compatible(PathMatch match) // The specified match is compatible with (does not contradicts to) this match
+        {
+            // Main rule: if a coverage condition holds for one path (in one or another direction) then it must hold for the other path (in the same direction)
+
+            // SourcePath -> TargetPath
+            if (match.SourcePath.StartsWith(SourcePath)) // The specified match continues this path
+            {
+                return match.TargetPath.StartsWith(TargetPath); // The same must be true for the other paths
+            }
+            else if (SourcePath.StartsWith(match.SourcePath)) // Opposite
+            {
+                return TargetPath.StartsWith(match.TargetPath); // The same must be true for the other paths
+            }
+
+            // TargetPath -> SourcePath
+            if (match.TargetPath.StartsWith(TargetPath))
+            {
+                return match.SourcePath.StartsWith(SourcePath);
+            }
+            else if (TargetPath.StartsWith(match.TargetPath))
+            {
+                return SourcePath.StartsWith(match.SourcePath);
+            }
+            
+            // Neither source path nor target paths cover. 
+            // This means they have some intersection (meet set they both continue). 
+            // This meet point defines an implicit match which we do not check but it might contradict to other matches.
+
+            return true;
         }
 
         public PathMatch(PathMatch m)
@@ -633,8 +654,8 @@ namespace Com.Model
 
         /// <summary>
         /// Secondary: Enabled/disabled status of a secondary node. Whether the current paths can be added as a new match without contradiction to the existing matches.
-        /// Primary: always true (if there is at least one possible secondary match). 
         /// Secondary: given a primary currently selected node, compute if a match with this secondary node does not contradict to existing matches (so it can be added). Alternatively, if relevances are precomputed then we find if relevance is higher than 0.
+        /// Primary: always true (if there is at least one possible secondary match). 
         /// </summary>
         public bool CanMatchTarget(DimPath path)
         {

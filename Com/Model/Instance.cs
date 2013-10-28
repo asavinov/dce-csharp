@@ -12,6 +12,7 @@ namespace Com.Model
     /// It is a tree of values where leaves are primitive values without child values.
     /// Each instance is a node in a tree. Each node corresponds to a pair of lesser dimension and its greater set.
     /// </summary>
+    [System.Obsolete("Use expressions instead.")]
     public class Instance
     {
         /// <summary>

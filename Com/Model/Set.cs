@@ -893,12 +893,6 @@ namespace Com.Model
             }
         }
 
-        public virtual Instance CreateDefaultInstance()
-        {
-            Instance instance = new Instance(this);
-            return instance;
-        }
-
         public Set(string name)
         {
             Id = Guid.NewGuid();
