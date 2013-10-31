@@ -531,30 +531,73 @@ namespace Com.Model
 
         public virtual void SetValue(string name, int offset, object value)
         {
-            Dim dim = GetGreaterDim(name);
-            dim.SetValue(offset, value);
+            Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
+            if (name.Equals("Super", StringComparison.InvariantCultureIgnoreCase))
+            {
+                SuperDim.SetValue(offset, value);
+            }
+            else
+            {
+                Dim dim = GetGreaterDim(name);
+                dim.SetValue(offset, value);
+            }
         }
 
-        public virtual object Find(Expression expr) // Use only identity dims (for general case use Search which returns a subset of elements)
+        public virtual Offset Find(Dictionary<Dim, object> values)
         {
+            Offset[] result = Enumerable.Range(0, Length).ToArray(); // All elements of this set (can be quite long)
+            foreach (var pair in values)
+            {
+                Dim dim = pair.Key;
+                object val = pair.Value;
+
+                Offset[] range = dim.DeprojectValue(val); // Deproject one value
+                result = result.Intersect(range).ToArray(); // OPTIMIZE: Write our own implementation for various operations. Assume that they are ordered.
+                // OPTIMIZE: Remember the position for the case this value will have to be inserted so we do not have again search for this positin during insertion (optimization). Maybe store it back to the dictionary.
+
+                if (result.Length == 0) break; // Not found
+            }
+
+            if (result.Length == 0) // Not found
+            {
+                return -1;
+            }
+            else if (result.Length == 1) // Found single element - return its offset
+            {
+                return result[0];
+            }
+            else // Many elements satisfy these properties (non-unique identities)
+            {
+                return -result.Length;
+            }
+        }
+
+        public virtual bool Find(Expression expr) // Use only identity dims (for general case use Search which returns a subset of elements)
+        {
+            // Find: Find the tuple and all nested tuples. Is applied only if the value is null - otherwise it assumed existing and no recursion is made. 
+            // Result: Output is set to offset for found tuples and (remains) null if not found.
+
             Debug.Assert(expr.OutputSet == this, "Wrong use: expression OutputSet must be equal to the set its value is appended/found.");
 
             if (IsPrimitive)
             {
-                expr.Evaluate();
                 Debug.Assert(expr.Output == null || expr.Output.GetType().IsPrimitive, "Wrong use: cannot find non-primitive type in a primitive set. Need a primitive value.");
                 Debug.Assert(expr.Output == null || !expr.Output.GetType().IsArray, "Wrong use: cannot find array type in a primitive set. Need a primitive value.");
-                return expr.Output; // It is assumed that the value (of correct type) exists and is found
+                return true; // It is assumed that the value (of correct type) exists and is found
             }
 
             if (expr.Operation != Operation.TUPLE) // End of recursion tuples
             {
                 // Instead of finding an offset for a combination of values, we evaluate the offset as output of the expression (say, a variable or some function)
-                expr.Evaluate();
-                return expr.Output;
+                return true;
             }
 
-            if (Length == 0) return null;
+            if (expr.Output != null) // Already found - not need to search
+            {
+                return true;
+            }
+
+            if (Length == 0) return false;
 
             //
             // Find a tuple in a non-primitive set recursively
@@ -564,7 +607,8 @@ namespace Com.Model
             // Super-dimension
             if (SuperSet.Length > 0 && expr.Input != null)
             {
-                object childOffset = SuperSet.Find(expr.Input);
+                SuperSet.Find(expr.Input);
+                object childOffset = expr.Input.Output;
 
                 Offset[] range = SuperDim.DeprojectValue(childOffset);
                 result = result.Intersect(range).ToArray();
@@ -576,7 +620,8 @@ namespace Com.Model
                 // First, find or append the value recursively. It will be in Output
                 Expression childExpr = expr.GetOperand(dim);
                 if (childExpr == null) continue;
-                object childOffset = dim.GreaterSet.Find(childExpr);
+                dim.GreaterSet.Find(childExpr);
+                object childOffset = childExpr.Output; 
 
                 // Second, use this value to analyze a combination of values for uniqueness - only for identity dimensions
                 Offset[] range = dim.DeprojectValue(childOffset); // Deproject the value
@@ -588,21 +633,58 @@ namespace Com.Model
 
             if (result.Length == 0) // Not found
             {
-                return null;
+                expr.Output = null;
+                return false;
             }
             else if (result.Length == 1) // Found single element - return its offset
             {
-                return result[0];
+                expr.Output = result[0];
+                return true;
             }
             else // Many elements satisfy these properties (non-unique identities)
             {
                 Debug.Fail("Wrong use: Many elements found although only one or no elmeents are supposed to be found. Use de-projection instead.");
-                return null;
+                expr.Output = result;
+                return true;
             }
+        }
+
+        public virtual bool CanAppend(Expression expr) // Determine if this expression (it has to be evaluated) can be added into this set as a new instance
+        {
+            // CanAppend: Check if the whole tuple can be added without errors
+            // We do not check existence (it is done before). If tuple exists then no check is done and return false. If null then we check general criterial for adding (presence of all necessary data).
+
+            Debug.Assert(expr.OutputSet == this, "Wrong use: expression OutputSet must be equal to the set its value is appended/found.");
+
+            //
+            // Check that real (non-null) values are available for all identity dimensions
+            //
+            foreach (DimPath path in GetGreaterPrimitiveDims(DimensionType.IDENTITY)) // Find all primitive identity paths
+            {
+                Expression node = expr.GetNode(path); // Find a (primitive) node corresonding to the primitive path
+                if (node == null) return false;
+
+                if (node.Output == null) return false; // Check if the node provides a non-null value
+            }
+
+            //
+            // Check that it satisfies the constraints (where expression)
+            //
+
+            // TODO: it is a problem because for that purpose we need to have this instance in the set appended. 
+            // Then we can check and remove but nested removal is difficult because we have to know which nested tuples were found and which were really added.
+            // Also, we need to check if nested inserted instances satsify their set constraints - this should be done during insertion and the process broken if any nested instance does not satsify the constraints.
+
+            return true;
         }
 
         public virtual object Append(Expression expr) // Identity dims must be set (for uniqueness). Entity dims are also used when appending.
         {
+            // Append: append *this* tuple to the set and, if necessary, all greater tuples. If necessary means "if no value for dimension is provided"  which means does not exist. 
+            // In particular, if all child expressions have values then only this set will be appended. 
+            // In particular, if this set has a value then it will not be appended (because it exists).
+            // Result: offset of new appended instance. 
+
             Debug.Assert(expr.OutputSet == this, "Wrong use: expression OutputSet must be equal to the set its value is appended/found.");
 
             if (IsPrimitive)
@@ -617,40 +699,34 @@ namespace Com.Model
                 return expr.Output;
             }
 
-            // Check if it already exists
-            object offset = Find(expr);
-            if (offset != null) // Already exists - no need to append
+            if (expr.Output != null) // Already exists - no need to append
             {
-                expr.Output = offset;
                 return expr.Output;
             }
 
             //
-            // Append a tuple to a non-primitive set recursively
+            // Append a complex value to a non-primitive set recursively
             //
 
-            // Super-dimension
-            if (SuperSet.Length > 0 && expr.Input != null)
+            if (SuperSet.IsInstantiable && expr.Input != null) // Super-dimension
             {
                 SuperDim.Append(expr.Input.Output);
             }
 
-            // All other dimensions
-            foreach (Dim dim in GreaterDims)
+            foreach (Dim dim in GreaterDims) // All other dimensions
             {
                 Expression childExpr = expr.GetOperand(dim);
-                Debug.Assert(!(dim.IsIdentity && childExpr == null), "Wrong use: All identity dimensions must be provided for appending an element.");
 
-                if (childExpr == null)
+                object val = null;
+                if (childExpr != null)
                 {
-                    dim.Append(null);
+                    if (childExpr.Output == null)
+                    {
+                        dim.GreaterSet.Append(childExpr); // Recursive insertion
+                    }
+                    val = childExpr.Output;
                 }
-                else
-                {
-                    dim.GreaterSet.Append(childExpr); // Recursion after which we know the offset that has to be appended to this set dimension
-                    // OPTIMIZE: Provide positions for the values which have been found during the search (not all positions are known if the search has been broken).
-                    dim.Append(childExpr.Output); 
-                }
+                dim.Append(val);
             }
 
             expr.Output = Length;
@@ -658,12 +734,13 @@ namespace Com.Model
             return expr.Output;
         }
 
+        [System.Obsolete("We cannot add an instance without providing its identity. It is possible only for non-identity sets. So we always have to use some identity as parameters.")]
         public virtual int Append() // Append or find default values
         {
             // Delegate to all dimensions
             foreach (Dim d in GreaterDims)
             {
-                d.Append(0); // Append default value for this dimension
+                d.Append(null); // Append default value for this dimension
             }
 
             Length++;
@@ -755,6 +832,8 @@ namespace Com.Model
                     if (top == dimCount) // Element is ready. Process new element.
                     {
                         bool satisfies = true;
+
+                        tupleExpr.SetOutput(Operation.ALL, null);
 
                         if (WhereExpression != null)
                         {

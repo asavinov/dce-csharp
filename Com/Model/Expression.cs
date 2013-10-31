@@ -43,12 +43,9 @@ namespace Com.Model
             
             // The same for all child nodes recursively
             if (Input != null) Input.SetOutput(op, output);
-            if (Operands != null)
+            foreach (Expression child in Operands)
             {
-                foreach (Expression child in Operands)
-                {
-                    child.SetOutput(op, output);
-                }
+                child.SetOutput(op, output);
             }
         }
 
@@ -101,30 +98,6 @@ namespace Com.Model
                 _input.ParentExpression = this;
             }
         }
-/*
-        public void SetInput(Expression child)
-        {
-            // TODO: We have to semantically check the validity of this child expression in the context of its parent expression (for example, using gramma rules)
-
-            if (Input != null) // Detach our current child
-            {
-                Input.ParentExpression = null;
-                Input = null;
-            }
-
-            if (child == null) // Nullify input - done above
-            {
-                return;
-            }
-
-            // Detach the child from its parent
-            if (child.ParentExpression != null && child.ParentExpression != this) child.ParentExpression.SetInput(null);
-
-            // Attach a new child
-            Input = child;
-            child.ParentExpression = this;
-        }
- */
         public void SetInput(Operation op, Operation inputOp)
         {
             if (op == Operation.ALL || Operation == op) // Assignment is needed
@@ -140,15 +113,30 @@ namespace Com.Model
             }
 
             // The same for all child nodes recursively
-            if (Operands != null)
+            foreach (Expression child in Operands)
             {
-                foreach (Expression child in Operands)
-                {
-                    child.SetInput(op, inputOp);
-                }
+                child.SetInput(op, inputOp);
             }
         }
- 
+
+        /// <summary>
+        /// Where this expression is a child operand.
+        /// </summary>
+        public Expression ParentExpression { get; set; }
+        public Expression Root
+        {
+            get
+            {
+                Expression root = this;
+                while (root.ParentExpression != null)
+                {
+                    root = root.ParentExpression;
+                }
+
+                return root;
+            }
+        }
+
         /// <summary>
         /// These are parameters which are needed for evaluation of this expression
         /// </summary>
@@ -179,10 +167,7 @@ namespace Com.Model
         public int RemoveOperand(Expression child)
         {
             int res = -1;
-            if (Operands != null)
-            {
-                res = Operands.IndexOf(child);
-            }
+            res = Operands.IndexOf(child);
 
             if (res >= 0) // Found
             {
@@ -217,10 +202,7 @@ namespace Com.Model
 
             // Recursively check all children
             if (Input != null) res.AddRange(Input.GetOperands(op));
-            if (Operands != null)
-            {
-                Operands.ForEach(e => res.AddRange(e.GetOperands(op)));
-            }
+            Operands.ForEach(e => res.AddRange(e.GetOperands(op)));
 
             return res;
         }
@@ -239,30 +221,108 @@ namespace Com.Model
 
             // Recursively check all children
             if (Input != null) res.AddRange(Input.GetOperands(op, name));
-            if (Operands != null)
+            foreach (Expression child in Operands)
             {
-                foreach (Expression child in Operands)
-                {
-                    res.AddRange(child.GetOperands(op, name));
-                }
+                res.AddRange(child.GetOperands(op, name));
             }
 
             return res;
         }
-        public Expression AddPath(DimPath path)
+        public List<Expression> GetLeaves(Operation op = Operation.TUPLE) // Get a list of nodes which have the specified operation but no children with this operation. It is normally used to get nodes corresponding to primitive paths in a complex tuple.
         {
-            Debug.Assert(path != null && path.LesserSet == OutputSet, "Wrong use: path must start from the node (output set) it is added to.");
+            List<Expression> res = new List<Expression>();
 
-            if (path.Path == null || path.Path.Count == 0) return null;
+            if (Operation != op && op != Operation.ALL)
+            {
+                return res; // Empty means that there are no leaves here and down the tree
+            }
+            // This node *can* be a leaf (provided if it has no children with the operation)
 
-            // 1. Add path
-            Dim seg;
+            // Recursively check all children
+            if (Input != null) res.AddRange(Input.GetLeaves(op));
+            foreach (Expression child in Operands)
+            {
+                res.AddRange(child.GetLeaves(op));
+            }
+
+            if (res.Count == 0) res.Add(this); // It is a leaf
+
+            return res;
+        }
+
+        public List<Expression> GetNodePath() // Return a node list with nodes starting from the root (if it has a non-null dimension) and ending with this node
+        {
+            List<Expression> path = new List<Expression>();
+
+            for (Expression node = this; node != null && node.Dimension != null; node = node.ParentExpression)
+            {
+                path.Insert(0, node);
+            }
+
+            return path;
+        }
+
+        public DimPath GetPath() // Return a dimension path with segments starting from the root and ending with this node
+        {
+            List<Expression> nodePath = GetNodePath();
+            if (nodePath.Count == 0)
+            {
+                return new DimPath(OutputSet);
+            }
+
+            DimPath path = new DimPath(nodePath[0].Dimension.LesserSet);
+            nodePath.ForEach(n => path.InsertLast(n.Dimension));
+
+            return path;
+        }
+
+        public Expression GetNode(DimPath path) // Return a node corresonding to the specified path starting from this node and ending with the returned node
+        {
+            Debug.Assert(path != null && path.LesserSet == OutputSet, "Wrong use: path must start from the node (output set) it is applied to.");
+
+            if (path.Path == null || path.Path.Count == 0) return this;
+
+            Expression node = this;
+            for (int i = 0; i < path.Path.Count; i++) // We search the path segments sequentially
+            {
+                Expression child = null;
+                Dim seg = path.Path[i];
+
+                if (seg is DimSuper)
+                {
+                    if (node.Input == null || node.Input.Dimension != seg)
+                    {
+                        throw new NotImplementedException();
+                    }
+                }
+                else
+                {
+                    child = node.GetOperand(seg); // Find a child corresponding to this segment
+
+                    if (child == null) // No node for some segment
+                    {
+                        return null;
+                    }
+                }
+
+                node = child;
+            }
+
+            return node;
+        }
+
+        public Expression AddPath(DimPath path) // Ensure that the specified path exists in the expression tuple tree by creating or finding the nodes corresponding to path segments
+        {
+            Debug.Assert(path != null && path.LesserSet == OutputSet, "Wrong use: path must start from the node (output set) it is applied to.");
+
+            if (path.Path == null || path.Path.Count == 0) return this;
+
             Expression node = this;
             for (int i = 0; i < path.Path.Count; i++) // We add all segments sequentially
             {
                 Expression child = null;
+                Dim seg = path.Path[i];
 
-                seg = path.Path[i];
                 if (seg is DimSuper)
                 {
                     if (node.Input == null || node.Input.Dimension != seg)
@@ -289,37 +349,6 @@ namespace Com.Model
         }
 
         /// <summary>
-        /// Where this expression is a child operand.
-        /// </summary>
-        public Expression ParentExpression { get; set; }
-        public Expression Root
-        {
-            get
-            {
-                Expression root = this;
-                while (root.ParentExpression != null)
-                {
-                    root = root.ParentExpression;
-                }
-
-                return root;
-            }
-        }
-        public List<Dim> GetPath()
-        {
-            // Return a list of dimensions from the root till this expression
-            // We ignore the segment that corresponds to the root expression because it is normally corresponds to the special export dimension
-
-            List<Dim> ret = new List<Dim>();
-            for (Expression exp = this; exp.ParentExpression != null; exp = exp.ParentExpression)
-            {
-                ret.Insert(0, exp.Dimension);
-            }
-
-            return ret;
-        }
-
-        /// <summary>
         /// Compute output of the expression by applying it to a row of the data table. 
         /// </summary>
         public object Evaluate()
@@ -333,7 +362,7 @@ namespace Com.Model
                         Input.Evaluate();
                         Output = Input.Output;
                     }
-                    else if (Operands != null && Operands.Count > 0)
+                    else if (Operands.Count > 0)
                     {
                         Operands[0].Evaluate();
                         Output = Operands[0].Output;
@@ -350,7 +379,10 @@ namespace Com.Model
 				{
                     Debug.Assert(OutputSet != null, "Wrong use: output set must be non-null when evaluating tuple expressions.");
 
-                    if (Input != null) Input.Evaluate();
+                    if (Input != null)
+                    {
+                        Input.Evaluate();
+                    }
 
                     foreach (Expression child in Operands) // Evaluate all parameters (recursively)
                     {
@@ -359,11 +391,25 @@ namespace Com.Model
 
                     if (OutputSet.IsPrimitive) // Leaf of the tuple structure - here we need to really find a concrete value by evaluating Input
                     {
-                        Output = Input.Output; // Ignore child expression output
+                        Output = Input.Output; // Ignore child expression output but we have to have no children if everything is correct
                     }
+
                     else // It is a non-leaf tuple and its value is by definition a combination of its children
                     {
-                        Output = null;
+                        Dictionary<Dim, object> values = new Dictionary<Dim, object>();
+                        if (Input != null)
+                        {
+                            values.Add(Input.Dimension, Input.Output);
+                        }
+                        foreach (Expression child in Operands)
+                        {
+                            if (child.Dimension == null || !child.Dimension.IsIdentity) continue;
+                            values.Add(child.Dimension, child.Output);
+                        }
+
+                        Offset offset = OutputSet.Find(values); // Output of a tuple is offset of an existing element or null if it does not exist 
+                        if (offset < 0) Output = null;
+                        else Output = offset;
                     }
 
                     break;
@@ -375,12 +421,9 @@ namespace Com.Model
                         break; // Do not evaluate some functions (e.g., they cannot be evaluated because 'this' element does not exist yet but we know their future output which can be added later).
 
                     if (Input != null) Input.Evaluate(); // Evaluate input object(s) before it can be used
-                    if (Operands != null)
+                    foreach (Expression child in Operands) // Evaluate all parameters before they can be used
                     {
-                        foreach (Expression child in Operands) // Evaluate all parameters before they can be used
-                        {
-                            child.Evaluate();
-                        }
+                        child.Evaluate();
                     }
 
                     // Find the function itself
@@ -415,7 +458,7 @@ namespace Com.Model
                         // OutputSet = ???; // TODO: We have to find a primitive set corresponding to the value. For that purpose, we have to know the database the result is computed for.
                         if (Output is DBNull)
                         {
-                            Output = (Int32)0; // TODO: We have to learn to work with NULL values as well as with non-supported values like BLOB etc.
+                            Output = null; // (Int32)0; // TODO: We have to learn to work with NULL values as well as with non-supported values like BLOB etc.
                         }
                     }
                     else if (Input.Output is Array) // Project an array of values using this function
@@ -445,12 +488,9 @@ namespace Com.Model
                 case Operation.DEPROJECTION:
                 {
                     if (Input != null) Input.Evaluate(); // Evaluate 'this' object before it can be used
-                    if (Operands != null)
+                    foreach (Expression child in Operands) // Evaluate all parameters before they can be used
                     {
-                        foreach (Expression child in Operands) // Evaluate all parameters before they can be used
-                        {
-                            child.Evaluate();
-                        }
+                        child.Evaluate();
                     }
 
                     // Find the function itself
@@ -466,7 +506,7 @@ namespace Com.Model
                 case Operation.AGGREGATION:
                 {
                     Debug.Assert(Input != null, "Wrong use: Aggregation expression must have group expression in Input.");
-                    Debug.Assert(Operands != null && Operands.Count == 1, "Wrong use: Aggregation expression must have measure expression as an operand.");
+                    Debug.Assert(Operands.Count == 1, "Wrong use: Aggregation expression must have measure expression as an operand.");
                     Debug.Assert(!string.IsNullOrWhiteSpace(Name), "Wrong use: Aggregation function must be specified.");
 
                     Expression groupExpr = Input;
@@ -503,17 +543,14 @@ namespace Com.Model
                     double res = (double)Input.Output;
                     Output = Input.Output;
 
-                    if (Operands != null)
+                    foreach (Expression child in Operands) // Evaluate parameters and apply operation
                     {
-                        foreach (Expression child in Operands) // Evaluate parameters and apply operation
-                        {
-                            child.Evaluate();
+                        child.Evaluate();
 
-                            if (Operation == Operation.PLUS) res += Convert.ToDouble(child.Output);
-                            else if (Operation == Operation.MINUS) res -= Convert.ToDouble(child.Output);
-                            else if (Operation == Operation.TIMES) res *= Convert.ToDouble(child.Output);
-                            else if (Operation == Operation.DIVIDE) res /= Convert.ToDouble(child.Output);
-                        }
+                        if (Operation == Operation.PLUS) res += Convert.ToDouble(child.Output);
+                        else if (Operation == Operation.MINUS) res -= Convert.ToDouble(child.Output);
+                        else if (Operation == Operation.TIMES) res *= Convert.ToDouble(child.Output);
+                        else if (Operation == Operation.DIVIDE) res /= Convert.ToDouble(child.Output);
                     }
 
                     Output = res;
@@ -525,7 +562,7 @@ namespace Com.Model
                 case Operation.EQUAL:
                 {
                     Debug.Assert(Input != null, "Wrong use: Logical operations must have at least one expression in Input.");
-                    Debug.Assert(Operands != null && Operands.Count == 1, "Wrong use: Comparison expression must have a second an operand.");
+                    Debug.Assert(Operands.Count == 1, "Wrong use: Comparison expression must have a second an operand.");
 
                     Expression op1 = Input;
                     Expression op2 = Operands[0];

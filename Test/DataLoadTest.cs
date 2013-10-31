@@ -27,13 +27,23 @@ namespace Test
             Assert.AreEqual(3, dim.Length);
             Assert.AreEqual(30, dim.GetValue(1));
 
-            dim.SetValue(0, 50);
-            dim.SetValue(1, 50);
             dim.SetValue(2, 50);
+            dim.SetValue(1, 50);
+            dim.SetValue(0, 50);
             Assert.AreEqual(50, dim.GetValue(1));
 
             dim.SetValue(1, 10);
             Assert.AreEqual(10, dim.GetValue(1));
+            Assert.AreEqual(false, dim.IsNull(2));
+
+            dim.SetValue(2, null);
+            Assert.AreEqual(true, dim.IsNull(2));
+            dim.SetValue(1, null);
+            dim.SetValue(0, null);
+            Assert.AreEqual(true, dim.IsNull(0));
+
+            dim.SetValue(1, 100);
+            Assert.AreEqual(100, dim.GetValue(1));
         }
 
         [TestMethod]
@@ -162,12 +172,14 @@ namespace Test
             childExpr.Output = 55.5; // Will be ignored - only identities are used
             orderExpr.AddOperand(childExpr);
 
-            object offset = orders.Find(orderExpr);
+            orders.Find(orderExpr);
+            object offset = orderExpr.Output;
             Assert.AreEqual(5, offset);
 
             //
             // Append operation
             //
+            orderExpr.SetOutput(Operation.ALL, null);
             orderExpr.GetOperands(Operation.ALL, "Order ID")[0].Output = 1000;
             orderExpr.GetOperands(Operation.ALL, "Tax Rate")[0].Output = 99.99;
 
@@ -188,7 +200,8 @@ namespace Test
             Assert.AreEqual(2000, cust.GetValue("ID", 15));
             Assert.AreEqual("Lennon", cust.GetValue("Last Name", 15));
 
-            offset = orders.Find(orderExpr);
+            orders.Find(orderExpr);
+            offset = orderExpr.Output;
             Assert.AreEqual(orders.Length-1, offset);
 
             //

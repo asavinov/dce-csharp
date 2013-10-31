@@ -17,13 +17,14 @@ namespace Com.Model
         private T[] _cells; // Each cell contains a T value in arbitrary original order
         private int[] _offsets; // Each cell contains an offset to an element in cells in ascending or descending order
 
+        private int NullCount; // Nulls are stored in the beginning of array of indexes (that is, treated as absolute minimum)
+        private T NullValue; // It is what is written in cell instead of null if null is not supported by the type. If null is supported then null is stored (instead, we can use NullValue=null).
+
         // Memory management parameters for instances (used by extensions and in future will be removed from this class).
         protected static int initialSize = 1024 * 8; // In elements
         protected static int incrementSize = 1024; // In elements
 
         protected int allocatedSize; // How many elements (maximum) fit into the allocated memory
-
-        protected T NullValue; // It is what is written in cell instead of null if null is not supported by the type. If null is supported then null is stored (instead, we can use NullValue=null).
 
         protected static IAggregator<T> Aggregator;
 
@@ -78,8 +79,7 @@ namespace Com.Model
                 // Update data and index in the case of increase (append to last) and decrease (delete last)
                 if (value > Length)
                 {
-                    // !!! TODO: We actually have to append NULLs rather than 0
-                    while (value > Length) AppendIndex(ObjectToGeneric(0)); // OPTIMIZE: Instead of appending individual values, write a method for appending an interval of offset (with default value)
+                    while (value > Length) Append(null); // OPTIMIZE: Instead of appending individual values, write a method for appending an interval of offset (with default value)
                 }
                 else if (value < Length)
                 {
@@ -90,26 +90,63 @@ namespace Com.Model
 
         #region Manipulate function (slow). Inherited object-based interface. Not generic. 
 
+        public override bool IsNull(Offset offset)
+        {
+            // For non-nullable storage, use the index to find if this cell is in the null interval of the index (beginning)
+            int pos = FindIndex(offset);
+            return pos < NullCount;
+            // For nullable storage: simply check the value (actually this method is not needed for nullable storage because the user can compare the values returned from GetValue)
+            // return EqualityComparer<T>.Default.Equals(NullValue, _cells[offset]);
+        }
+
         public override object GetValue(Offset offset)
         {
-            T cell = _cells[offset]; // We do not check the range of offset - the caller must guarantee its validity
-            if (EqualityComparer<T>.Default.Equals(NullValue, cell))
-                return null;
-            else
-                return cell;
+            return _cells[offset]; // We do not check the range of offset - the caller must guarantee its validity
         }
 
-        public override void SetValue(Offset offset, object value)
+        public override void SetValue(Offset offset, object value) // Replace an existing value with the new value and update the index. 
         {
+            T val = default(T);
+            int oldPos = FindIndex(offset); // Old sorted position of the cell we are going to change
+            Tuple<int,int> interval;
+            int pos = -1; // New sorted position for this cell
+
             if (value == null)
-                UpdateIndex(offset, NullValue);
+            {
+                val = NullValue;
+                interval = new Tuple<int,int>(0, NullCount);
+
+                if (oldPos >= NullCount) NullCount++; // If old value is not null, then increase the number of nulls
+            }
             else
-                UpdateIndex(offset, ObjectToGeneric(value));
+            {
+                val = ObjectToGeneric(value);
+                interval = FindIndexes(val);
+
+                if (oldPos < NullCount) NullCount--; // If old value is null, then decrease the number of nulls
+            }
+
+            // Find sorted position within this value interval (by increasing offsets)
+            pos = Array.BinarySearch(_offsets, interval.Item1, interval.Item2 - interval.Item1, offset);
+            if (pos < 0) pos = ~pos;
+
+            if (pos > oldPos)
+            {
+                Array.Copy(_offsets, oldPos + 1, _offsets, oldPos, (pos - 1) - oldPos); // Shift backward by overwriting old
+                _offsets[pos - 1] = offset;
+            }
+            else if (pos < oldPos)
+            {
+                Array.Copy(_offsets, pos, _offsets, pos + 1, oldPos - pos); // Shift forward by overwriting old pos
+                _offsets[pos] = offset;
+            }
+
+            _cells[offset] = val;
         }
 
-        public override void NullifyValues() 
+        public override void NullifyValues() // Reset values and index to initial state (all nulls)
         {
-            // Reset values and index to initial state.
+            throw new NotImplementedException();
         }
 
         public override void ComputeValues()
@@ -123,12 +160,9 @@ namespace Com.Model
                     object val = null;
                     if (SelectExpression.Operation == Operation.TUPLE)
                     {
-                        val = SelectExpression.OutputSet.Find(SelectExpression);
+                        SelectExpression.OutputSet.Find(SelectExpression);
                     }
-                    else
-                    {
-                        val = SelectExpression.Output;
-                    }
+                    val = SelectExpression.Output;
                     SetValue(offset, val); // Store the final result
                 }
             }
@@ -144,7 +178,29 @@ namespace Com.Model
                 System.Array.Resize(ref _offsets, allocatedSize); // Resize the indeex
             }
 
-            AppendIndex(ObjectToGeneric(value));
+            T val = default(T);
+            Tuple<int, int> interval;
+            int pos = -1;
+
+            if (value == null)
+            {
+                val = NullValue;
+                interval = new Tuple<int, int>(0, NullCount);
+                NullCount++;
+            }
+            else
+            {
+                val = ObjectToGeneric(value);
+                interval = FindIndexes(val);
+            }
+
+            pos = interval.Item2; // New value has the largest offset and hence is inserted after the end of the interval of values
+
+            Array.Copy(_offsets, pos, _offsets, pos + 1, Length - pos); // Free an index element by shifting other elements forward
+
+            _cells[Length] = val;
+            _offsets[pos] = Length;
+            _length = _length + 1;
         }
 
         public override void Insert(Offset offset, object value)
@@ -172,58 +228,21 @@ namespace Com.Model
 
         public override Offset[] DeprojectValue(object value)
         {
-            if (value.GetType().IsArray) return deproject(ObjectToGenericArray(value));
-            else return deproject(ObjectToGeneric(value));
+            if (value == null || !value.GetType().IsArray)
+            {
+                return deproject(ObjectToGeneric(value));
+            }
+            else
+            {
+                return deproject(ObjectToGenericArray(value));
+            }
         }
 
         #endregion
 
         #region Index methods
 
-        private void AppendIndex(T value)
-        {
-            // Append the specified element to the index. The index and the storage must have enough memory. 
-
-            // The last element contains garbadge and is not referenced from index. 
-            // The last element of index is also free and contains garbadge.
-
-            int pos = FindIndexes(value).Item2;
-            Array.Copy(_offsets, pos, _offsets, pos + 1, Length - pos); // Free an index element by shifting other elements forward
-
-            _offsets[pos] = Length;
-            _cells[Length] = value;
-
-            _length = _length + 1;
-        }
-
-        private void UpdateIndex(int offset, T value)
-        {
-            // Update index when changing a single value at one offset
-
-            // Replace an existing value with the new value and update the index. 
-            int oldPos = FindIndex(offset); // Old sorted position of the cell we are going to change
-            int pos = FindIndexes(value).Item2; // The new sorted position for this cell
-
-            // Optimization: Instead of inserting after the last element with this same value, it is a good idea to position it within this interval by preserving the order of offsets (as a kind of secondary criterion). 
-            // In this case all elements with the same value will have growing index in the sorted array like [3, 25, 153]. 
-            // It will make some operations (with several dimensions) much more efficient by allowing for binary search for a given index (among the same value).
-            // To find such a new position, we need to make binary search among indexes within the returned interval.
-
-            if (pos > oldPos)
-            {
-                Array.Copy(_offsets, oldPos+1, _offsets, oldPos, (pos-1) - oldPos); // Shift backward by overwriting old
-                _offsets[pos-1] = offset;
-            }
-            else if (pos < oldPos)
-            {
-                Array.Copy(_offsets, pos, _offsets, pos + 1, oldPos - pos); // Shift forward by overwriting old pos
-                _offsets[pos] = offset;
-            }
-
-            _cells[offset] = value;
-        }
-
-        private Tuple<int,int> FindIndexes(T target)
+        private Tuple<int,int> FindIndexes(T value)
         {
             // Returns an interval of indexes which all reference the specified value
             // min is inclusive and max is exclusive
@@ -231,25 +250,23 @@ namespace Com.Model
             // min=max - the value is not found, min=max is the position where it has to be inserted
             // min=length - the value has to be appended (and is not found, so min=max) 
 
-            // C# bionary search works directly with value array. 
-            // int index = Array.BinarySearch<T>(mynumbers, target);
-            // BinarySearch<T>(T[], Int32, Int32, T) - search in range 
+            // Alternative: Array.BinarySearch<T>(mynumbers, value) or  BinarySearch<T>(T[], Int32, Int32, T) - search in range
+            // Comparer<T> comparer = Comparer<T>.Default;
+            // mid = Array.BinarySearch(_offsets, 0, _count, value, (a, b) => comparer.Compare(_cells[a], _cells[b]));
+            //IComparer<T> comparer = new IndexComparer<T>(this);
+            //mid = Array.BinarySearch(_offsets, 0, _count, value, comparer);
 
-            // Implemented as binary search
-            // Source: http://stackoverflow.com/questions/8067643/binary-search-of-a-sorted-array
-
-            int mid = 0, first = 0, last = Length;
-
-            //for a sorted array with ascending values
+            // Binary search in a sorted array with ascending values: http://stackoverflow.com/questions/8067643/binary-search-of-a-sorted-array
+            int mid = NullCount, first = NullCount, last = Length;
             while (first < last)
             {
                 mid = (first + last) / 2;
 
-                if (Comparer<T>.Default.Compare(target, _cells[_offsets[mid]]) > 0) // Less: target > mid
+                if (Comparer<T>.Default.Compare(value, _cells[_offsets[mid]]) > 0) // Less: target > mid
                 {
                     first = mid+1;
                 }
-                else if (Comparer<T>.Default.Compare(target, _cells[_offsets[mid]]) < 0) // Greater: target < mynumbers[mid]
+                else if (Comparer<T>.Default.Compare(value, _cells[_offsets[mid]]) < 0) // Greater: target < mynumbers[mid]
                 {
                     last = mid;
                 }
@@ -264,39 +281,30 @@ namespace Com.Model
                 return new Tuple<int, int>(first, last);
             }
 
-            // Now find min and max positions for the interval of equal values
+            // One element is found. Now find min and max positions for the interval of equal values.
             // Optimization: such search is not efficient - it is simple scan. One option would be use binary serach within interval [first, mid] and [mid, last]
-            for (first = mid; first >= 0 && EqualityComparer<T>.Default.Equals(target, _cells[_offsets[first]]); first--)
+            for (first = mid; first >= NullCount && EqualityComparer<T>.Default.Equals(value, _cells[_offsets[first]]); first--)
                 ;
-            for (last = mid; last < Length && EqualityComparer<T>.Default.Equals(target, _cells[_offsets[last]]); last++) 
+            for (last = mid; last < Length && EqualityComparer<T>.Default.Equals(value, _cells[_offsets[last]]); last++) 
                 ;
 
             return new Tuple<int, int>(first+1, last);
         }
 
-        private int FindIndex(int offset)
+        private int FindIndex(int offset) // Find an index for an offset of a cell (rather than a value in this cell)
         {
-            // Find an index for an offset (rather than a value in this offset).
             // A value can be stored at many different offsets while one offset has always one index and therefore a single valueis returned rather than an interval.
+
+            // First, we try to find it in the null interval
+            int pos = Array.BinarySearch(_offsets, 0, NullCount, offset);
+            if (pos >= 0 && pos < NullCount) return pos; // It is null
+            
+            // Second, try to find it as a value (find the value area and then find the offset in the value interval)
             Tuple<int,int> indexes = FindIndexes(_cells[offset]);
-            for (int i = indexes.Item1; i < indexes.Item2; i++)
-            {
-                if (_offsets[i] == offset) return i;
-            }
+            pos = Array.BinarySearch(_offsets, indexes.Item1, indexes.Item2 - indexes.Item1, offset);
+            if (pos >= indexes.Item1 && pos < indexes.Item2) return pos;
 
-            return -1;
-        }
-
-        private int FindIndex_2(T target)
-        {
-            int mid = -1;
-            // Comparer<T> comparer = Comparer<T>.Default;
-            // mid = Array.BinarySearch(_offsets, 0, _count, target, (a, b) => comparer.Compare(_cells[a], _cells[b]));
-
-            //IComparer<T> comparer = new IndexComparer<T>(this);
-            //mid = Array.BinarySearch(_offsets, 0, _count, target, comparer);
-
-            return mid;
+            return -1; // Not found (error - all valid offset must be present in the index)
         }
 
         private void FullSort()
@@ -323,13 +331,6 @@ namespace Com.Model
             // http://www.csharp-examples.net/sort-array/
             Comparer<T> comparer = Comparer<T>.Default;
             Array.Sort(_offsets, /* 0, _count, */ (a, b) => comparer.Compare(_cells[a], _cells[b]));
-        }
-
-        private int[] FindOffsets(Dictionary<string, object> values)
-        {
-            // Return an array of offsets of elements which have the specified values
-
-            return null;
         }
 
         #endregion
@@ -380,7 +381,16 @@ namespace Com.Model
 
         public int[] deproject(T value)
         {
-            Tuple<int,int> indexes = FindIndexes(value);
+            Tuple<int, int> indexes;
+
+            if (value == null)
+            {
+                indexes = new Tuple<int, int>(0, NullCount);
+            }
+            else
+            {
+                indexes = FindIndexes(value);
+            }
 
             if (indexes.Item1 == indexes.Item2)
             {
@@ -391,6 +401,7 @@ namespace Com.Model
 
             for (int i = 0; i < result.Length; i++)
             {
+                // OPTIMIZE: Use system copy function
                 result[i] = _offsets[indexes.Item1 + i];
             }
 
@@ -508,6 +519,8 @@ namespace Com.Model
             _cells = new T[allocatedSize];
             _offsets = new int[allocatedSize];
 
+            NullCount = Length;
+
             if (IsInstantiable)
             {
                 Length = lesserSet.Length;
@@ -540,5 +553,70 @@ namespace Com.Model
             }
         }
 
+
+
+
+
+
+
+        [System.Obsolete("Use public Append method with object argument")]
+        private void AppendIndex(T value)
+        {
+            // Append the specified element to the index. The index and the storage must have enough memory. 
+
+            // The last element contains garbadge and is not referenced from index. 
+            // The last element of index is also free and contains garbadge.
+
+            int pos = FindIndexes(value).Item2;
+            Array.Copy(_offsets, pos, _offsets, pos + 1, Length - pos); // Free an index element by shifting other elements forward
+
+            _offsets[pos] = Length;
+            _cells[Length] = value;
+
+            _length = _length + 1;
+        }
+
+        [System.Obsolete("Use public Append method with object argument")]
+        private void AppendIndexNull()
+        {
+            int pos = NullCount;
+            Array.Copy(_offsets, pos, _offsets, pos + 1, Length - pos); // Free an index element by shifting other elements forward
+
+            _offsets[pos] = Length;
+            _cells[Length] = NullValue;
+
+            _length = _length + 1;
+        }
+
+        [System.Obsolete("Use public SetValue method with object argument")]
+        private void UpdateIndex(int offset, T value)
+        {
+            // Update index when changing a single value at one offset
+
+            // Replace an existing value with the new value and update the index. 
+            int oldPos = FindIndex(offset); // Old sorted position of the cell we are going to change
+            var interval = FindIndexes(value); // The new sorted position for this cell
+
+            // Optimization: Instead of inserting *after* the last element with this same value, it is a good idea to position it within this interval by preserving the order of offsets (as a kind of secondary criterion). 
+            // In this case all elements with the same value will have growing index in the sorted array like [3, 25, 153]. 
+            // It will make some operations (with several dimensions) much more efficient by allowing for binary search for a given index (among the same value).
+            // To find such a new position, we need to make binary search among indexes within the returned interval.
+            int pos = Array.BinarySearch(_offsets, interval.Item1, interval.Item2 - interval.Item1, offset);
+
+            pos = interval.Item2; // The new sorted position for this cell
+
+            if (pos > oldPos)
+            {
+                Array.Copy(_offsets, oldPos + 1, _offsets, oldPos, (pos - 1) - oldPos); // Shift backward by overwriting old
+                _offsets[pos - 1] = offset;
+            }
+            else if (pos < oldPos)
+            {
+                Array.Copy(_offsets, pos, _offsets, pos + 1, oldPos - pos); // Shift forward by overwriting old pos
+                _offsets[pos] = offset;
+            }
+
+            _cells[offset] = value;
+        }
     }
 }
