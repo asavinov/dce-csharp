@@ -276,32 +276,33 @@ namespace Com.Model
             return path;
         }
 
-        public Expression GetNode(DimPath path) // Return a node corresonding to the specified path starting from this node and ending with the returned node
+        public Expression GetLastNode(DimPath path) // Return a last node on the specified path starting from this node and ending with the returned node. Null if the path does not start from this expression. 
         {
-            Debug.Assert(path != null && path.LesserSet == OutputSet, "Wrong use: path must start from the node (output set) it is applied to.");
-
             if (path.Path == null || path.Path.Count == 0) return this;
 
+            if (OutputSet != path.LesserSet) return null;
+            
             Expression node = this;
             for (int i = 0; i < path.Path.Count; i++) // We search the path segments sequentially
             {
-                Expression child = null;
                 Dim seg = path.Path[i];
 
+                Expression child = null;
                 if (seg is DimSuper)
                 {
                     if (node.Input == null || node.Input.Dimension != seg)
                     {
                         throw new NotImplementedException();
+                        // Actually GetOperand method takes into account the type of dimension (Super or not) so we do not check it here
                     }
                 }
                 else
                 {
                     child = node.GetOperand(seg); // Find a child corresponding to this segment
 
-                    if (child == null) // No node for some segment
+                    if (child == null) // No node for this path segment
                     {
-                        return null;
+                        break;
                     }
                 }
 
@@ -309,6 +310,21 @@ namespace Com.Model
             }
 
             return node;
+        }
+
+        public Expression GetNode(DimPath path) // Return a node corresonding to the specified path starting from this node and ending with the returned node
+        {
+            Debug.Assert(path != null && path.LesserSet == OutputSet, "Wrong use: path must start from the node (output set) it is applied to.");
+
+            Expression e = GetLastNode(path);
+            if (e == null) return null;
+            Dim dim = path.LastSegment;
+
+            // We use this comparison in GetOperand (but in future we should probably change the comparison criterion)
+            if (e.Name != null && dim.Name != null && e.Name.Equals(dim.Name, StringComparison.InvariantCultureIgnoreCase))
+                return e;
+
+            return null; // Not found
         }
 
         public Expression AddPath(DimPath path) // Ensure that the specified path exists in the expression tuple tree by creating or finding the nodes corresponding to path segments

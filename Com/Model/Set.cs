@@ -661,10 +661,14 @@ namespace Com.Model
             //
             foreach (DimPath path in GetGreaterPrimitiveDims(DimensionType.IDENTITY)) // Find all primitive identity paths
             {
-                Expression node = expr.GetNode(path); // Find a (primitive) node corresonding to the primitive path
-                if (node == null) return false;
+                // Try to find at least one node with non-null value on the path
+                bool valueFound = false;
+                for (Expression node = expr.GetLastNode(path); node != null; node = node.ParentExpression)
+                {
+                    if (node.Output != null) { valueFound = true; break; }
+                }
 
-                if (node.Output == null) return false; // Check if the node provides a non-null value
+                if (!valueFound) return false; // This primitive path does not provide a value so the whole instance cannot be created
             }
 
             //
@@ -702,6 +706,11 @@ namespace Com.Model
             if (expr.Output != null) // Already exists - no need to append
             {
                 return expr.Output;
+            }
+
+            if (!CanAppend(expr)) // Cannot be appended (identity not defined completely, integrity constraints etc.)
+            {
+                return expr.Output; // It must be null in this case
             }
 
             //
