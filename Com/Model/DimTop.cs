@@ -9,9 +9,9 @@ namespace Com.Model
     /// <summary>
     /// This super dimension leads to an empty set (root) and does not store any elements. 
     /// </summary>
-    public class DimRoot : DimSuper
+    public class DimTop : DimSuper
     {
-        public DimRoot(string name, Set lesserSet, Set greaterSet) 
+        public DimTop(string name, Set lesserSet, Set greaterSet) 
             : base(name, lesserSet, greaterSet)
         {
             // TODO: Check if sets are of correct type.

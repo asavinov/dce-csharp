@@ -18,7 +18,7 @@ namespace Com.Model
             get { return int.MaxValue; } // It is the number of all strings
         }
 
-        public virtual Type SystemType
+        public override Type SystemType
         {
             get { return typeof(string); }
         }

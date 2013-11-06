@@ -123,22 +123,38 @@ namespace Com.Model
             get { return SuperDim != null ? SuperDim.GreaterSet : null; }
         }
 
+        public SetTop Top
+        {
+            get
+            {
+                Set set = this;
+                while (set.SuperSet != null) set = set.SuperSet;
+                return (SetTop)set;
+            }
+        }
+
+        public bool IsTop
+        {
+            get { return SuperDim == null; }
+        }
+
         public SetRoot Root
         {
             get
             {
-                Set root = this;
-                while (root.SuperSet != null) root = root.SuperSet;
-                return (SetRoot)root;
+                if (this is SetTop) return (SetRoot) ((SetTop)this).GetPrimitiveSubset("Root");
+                Set set = this;
+                while (!(set is SetRoot)) set = set.SuperSet;
+                return (SetRoot)set;
             }
         }
 
         public bool IsRoot
         {
-            get { return SuperDim == null; }
+            get { return this is SetRoot; }
         }
 
-        public bool IsIn(Set parent) // Return true if this set is included in the specified set,that is, the specified set is a direct or indirect super-set of this set
+        public bool IsIn(Set parent) // Return true if this set is included in the specified set, that is, the specified set is a direct or indirect super-set of this set
         {
             for (Set set = this; set != null; set = set.SuperSet)
             {
@@ -154,7 +170,17 @@ namespace Com.Model
         public Set AddSubset(Set subset)
         {
             Debug.Assert(subset != null, "Wrong use of method parameter. Subset must be non-null.");
-            subset.SuperDim = new DimSuper("Super", subset, this);
+            DimSuper dim;
+            if (subset.IsPrimitive)
+            {
+                dim = new DimTop("Top", subset, this);
+            }
+            else
+            {
+                dim = new DimSuper("Super", subset, this);
+            }
+
+            subset.SuperDim = dim;
             return subset;
         }
 
@@ -174,23 +200,7 @@ namespace Com.Model
 
         public List<Set> SubSets
         {
-            get { return NonPrimitiveSubsets; }
-        }
-
-        public List<Set> PrimitiveSubsets
-        {
-            get { return SubDims.Where(x => x.LesserSet.IsPrimitive).Select(x => x.LesserSet).ToList(); }
-        }
-
-        public List<Set> NonPrimitiveSubsets
-        {
-            get { return SubDims.Where(x => !x.LesserSet.IsPrimitive).Select(x => x.LesserSet).ToList(); }
-        }
-
-        public Set GetPrimitiveSubset(string name)
-        {
-            Dim dim = SubDims.FirstOrDefault(x => x.LesserSet.IsPrimitive && x.LesserSet.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
-            return dim != null ? dim.LesserSet : null;
+            get { return SubDims.Select(x => x.LesserSet).ToList(); }
         }
 
         public List<Set> GetAllSubsets()

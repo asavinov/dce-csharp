@@ -18,7 +18,7 @@ namespace Com.Model
             get { return 2; } // It is the number of all boolean values, that is, 0 and 1
         }
 
-        public virtual Type SystemType
+        public override Type SystemType
         {
             get { return typeof(bool); }
         }

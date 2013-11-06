@@ -95,7 +95,7 @@ namespace Com.Model
                 // The mapping can reference new elements which have to be integrated into the schema
                 DimTree tree = value.GetTargetTree();
                 PathMatch match = value.Matches.FirstOrDefault(m => m.TargetPath.GreaterSet.IsPrimitive);
-                SetRoot schema = match != null ? match.TargetPath.GreaterSet.Root : null; // We assume that primitive sets always have root defined (other sets might not have been added yet).
+                SetTop schema = match != null ? match.TargetPath.GreaterSet.Top : null; // We assume that primitive sets always have root defined (other sets might not have been added yet).
                 tree.IncludeInSchema(schema); // Include new elements in schema
 
                 _importMapping = value; // Configure set for import
@@ -109,10 +109,10 @@ namespace Com.Model
             Expression importExpression = ImportMapping.GetTargetExpression(); // Build a tuple tree with paths in leaves
 
             Set remoteSet = GreaterSet;
-            if (remoteSet.Root is SetRootOledb)
+            if (remoteSet.Top is SetTopOledb)
             {
                 // Request a (flat) result set from the remote set (data table)
-                DataTable dataTable = ((SetRootOledb)remoteSet.Root).ExportAll(remoteSet);
+                DataTable dataTable = ((SetTopOledb)remoteSet.Top).ExportAll(remoteSet);
 
                 // For each row, evaluate the expression and append the new element
                 foreach (DataRow row in dataTable.Rows) // A row is <colName, primValue> collection
@@ -125,10 +125,10 @@ namespace Com.Model
                     LesserSet.Append(importExpression); // Append an element using the tuple composed of primitive values
                 }
             }
-            else if (remoteSet.Root is SetRootOdata)
+            else if (remoteSet.Top is SetTopOdata)
             {
             }
-            else if (remoteSet.Root == LesserSet.Root) // Intraschema: direct access using offsets
+            else if (remoteSet.Top == LesserSet.Top) // Intraschema: direct access using offsets
             {
                 for (Offset offset = 0; offset < remoteSet.Length; offset++)
                 {

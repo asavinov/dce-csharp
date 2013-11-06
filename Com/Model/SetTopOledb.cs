@@ -18,7 +18,7 @@ namespace Com.Model
     /// Connection string example: "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\\Test\\Northwind.accdb"
     /// Provider example: "Provider=Microsoft.Jet.OLEDB.4.0;"
     /// </summary>
-    public class SetRootOledb : SetRoot
+    public class SetTopOledb : SetTop
     {
         /// <summary>
         /// Connection string.
@@ -100,7 +100,7 @@ namespace Com.Model
 
         public void ImportSchema()
         {
-            // Set root name
+            // Set top name
             if (!string.IsNullOrEmpty(_connection.Database))
                 Name = _connection.Database;
             else if (!string.IsNullOrEmpty(_connection.DataSource))
@@ -115,7 +115,7 @@ namespace Com.Model
             {
                 Set set = new Set(tableName); // Create a set 
                 set.RelationalTableName = tableName;
-                AddSubset(set);
+                Root.AddSubset(set);
             }
 
             // Load columns and FKs as (complex) paths and (simple) FK-dimensions
@@ -169,7 +169,7 @@ namespace Com.Model
                     path = new DimPath(columnName);
                     path.RelationalColumnName = columnName;
                     path.LesserSet = tableSet; // Assign domain set give the table name
-                    path.GreaterSet = Root.GetPrimitiveSubset(columnType);
+                    path.GreaterSet = Top.GetPrimitiveSubset(columnType);
                     tableSet.AddGreaterPath(path); // We do not know if it is FK or simple dimensin. It will be determined later.
                 }
 
@@ -554,7 +554,7 @@ namespace Com.Model
             return tableName + "_" + pathName;
         }
 
-        public SetRootOledb(string name)
+        public SetTopOledb(string name)
             : base(name) // C#: If nothing specified, then base() will always be called by default
         {
             // We need to bootstrap the database with primitive types corresponding to OleDb standard

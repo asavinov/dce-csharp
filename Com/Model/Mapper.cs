@@ -41,7 +41,7 @@ namespace Com.Model
         /// <summary>
         /// Create target mappings for the specified set and store them in the mapper. Mappings for all greater sets will be used and created if they do not exist in the mapper. 
         /// </summary>
-        public void RecommendMappings(Set sourceSet, SetRoot targetSchema, double setCreationThreshold)
+        public void RecommendMappings(Set sourceSet, SetTop targetSchema, double setCreationThreshold)
         {
             if (sourceSet.IsPrimitive)
             {
@@ -175,7 +175,7 @@ namespace Com.Model
         /// The set is not populated but is ready to be populated. 
         /// It is a convenience method simplifying a typical operation. 
         /// </summary>
-        public static Set ImportSet(Set sourceSet, SetRoot targetSchema)
+        public static Set ImportSet(Set sourceSet, SetTop targetSchema)
         {
             Mapper mapper = new Mapper();
             mapper.RecommendMappings(sourceSet, targetSchema, 1.0);
@@ -1139,22 +1139,31 @@ namespace Com.Model
         /// If a set is not included in the schema then include it. Inclusion is performed by storing all dimensions into the set including (a new) super-dimension. 
         /// TODO: In fact, all elements should have super-dimensions which specify the parent set or the root of the schema to include into, and then the parameter is not needed. 
         /// </summary>
-        public void IncludeInSchema(Set root)
+        public void IncludeInSchema(SetTop top)
         {
-            List<Set> allSets = Set.GetAllSubsets();
-            if (!allSets.Contains(Set))
+            if (Set.IsPrimitive)
             {
-                root.AddSubset(Set);
+                // Check that the schema has this primitive set and add an equivalent primitive set if it is absent (determined via default mapping)
+            }
+            else
+            {
+                if (!Set.IsIn(top.Root))
+                {
+                    top.Root.AddSubset(Set);
+                }
+            }
+
+            if (Dim != null && Dim.LesserSet != Dim.GreaterSet)
+            {
+                if (!Dim.IsInLesserSet) Dim.IsInLesserSet = true;
+                if (!Dim.IsInGreaterSet) Dim.IsInGreaterSet = true;
             }
 
             foreach (DimTree node in Children)
             {
-                if (node.IsEmpty) continue; // Root has null dimension
+                if (node.IsEmpty) continue; // Root has no dimension
 
-                if (!node.Dim.IsInLesserSet) node.Dim.IsInLesserSet = true;
-                if (!node.Dim.IsInGreaterSet) node.Dim.IsInGreaterSet = true;
-
-                node.IncludeInSchema(root); // Recursion
+                node.IncludeInSchema(top); // Recursion
             }
         }
 

@@ -52,14 +52,14 @@ namespace Test
             //
             // Prepare table schema
             //
-            SetRoot root = new SetRoot("Root");
-            Set setInteger = root.GetPrimitiveSubset("Integer");
-            Set setDouble = root.GetPrimitiveSubset("Double");
-            Set setString = root.GetPrimitiveSubset("String");
+            SetTop top = new SetTop("Top");
+            Set setInteger = top.GetPrimitiveSubset("Integer");
+            Set setDouble = top.GetPrimitiveSubset("Double");
+            Set setString = top.GetPrimitiveSubset("String");
 
             // Insert table
             Set t1 = new Set("t1");
-            root.AddSubset(t1);
+            top.Root.AddSubset(t1);
 
             Dim orders = new DimPrimitive<int>("orders", t1, setInteger);
             t1.AddGreaterDim(orders);
@@ -88,21 +88,21 @@ namespace Test
         [TestMethod]
         public void OledbDataImportTest()
         {
-            // Create Oldedb root set
-            SetRootOledb dbRoot = new SetRootOledb("Northwind");
-            dbRoot.ConnectionString = Northwind;
-            dbRoot.Open();
-            dbRoot.ImportSchema();
+            // Create Oldedb top set
+            SetTopOledb dbTop = new SetTopOledb("Northwind");
+            dbTop.ConnectionString = Northwind;
+            dbTop.Open();
+            dbTop.ImportSchema();
 
-            SetRoot wsRoot = new SetRoot("My Mashup");
+            SetTop wsTop = new SetTop("My Mashup");
 
             //
             // Import first set. Employees
             //
             Mapper mapper = new Mapper();
 
-            Set sourceSet = dbRoot.FindSubset("Employees");
-            mapper.RecommendMappings(sourceSet, wsRoot, 1.0);
+            Set sourceSet = dbTop.FindSubset("Employees");
+            mapper.RecommendMappings(sourceSet, wsTop, 1.0);
 
             SetMapping bestMapping = mapper.GetBestMapping(sourceSet);
             Set targetSet = bestMapping.TargetSet;
@@ -118,8 +118,8 @@ namespace Test
             //
             // Import second set. Inventory Transactions
             //
-            Set sourceSet2 = dbRoot.FindSubset("Inventory Transactions");
-            mapper.RecommendMappings(sourceSet2, wsRoot, 1.0);
+            Set sourceSet2 = dbTop.FindSubset("Inventory Transactions");
+            mapper.RecommendMappings(sourceSet2, wsTop, 1.0);
 
             SetMapping bestMapping2 = mapper.GetBestMapping(sourceSet2);
             Set targetSet2 = bestMapping2.TargetSet;
@@ -130,7 +130,7 @@ namespace Test
             Assert.AreEqual(102, targetSet2.Length);
             Assert.AreEqual(1, targetSet2.GetValue("Transaction Type", 99)); // 1 is offset which should correspond to second record "Sold"
 
-            Set pro = wsRoot.FindSubset("Products");
+            Set pro = wsTop.FindSubset("Products");
             Assert.AreEqual(28, pro.Length);
             Assert.AreEqual(34.8, pro.GetValue("List Price", 1));
         }
@@ -138,26 +138,26 @@ namespace Test
         [TestMethod]
         public void SetDataOperationsTest()
         {
-            // Create Oldedb root set
-            SetRootOledb dbRoot = new SetRootOledb("Northwind");
-            dbRoot.ConnectionString = Northwind;
-            dbRoot.Open();
-            dbRoot.ImportSchema();
+            // Create Oldedb top set
+            SetTopOledb dbTop = new SetTopOledb("Northwind");
+            dbTop.ConnectionString = Northwind;
+            dbTop.Open();
+            dbTop.ImportSchema();
 
-            SetRoot wsRoot = new SetRoot("My Mashup");
+            SetTop wsTop = new SetTop("My Mashup");
 
             //
             // Load test data
             //
-            Set targetSet = Mapper.ImportSet(dbRoot.FindSubset("Order Details"), wsRoot);
+            Set targetSet = Mapper.ImportSet(dbTop.FindSubset("Order Details"), wsTop);
             targetSet.Populate();
 
-            Set odet = wsRoot.FindSubset("Order Details");
-            Set orders = wsRoot.FindSubset("Orders");
-            Set cust = wsRoot.FindSubset("Customers");
-            Set doubleSet = wsRoot.GetPrimitiveSubset("Double");
-            Set intSet = wsRoot.GetPrimitiveSubset("Integer");
-            Set strSet = wsRoot.GetPrimitiveSubset("String");
+            Set odet = wsTop.FindSubset("Order Details");
+            Set orders = wsTop.FindSubset("Orders");
+            Set cust = wsTop.FindSubset("Customers");
+            Set doubleSet = wsTop.GetPrimitiveSubset("Double");
+            Set intSet = wsTop.GetPrimitiveSubset("Integer");
+            Set strSet = wsTop.GetPrimitiveSubset("String");
 
             Expression childExpr;
 
@@ -207,8 +207,8 @@ namespace Test
             //
             // Product operation and population of a product
             //
-            Set ods = wsRoot.FindSubset("Order Details Status"); // 4 elements loaded
-            Set os = wsRoot.FindSubset("Orders Status"); // 3 elements loaded
+            Set ods = wsTop.FindSubset("Order Details Status"); // 4 elements loaded
+            Set os = wsTop.FindSubset("Orders Status"); // 3 elements loaded
 
             Set newSet = new Set("New Set");
 
@@ -217,7 +217,7 @@ namespace Test
             Dim d2 = os.CreateDefaultLesserDimension("Orders Status", newSet);
             d2.IsIdentity = true;
 
-            wsRoot.AddSubset(newSet);
+            wsTop.Root.AddSubset(newSet);
             newSet.AddGreaterDim(d1);
             newSet.AddGreaterDim(d2);
 
@@ -276,24 +276,24 @@ namespace Test
         [TestMethod]
         public void ProjectionTest()
         {
-            // Create Oldedb root set
-            SetRootOledb dbRoot = new SetRootOledb("Northwind");
-            dbRoot.ConnectionString = Northwind;
-            dbRoot.Open();
-            dbRoot.ImportSchema();
+            // Create Oldedb top set
+            SetTopOledb dbTop = new SetTopOledb("Northwind");
+            dbTop.ConnectionString = Northwind;
+            dbTop.Open();
+            dbTop.ImportSchema();
 
-            SetRoot wsRoot = new SetRoot("My Mashup");
+            SetTop wsTop = new SetTop("My Mashup");
 
             //
             // Load test data
             //
-            Set targetSet = Mapper.ImportSet(dbRoot.FindSubset("Order Details"), wsRoot);
+            Set targetSet = Mapper.ImportSet(dbTop.FindSubset("Order Details"), wsTop);
             targetSet.Populate();
             
             //
             // Create derived dimensions
             //
-            Set od = wsRoot.FindSubset("Order Details");
+            Set od = wsTop.FindSubset("Order Details");
 
             // Create expression
             Dim d1 = od.GetGreaterDim("Order ID");
@@ -317,27 +317,27 @@ namespace Test
         [TestMethod]
         public void AggregationTest()
         {
-            // Create Oldedb root set
-            SetRootOledb dbRoot = new SetRootOledb("Northwind");
-            dbRoot.ConnectionString = Northwind;
-            dbRoot.Open();
-            dbRoot.ImportSchema();
+            // Create Oldedb top set
+            SetTopOledb dbTop = new SetTopOledb("Northwind");
+            dbTop.ConnectionString = Northwind;
+            dbTop.Open();
+            dbTop.ImportSchema();
 
-            SetRoot wsRoot = new SetRoot("My Mashup");
+            SetTop wsTop = new SetTop("My Mashup");
 
             //
             // Load test data
             //
-            Set targetSet = Mapper.ImportSet(dbRoot.FindSubset("Order Details"), wsRoot);
+            Set targetSet = Mapper.ImportSet(dbTop.FindSubset("Order Details"), wsTop);
             targetSet.Populate();
 
             //
             // Create derived dimensions
             //
-            Set odet = wsRoot.FindSubset("Order Details");
-            Set orders = wsRoot.FindSubset("Orders");
-            Set cust = wsRoot.FindSubset("Customers");
-            Set doubleSet = wsRoot.GetPrimitiveSubset("Double");
+            Set odet = wsTop.FindSubset("Order Details");
+            Set orders = wsTop.FindSubset("Orders");
+            Set cust = wsTop.FindSubset("Customers");
+            Set doubleSet = wsTop.GetPrimitiveSubset("Double");
 
             // Create deproject (grouping) expression: (Customers) <- (Orders) <- (Order Details)
             Dim d1 = odet.GetGreaterDim("Order ID");
@@ -368,23 +368,23 @@ namespace Test
         [TestMethod]
         public void RecommendAggregationTest()
         {
-            // Create Oldedb root set
-            SetRootOledb dbRoot = new SetRootOledb("Root");
-            dbRoot.ConnectionString = Northwind;
-            dbRoot.Open();
-            dbRoot.ImportSchema();
+            // Create Oldedb top set
+            SetTopOledb dbTop = new SetTopOledb("Root");
+            dbTop.ConnectionString = Northwind;
+            dbTop.Open();
+            dbTop.ImportSchema();
 
-            SetRoot wsRoot = new SetRoot("My Mashup");
+            SetTop wsTop = new SetTop("My Mashup");
 
             //
             // Load test data
             //
-            Set targetSet = Mapper.ImportSet(dbRoot.FindSubset("Order Details"), wsRoot);
+            Set targetSet = Mapper.ImportSet(dbTop.FindSubset("Order Details"), wsTop);
             targetSet.Populate();
 
-            Set cust = wsRoot.FindSubset("Customers");
-            Set prod = wsRoot.FindSubset("Products");
-            Set doubleSet = wsRoot.GetPrimitiveSubset("Double");
+            Set cust = wsTop.FindSubset("Customers");
+            Set prod = wsTop.FindSubset("Products");
+            Set doubleSet = wsTop.GetPrimitiveSubset("Double");
 
             //
             // Test aggregation recommendations. From Customers to Product
@@ -420,18 +420,18 @@ namespace Test
         [TestMethod]
         public void ArithmeticTest()
         {
-            // Create Oldedb root set
-            SetRootOledb dbRoot = new SetRootOledb("Northwind");
-            dbRoot.ConnectionString = Northwind;
-            dbRoot.Open();
-            dbRoot.ImportSchema();
+            // Create Oldedb top set
+            SetTopOledb dbTop = new SetTopOledb("Northwind");
+            dbTop.ConnectionString = Northwind;
+            dbTop.Open();
+            dbTop.ImportSchema();
 
-            SetRoot wsRoot = new SetRoot("My Mashup");
+            SetTop wsTop = new SetTop("My Mashup");
 
             //
             // Load test data
             //
-            Set targetSet = Mapper.ImportSet(dbRoot.FindSubset("Order Details"), wsRoot);
+            Set targetSet = Mapper.ImportSet(dbTop.FindSubset("Order Details"), wsTop);
             targetSet.Populate();
 
             //
@@ -444,8 +444,8 @@ namespace Test
             // So Input.Output has to be assigned explicitly offset in a loop. Or we need to store a variable 'this' which, when evaluated, writes its current value to Input.Output.
 
 
-            Set products = wsRoot.FindSubset("Products");
-            Set doubleSet = wsRoot.GetPrimitiveSubset("Double");
+            Set products = wsTop.FindSubset("Products");
+            Set doubleSet = wsTop.GetPrimitiveSubset("Double");
 
             // Create simple (one-segment) function expressions
             Dim d1 = products.GetGreaterDim("List Price");
@@ -494,24 +494,24 @@ namespace Test
         [TestMethod]
         public void SubsettingTest()
         {
-            // Create Oldedb root set
-            SetRootOledb dbRoot = new SetRootOledb("Northwind");
-            dbRoot.ConnectionString = Northwind;
-            dbRoot.Open();
-            dbRoot.ImportSchema();
+            // Create Oldedb top set
+            SetTopOledb dbTop = new SetTopOledb("Northwind");
+            dbTop.ConnectionString = Northwind;
+            dbTop.Open();
+            dbTop.ImportSchema();
 
-            SetRoot wsRoot = new SetRoot("My Mashup");
+            SetTop wsTop = new SetTop("My Mashup");
 
             //
             // Load test data
             //
-            Set targetSet = Mapper.ImportSet(dbRoot.FindSubset("Order Details"), wsRoot);
+            Set targetSet = Mapper.ImportSet(dbTop.FindSubset("Order Details"), wsTop);
             targetSet.Populate();
             
             //
             // Create logical expression
             //
-            Set products = wsRoot.FindSubset("Products");
+            Set products = wsTop.FindSubset("Products");
 
             // Add subset
             Set subProducts = new Set("SubProducts");
@@ -540,29 +540,29 @@ namespace Test
         [TestMethod]
         public void ChangeTypeTest()
         {
-            // Create Oldedb root set
-            SetRootOledb dbRoot = new SetRootOledb("Northwind");
-            dbRoot.ConnectionString = Northwind;
-            dbRoot.Open();
-            dbRoot.ImportSchema();
+            // Create Oldedb top set
+            SetTopOledb dbTop = new SetTopOledb("Northwind");
+            dbTop.ConnectionString = Northwind;
+            dbTop.Open();
+            dbTop.ImportSchema();
 
-            SetRoot wsRoot = new SetRoot("My Mashup");
+            SetTop wsTop = new SetTop("My Mashup");
 
             //
             // Load test data. 
             //
-            Set orderStatus = Mapper.ImportSet(dbRoot.FindSubset("Orders Status"), wsRoot); // We load it to get more (target) data
+            Set orderStatus = Mapper.ImportSet(dbTop.FindSubset("Orders Status"), wsTop); // We load it to get more (target) data
             orderStatus.Populate();
 
-            Set mainSet = Mapper.ImportSet(dbRoot.FindSubset("Order Details"), wsRoot);
+            Set mainSet = Mapper.ImportSet(dbTop.FindSubset("Order Details"), wsTop);
             mainSet.Populate();
 
             //
             // Define mapping (Orders Details) -> Status ID: From (Order Details Status) To (Orders Status)
             //
-            Set sourceSet = wsRoot.FindSubset("Order Details Status");
+            Set sourceSet = wsTop.FindSubset("Order Details Status");
             Dim sourceDim = mainSet.GetGreaterDim("Status ID");
-            Set targetSet = wsRoot.FindSubset("Orders Status");
+            Set targetSet = wsTop.FindSubset("Orders Status");
             Dim targetDim = targetSet.CreateDefaultLesserDimension(sourceDim.Name, mainSet); // TODO: set also other properties so that new dim is identical to the old one
 
             SetMapping mapping = new SetMapping(sourceSet, targetSet);
@@ -588,14 +588,14 @@ namespace Test
             //
             // Define mapping (Orders) -> Employee ID: From (Employees) To (Suppliers)
             //
-            targetSet = Mapper.ImportSet(dbRoot.FindSubset("Suppliers"), wsRoot);
+            targetSet = Mapper.ImportSet(dbTop.FindSubset("Suppliers"), wsTop);
             targetSet.Populate();
 
-            mainSet = wsRoot.FindSubset("Orders");
+            mainSet = wsTop.FindSubset("Orders");
 
-            sourceSet = wsRoot.FindSubset("Employees");
+            sourceSet = wsTop.FindSubset("Employees");
             sourceDim = mainSet.GetGreaterDim("Employee ID");
-            targetSet = wsRoot.FindSubset("Suppliers");
+            targetSet = wsTop.FindSubset("Suppliers");
             targetDim = targetSet.CreateDefaultLesserDimension(sourceDim.Name, mainSet); // TODO: set also other properties so that new dim is identical to the old one
 
             mapping = new SetMapping(sourceSet, targetSet);

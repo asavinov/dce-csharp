@@ -45,7 +45,7 @@
     <Compile Include="Model\DimImport.cs" />
     <Compile Include="Model\DimPath.cs" />
     <Compile Include="Model\DimPrimitive.cs" />
-    <Compile Include="Model\DimRoot.cs" />
+    <Compile Include="Model\DimTop.cs" />
     <Compile Include="Model\DimSet.cs" />
     <Compile Include="Model\DimSubset.cs" />
     <Compile Include="Model\DimSuper.cs" />
@@ -60,9 +60,10 @@
     <Compile Include="Model\SetDouble.cs" />
     <Compile Include="Model\SetInteger.cs" />
     <Compile Include="Model\SetRoot.cs" />
-    <Compile Include="Model\SetRootOdata.cs" />
-    <Compile Include="Model\SetRootOledb.cs" />
+    <Compile Include="Model\SetTopOdata.cs" />
+    <Compile Include="Model\SetTopOledb.cs" />
     <Compile Include="Model\SetString.cs" />
+    <Compile Include="Model\SetTop.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="query\Query.cs" />
     <Compile Include="query\QueryOperation.cs" />

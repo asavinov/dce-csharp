@@ -41,7 +41,7 @@ namespace Com.Model
         /// </summary>
         public List<Dim> Path { get; set; }
 
-        public int Length
+        public override int Length
         {
             get
             {
