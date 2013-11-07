@@ -558,6 +558,8 @@ namespace Com.Model
             : base(name) // C#: If nothing specified, then base() will always be called by default
         {
             // We need to bootstrap the database with primitive types corresponding to OleDb standard
+            // Either use Ole DB standard or System.Data.OleDb.OleDbType.* (or maybe they are the same). 
+            // Type names should correspond to what we see in SQL queries (or other syntactic expressions expected by OleDb driver)
         }
 
     }

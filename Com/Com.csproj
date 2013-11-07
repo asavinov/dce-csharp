@@ -56,13 +56,10 @@
     <Compile Include="Model\Mapper.cs" />
     <Compile Include="Model\Recommender.cs" />
     <Compile Include="Model\Set.cs" />
-    <Compile Include="Model\SetBoolean.cs" />
-    <Compile Include="Model\SetDouble.cs" />
-    <Compile Include="Model\SetInteger.cs" />
+    <Compile Include="Model\SetPrimitive.cs" />
     <Compile Include="Model\SetRoot.cs" />
     <Compile Include="Model\SetTopOdata.cs" />
     <Compile Include="Model\SetTopOledb.cs" />
-    <Compile Include="Model\SetString.cs" />
     <Compile Include="Model\SetTop.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="query\Query.cs" />

@@ -11,7 +11,7 @@ namespace Com.Model
     /// <summary>
     /// The root set is a predefined primitive set with no instances and no superset. 
     /// </summary>
-    public class SetRoot : Set
+    public class SetRoot : SetPrimitive
     {
         public override int Width
         {
@@ -32,7 +32,7 @@ namespace Com.Model
         }
 
         public SetRoot(string name)
-            : base(name) // C#: If nothing specified, then base() will always be called by default
+            : base(DataType.Root) // C#: If nothing specified, then base() will always be called by default
         {
             // TODO: Parameterize this instance as double virtual set. Important: isPrimitive
             Name = "Root"; // So the parameter is ignored

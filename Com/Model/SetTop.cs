@@ -43,6 +43,22 @@ namespace Com.Model
             return dim != null ? dim.LesserSet : null;
         }
 
+        public virtual DataTable Export(Set set)
+        {
+            // Check if this set is our child
+            DataTable dataTable = new DataTable(set.Name);
+            // Add rows by reading them from this set local dimensions
+            return null;
+        }
+
+        public virtual DataTable ExportAll(Set set)
+        {
+            // Check if this set is our child
+            DataTable dataTable = new DataTable(set.Name);
+            // Add rows by reading them from this set local dimensions
+            return null;
+        }
+
         public virtual string MapToLocalType(string externalType)
         {
             string localType = null;
@@ -81,7 +97,7 @@ namespace Com.Model
             return localType;
         }
 
-        public virtual Set MapToLocalSet(Set externalSet)
+        public virtual Set MapToLocalSet(Set externalSet) // Map a set from another schema to a set in this schema. 
         {
             string externalType = externalSet.Name;
             Set localSet = null;
@@ -117,22 +133,6 @@ namespace Com.Model
             return localSet;
         }
 
-        public virtual DataTable Export(Set set)
-        {
-            // Check if this set is our child
-            DataTable dataTable = new DataTable(set.Name);
-            // Add rows by reading them from this set local dimensions
-            return null;
-        }
-
-        public virtual DataTable ExportAll(Set set)
-        {
-            // Check if this set is our child
-            DataTable dataTable = new DataTable(set.Name);
-            // Add rows by reading them from this set local dimensions
-            return null;
-        }
-
         public override Dim CreateDefaultLesserDimension(string name, Set lesserSet)
         {
             Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
@@ -152,30 +152,34 @@ namespace Com.Model
             SetRoot setRoot = new SetRoot("Root");
             AddSubset(setRoot);
 
-            SetInteger setInteger = new SetInteger("Integer");
+            SetPrimitive setInteger = new SetPrimitive(DataType.Integer);
             AddSubset(setInteger);
 
-            SetDouble setDouble = new SetDouble("Double");
+            SetPrimitive setDouble = new SetPrimitive(DataType.Double);
             AddSubset(setDouble);
 
-            SetString setString = new SetString("String");
+            SetPrimitive setString = new SetPrimitive(DataType.String);
             AddSubset(setString);
 
-            SetBoolean setBoolean = new SetBoolean("Boolean");
+            SetPrimitive setBoolean = new SetPrimitive(DataType.Boolean);
             AddSubset(setBoolean);
         }
+    
     }
 
-    /// <summary>
-    /// Primitive data types used in our local database system. 
-    /// We need to enumerate data types for each kind of database along with the primitive mappings to other databases.
-    /// See also OleDb types: System.Data.OleDb.OleDbType.*
-    /// </summary>
-    public enum DataType
-    {
-        Double,
-        Integer,
-        String,
-        Boolean
-    }
+    // Each specific top will have its own primitive types
+    // We want API to *resolve* arbitrary specific *primitive* types (as they appear during import/export) to/from other top's primitive types (at least our standard system)
+    // These primitive mappings are *terminal* nodes in variuos more complex mappings. 
+    // Primitive mappings can be ambigous just as more complex mappings.
+    // Each primitive mapping may have an associated converter as a kind of C# method. 
+    // More complex mappings might have an associated convereter as a method, expression or some other specification.
+    // Path matches is one approach to describe a convertion procedure.
+    //
+    // Finding such converters as expressions (mappings) is one use of this API. Here we search for alternative recommendations. 
+    // - One specific feature is that sometimes we want to propose new elements if acceptable match cannot be found
+    // - A mapping is a representation of conversion
+    // - We want to edit these mappings/converters and therefore use the mappings (recommendations) in an edit model
+    // - We will use recommendations for: import remove set, export local set, import to source set, export to remove set. 
+    // 
+    
 }
