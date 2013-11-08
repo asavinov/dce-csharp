@@ -31,13 +31,9 @@ namespace Com.Model
             return new DimTop(name, lesserSet, this);
         }
 
-        public SetRoot(string name)
-            : base(DataType.Root) // C#: If nothing specified, then base() will always be called by default
+        public SetRoot(Enum dataType)
+            : base(dataType)
         {
-            // TODO: Parameterize this instance as double virtual set. Important: isPrimitive
-            Name = "Root"; // So the parameter is ignored
-            IsInstantiable = false;
-            IsPrimitive = true;
         }
     }
 

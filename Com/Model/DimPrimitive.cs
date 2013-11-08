@@ -530,13 +530,18 @@ namespace Com.Model
             Type type = typeof(T);
             if (type == typeof(int))
             {
-                NullValue = ObjectToGeneric(int.MaxValue);
+                NullValue = ObjectToGeneric(int.MinValue);
                 Aggregator = new IntAggregator() as IAggregator<T>;
             }
             else if (type == typeof(double))
             {
                 NullValue = ObjectToGeneric(double.NaN);
                 Aggregator = new DoubleAggregator() as IAggregator<T>;
+            }
+            else if (type == typeof(decimal))
+            {
+                NullValue = ObjectToGeneric(decimal.MinValue);
+                Aggregator = new DecimalAggregator() as IAggregator<T>;
             }
             else if (!type.IsValueType) // Reference type
             {
@@ -553,70 +558,5 @@ namespace Com.Model
             }
         }
 
-
-
-
-
-
-
-        [System.Obsolete("Use public Append method with object argument")]
-        private void AppendIndex(T value)
-        {
-            // Append the specified element to the index. The index and the storage must have enough memory. 
-
-            // The last element contains garbadge and is not referenced from index. 
-            // The last element of index is also free and contains garbadge.
-
-            int pos = FindIndexes(value).Item2;
-            Array.Copy(_offsets, pos, _offsets, pos + 1, Length - pos); // Free an index element by shifting other elements forward
-
-            _offsets[pos] = Length;
-            _cells[Length] = value;
-
-            _length = _length + 1;
-        }
-
-        [System.Obsolete("Use public Append method with object argument")]
-        private void AppendIndexNull()
-        {
-            int pos = NullCount;
-            Array.Copy(_offsets, pos, _offsets, pos + 1, Length - pos); // Free an index element by shifting other elements forward
-
-            _offsets[pos] = Length;
-            _cells[Length] = NullValue;
-
-            _length = _length + 1;
-        }
-
-        [System.Obsolete("Use public SetValue method with object argument")]
-        private void UpdateIndex(int offset, T value)
-        {
-            // Update index when changing a single value at one offset
-
-            // Replace an existing value with the new value and update the index. 
-            int oldPos = FindIndex(offset); // Old sorted position of the cell we are going to change
-            var interval = FindIndexes(value); // The new sorted position for this cell
-
-            // Optimization: Instead of inserting *after* the last element with this same value, it is a good idea to position it within this interval by preserving the order of offsets (as a kind of secondary criterion). 
-            // In this case all elements with the same value will have growing index in the sorted array like [3, 25, 153]. 
-            // It will make some operations (with several dimensions) much more efficient by allowing for binary search for a given index (among the same value).
-            // To find such a new position, we need to make binary search among indexes within the returned interval.
-            int pos = Array.BinarySearch(_offsets, interval.Item1, interval.Item2 - interval.Item1, offset);
-
-            pos = interval.Item2; // The new sorted position for this cell
-
-            if (pos > oldPos)
-            {
-                Array.Copy(_offsets, oldPos + 1, _offsets, oldPos, (pos - 1) - oldPos); // Shift backward by overwriting old
-                _offsets[pos - 1] = offset;
-            }
-            else if (pos < oldPos)
-            {
-                Array.Copy(_offsets, pos, _offsets, pos + 1, oldPos - pos); // Shift forward by overwriting old pos
-                _offsets[pos] = offset;
-            }
-
-            _cells[offset] = value;
-        }
     }
 }

@@ -132,7 +132,7 @@ namespace Test
 
             Set pro = wsTop.FindSubset("Products");
             Assert.AreEqual(28, pro.Length);
-            Assert.AreEqual(34.8, pro.GetValue("List Price", 1));
+            Assert.AreEqual(34.8m, pro.GetValue("List Price", 1));
         }
 
         [TestMethod]
@@ -337,7 +337,6 @@ namespace Test
             Set odet = wsTop.FindSubset("Order Details");
             Set orders = wsTop.FindSubset("Orders");
             Set cust = wsTop.FindSubset("Customers");
-            Set doubleSet = wsTop.GetPrimitiveSubset("Double");
 
             // Create deproject (grouping) expression: (Customers) <- (Orders) <- (Order Details)
             Dim d1 = odet.GetGreaterDim("Order ID");
@@ -355,14 +354,14 @@ namespace Test
 
             // Add derived dimension
             Expression aggreExpr = Expression.CreateAggregateExpression("SUM", deprExpr, projExpr);
-            Dim derived1 = doubleSet.CreateDefaultLesserDimension("Average List Price", cust);
+            Dim derived1 = d4.GreaterSet.CreateDefaultLesserDimension("Average List Price", cust);
             derived1.SelectExpression = aggreExpr;
             cust.AddGreaterDim(derived1);
 
             // Update
             derived1.ComputeValues();
 
-            Assert.AreEqual(64.0, cust.GetValue("Average List Price", 2));
+            Assert.AreEqual(64.0m, cust.GetValue("Average List Price", 2));
         }
 
         [TestMethod]

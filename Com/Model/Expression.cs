@@ -556,7 +556,7 @@ namespace Com.Model
 
                     Input.Evaluate(); // Evaluate 'this' object before it can be used
 
-                    double res = (double)Input.Output;
+                    double res = Convert.ToDouble(Input.Output);
                     Output = Input.Output;
 
                     foreach (Expression child in Operands) // Evaluate parameters and apply operation

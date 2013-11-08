@@ -37,10 +37,11 @@ namespace Com.Model
             get { return SubDims.Where(x => x.LesserSet.IsPrimitive).Select(x => x.LesserSet).ToList(); }
         }
 
-        public Set GetPrimitiveSubset(string name)
+        public SetPrimitive GetPrimitiveSubset(string name)
         {
-            Dim dim = SubDims.FirstOrDefault(x => x.LesserSet.IsPrimitive && x.LesserSet.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
-            return dim != null ? dim.LesserSet : null;
+            Dim dim = SubDims.FirstOrDefault(x => x.LesserSet.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+            Debug.Assert(dim.LesserSet.IsPrimitive, "Wrong use: Immediate subsets of top must be primitive sets.");
+            return dim != null ? (SetPrimitive)dim.LesserSet : null;
         }
 
         public virtual DataTable Export(Set set)
@@ -59,79 +60,53 @@ namespace Com.Model
             return null;
         }
 
-        public virtual string MapToLocalType(string externalType)
+        //
+        // Primitive mapping API
+        //
+
+        public virtual SetPrimitive BestLocalPrimitiveSource(SetPrimitive remoteSet)
         {
-            string localType = null;
+            // Find local (DataType) set corresponding to the remote set
 
-            switch (externalType)
+            if (remoteSet.Top.GetType() == typeof(SetTop))
             {
-                case "Double": // System.Data.OleDb.OleDbType.Double "Numeric"
-                case "Numeric":
-                    localType = "Double";
-                    break;
-                case "Integer": // System.Data.OleDb.OleDbType.Integer
-                case "UnsignedTinyInt":
-                case "SmallInt":
-                    localType = "Integer";
-                    break;
-                case "Char": // System.Data.OleDb.OleDbType.Char
-                case "VarChar": // System.Data.OleDb.OleDbType.VarChar
-                case "VarWChar": // System.Data.OleDb.OleDbType.VarWChar
-                case "WChar": // System.Data.OleDb.OleDbType.WChar
-                    localType = "String";
-                    break;
-                case "Boolean":
-                    localType = "Boolean";
-                    break;
-                case "Date":
-                    localType = "String";
-                    break;
-                case "Currency":
-                    localType = "Double";
-                    break;
-                default:
-                    localType = externalType; // The same type name
-                    break;
-            }
-
-            return localType;
-        }
-
-        public virtual Set MapToLocalSet(Set externalSet) // Map a set from another schema to a set in this schema. 
-        {
-            string externalType = externalSet.Name;
-            Set localSet = null;
-            string localType = null;
-
-            if (externalSet.IsTop)
-            {
-                return this; // Top is mapped to top by definition
-            }
-
-            if (externalSet.IsPrimitive)
-            {
-                // Primitive sets never point to a remote source so we use some predefined mapping rules
-                localType = MapToLocalType(externalType);
-                localSet = GetPrimitiveSubset(localType);
+                SetPrimitive localSet = GetPrimitiveSubset(remoteSet.Name);
                 return localSet;
             }
-
-            // TODO: try to find explicitly marked sets (same as)
-
-            foreach (Set set in GetAllSubsets()) // Second, we try to find by semantics
+            else
             {
-                if (set.IsTop) continue;
-                if (set.IsPrimitive) continue;
-
-                if (set.Name.Equals(externalType, StringComparison.InvariantCultureIgnoreCase))
-                {
-                    localSet = set; // Found.
-                    return localSet;
-                }
+                return remoteSet.Top.BestRemotePrimitiveTarget(remoteSet, this); // Delegate to remote schema
             }
-
-            return localSet;
         }
+        public virtual SetPrimitive BestLocalPrimitiveTarget(SetPrimitive remoteSet)
+        {
+            return BestLocalPrimitiveSource(remoteSet);
+
+        }
+
+        public virtual SetPrimitive BestRemotePrimitiveSource(SetPrimitive localSet, SetTop remoteSchema)
+        {
+            if (remoteSchema.GetType() == typeof(SetTop))
+            {
+                SetPrimitive remoteSet = remoteSchema.GetPrimitiveSubset(localSet.Name);
+                return remoteSet;
+            }
+            else
+            {
+                return remoteSchema.BestLocalPrimitiveTarget(localSet); // Delegate to remote schema
+            }
+        }
+        public virtual SetPrimitive BestRemotePrimitiveTarget(SetPrimitive localSet, SetTop remoteSchema)
+        {
+            return BestRemotePrimitiveSource(localSet, remoteSchema);
+        }
+
+        //
+        // Complex/structured mapping API
+        //
+
+        // TODO: It is actualy mapping (recommendation) API
+
 
         public override Dim CreateDefaultLesserDimension(string name, Set lesserSet)
         {
@@ -141,45 +116,82 @@ namespace Com.Model
             return new DimTop(name, lesserSet, this);
         }
 
+        private void CreateDataTypes() // Create all primitive data types from some specification like Enum, List or XML
+        {
+
+            foreach (DataType dataType in (DataType[])Enum.GetValues(typeof(DataType)))
+            {
+                if (dataType == DataType.Root) // Root has a special class
+                {
+                    SetRoot setRoot = new SetRoot(DataType.Root);
+                    AddSubset(setRoot);
+                    setRoot.DimType = typeof(DimTop);
+                }
+                else
+                {
+                    SetPrimitive setPrimitive = new SetPrimitive(dataType);
+                    AddSubset(setPrimitive);
+
+                    switch (dataType) // Set properties explicitly for each data type
+                    {
+                        case DataType.Root:
+                            setPrimitive.DimType = typeof(DimTop);
+                            break;
+                        case DataType.Integer:
+                            setPrimitive.DimType = typeof(DimPrimitive<int>);
+                            break;
+                        case DataType.Double:
+                            setPrimitive.DimType = typeof(DimPrimitive<double>);
+                            break;
+                        case DataType.Decimal:
+                            setPrimitive.DimType = typeof(DimPrimitive<decimal>);
+                            break;
+                        case DataType.String:
+                            setPrimitive.DimType = typeof(DimPrimitive<string>);
+                            break;
+                        case DataType.Boolean:
+                            setPrimitive.DimType = typeof(DimPrimitive<bool>);
+                            break;
+                        case DataType.DateTime:
+                            setPrimitive.DimType = typeof(DimPrimitive<DateTime>);
+                            break;
+                        default:
+                            Debug.Fail("No definition for this type provided. Update configuration of primitive types.");
+                            break;
+                    }
+                }
+            }
+        }
+
+        public SetTop()
+            : base()
+        {
+        }
+
         public SetTop(string name)
-            : base(name) // C#: If nothing specified, then base() will always be called by default
+            : base(name)
         {
             IsInstantiable = false;
 
-            //
-            // Generate all predefined primitive sets as subsets
-            //
-            SetRoot setRoot = new SetRoot("Root");
-            AddSubset(setRoot);
-
-            SetPrimitive setInteger = new SetPrimitive(DataType.Integer);
-            AddSubset(setInteger);
-
-            SetPrimitive setDouble = new SetPrimitive(DataType.Double);
-            AddSubset(setDouble);
-
-            SetPrimitive setString = new SetPrimitive(DataType.String);
-            AddSubset(setString);
-
-            SetPrimitive setBoolean = new SetPrimitive(DataType.Boolean);
-            AddSubset(setBoolean);
+            CreateDataTypes(); // Generate all predefined primitive sets as subsets
         }
-    
+
     }
 
-    // Each specific top will have its own primitive types
-    // We want API to *resolve* arbitrary specific *primitive* types (as they appear during import/export) to/from other top's primitive types (at least our standard system)
-    // These primitive mappings are *terminal* nodes in variuos more complex mappings. 
-    // Primitive mappings can be ambigous just as more complex mappings.
-    // Each primitive mapping may have an associated converter as a kind of C# method. 
-    // More complex mappings might have an associated convereter as a method, expression or some other specification.
-    // Path matches is one approach to describe a convertion procedure.
-    //
-    // Finding such converters as expressions (mappings) is one use of this API. Here we search for alternative recommendations. 
-    // - One specific feature is that sometimes we want to propose new elements if acceptable match cannot be found
-    // - A mapping is a representation of conversion
-    // - We want to edit these mappings/converters and therefore use the mappings (recommendations) in an edit model
-    // - We will use recommendations for: import remove set, export local set, import to source set, export to remove set. 
-    // 
-    
+    /// <summary>
+    /// Primitive data types used in our local database system. 
+    /// We need to enumerate data types for each kind of database along with the primitive mappings to other databases.
+    /// </summary>
+    public enum DataType
+    {
+        // Built-in types in C#: http://msdn.microsoft.com/en-us/library/vstudio/ya5y69ds.aspx
+        Root,
+        Integer,
+        Double,
+        Decimal,
+        String,
+        Boolean,
+        DateTime,
+    }
+
 }

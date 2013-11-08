@@ -45,7 +45,7 @@ namespace Com.Model
         {
             if (sourceSet.IsPrimitive)
             {
-                Set ts = targetSchema.GetPrimitiveSubset(targetSchema.MapToLocalType(sourceSet.Name));
+                SetPrimitive ts = targetSchema.BestLocalPrimitiveTarget((SetPrimitive)sourceSet);
 
                 SetMapping primMapping = new SetMapping(sourceSet, ts);
                 primMapping.Similarity = 1.0;

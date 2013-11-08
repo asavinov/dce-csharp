@@ -103,4 +103,36 @@ namespace Com.Model
             return values.Average();
         }
     }
+
+    /// <summary>
+    /// Aggregation functions for decimal[]
+    /// </summary>
+    public struct DecimalAggregator : IAggregator<decimal>
+    {
+        public decimal Sum(decimal[] values)
+        {
+            return (decimal)values.Sum();
+        }
+        public decimal Avg(decimal[] values)
+        {
+            return values.Average();
+        }
+
+        public decimal Add(decimal a, decimal b) { return a + b; }
+        public decimal Div(decimal a, int b) { return a / b; }
+    }
+    public static class DecimalArray // Expand decimal[]
+    {
+        /*
+                public static decimal Sum(this IEnumerable<decimal> values)
+                {
+                    return values.Sum();
+                }
+        */
+        public static decimal Avg(this IEnumerable<decimal> values)
+        {
+            return values.Average();
+        }
+    }
+
 }

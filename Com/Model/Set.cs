@@ -46,6 +46,8 @@ namespace Com.Model
             get { return typeof(Offset); }
         }
 
+        public Type DimType { get; set; } // Default lesser dimension class
+
         /// <summary>
         /// Size of values or cells (physical identities) in bytes.
         /// </summary>
@@ -991,10 +993,11 @@ namespace Com.Model
             }
         }
 
-        public Set(string name)
+        public Set()
         {
             Id = Guid.NewGuid();
-            Name = name;
+
+            DimType = typeof(DimSet);
 
             SuperDims = new List<DimSuper>();
             SubDims = new List<DimSuper>();
@@ -1008,10 +1011,15 @@ namespace Com.Model
             GreaterPaths = new List<DimPath>();
             LesserPaths = new List<DimPath>();
 
-            // TODO: Parameterize depending on the reserved names: Integer, Double etc. (or exclude these names)
             IsInstantiable = true;
             IsPrimitive = false;
             IsAutoPopulated = true;
+        }
+
+        public Set(string name)
+            : this()
+        {
+            Name = name;
         }
 
         #endregion

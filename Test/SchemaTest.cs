@@ -94,8 +94,8 @@ namespace Test
 
             // Check validity of the schema
             Set doubleSet = dbTop.FindSubset("Double");
-            Assert.AreEqual(16, doubleSet.LesserDims.Count);
-            Assert.AreEqual(45, doubleSet.LesserPaths.Count);
+            Assert.AreEqual(2, doubleSet.LesserDims.Count); // 16
+            Assert.AreEqual(6, doubleSet.LesserPaths.Count); // 45
 
             Set empSet = dbTop.FindSubset("Employees");
             System.Data.DataTable dataTable = dbTop.Export(empSet);

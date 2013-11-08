@@ -140,7 +140,8 @@ namespace Com.Model
         }
 
         /// <summary>
-        /// The method loads schema data from the specified table in the underlying database and stores them in a matching set.
+        /// The method loads structure of the specified table and stores it as a set in this schema.
+        /// 
         /// The method loops through all columns and for each of them creates or finds existing three elements in the schema:
         /// a complex path from this set to the primtiive domain, a simple FK dimension from this set to the target FK set, and 
         /// a complex path from the target FK set to the primitive domain. The complex path corresponding to the column will 
@@ -158,12 +159,13 @@ namespace Com.Model
             DataTable fks = _connection.GetOleDbSchemaTable(OleDbSchemaGuid.Foreign_Keys, new object[] { null, null, null, null, null, tableName });
             DataTable columns = _connection.GetOleDbSchemaTable(OleDbSchemaGuid.Columns, new object[] { null, null, tableName, null });
 
-            foreach (DataRow col in columns.Rows) // Process all columns of the table
+            foreach (DataRow col in columns.Rows) // Process all columns of the table (correspond to primitive paths of the set)
             {
                 string columnName = col["COLUMN_NAME"].ToString();
-                string columnType = MapToLocalType(((OleDbType)col["DATA_TYPE"]).ToString());
 
-                DimPath path = tableSet.GetGreaterPathByColumnName(columnName); // It might have been already added
+                string columnType = ((OleDbType)col["DATA_TYPE"]).ToString();
+
+                DimPath path = tableSet.GetGreaterPathByColumnName(columnName); // It might have been already created (when processing other tables)
                 if (path == null)
                 {
                     path = new DimPath(columnName);
@@ -554,12 +556,176 @@ namespace Com.Model
             return tableName + "_" + pathName;
         }
 
+        //
+        // Primitive mapping API
+        //
+
+        public override SetPrimitive BestLocalPrimitiveSource(SetPrimitive remoteSet) // remoteSet -> localSet (source)
+        {
+            // Find local (OldDdb) set corresponding to the remote set
+
+            if (remoteSet.Top.GetType() == typeof(SetTopOledb))
+            {
+                SetPrimitive localSet = GetPrimitiveSubset(remoteSet.Name);
+                return localSet;
+            }
+
+            return null;
+        }
+        public override SetPrimitive BestLocalPrimitiveTarget(SetPrimitive remoteSet) // remoteSet -> localSet (target)
+        {
+            return BestLocalPrimitiveSource(remoteSet);
+        }
+
+        public override SetPrimitive BestRemotePrimitiveSource(SetPrimitive localSet, SetTop remoteSchema) // localSet -> remoteSet (source)
+        {
+            // Find remote set corresponding to the local (OleDb) set
+            Debug.Assert(localSet.Top == this, "Wrong use: the specified primitive set must belong to this top.");
+
+            if (remoteSchema.GetType() == typeof(SetTopOledb))
+            {
+                SetPrimitive remoteSet = remoteSchema.GetPrimitiveSubset(localSet.Name);
+                return remoteSet;
+            }
+            else if (remoteSchema.GetType() == typeof(SetTop))
+            {
+                string localType = localSet.Name;
+                DataType? remoteTypeEnum;
+
+                // Mappings: 
+                // http://msdn.microsoft.com/en-us/library/system.data.oledb.oledbtype(v=vs.110).aspx
+                // http://msdn.microsoft.com/en-us/library/cc668759(v=vs.110).aspx
+                switch (localType)
+                {
+                    // Integers
+                    case "BigInt": // DBTYPE_I8 -> Int64
+                    case "Integer": // DBTYPE_I4 -> Int32
+                    case "SmallInt": // DBTYPE_I2 -> Int16
+                    case "TinyInt": // DBTYPE_I1 -> SByte
+                    case "UnsignedBigInt": // DBTYPE_UI8 -> UInt64
+                    case "UnsignedInt": // DBTYPE_UI4 -> UInt32
+                    case "UnsignedSmallInt": // DBTYPE_UI2 -> UInt16
+                    case "UnsignedTinyInt": // DBTYPE_UI1 -> Byte
+                        remoteTypeEnum = DataType.Integer;
+                        break;
+
+                    // Double
+                    case "Double": // DBTYPE_R8
+                    case "Single": // DBTYPE_R4 -> Single
+                        remoteTypeEnum = DataType.Double;
+                        break;
+
+                    // Decimal
+                    case "Currency": // DBTYPE_CY
+                    case "Decimal": // DBTYPE_DECIMAL
+                    case "Numeric": // DBTYPE_NUMERIC
+                    case "VarNumeric":
+                        remoteTypeEnum = DataType.Decimal;
+                        break;
+
+                    // Boolean
+                    case "Boolean": // DBTYPE_BOOL
+                        remoteTypeEnum = DataType.Boolean;
+                        break;
+
+                    // DateTime
+                    case "Date": // DBTYPE_DATE
+                    case "DBDate": // DBTYPE_DBDATE
+                    case "DBTime": // DBTYPE_DBTIME ->  TimeSpan
+                    case "DBTimeStamp": // DBTYPE_DBTIMESTAMP
+                    case "Filetime": // DBTYPE_FILETIME
+                        remoteTypeEnum = DataType.DateTime;
+                        break;
+
+                    // Strings
+                    case "BSTR": // DBTYPE_BSTR
+                    case "Char": // DBTYPE_STR
+                    case "LongVarChar": // 
+                    case "LongVarWChar": //
+                    case "VarChar": //
+                    case "VarWChar": //
+                    case "WChar": // DBTYPE_WSTR
+                        remoteTypeEnum = DataType.String;
+                        break;
+
+                    // Binary
+                    case "Binary": // DBTYPE_BYTES -> Array of type Byte
+                    case "LongVarBinary": // Array of type Byte
+                    case "VarBinary": // Array of type Byte
+
+                    // NULL
+                    case "Empty": // DBTYPE_EMPTY
+
+                    case "Guid": // DBTYPE_GUID -> Guid
+                    case "Error": // DBTYPE_ERROR -> Exception
+                    case "IDispatch": // DBTYPE_IDISPATCH -> Object
+                    case "IUnknown": // DBTYPE_UNKNOWN -> Object
+
+                    case "PropVariant": // DBTYPE_PROP_VARIANT -> Object
+                    case "Variant": // DBTYPE_VARIANT -> Object
+                        remoteTypeEnum = null;
+                        break;
+
+                    default:
+                        remoteTypeEnum = null;
+                        break;
+                }
+
+                if (remoteTypeEnum == null)
+                {
+                    return null;
+                }
+
+                SetPrimitive remoteSet = remoteSchema.GetPrimitiveSubset(remoteTypeEnum.ToString());
+                return remoteSet;
+            }
+
+            return null;
+        }
+        public override SetPrimitive BestRemotePrimitiveTarget(SetPrimitive localSet, SetTop remoteSchema) // localSet -> remoteSet (target)
+        {
+            return BestRemotePrimitiveSource(localSet, remoteSchema);
+        }
+
+
+
+
+
+
+        private void CreateDataTypes() // Create all primitive data types from some specification like Enum, List or XML
+        {
+            SetRoot setRoot = new SetRoot(DataType.Root);
+            AddSubset(setRoot);
+            setRoot.DimType = typeof(DimTop);
+
+            foreach (OleDbType dataType in (OleDbType[])Enum.GetValues(typeof(OleDbType)))
+            {
+                SetPrimitive setPrimitive = new SetPrimitive(dataType);
+                AddSubset(setPrimitive);
+
+                setPrimitive.DimType = typeof(Dim); // Dimension without instances
+
+                switch (dataType) // Set properties explicitly for each data type
+                {
+                }
+            }
+        }
+
+        public SetTopOledb()
+        {
+        }
+
         public SetTopOledb(string name)
-            : base(name) // C#: If nothing specified, then base() will always be called by default
+            : base()
         {
             // We need to bootstrap the database with primitive types corresponding to OleDb standard
             // Either use Ole DB standard or System.Data.OleDb.OleDbType.* (or maybe they are the same). 
             // Type names should correspond to what we see in SQL queries (or other syntactic expressions expected by OleDb driver)
+
+            Name = name;
+            IsInstantiable = false;
+
+            CreateDataTypes(); // Generate all predefined primitive sets as subsets
         }
 
     }
