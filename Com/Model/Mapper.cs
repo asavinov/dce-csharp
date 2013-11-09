@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Data;
+using System.Data.OleDb;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -12,16 +14,33 @@ namespace Com.Model
 {
 
     /// <summary>
-    /// It implements mapping recommendations. 
+    /// Represent and generate set mappings.
+    /// This class knows about mappings between primitive sets from different type systems. 
+    /// And it can derive mappings for more complex sets. 
     /// </summary>
     public class Mapper
     {
-        public List<SetMapping> Mappings { get; private set; }
+        public List<SetMapping> Mappings { get; private set; } // Use for caching intermediate results (for greater sets)
 
-        public SetMapping GetBestMapping(Set sourceSet, Set targetSet = null)
+        // Mapping parameters: thresholds, weights, algorithm options
+
+        public double SetCreationThreshold { get; set; }
+
+        public Set GetBestTargetSet(Set sourceSet, SetTop targetSchema) // Find target in the cache
+        {
+            SetMapping bestMapping = GetBestMapping(sourceSet, targetSchema);
+            return bestMapping == null ? null : bestMapping.TargetSet;
+        }
+        public Set GetBestSourceSet(SetTop sourceSchema, Set targetSet)
+        {
+            SetMapping bestMapping = GetBestMapping(sourceSchema, targetSet);
+            return bestMapping == null ? null : bestMapping.TargetSet;
+        }
+
+        public SetMapping GetBestMapping(Set sourceSet, SetTop targetSchema) // Find best mapping in the cache
         {
             SetMapping bestMapping = null;
-            var setMappings = Mappings.Where(m => m.SourceSet == sourceSet); // Try to find available mappings
+            var setMappings = Mappings.Where(m => m.SourceSet == sourceSet && (m.TargetSet.Top == null || m.TargetSet.Top == targetSchema)); // Find available mappings
 
             if (setMappings.Count() > 0)
             {
@@ -31,28 +50,155 @@ namespace Com.Model
 
             return bestMapping;
         }
-
-        public Set GetBestTarget(Set sourceSet, Set targetSet = null)
+        public SetMapping GetBestMapping(SetTop sourceSchema, Set targetSet)
         {
-            SetMapping bestMapping = GetBestMapping(sourceSet, targetSet);
-            return bestMapping == null ? null : bestMapping.TargetSet;
+            SetMapping bestMapping = GetBestMapping(targetSet, sourceSchema);
+            bestMapping.Invert();
+            return bestMapping;
+        }
+
+        public List<SetMapping> MapPrimitiveSet(SetPrimitive sourceSet, SetTop targetSchema)
+        {
+            SetTop sourceSchema = sourceSet.Top;
+            List<SetMapping> maps = new List<SetMapping>();
+            SetPrimitive targetSet;
+
+            if (sourceSchema.GetType() == typeof(SetTop)) // SetTop -> *
+            {
+                if (targetSchema.GetType() == typeof(SetTop)) // SetTop -> SetTop
+                {
+                    targetSet = targetSchema.GetPrimitiveSubset(sourceSet.Name);
+                    SetMapping map = new SetMapping(sourceSet, targetSet);
+                    map.Similarity = 1.0;
+                    maps.Add(map);
+                }
+                else if (targetSchema.GetType() == typeof(SetTopOledb)) // SetTop -> SetTopOledb
+                {
+                    throw new NotImplementedException();
+                }
+            }
+            else if (sourceSchema.GetType() == typeof(SetTopOledb)) // SetTopOledb -> *
+            {
+                if (targetSchema.GetType() == typeof(SetTop)) // SetTopOledb -> SetTop
+                {
+                    OleDbType sourceType = (OleDbType)sourceSet.DataType;
+                    DataType? targetType;
+
+                    // Mappings: 
+                    // http://msdn.microsoft.com/en-us/library/system.data.oledb.oledbtype(v=vs.110).aspx
+                    // http://msdn.microsoft.com/en-us/library/cc668759(v=vs.110).aspx
+                    switch (sourceType)
+                    {                        // Integers
+                        case OleDbType.BigInt: // DBTYPE_I8 -> Int64
+                        case OleDbType.Integer: // DBTYPE_I4 -> Int32
+                        case OleDbType.SmallInt: // DBTYPE_I2 -> Int16
+                        case OleDbType.TinyInt: // DBTYPE_I1 -> SByte
+                        case OleDbType.UnsignedBigInt: // DBTYPE_UI8 -> UInt64
+                        case OleDbType.UnsignedInt: // DBTYPE_UI4 -> UInt32
+                        case OleDbType.UnsignedSmallInt: // DBTYPE_UI2 -> UInt16
+                        case OleDbType.UnsignedTinyInt: // DBTYPE_UI1 -> Byte
+                            targetType = DataType.Integer;
+                            break;
+
+                        // Double
+                        case OleDbType.Double: // DBTYPE_R8
+                        case OleDbType.Single: // DBTYPE_R4 -> Single
+                            targetType = DataType.Double;
+                            break;
+
+                        // Decimal
+                        case OleDbType.Currency: // DBTYPE_CY
+                        case OleDbType.Decimal: // DBTYPE_DECIMAL
+                        case OleDbType.Numeric: // DBTYPE_NUMERIC
+                        case OleDbType.VarNumeric:
+                            targetType = DataType.Decimal;
+                            break;
+
+                        // Boolean
+                        case OleDbType.Boolean: // DBTYPE_BOOL
+                            targetType = DataType.Boolean;
+                            break;
+
+                        // DateTime
+                        case OleDbType.Date: // DBTYPE_DATE
+                        case OleDbType.DBDate: // DBTYPE_DBDATE
+                        case OleDbType.DBTime: // DBTYPE_DBTIME ->  TimeSpan
+                        case OleDbType.DBTimeStamp: // DBTYPE_DBTIMESTAMP
+                        case OleDbType.Filetime: // DBTYPE_FILETIME
+                            targetType = DataType.DateTime;
+                            break;
+
+                        // Strings
+                        case OleDbType.BSTR: // DBTYPE_BSTR
+                        case OleDbType.Char: // DBTYPE_STR
+                        case OleDbType.LongVarChar: // 
+                        case OleDbType.LongVarWChar: //
+                        case OleDbType.VarChar: //
+                        case OleDbType.VarWChar: //
+                        case OleDbType.WChar: // DBTYPE_WSTR
+                            targetType = DataType.String;
+                            break;
+
+                        // Binary
+                        case OleDbType.Binary: // DBTYPE_BYTES -> Array of type Byte
+                        case OleDbType.LongVarBinary: // Array of type Byte
+                        case OleDbType.VarBinary: // Array of type Byte
+
+                        // NULL
+                        case OleDbType.Empty: // DBTYPE_EMPTY
+
+                        case OleDbType.Guid: // DBTYPE_GUID -> Guid
+                        case OleDbType.Error: // DBTYPE_ERROR -> Exception
+                        case OleDbType.IDispatch: // DBTYPE_IDISPATCH -> Object
+                        case OleDbType.IUnknown: // DBTYPE_UNKNOWN -> Object
+
+                        case OleDbType.PropVariant: // DBTYPE_PROP_VARIANT -> Object
+                        case OleDbType.Variant: // DBTYPE_VARIANT -> Object
+                            targetType = null;
+                            break;
+
+                        default:
+                            targetType = null;
+                            break;
+                    }
+
+                    targetSet = targetSchema.GetPrimitiveSubset(targetType.ToString());
+
+                    SetMapping map = new SetMapping(sourceSet, targetSet);
+                    map.Similarity = 1.0;
+                    maps.Add(map);
+                }
+                else if (targetSchema.GetType() == typeof(SetTopOledb)) // SetTopOledb -> SetTopOledb
+                {
+                    targetSet = targetSchema.GetPrimitiveSubset(sourceSet.Name);
+                    SetMapping map = new SetMapping(sourceSet, targetSet);
+                    map.Similarity = 1.0;
+                    maps.Add(map);
+                }
+            }
+
+            Mappings.AddRange(maps);
+            return maps;
+        }
+        public List<SetMapping> MapPrimitiveSet(SetTop sourceSchema, SetPrimitive targetSet)
+        {
+            List<SetMapping> maps = MapPrimitiveSet(targetSet, sourceSchema);
+            maps.ForEach(m => Mappings.Remove(m));
+            
+            maps.ForEach(m => m.Invert());
+            Mappings.AddRange(maps);
+            return maps;
         }
 
         /// <summary>
-        /// Create target mappings for the specified set and store them in the mapper. Mappings for all greater sets will be used and created if they do not exist in the mapper. 
+        /// Create target mappings for the specified set and store them in the mapper. 
+        /// Mappings for all greater sets will be used and created if they do not exist in the mapper. 
         /// </summary>
-        public void RecommendMappings(Set sourceSet, SetTop targetSchema, double setCreationThreshold)
+        public List<SetMapping> MapSet(Set sourceSet, SetTop targetSchema)
         {
-            if (sourceSet.IsPrimitive)
-            {
-                SetPrimitive ts = targetSchema.BestLocalPrimitiveTarget((SetPrimitive)sourceSet);
-
-                SetMapping primMapping = new SetMapping(sourceSet, ts);
-                primMapping.Similarity = 1.0;
-                Mappings.Add(primMapping);
-
-                return;
-            }
+            if (sourceSet.IsPrimitive) return MapPrimitiveSet((SetPrimitive)sourceSet, targetSchema);
+            SetTop sourceSchema = sourceSet.Top;
+            List<SetMapping> maps = new List<SetMapping>();
 
             Dictionary<Dim, SetMapping> greaterMappings = new Dictionary<Dim, SetMapping>();
 
@@ -63,12 +209,12 @@ namespace Com.Model
 
             foreach (Dim sd in sourceSet.GreaterDims)
             {
-                SetMapping gMapping = GetBestMapping(sd.GreaterSet);
+                SetMapping gMapping = GetBestMapping(sd.GreaterSet, targetSchema);
 
                 if (gMapping == null) // Either does not exist or cannot be built (for example, formally not possible or meaningless)
                 {
-                    RecommendMappings(sd.GreaterSet, targetSchema, setCreationThreshold); // Recursion up to primitive sets if not computed and stored earlier
-                    gMapping = GetBestMapping(sd.GreaterSet); // Try again
+                    MapSet(sd.GreaterSet, targetSchema); // Recursion up to primitive sets if not computed and stored earlier
+                    gMapping = GetBestMapping(sd.GreaterSet, targetSchema); // Try again after generation
                 }
 
                 greaterMappings.Add(sd, gMapping);
@@ -115,7 +261,7 @@ namespace Com.Model
             // 3. Create and store a mapping (or several mappings) 
             //
             SetMapping newMapping = null;
-            if (maxCoverage < setCreationThreshold) // Create new target set for mapping (and its greater dimensions) which will be accessible only via the mapping object (not via the schema)
+            if (maxCoverage < SetCreationThreshold) // Create new target set for mapping (and its greater dimensions) which will be accessible only via the mapping object (not via the schema)
             {
                 Set ts = new Set(sourceSet.Name); // New set has the same name as the soure set
 
@@ -133,7 +279,7 @@ namespace Com.Model
                 }
 
                 newMapping.Similarity = 1.0;
-                Mappings.Add(newMapping);
+                maps.Add(newMapping);
             }
             else // Use existing target set(s) for mapping(s)
             {
@@ -166,34 +312,49 @@ namespace Com.Model
                 }
 
                 newMapping.Similarity = maxCoverage;
-                Mappings.Add(newMapping);
+                maps.Add(newMapping);
             }
+
+            Mappings.AddRange(maps);
+            return maps;
+        }
+        public List<SetMapping> MapSet(SetTop sourceSchema, Set targetSet)
+        {
+            if (targetSet.IsPrimitive) return MapPrimitiveSet(sourceSchema, (SetPrimitive)targetSet);
+
+            List<SetMapping> maps = MapSet(targetSet, sourceSchema);
+            maps.ForEach(m => Mappings.Remove(m));
+
+            maps.ForEach(m => m.Invert());
+            Mappings.AddRange(maps);
+            return maps;
         }
 
         /// <summary>
-        /// Import the specified set along with all its greater sets as a subset of the specified parent set (normally root). 
+        /// Import the specified set along with all its greater sets. 
         /// The set is not populated but is ready to be populated. 
         /// It is a convenience method simplifying a typical operation. 
         /// </summary>
         public static Set ImportSet(Set sourceSet, SetTop targetSchema)
         {
             Mapper mapper = new Mapper();
-            mapper.RecommendMappings(sourceSet, targetSchema, 1.0);
-            SetMapping bestMapping = mapper.GetBestMapping(sourceSet);
+            mapper.SetCreationThreshold = 1.0;
+            mapper.MapSet(sourceSet, targetSchema);
+            SetMapping bestMapping = mapper.GetBestMapping(sourceSet, targetSchema);
 
             DimImport dimImport = new DimImport(bestMapping);
             dimImport.Add();
-            
+
             return bestMapping.TargetSet;
         }
 
         public Mapper()
         {
             Mappings = new List<SetMapping>();
+            SetCreationThreshold = 1.0;
         }
-
     }
-
+    
     /// <summary>
     /// The class describes one mapping between two concrete sets as a collection of path pairs. 
     /// </summary>
@@ -371,6 +532,15 @@ namespace Com.Model
             toRemove.ForEach(m => Matches.Remove(m));
         }
 
+        public void Invert() // Invert source and target
+        {
+            var tempSet = _sourceSet;
+            _sourceSet = _targetSet;
+            _targetSet = tempSet;
+
+            Matches.ForEach(m => m.Invert());
+        }
+
         public DimTree GetSourceTree() // Convert all source paths into a dimension tree where the source set will be a root. The tree can contain non-existing elements if they are used in the mapping. 
         {
             DimTree tree = new DimTree(SourceSet);
@@ -492,6 +662,13 @@ namespace Com.Model
         public bool Matches(PathMatch match) // This is more specific (longer) than argument
         {
             return MatchesSource(match.SourcePath) && MatchesTarget(match.TargetPath);
+        }
+
+        public void Invert() // Invert source and target
+        {
+            var tempPath = SourcePath;
+            SourcePath = TargetPath;
+            TargetPath = tempPath;
         }
 
         public bool Compatible(PathMatch match) // The specified match is compatible with (does not contradicts to) this match

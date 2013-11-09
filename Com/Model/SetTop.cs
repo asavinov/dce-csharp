@@ -60,54 +60,6 @@ namespace Com.Model
             return null;
         }
 
-        //
-        // Primitive mapping API
-        //
-
-        public virtual SetPrimitive BestLocalPrimitiveSource(SetPrimitive remoteSet)
-        {
-            // Find local (DataType) set corresponding to the remote set
-
-            if (remoteSet.Top.GetType() == typeof(SetTop))
-            {
-                SetPrimitive localSet = GetPrimitiveSubset(remoteSet.Name);
-                return localSet;
-            }
-            else
-            {
-                return remoteSet.Top.BestRemotePrimitiveTarget(remoteSet, this); // Delegate to remote schema
-            }
-        }
-        public virtual SetPrimitive BestLocalPrimitiveTarget(SetPrimitive remoteSet)
-        {
-            return BestLocalPrimitiveSource(remoteSet);
-
-        }
-
-        public virtual SetPrimitive BestRemotePrimitiveSource(SetPrimitive localSet, SetTop remoteSchema)
-        {
-            if (remoteSchema.GetType() == typeof(SetTop))
-            {
-                SetPrimitive remoteSet = remoteSchema.GetPrimitiveSubset(localSet.Name);
-                return remoteSet;
-            }
-            else
-            {
-                return remoteSchema.BestLocalPrimitiveTarget(localSet); // Delegate to remote schema
-            }
-        }
-        public virtual SetPrimitive BestRemotePrimitiveTarget(SetPrimitive localSet, SetTop remoteSchema)
-        {
-            return BestRemotePrimitiveSource(localSet, remoteSchema);
-        }
-
-        //
-        // Complex/structured mapping API
-        //
-
-        // TODO: It is actualy mapping (recommendation) API
-
-
         public override Dim CreateDefaultLesserDimension(string name, Set lesserSet)
         {
             Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");

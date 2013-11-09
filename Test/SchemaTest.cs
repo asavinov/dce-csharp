@@ -236,8 +236,9 @@ namespace Test
             // Initialize a mapping model 
             //
             Mapper mapper = new Mapper();
-            mapper.RecommendMappings(ordersSource, wsTop, 1.0);
-            SetMapping mapping = mapper.GetBestMapping(ordersSource);
+            mapper.SetCreationThreshold = 1.0;
+            mapper.MapSet(ordersSource, wsTop);
+            SetMapping mapping = mapper.GetBestMapping(ordersSource, wsTop);
 
             MappingModel model = new MappingModel(mapping);
 

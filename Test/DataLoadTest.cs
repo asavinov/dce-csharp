@@ -100,11 +100,12 @@ namespace Test
             // Import first set. Employees
             //
             Mapper mapper = new Mapper();
+            mapper.SetCreationThreshold = 1.0;
 
             Set sourceSet = dbTop.FindSubset("Employees");
-            mapper.RecommendMappings(sourceSet, wsTop, 1.0);
+            mapper.MapSet(sourceSet, wsTop);
 
-            SetMapping bestMapping = mapper.GetBestMapping(sourceSet);
+            SetMapping bestMapping = mapper.GetBestMapping(sourceSet, wsTop);
             Set targetSet = bestMapping.TargetSet;
             DimImport dimImport = new DimImport(bestMapping); // Configure first set for import
             dimImport.Add();
@@ -119,9 +120,9 @@ namespace Test
             // Import second set. Inventory Transactions
             //
             Set sourceSet2 = dbTop.FindSubset("Inventory Transactions");
-            mapper.RecommendMappings(sourceSet2, wsTop, 1.0);
+            mapper.MapSet(sourceSet2, wsTop);
 
-            SetMapping bestMapping2 = mapper.GetBestMapping(sourceSet2);
+            SetMapping bestMapping2 = mapper.GetBestMapping(sourceSet2, wsTop);
             Set targetSet2 = bestMapping2.TargetSet;
             DimImport dimImport2 = new DimImport(bestMapping2); // Configure first set for import
             dimImport2.Add();

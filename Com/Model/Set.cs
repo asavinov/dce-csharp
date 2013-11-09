@@ -131,7 +131,7 @@ namespace Com.Model
             {
                 Set set = this;
                 while (set.SuperSet != null) set = set.SuperSet;
-                return (SetTop)set;
+                return set is SetTop ? (SetTop)set : null; // A set which is not integrated in the schema does not have top
             }
         }
 
