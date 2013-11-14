@@ -87,7 +87,15 @@ namespace Com.Model
             }
         }
 
-        public int IndexOf(Set set) // Return index of the set in the path
+        public int IndexOfGreater(Set set) // Return index of the dimension with this greater set
+        {
+            for (int i = 0; i < Path.Count; i++)
+            {
+                if (Path[i].GreaterSet == set) return i;
+            }
+            return -1;
+        }
+        public int IndexOfLesser(Set set) // Return index of the dimension with this lesser set
         {
             for (int i = 0; i < Path.Count; i++)
             {
@@ -262,11 +270,13 @@ namespace Com.Model
         }
         public void RemoveFirst(Set set) // Remove first segments till this set (the new path will start from the specified set if trimmed)
         {
+            if (LesserSet == set) return; // Already here
+
             // Find a path to the specified set
-            int index = IndexOf(set);
+            int index = this.IndexOfGreater(set);
             if (index < 0) return;
 
-            Path.RemoveRange(0, index);
+            Path.RemoveRange(0, index+1);
 
             if (Path.Count > 0) LesserSet = Path[0].LesserSet;
             else LesserSet = GreaterSet;

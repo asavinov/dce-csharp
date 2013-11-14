@@ -296,6 +296,7 @@ namespace Test
             // Initialize a mapping model 
             //
             Mapper mapper = new Mapper();
+            mapper.MaxMappingsToBuild = 100;
 
             // So each Employee instance referenced by this dimension has to be converted to some Customer instance (or null if not found)
             // Each source instance is identified by all primitive values and these values are used to compose a target tuple and find it.
@@ -323,7 +324,9 @@ namespace Test
             targetDim = targetSet.CreateDefaultLesserDimension(sourceDim.Name, mainSet); // TODO: set also other properties so that new dim is identical to the old one
 
             mapper.MapDim(new DimPath(sourceDim), new DimPath(targetDim));
-
+            string sourceName = "ID";
+            string targetName = mapper.Mappings[0].Matches[0].TargetPath.LastSegment.Name;
+            Assert.AreEqual(sourceName, targetName);
         }
     }
 }
