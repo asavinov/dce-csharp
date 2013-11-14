@@ -839,14 +839,15 @@ namespace Com.Model
 
                 int dimCount = dims.Count();
 
-                Offset[] offsets = new Offset[dimCount];
-                for (int i = 0; i < dimCount; i++) offsets[i] = -1;
-
                 Offset[] lengths = new Offset[dimCount];
                 for (int i = 0; i < dimCount; i++) lengths[i] = dims[i].GreaterSet.Length;
 
-                int top = -1; // The current level or top where we change the offset. Depth of recursion.
+                Offset[] offsets = new Offset[dimCount]; // Here we store the current state of choices for each dimensions
+                for (int i = 0; i < dimCount; i++) offsets[i] = -1;
+
+                int top = -1; // The current level/top where we change the offset. Depth of recursion.
                 do ++top; while (top < dimCount && lengths[top] == 0);
+
                 // Alternative recursive iteration: http://stackoverflow.com/questions/13655299/c-sharp-most-efficient-way-to-iterate-through-multiple-arrays-list
                 while (top >= 0) 
                 {
@@ -897,19 +898,24 @@ namespace Com.Model
                             Append(tupleExpr);
                         }
 
-                        do --top; while (top >= 0 && lengths[top] == 0); // Go up by skipping empty dimensions
+                        top--;
+                        while (top >= 0 && lengths[top] == 0) // Go up by skipping empty dimensions and reseting 
+                        { offsets[top--] = -1; } 
                     }
                     else
                     {
+                        // Find the next valid offset
                         offsets[top]++;
-                        if (offsets[top] < lengths[top]) // Valid offset
+
+                        if (offsets[top] < lengths[top]) // Offset chosen
                         {
-                            do ++top; while (top < dimCount && lengths[top] == 0); // Go up by skipping empty dimensions
+                            do ++top; 
+                            while (top < dimCount && lengths[top] == 0); // Go up (foreward) by skipping empty dimensions
                         }
-                        else // Invalid offset. This level is finished. 
+                        else // Level is finished. Go back.
                         {
-                            offsets[top] = -1; // Reset
-                            do --top; while (top >= 0 && lengths[top] == 0); // Go up by skipping empty dimensions
+                            do { offsets[top--] = -1; } 
+                            while (top >= 0 && lengths[top] == 0); // Go down (backward) by skipping empty dimensions and reseting 
                         }
                     }
                 }

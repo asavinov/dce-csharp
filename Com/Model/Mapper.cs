@@ -26,6 +26,12 @@ namespace Com.Model
 
         public double SetCreationThreshold { get; set; }
 
+        public double MinPathSimilarity { get; set; } // Do not consider path matches with lower similarity
+        public int MaxPossibleTargetPaths { get; set; } // Consider only this number of (best) possible target paths for each source paths
+        public double MinSourcePathsMatched { get; set; } // How many source dims are mapped in percent
+        public double MinSetMappingQuality { get; set; } // Do not return mappings with lower quality
+        public int MaxMappingToBuild { get; set; } // Size of the search space. Do not build more potential mappings.
+
         public Set GetBestTargetSet(Set sourceSet, SetTop targetSchema) // Find target in the cache
         {
             SetMapping bestMapping = GetBestMapping(sourceSet, targetSchema);
@@ -245,7 +251,7 @@ namespace Com.Model
                 if (coverage[i] > 1) coverage[i] = 1; // A lesser set can use (reference, cover) a greater set more than once
 
                 // Take into account individual similarity of the target set with the source set
-                double nameSimilarity = StringSimilarity.computeNGramSimilarity(sourceSet.Name, allTargetSets[i].Name, 3);
+                double nameSimilarity = StringSimilarity.ComputeStringSimilarity(sourceSet.Name, allTargetSets[i].Name, 3);
                 coverage[i] *= nameSimilarity;
 
                 // TODO: Take into account difference in max ranks
@@ -331,6 +337,176 @@ namespace Com.Model
         }
 
         /// <summary>
+        /// Build mappings from the source set to the target set. The sets are greater sets of the specified dimensions. 
+        /// The mapping should take into account (semantically) that these sets are used from these dimensions. 
+        /// </summary>
+        public List<SetMapping> MapDim(DimPath sourcePath, DimPath targetPath)
+        {
+            Set sourceSet = sourcePath.GreaterSet;
+            Set targetSet = targetPath.GreaterSet;
+
+            List<DimPath> sourcePaths = sourceSet.GetGreaterPrimitiveDims(DimensionType.IDENTITY_ENTITY).ToList();
+            List<DimPath> targetPaths = targetSet.GetGreaterPrimitiveDims(DimensionType.IDENTITY_ENTITY).ToList();
+
+            List<SetMapping> mappings = new List<SetMapping>();
+
+            int dimCount = sourcePaths.Count();
+
+            var matches = new List<Tuple<DimPath, DimPath, List<DimPath>, List<DimPath>>>(); // List of: <srcPath, srcPathWithPrefix, targetPaths, targetPathsWithPrefix>
+            int[] lengths = new int[dimCount]; // Each dimension has some length (some valid target paths)
+            for (int i = 0; i < dimCount; i++)
+            {
+                DimPath sp = sourcePaths[i];
+                DimPath spWithPreifx = new DimPath(sp);
+                if (sourcePath.Length > 0) spWithPreifx.InsertFirst(sourcePath);
+
+                List<DimPath> tps = new List<DimPath>();
+                List<DimPath> tpsWithPrefix = new List<DimPath>();
+                int len = 0;
+                for (int j = 0; j < targetPaths.Count; j++)
+                {
+                    DimPath tp = targetPaths[j];
+                    DimPath tpWithPrefix = new DimPath(tp);
+                    if (targetPath.Length > 0) tpWithPrefix.InsertFirst(targetPath);
+
+                    double pathSimilarity = StringSimilarity.ComputePathSimilarity(spWithPreifx, tpWithPrefix);
+                    if (pathSimilarity < MinPathSimilarity) continue;
+
+                    // This target path will be used to build mappings
+                    tps.Add(tp);
+                    tpsWithPrefix.Add(tpWithPrefix);
+                    len++;
+                }
+
+                // Sort target paths according to their similarity
+                tpsWithPrefix = tpsWithPrefix.OrderByDescending(p => StringSimilarity.ComputePathSimilarity(spWithPreifx, p)).ToList();
+                // Leave only top n target paths with the best similarity
+                if (tpsWithPrefix.Count > MaxPossibleTargetPaths)
+                {
+                    tpsWithPrefix.RemoveRange(MaxPossibleTargetPaths, tpsWithPrefix.Count - MaxPossibleTargetPaths);
+                }
+                len = tpsWithPrefix.Count;
+
+                // Build the other collection in the same order as the ordered one
+                tps.Clear();
+                foreach (DimPath p in tpsWithPrefix)
+                {
+                    DimPath pp = new DimPath(p);
+                    pp.RemoveFirst(targetPath);
+                    tps.Add(pp);
+                }
+
+                matches.Add(Tuple.Create(sp, spWithPreifx, tps, tpsWithPrefix));
+                lengths[i] = len;
+            }
+
+            int[] offsets = new int[dimCount]; // Here we store the current state of choices for each dimensions (target path number)
+            for (int i = 0; i < dimCount; i++) offsets[i] = -1;
+
+            int top = -1; // The current level/top where we change the offset. Depth of recursion.
+            do ++top; while (top < dimCount && lengths[top] == 0);
+
+            int mappingsBuilt = 0; // The number of all hypothesis (mappings) built and checked
+
+            Func<int, bool, SetMapping> BuildSetMapping = delegate(int sourcePathCount, bool withPrefix)
+            {
+                SetMapping mapping;
+                if (withPrefix)
+                {
+                    mapping = new SetMapping(sourcePath.LesserSet, targetPath.LesserSet);
+                }
+                else
+                {
+                    mapping = new SetMapping(sourceSet, targetSet);
+                }
+
+                for (int i = 0; i < sourcePathCount; i++)
+                {
+                    if (offsets[i] < 0 || offsets[i] >= lengths[i]) continue;
+
+                    DimPath sp = matches[i].Item1;
+                    if (withPrefix) sp = matches[i].Item2;
+                    DimPath tp = matches[i].Item3[offsets[i]];
+                    if (withPrefix) tp = matches[i].Item4[offsets[i]];
+
+                    mapping.AddMatch(new PathMatch(sp, tp));
+                }
+
+                return mapping;
+            };
+
+            while (top >= 0)
+            {
+                if (top == dimCount) // Element is ready. Process new element.
+                {
+                    if (++mappingsBuilt > MaxMappingToBuild) break;
+
+                    // Check coverage. However many source paths have been assigned a non-null target path
+                    double coverage = 0;
+                    for (int i = 0; i < top; i++) 
+                        if (offsets[i] >= 0 && offsets[i] < lengths[i]) coverage += 1;
+
+                    coverage /= dimCount;
+
+                    if (coverage >= MinSourcePathsMatched)
+                    {
+                        // Evaluate the whole mapping (aggregated quality with coverage and other parameters)
+                        SetMapping currentMapping = BuildSetMapping(top, true);
+
+                        double quality = currentMapping.ComputeSimilarity();
+
+                        if (quality >= MinSetMappingQuality)
+                        {
+                            SetMapping mapping = BuildSetMapping(top, false);
+                            mapping.ComputeSimilarity();
+                            mappings.Add(mapping);
+                        }
+                    }
+
+                    top--;
+                    while (top >= 0 && (offsets[top] >= lengths[top] || lengths[top] == 0)) // Go up by skipping finished and empty dimensions
+                    { offsets[top--] = -1; } 
+                }
+                else // Find the next valid offset
+                {
+                    SetMapping currentMapping = BuildSetMapping(top, false);
+
+                    for (offsets[top]++; offsets[top] < lengths[top]; offsets[top]++)
+                    {
+                        DimPath sp = matches[top].Item1;
+                        DimPath tp = matches[top].Item3[offsets[top]]; // New target path
+
+                        bool canUse = true;
+
+                        // Check if it has not been already used as a target for previous paths
+                        for (int i = 0; i < top; i++)
+                        {
+                            if (offsets[i] < 0 || offsets[i] >= lengths[i]) continue;
+                            DimPath usedtp = matches[i].Item3[offsets[i]]; // Used target path (by i-th source path)
+                            if (usedtp == tp) { canUse = false; break; }
+                        }
+                        if (!canUse) continue;
+
+                        canUse = currentMapping.Compatible(new PathMatch(sp, tp));
+                        if (!canUse) continue;
+
+                        break; // Found
+                    }
+
+                    // Offset chosen. Go foreward by skipping empty dimensions.
+                    top++;
+                    while (top < dimCount && (offsets[top] >= lengths[top] || lengths[top] == 0)) // Go up (foreward) by skipping finished and empty dimensions
+                    { top++; }
+                }
+            }
+
+            mappings = mappings.OrderByDescending(m => m.Similarity).ToList();
+
+            Mappings.AddRange(mappings);
+            return mappings;
+        }
+
+        /// <summary>
         /// Import the specified set along with all its greater sets. 
         /// The set is not populated but is ready to be populated. 
         /// It is a convenience method simplifying a typical operation. 
@@ -343,7 +519,7 @@ namespace Com.Model
             SetMapping bestMapping = mapper.GetBestMapping(sourceSet, targetSchema);
 
             DimImport dimImport = new DimImport(bestMapping);
-            dimImport.Add();
+           dimImport.Add();
 
             return bestMapping.TargetSet;
         }
@@ -352,6 +528,12 @@ namespace Com.Model
         {
             Mappings = new List<SetMapping>();
             SetCreationThreshold = 1.0;
+        
+            MinPathSimilarity = 0.1;
+            MaxPossibleTargetPaths = 3;
+            MinSourcePathsMatched = 0.2;
+            MinSetMappingQuality = 0.0;
+            MaxMappingToBuild = 1000;
         }
     }
     
@@ -417,6 +599,30 @@ namespace Com.Model
         {
             if (path.LesserSet != TargetSet && !path.LesserSet.IsGreater(TargetSet)) return false;
             return true;
+        }
+
+        public bool Compatible(PathMatch match) // Determine if the specified match does not contradict to this mapping and can be added to it without removing existing matches
+        {
+            foreach (PathMatch m in Matches)
+            {
+                if (!m.Compatible(match)) return false;
+            }
+            return true; // Compatible and can be added
+        }
+
+        public double ComputeSimilarity()
+        {
+            double sum = 0.0;
+            foreach (PathMatch m in Matches)
+            {
+                m.Similarity = StringSimilarity.ComputePathSimilarity(m.SourcePath, m.TargetPath);
+                sum += m.Similarity;
+            }
+
+            if (Matches.Count > 0) Similarity = sum / Matches.Count;
+            else Similarity = 0.0;
+
+            return Similarity;
         }
 
         public bool AreMatched(PathMatch match) // Determine if both paths are matched (true if there exist the same or more specific match)
@@ -622,6 +828,11 @@ namespace Com.Model
             }
 
             return expr;
+        }
+
+        public override string ToString()
+        {
+            return String.Format("{0} -> {1}. Similarity={2}. Matches={3}", SourceSet.Name, TargetSet.Name, Similarity, Matches.Count);
         }
 
         public SetMapping(Set sourceSet, Set targetSet)
@@ -1431,7 +1642,7 @@ namespace Com.Model
 
     class StringSimilarity
     {
-        public static double computeNGramSimilarity(string source, string target, int gramlength)
+        public static double ComputeStringSimilarity(string source, string target, int gramlength)
         {
             if (source == null || target == null || source.Length == 0 || target.Length == 0) return 0;
 
@@ -1492,6 +1703,47 @@ namespace Com.Model
                 }
             }
             return grams;
+        }
+
+        public static double ComputePathSimilarity(DimPath source, DimPath target)
+        {
+            if (source == null || target == null || source.Length == 0 || target.Length == 0) return 0;
+
+            double rankFactor1 = 0.5;
+            double rankFactor2 = 0.5;
+
+            double sumDim = 0.0;
+            double sumSet = 0.0;
+            double w1 = 1.0;
+            for (int i = source.Path.Count - 1; i >= 0; i--)
+            {
+                string d1 = source.Path[i].Name;
+                string s1 = source.Path[i].GreaterSet.Name;
+
+                double w2 = 1.0;
+                for (int j = source.Path.Count - 1; j >= 0; j--)
+                {
+                    string d2 = target.Path[j].Name;
+                    string s2 = target.Path[i].GreaterSet.Name;
+
+                    double simDim = ComputeStringSimilarity(d1, d2, 3);
+                    simDim *= (w1 * w2);
+                    sumDim += simDim;
+
+                    double simSet = ComputeStringSimilarity(s1, s2, 3);
+                    simSet *= (w1 * w2);
+                    sumSet += simSet;
+
+                    w2 *= rankFactor1; // Decrease the weight
+                }
+
+                w1 *= rankFactor2; // Decrease the weight
+            }
+
+            sumDim /= (source.Path.Count * target.Path.Count);
+            sumSet /= (source.Path.Count * target.Path.Count);
+
+            return (sumDim + sumSet) / 2;
         }
 
     }

@@ -268,5 +268,62 @@ namespace Test
             // Find recommended mappings
             //
         }
+
+        [TestMethod]
+        public void MappingForTypeChangeTest()
+        {
+            // Create Oldedb top new set
+            SetTopOledb dbTop = new SetTopOledb("Northwind");
+            dbTop.ConnectionString = Northwind;
+            dbTop.Open();
+            dbTop.ImportSchema();
+
+            SetTop wsTop = new SetTop("My Mashup");
+
+            //
+            // Load test data
+            //
+            Set mainSet = Mapper.ImportSet(dbTop.FindSubset("Orders"), wsTop);
+            mainSet.Populate(); // Actually, we do not need it for mapping (yet, some mappings algorithms might use instances for better mapping)
+
+            // Dimension "Employee ID" will change its type from "Employees" to "Customers"
+            Set sourceSet = wsTop.FindSubset("Employees");
+            Dim sourceDim = mainSet.GetGreaterDim("Employee ID");
+            Set targetSet = wsTop.FindSubset("Customers");
+            Dim targetDim = targetSet.CreateDefaultLesserDimension(sourceDim.Name, mainSet); // TODO: set also other properties so that new dim is identical to the old one
+
+            //
+            // Initialize a mapping model 
+            //
+            Mapper mapper = new Mapper();
+
+            // So each Employee instance referenced by this dimension has to be converted to some Customer instance (or null if not found)
+            // Each source instance is identified by all primitive values and these values are used to compose a target tuple and find it.
+            // Interestingly, it is not necessary to use identities - we use any properties provided that source values uniquely determine some target instance.
+            mapper.MapDim(new DimPath(sourceDim), new DimPath(targetDim));
+
+            SetMapping mapping = mapper.Mappings[0];
+            DimPath sourcePath = new DimPath(sourceSet.GetGreaterDim("Last Name"));
+            DimPath targetPath = mapping.GetMatchForSource(sourcePath).TargetPath;
+            Assert.AreEqual(sourcePath.FirstSegment.Name, targetPath.FirstSegment.Name);
+
+            sourcePath = new DimPath(sourceSet.GetGreaterDim("ID"));
+            targetPath = mapping.GetMatchForSource(sourcePath).TargetPath;
+            Assert.AreEqual(sourcePath.FirstSegment.Name, targetPath.FirstSegment.Name);
+
+
+            // Shippers.ID.Integer -> Shippers.ID.Customers (instead of Integer we want to point to Customer and map to Customer ID)
+            mapper.Mappings.Clear();
+
+            mainSet = wsTop.FindSubset("Shippers");
+
+            sourceDim = mainSet.GetGreaterDim("ID");
+            sourceSet = sourceDim.GreaterSet;
+            targetSet = wsTop.FindSubset("Customers");
+            targetDim = targetSet.CreateDefaultLesserDimension(sourceDim.Name, mainSet); // TODO: set also other properties so that new dim is identical to the old one
+
+            mapper.MapDim(new DimPath(sourceDim), new DimPath(targetDim));
+
+        }
     }
 }
