@@ -287,8 +287,8 @@ namespace Test
             mainSet.Populate(); // Actually, we do not need it for mapping (yet, some mappings algorithms might use instances for better mapping)
 
             // Dimension "Employee ID" will change its type from "Employees" to "Customers"
-            Set sourceSet = wsTop.FindSubset("Employees");
             Dim sourceDim = mainSet.GetGreaterDim("Employee ID");
+            Set sourceSet = sourceDim.GreaterSet;
             Set targetSet = wsTop.FindSubset("Customers");
             Dim targetDim = targetSet.CreateDefaultLesserDimension(sourceDim.Name, mainSet); // TODO: set also other properties so that new dim is identical to the old one
 

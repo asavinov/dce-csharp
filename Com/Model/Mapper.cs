@@ -430,8 +430,9 @@ namespace Com.Model
                         // Evaluate the whole mapping (aggregated quality with coverage and other parameters)
                         SetMapping currentMapping = BuildSetMapping(top);
 
-                        double quality = currentMapping.ComputeSimilarity();
-                        if (quality >= MinSetMappingQuality)
+                        currentMapping.ComputeSimilarity();
+                        currentMapping.Similarity *= coverage;
+                        if (currentMapping.Similarity >= MinSetMappingQuality)
                         {
                             mappings.Add(currentMapping);
                         }
