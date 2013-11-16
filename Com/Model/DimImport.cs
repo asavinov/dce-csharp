@@ -50,6 +50,21 @@ namespace Com.Model
             if (LesserSet != null) LesserSet.ImportDims.Remove(this);
         }
 
+        public override void Replace(Dim dim)
+        {
+            int greaterSetIndex = GreaterSet.ExportDims.IndexOf(dim);
+            int lesserSetIndex = LesserSet.ImportDims.IndexOf(dim);
+            dim.Remove();
+            if (GreaterSet != null)
+            {
+                AddToDimensions(GreaterSet.ExportDims, greaterSetIndex);
+            }
+            if (LesserSet != null)
+            {
+                AddToDimensions(LesserSet.ImportDims, lesserSetIndex);
+            }
+        }
+
         #endregion
 
         #region Data methods

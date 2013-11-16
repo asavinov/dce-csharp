@@ -45,6 +45,14 @@ namespace Com.Model
             if (LesserSet != null) LesserSet.SuperDim = null;
         }
 
+        public override void Replace(Dim dim)
+        {
+            int greaterSetIndex = GreaterSet.SubDims.IndexOf(dim);
+            dim.Remove();
+            if (GreaterSet != null) AddToDimensions(GreaterSet.SubDims, greaterSetIndex);
+            if (LesserSet != null) if (!IsInLesserSet) LesserSet.SuperDim = this;
+        }
+
         #endregion
 
         public DimSuper(string name, Set lesserSet, Set greaterSet) 

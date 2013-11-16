@@ -579,9 +579,7 @@ namespace Test
 
             targetDim.ComputeValues(); // Evaluate tuple expression on the same set (not remove set), that is, move data from one dimension to the new dimension
 
-            int idx = sourceDim.LesserSet.GreaterDims.IndexOf(sourceDim);
-            sourceDim.Remove(); // Remove old dimension (detach) and attach new dimension (if not attached)
-            targetDim.Add(idx);
+            targetDim.Replace(sourceDim); // Remove old dimension (detach) and attach new dimension (if not attached)
 
             Assert.AreEqual(2, targetDim.GetValue(14));
             Assert.AreEqual(1, targetDim.GetValue(15));
@@ -613,9 +611,7 @@ namespace Test
 
             targetDim.ComputeValues(); // Evaluate tuple expression on the same set (not remove set), that is, move data from one dimension to the new dimension
 
-            idx = sourceDim.LesserSet.GreaterDims.IndexOf(sourceDim);
-            sourceDim.Remove(); // Remove old dimension (detach) and attach new dimension (if not attached)
-            targetDim.Add(idx);
+            targetDim.Replace(sourceDim); // Remove old dimension (detach) and attach new dimension (if not attached)
 
             Assert.AreEqual(8, targetDim.GetValue(0));
             Assert.AreEqual(2, targetDim.GetValue(1));

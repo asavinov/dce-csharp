@@ -190,6 +190,18 @@ namespace Com.Model
             if (LesserSet != null) LesserSet.GreaterDims.Remove(this);
         }
 
+        /// <summary>
+        /// Remove the specified dimension and add this dimension at the same position.
+        /// </summary>
+        public virtual void Replace(Dim dim)
+        {
+            int lesserSetIndex = GreaterSet.LesserDims.IndexOf(dim);
+            int greaterSetIndex = LesserSet.GreaterDims.IndexOf(dim);
+            dim.Remove();
+            if (GreaterSet != null) AddToDimensions(GreaterSet.LesserDims, lesserSetIndex);
+            if (LesserSet != null) AddToDimensions(LesserSet.GreaterDims, greaterSetIndex);
+        }
+
         #endregion
 
         #region Function methods (abstract)
@@ -227,7 +239,7 @@ namespace Com.Model
 
         public override string ToString()
         {
-            return String.Format("{0} From: {1}, To: {2}", Name, LesserSet.Name, GreaterSet.Name);
+            return String.Format("{0}: {1} -> {2}", Name, LesserSet.Name, GreaterSet.Name);
         }
 
         public override bool Equals(object obj)
