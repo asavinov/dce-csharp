@@ -22,20 +22,6 @@ namespace Com.Model
                 var dimList = GreaterSet.SubDims; // Only this line will be changed in this class extensions for other dimension types
                 return dimList.Contains(this);
             }
-            set
-            {
-                if (GreaterSet == null) return;
-                var dimList = GreaterSet.SubDims; // Only this line will be changed in this class extensions for other dimension types
-                if (value == true) // Include
-                {
-                    if (IsInGreaterSet) return;
-                    dimList.Add(this);
-                }
-                else // Exclude
-                {
-                    dimList.Remove(this);
-                }
-            }
         }
 
         public override bool IsInLesserSet
@@ -45,19 +31,18 @@ namespace Com.Model
                 if (LesserSet == null) return true;
                 return LesserSet.SuperDim == this;
             }
-            set
-            {
-                if (LesserSet == null) return;
-                if (value == true) // Include
-                {
-                    if (IsInLesserSet) return;
-                    LesserSet.SuperDim = this;
-                }
-                else // Exclude
-                {
-                    LesserSet.SuperDim = null;
-                }
-            }
+        }
+
+        public override void Add(int lesserSetIndex, int greaterSetIndex = -1)
+        {
+            if (GreaterSet != null) AddToDimensions(GreaterSet.SubDims, greaterSetIndex);
+            if (LesserSet != null) if (!IsInLesserSet) LesserSet.SuperDim = this;
+        }
+
+        public override void Remove()
+        {
+            if (GreaterSet != null) GreaterSet.SubDims.Remove(this);
+            if (LesserSet != null) LesserSet.SuperDim = null;
         }
 
         #endregion

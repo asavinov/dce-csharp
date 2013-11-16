@@ -120,20 +120,6 @@ namespace Com.Model
                 var dimList = GreaterSet.LesserDims; // Only this line will be changed in this class extensions for other dimension types
                 return dimList.Contains(this);
             }
-            set
-            {
-                if (GreaterSet == null) return;
-                var dimList = GreaterSet.LesserDims; // Only this line will be changed in this class extensions for other dimension types
-                if (value == true) // Include
-                {
-                    if (IsInGreaterSet) return;
-                    dimList.Add(this);
-                }
-                else // Exclude
-                {
-                    dimList.Remove(this);
-                }
-            }
         }
 
         /// <summary>
@@ -146,20 +132,6 @@ namespace Com.Model
                 if (LesserSet == null) return true;
                 var dimList = LesserSet.GreaterDims; // Only this line will be changed in this class extensions for other dimension types
                 return dimList.Contains(this);
-            }
-            set
-            {
-                if (LesserSet == null) return;
-                var dimList = LesserSet.GreaterDims; // Only this line will be changed in this class extensions for other dimension types
-                if (value == true) // Include
-                {
-                    if (IsInLesserSet) return;
-                    dimList.Add(this);
-                }
-                else // Exclude
-                {
-                    dimList.Remove(this);
-                }
             }
         }
 
@@ -175,21 +147,47 @@ namespace Com.Model
         }
 
         /// <summary>
-        /// Add (attach) to its lesser and greater sets if not added yet. Depends on the dimension type.
+        /// Add (attach) to its lesser and greater sets if not added yet. 
+        /// Dimension type is important because different dimensions are stored in different collections.
         /// </summary>
         public void Add()
         {
-            IsInLesserSet = true;
-            IsInGreaterSet = true;
+            Add(-1, -1);
+        }
+
+        /// <summary>
+        /// Add to its lesser and greater sets if not added yet. 
+        /// Dimension type is important because different dimensions are stored in different collections.
+        /// Ensure that the dimension has the specified indexes. Change indexes if the current position is different from the requested.
+        /// </summary>
+        public virtual void Add(int lesserSetIndex, int greaterSetIndex = -1)
+        {
+            if (GreaterSet != null) AddToDimensions(GreaterSet.LesserDims, greaterSetIndex);
+            if (LesserSet != null) AddToDimensions(LesserSet.GreaterDims, lesserSetIndex);
+        }
+        protected void AddToDimensions(IList<Dim> dimList, int index = -1) 
+        {
+            if (index < 0 || index > dimList.Count) index = dimList.Count;
+            int current_index = dimList.IndexOf(this);
+            if (current_index < 0) // Does not exist
+            {
+                dimList.Insert(index, this);
+            }
+            else if (index != current_index) // Exists but has different index
+            {
+                if (index == dimList.Count) index = dimList.Count - 1;
+                dimList.RemoveAt(current_index);
+                dimList.Insert(index, this);
+            }
         }
 
         /// <summary>
         /// Remove (detach) from its lesser and greater sets if it is there. Depends on the dimension type.
         /// </summary>
-        public void Remove()
+        public virtual void Remove()
         {
-            IsInLesserSet = false;
-            IsInGreaterSet = false;
+            if (GreaterSet != null) GreaterSet.LesserDims.Remove(this);
+            if (LesserSet != null) LesserSet.GreaterDims.Remove(this);
         }
 
         #endregion

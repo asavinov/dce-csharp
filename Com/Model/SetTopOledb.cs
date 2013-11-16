@@ -214,7 +214,7 @@ namespace Com.Model
                     string fkTargetTableName = (string)fk["PK_TABLE_NAME"]; // Name of the target set of the simple dimension (first segment of this complex path)
                     Set fkTargetSet = Root.FindSubset(fkTargetTableName);
                     fkSegment.GreaterSet = fkTargetSet;
-                    tableSet.AddGreaterDim(fkSegment); // Add this FK-dimension to the set (it is always new)
+                    fkSegment.Add(); // Add this FK-dimension to the set (it is always new)
 
                     if (path.Path.Count == 0)
                     {
@@ -267,7 +267,7 @@ namespace Com.Model
                     dim.LesserSet = path.LesserSet;
                     dim.GreaterSet = path.GreaterSet;
                     dim.IsIdentity = path.IsIdentity;
-                    dim.LesserSet.AddGreaterDim(dim);
+                    dim.Add();
 
                     path.Path.Add(dim); // The path will consist of a single segment
                 }

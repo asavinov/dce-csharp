@@ -1561,8 +1561,7 @@ namespace Com.Model
 
             if (Dim != null && Dim.LesserSet != Dim.GreaterSet)
             {
-                if (!Dim.IsInLesserSet) Dim.IsInLesserSet = true;
-                if (!Dim.IsInGreaterSet) Dim.IsInGreaterSet = true;
+                Dim.Add();
             }
 
             foreach (DimTree node in Children)

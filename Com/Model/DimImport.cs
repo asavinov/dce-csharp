@@ -26,20 +26,6 @@ namespace Com.Model
                 var dimList = GreaterSet.ExportDims; // Only this line will be changed in this class extensions for other dimension types
                 return dimList.Contains(this);
             }
-            set
-            {
-                if (GreaterSet == null) return;
-                var dimList = GreaterSet.ExportDims; // Only this line will be changed in this class extensions for other dimension types
-                if (value == true) // Include
-                {
-                    if (IsInGreaterSet) return;
-                    dimList.Add(this);
-                }
-                else // Exclude
-                {
-                    dimList.Remove(this);
-                }
-            }
         }
 
         public override bool IsInLesserSet
@@ -50,20 +36,18 @@ namespace Com.Model
                 var dimList = LesserSet.ImportDims; // Only this line will be changed in this class extensions for other dimension types
                 return dimList.Contains(this);
             }
-            set
-            {
-                if (LesserSet == null) return;
-                var dimList = LesserSet.ImportDims; // Only this line will be changed in this class extensions for other dimension types
-                if (value == true) // Include
-                {
-                    if (IsInLesserSet) return;
-                    dimList.Add(this);
-                }
-                else // Exclude
-                {
-                    dimList.Remove(this);
-                }
-            }
+        }
+
+        public override void Add(int lesserSetIndex, int greaterSetIndex = -1)
+        {
+            if (GreaterSet != null) AddToDimensions(GreaterSet.ExportDims, greaterSetIndex);
+            if (LesserSet != null) AddToDimensions(LesserSet.ImportDims, lesserSetIndex);
+        }
+
+        public override void Remove()
+        {
+            if (GreaterSet != null) GreaterSet.ExportDims.Remove(this);
+            if (LesserSet != null) LesserSet.ImportDims.Remove(this);
         }
 
         #endregion

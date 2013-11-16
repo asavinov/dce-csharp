@@ -73,12 +73,12 @@ namespace Com.Model
 
         #region Simple dimensions
 
-        public List<DimSuper> SuperDims { get; private set; }
-        public List<DimSuper> SubDims { get; private set; }
+        public List<Dim> SuperDims { get; private set; }
+        public List<Dim> SubDims { get; private set; }
         public List<Dim> GreaterDims { get; private set; }
         public List<Dim> LesserDims { get; private set; }
-        public List<DimImport> ExportDims { get; private set; }
-        public List<DimImport> ImportDims { get; private set; }
+        public List<Dim> ExportDims { get; private set; }
+        public List<Dim> ImportDims { get; private set; }
 
         #region Inclusion. Super.
 
@@ -87,7 +87,7 @@ namespace Com.Model
             get
             {
                 Debug.Assert(SuperDims != null && SuperDims.Count < 2, "Wrong use: more than one super dimension.");
-                return SuperDims.Count == 0 ? null : SuperDims[0];
+                return SuperDims.Count == 0 ? null : (DimSuper)SuperDims[0];
             }
             set
             {
@@ -97,7 +97,6 @@ namespace Com.Model
                     if (dim != null)
                     {
                         SuperDims.Remove(dim);
-                        dim.GreaterSet.SubDims.Remove(dim);
                     }
                     return;
                 }
@@ -116,7 +115,6 @@ namespace Com.Model
 
                 // Really add new dimension
                 SuperDims.Add(value);
-                value.GreaterSet.SubDims.Add(value);
             }
         }
 
@@ -182,7 +180,8 @@ namespace Com.Model
                 dim = new DimSuper("Super", subset, this);
             }
 
-            subset.SuperDim = dim;
+            dim.Add();
+
             return subset;
         }
 
@@ -335,31 +334,6 @@ namespace Com.Model
             }
         }
 */
-        public void AddGreaterDim(Dim dim)
-        {
-            Debug.Assert(dim.GreaterSet != null && dim.LesserSet != null, "Wrong use: dimension must specify a lesser and greater sets before it can be added to a set.");
-
-            // Remove or enusre that this dimension has not been added before
-            RemoveGreaterDim(dim);
-            dim.GreaterSet.LesserDims.Remove(dim);
-
-            // Add this dimension to both lesser and greater sets
-            dim.GreaterSet.LesserDims.Add(dim);
-            dim.LesserSet.GreaterDims.Add(dim);
-        }
-        public void RemoveGreaterDim(Dim dim)
-        {
-            if (dim.GreaterSet != null) dim.GreaterSet.LesserDims.Remove(dim);
-            if (dim.LesserSet != null) dim.LesserSet.GreaterDims.Remove(dim);
-        }
-        public void RemoveGreaterDim(string name)
-        {
-            Dim dim = GetGreaterDim(name);
-            if (dim != null)
-            {
-                RemoveGreaterDim(dim);
-            }
-        }
         public Dim GetGreaterDim(string name)
         {
             return GreaterDims.FirstOrDefault(d => d.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
@@ -1005,12 +979,12 @@ namespace Com.Model
 
             DimType = typeof(DimSet);
 
-            SuperDims = new List<DimSuper>();
-            SubDims = new List<DimSuper>();
+            SuperDims = new List<Dim>();
+            SubDims = new List<Dim>();
             GreaterDims = new List<Dim>();
             LesserDims = new List<Dim>();
-            ExportDims = new List<DimImport>();
-            ImportDims = new List<DimImport>();
+            ExportDims = new List<Dim>();
+            ImportDims = new List<Dim>();
 
             SuperPaths = new List<DimPath>();
             SubPaths = new List<DimPath>();

@@ -62,13 +62,13 @@ namespace Test
             top.Root.AddSubset(t1);
 
             Dim orders = new DimPrimitive<int>("orders", t1, setInteger);
-            t1.AddGreaterDim(orders);
+            orders.Add();
 
             Dim revenue = new DimPrimitive<double>("revenue", t1, setDouble);
-            t1.AddGreaterDim(revenue);
+            revenue.Add();
 
             Dim name = new DimPrimitive<string>("name", t1, setString);
-            t1.AddGreaterDim(name);
+            name.Add();
 
             //
             // Insert new data
@@ -219,8 +219,8 @@ namespace Test
             d2.IsIdentity = true;
 
             wsTop.Root.AddSubset(newSet);
-            newSet.AddGreaterDim(d1);
-            newSet.AddGreaterDim(d2);
+            d1.Add();
+            d2.Add();
 
             // Define filter
             Expression whereExpr = new Expression("EQUAL", Operation.EQUAL);
@@ -250,7 +250,7 @@ namespace Test
             d2.IsIdentity = true;
 
             ods.AddSubset(subset_ods); // TODO: Check that super-dim is identity
-            subset_ods.AddGreaterDim(d2);
+            d2.Add();
 
             // Define filter
 
@@ -307,7 +307,7 @@ namespace Test
             // Add derived dimension
             Dim derived1 = d3.GreaterSet.CreateDefaultLesserDimension("Customer Last Name", od);
             derived1.SelectExpression = expr;
-            od.AddGreaterDim(derived1);
+            derived1.Add();
 
             // Update
             derived1.ComputeValues();
@@ -357,7 +357,7 @@ namespace Test
             Expression aggreExpr = Expression.CreateAggregateExpression("SUM", deprExpr, projExpr);
             Dim derived1 = d4.GreaterSet.CreateDefaultLesserDimension("Average List Price", cust);
             derived1.SelectExpression = aggreExpr;
-            cust.AddGreaterDim(derived1);
+            derived1.Add();
 
             // Update
             derived1.ComputeValues();
@@ -408,7 +408,7 @@ namespace Test
             Expression aggreExpr = recoms.GetExpression();
             Dim derived1 = doubleSet.CreateDefaultLesserDimension("Average List Price", cust);
             derived1.SelectExpression = aggreExpr;
-            cust.AddGreaterDim(derived1);
+            derived1.Add();
 
             // Update
             derived1.ComputeValues();
@@ -468,7 +468,7 @@ namespace Test
             // Add derived dimension
             Dim derived1 = doubleSet.CreateDefaultLesserDimension("Derived Column", products);
             derived1.SelectExpression = arithmExpr;
-            products.AddGreaterDim(derived1);
+            derived1.Add();
 
             // Update
             derived1.ComputeValues();
@@ -484,7 +484,7 @@ namespace Test
             // Add derived dimension
             Dim derived2 = doubleSet.CreateDefaultLesserDimension("Derived Column 2", products);
             derived2.SelectExpression = plusExpr;
-            products.AddGreaterDim(derived2);
+            derived2.Add();
 
             // Update
             derived2.ComputeValues();
@@ -579,8 +579,9 @@ namespace Test
 
             targetDim.ComputeValues(); // Evaluate tuple expression on the same set (not remove set), that is, move data from one dimension to the new dimension
 
+            int idx = sourceDim.LesserSet.GreaterDims.IndexOf(sourceDim);
             sourceDim.Remove(); // Remove old dimension (detach) and attach new dimension (if not attached)
-            targetDim.Add();
+            targetDim.Add(idx);
 
             Assert.AreEqual(2, targetDim.GetValue(14));
             Assert.AreEqual(1, targetDim.GetValue(15));
@@ -612,8 +613,9 @@ namespace Test
 
             targetDim.ComputeValues(); // Evaluate tuple expression on the same set (not remove set), that is, move data from one dimension to the new dimension
 
+            idx = sourceDim.LesserSet.GreaterDims.IndexOf(sourceDim);
             sourceDim.Remove(); // Remove old dimension (detach) and attach new dimension (if not attached)
-            targetDim.Add();
+            targetDim.Add(idx);
 
             Assert.AreEqual(8, targetDim.GetValue(0));
             Assert.AreEqual(2, targetDim.GetValue(1));
