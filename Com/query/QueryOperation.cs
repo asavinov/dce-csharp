@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Com.query
+namespace Com.Query
 {
     /// <summary>
     /// One operation is a unit of execution of the engine.

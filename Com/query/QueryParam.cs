@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Com.query
+namespace Com.Query
 {
     /// <summary>
     /// - Parameters: a list of enabled/disabled values, e.g., {4, 1, 35}
