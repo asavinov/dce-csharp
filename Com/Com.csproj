@@ -65,8 +65,11 @@
     <Compile Include="Model\SetTopOledb.cs" />
     <Compile Include="Model\SetTop.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Query\ExprBaseVisitor.cs" />
+    <Compile Include="Query\ExpressionBuilder.cs" />
     <Compile Include="Query\ExprLexer.cs" />
     <Compile Include="Query\ExprParser.cs" />
+    <Compile Include="Query\ExprVisitor.cs" />
     <Compile Include="Query\Query.cs" />
     <Compile Include="Query\QueryOperation.cs" />
     <Compile Include="Query\QueryParam.cs" />

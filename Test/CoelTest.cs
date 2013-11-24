@@ -8,6 +8,7 @@ using Antlr4.Runtime.Misc;
 using Antlr4.Runtime.Tree;
 using DFA = Antlr4.Runtime.Dfa.DFA;
 
+using Com.Model;
 using Com.Query;
 
 namespace Test
@@ -23,8 +24,11 @@ namespace Test
             CommonTokenStream tokens = new CommonTokenStream(lexer);
             ExprParser parser = new ExprParser(tokens);
             IParseTree tree = parser.init_expr();
-            string t = tree.ToStringTree(parser);
-            Console.WriteLine(t);
+            string tree_str = tree.ToStringTree(parser);
+            Console.WriteLine(tree_str);
+
+            ExpressionBuilder builder = new ExpressionBuilder();
+            Expression ast = builder.Visit(tree);
         }
 
     }
