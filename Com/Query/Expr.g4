@@ -1,21 +1,45 @@
 grammar Expr;
 import Common;
 
-init_expr: expr ; // Artificial rule because a rule for expr does not produce a correct method
+init_expr: expression ; // Artificial rule because a rule for expr does not produce a correct method
 
-expr
-  : expr (op=MUL|op=DIV) expr     # MulDiv // Labels are for visitor pattern - otherwise only one method per rule is generated
-  | expr (op=ADD|op=SUB) expr     # AddSub
-  | INT                     # Int
-  | ID                      # Id
-  | '(' expr ')'            # Parens
+expression
+  : expression (op='.'|op='->'|op='<-') access # AccessPath // Access operator (dot, projection, deprojection etc.)
+  | expression (op='*'|op='/') expression      # MulDiv
+  | expression (op='+'|op='-') expression      # AddSub
+  | primary                                    # PrimaryRule
   ;
 
+primary
+  : literal                                    # LiteralRule // Primitive value
+  | access                                     # AccessRule // Start without prefix (variable or function)
+  | '(' expression ')'                         # Parens
+  ;
+  
+literal // Primitive value
+  : DECIMAL
+  | INT
+  | STRING
+  | 'null'
+  ;
 
-// Sample antlr4 grammars: https://github.com/antlr/grammars-v4  
+access
+  : (ID | DELIMITED_ID) arguments?
+  ;
+
+arguments
+    :   '(' (expression (',' expression)*)? ')'
+    ;
+
+//qualifiedName
+//    :   Identifier ('.' Identifier)*
+//    ;
+
+// Sample antlr4 grammars: https://github.com/antlr/grammars-v4
 
 /*
 TODO:
+  
 - we refer to dimensions/functions/fields in this set, other sets, or external sets (in other data source) -> define a rule for a function reference/call
   - it can be a simple identifier like field, say, MyTableColumn, Price
   - It can be a multi-word identifier in delimiters like "List Price". See how MS does it in SQL or else. 

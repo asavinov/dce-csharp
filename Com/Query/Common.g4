@@ -6,20 +6,27 @@ DIV : '/' ;
 ADD : '+' ;
 SUB : '-' ;
 
-ID : ALPHA+ ; // match identifiers -> TODO: We need to define our identification rules: sets, dimensions/functions, data source, ... 
+ID : LETTER (LETTER|DIGIT)* ;
+DELIMITED_ID : '[' (LETTER|DIGIT|' ')* ']' ;
 
-INT : DIGIT+ ; // match integers -> TODO: we need to define double and other literals including strings. We might distinguish between primitive values and complex values (tuples)
-
-NEWLINE:'\r'? '\n' ; // return newlines to parser (is end-statement signal)
-
-COMMENT
-  : '/*' .*? '*/' -> skip // channel(HIDDEN) // match anything between /* and */
-  ;
-WS 
-  : [ \t\r\u000C\n]+ -> skip // channel(HIDDEN) // toss out whitespace
-  ;
+INT : DIGIT+ ;
+DECIMAL : DIGIT+ '.' DIGIT* | '.' DIGIT+;
+STRING : '"' ('\\"'|.)*? '"' ;
 
 fragment
 ALPHA : [a-zA-Z] ;
 fragment
+LETTER : [a-zA-Z\u0080-\u00FF_] ;
+fragment
 DIGIT : [0-9] ;
+
+COMMENT
+  : '/*' .*? '*/' -> skip // channel(HIDDEN) // match anything between /* and */
+  ;
+
+WS 
+  : [ \t\r\n]+ -> skip // channel(HIDDEN) // toss out whitespace
+  ;
+
+NEWLINE:'\r'? '\n' ; // return newlines to parser (is end-statement signal)
+
