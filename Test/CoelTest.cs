@@ -61,8 +61,15 @@ namespace Test
 
             ast = builder.Visit(tree);
 
-            // TODO: Asserts
-            // TODO: Find assert for internal built-in exceptions during parsing in Context object?
+            Assert.AreEqual(ast.Operation, Operation.MINUS);
+
+            Assert.AreEqual(ast.Operands[0].Operation, Operation.PLUS);
+            Assert.AreEqual(ast.Operands[0].Operands[0].Name, "aaa");
+            Assert.AreEqual(ast.Operands[0].Operands[0].Operands[0].Name, "p1");
+            Assert.AreEqual(ast.Operands[0].Operands[0].Operands[1].Name, "p2");
+            Assert.AreEqual(ast.Operands[0].Operands[1].Operation, Operation.TIMES);
+            Assert.AreEqual(ast.Operands[0].Operands[1].Operands[0].Name, "bbb");
+            Assert.AreEqual(ast.Operands[0].Operands[1].Operands[1].Name, "bbb BBB");
 
             //
             // Add complex access (dot, projection, de-projection paths with priority/scopes)
@@ -76,7 +83,41 @@ namespace Test
 
             ast = builder.Visit(tree);
 
-            // PrimaryRule - AccessRule - Access (id, Arguments[5])
+            Assert.AreEqual(ast.Operation, Operation.PLUS);
+
+            Assert.AreEqual(ast.Operands[0].Operation, Operation.DEPROJECTION);
+            Assert.AreEqual(ast.Operands[0].Name, "bbb BBB");
+            Assert.AreEqual(ast.Operands[0].Input.Operation, Operation.DOT);
+            Assert.AreEqual(ast.Operands[0].Input.Name, "bbb");
+            Assert.AreEqual(ast.Operands[0].Input.Input.Name, "aaa");
+
+            Assert.AreEqual(ast.Operands[1].Operation, Operation.PROJECTION);
+            Assert.AreEqual(ast.Operands[1].Name, "eee");
+            Assert.AreEqual(ast.Operands[1].Input.Operation, Operation.PROJECTION);
+            Assert.AreEqual(ast.Operands[1].Input.Name, "ddd");
+            Assert.AreEqual(ast.Operands[1].Input.Input.Name, "ccc CCC");
+
+            Assert.AreEqual(ast.Operands[1].Input.Input.Operands[0].Name, "p2");
+            Assert.AreEqual(ast.Operands[1].Input.Input.Operands[0].Input.Name, "p1");
+            Assert.AreEqual(ast.Operands[1].Input.Input.Operands[0].Input.Input.Name, "this");
+
+            Assert.AreEqual(ast.Operands[1].Input.Operands[0].Name, "p3");
+            Assert.AreEqual(ast.Operands[1].Input.Operands[0].Input.Name, "p2");
+            Assert.AreEqual(ast.Operands[1].Input.Operands[0].Input.Input.Name, "p1");
+
+            //
+            // Test expressions with errors. 
+            //
+            string errorStr = "aaa(p1,p2) bbb()";
+
+            lexer = new ExprLexer(new AntlrInputStream(errorStr));
+            parser = new ExprParser(new CommonTokenStream(lexer));
+            tree = parser.init_expr();
+            tree_str = tree.ToStringTree(parser);
+
+            var exception = ((ParserRuleContext)tree.GetChild(0)).exception;
+            Assert.AreEqual(exception.GetType().Name, "InputMismatchException");
+            Assert.AreEqual(exception.OffendingToken.Text, "bbb");
         }
 
     }

@@ -29,4 +29,3 @@ WS
   ;
 
 NEWLINE:'\r'? '\n' ; // return newlines to parser (is end-statement signal)
-

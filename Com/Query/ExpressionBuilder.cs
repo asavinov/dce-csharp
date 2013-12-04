@@ -24,10 +24,8 @@ namespace Com.Query
 
         public override Expression VisitAccessPath(ExprParser.AccessPathContext context) 
         {
-            var aaa = context.expression(); // Prefix, input
-            var bbb = context.access(); // Suffix, Dimension, returned from access or build new?
-
-            Expression e = new Expression("");
+            Expression e = Visit(context.access()); // It is the function itself
+            e.Input = Visit(context.expression()); // Prefix, input the function is applied to
 
             if (context.op.Text == ".")
             {
@@ -42,7 +40,7 @@ namespace Com.Query
                 e.Operation = Operation.PROJECTION;
             }
 
-            return VisitChildren(context); 
+            return e; 
         }
 
         public override Expression VisitMulDiv(ExprParser.MulDivContext context)
@@ -120,30 +118,7 @@ namespace Com.Query
 
         public override Expression VisitAccessRule(ExprParser.AccessRuleContext context) 
         {
-            // It is the very first method in access path without input (this)
-
-            string name = null;
-            if (context.access().ID() != null)
-            {
-                name = context.access().ID().GetText();
-            }
-            else if (context.access().DELIMITED_ID() != null) 
-            {
-                name = context.access().DELIMITED_ID().GetText();
-                name = name.Substring(1, name.Length - 2); // Remove delimiters
-            }
-
-            Expression e = new Expression(name, Operation.DOT);
-
-            // Find all arguments and store them as operands of the expression
-            int argCount = context.access().arguments() != null ? context.access().arguments().expression().Count() : 0;
-            for (int i = 0; i < argCount; i++)
-            {
-                Expression argExpr = Visit(context.access().arguments().expression(i));
-                e.AddOperand(argExpr);
-            }
-
-            return e; 
+            return Visit(context.access());
         }
 
         public override Expression VisitParens(ExprParser.ParensContext context)
@@ -154,6 +129,34 @@ namespace Com.Query
         //
         // Access
         //
+
+        public override Expression VisitAccess(ExprParser.AccessContext context)
+        {
+            // It is one call with no context and no relation to previous or next calls
+
+            string name = null;
+            if (context.ID() != null)
+            {
+                name = context.ID().GetText();
+            }
+            else if (context.DELIMITED_ID() != null)
+            {
+                name = context.DELIMITED_ID().GetText();
+                name = name.Substring(1, name.Length - 2); // Remove delimiters
+            }
+
+            Expression e = new Expression(name, Operation.DOT); // Actually we do not know the operation
+
+            // Find all arguments and store them as operands of the expression
+            int argCount = context.arguments() != null ? context.arguments().expression().Count() : 0;
+            for (int i = 0; i < argCount; i++)
+            {
+                Expression argExpr = Visit(context.arguments().expression(i));
+                e.AddOperand(argExpr);
+            }
+
+            return e;
+        }
 
     }
 }
