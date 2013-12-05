@@ -224,7 +224,7 @@ namespace Test
             d2.Add();
 
             // Define filter
-            Expression whereExpr = new Expression("EQUAL", Operation.EQUAL);
+            Expression whereExpr = new Expression("EQUAL", Operation.EQ);
 
             Expression d1_Expr = Expression.CreateProjectExpression(new List<Dim> { d1, ods.GetGreaterDim("Status ID") }, Operation.DOT);
             Expression d2_Expr = Expression.CreateProjectExpression(new List<Dim> { d2, os.GetGreaterDim("Status ID") }, Operation.DOT);
@@ -260,7 +260,7 @@ namespace Test
             Assert.AreEqual(12, subset_ods.Length);
 
             // Define filter
-            whereExpr = new Expression("EQUAL", Operation.EQUAL);
+            whereExpr = new Expression("EQUAL", Operation.EQ);
 
             d1_Expr = Expression.CreateProjectExpression(new List<Dim> { subset_ods.SuperDim, ods.GetGreaterDim("Status ID") }, Operation.DOT);
             d2_Expr = Expression.CreateProjectExpression(new List<Dim> { d2, os.GetGreaterDim("Status ID") }, Operation.DOT);
@@ -457,10 +457,10 @@ namespace Test
             Expression d2_Expr = Expression.CreateProjectExpression(new List<Dim> { d2 }, Operation.DOT);
             Expression d3_Expr = Expression.CreateProjectExpression(new List<Dim> { d3 }, Operation.DOT);
 
-            Expression arithmExpr = new Expression("MINUS", Operation.MINUS);
+            Expression arithmExpr = new Expression("MINUS", Operation.SUB);
             arithmExpr.Input = d1_Expr;
 
-            Expression plusExpr = new Expression("PLUS", Operation.PLUS);
+            Expression plusExpr = new Expression("PLUS", Operation.ADD);
             plusExpr.Input = d2_Expr;
             plusExpr.AddOperand(d3_Expr);
 
@@ -478,7 +478,7 @@ namespace Test
             // 
             // Another (simpler) test
             //
-            plusExpr = new Expression("PLUS", Operation.PLUS);
+            plusExpr = new Expression("PLUS", Operation.ADD);
             plusExpr.Input = d1_Expr;
             plusExpr.AddOperand(d1_Expr);
 
@@ -527,7 +527,7 @@ namespace Test
             Expression d2_Expr = Expression.CreateProjectExpression(new List<Dim> { subProducts.SuperDim, d2 }, Operation.DOT);
             Expression d3_Expr = Expression.CreateProjectExpression(new List<Dim> { subProducts.SuperDim, d3 }, Operation.DOT);
 
-            Expression logicalExpr = new Expression("GREATER", Operation.GREATER);
+            Expression logicalExpr = new Expression("GREATER", Operation.GRE);
 
             logicalExpr.Input = d1_Expr;
             logicalExpr.AddOperand(d3_Expr);

@@ -6,6 +6,17 @@ DIV : '/' ;
 ADD : '+' ;
 SUB : '-' ;
 
+LEQ : '<=' ;
+GEQ : '>=' ;
+GRE : '>' ;
+LES : '<' ;
+
+EQ : '==' ;
+NEQ : '!=' ;
+
+AND : '&&' ;
+OR : '||' ;
+
 ID : LETTER (LETTER|DIGIT)* ;
 DELIMITED_ID : '[' (LETTER|DIGIT|' ')* ']' ;
 

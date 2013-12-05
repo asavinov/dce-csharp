@@ -547,10 +547,10 @@ namespace Com.Model
 
                     break;
                 }
-                case Operation.PLUS:
-                case Operation.MINUS:
-                case Operation.TIMES:
-                case Operation.DIVIDE:
+                case Operation.ADD:
+                case Operation.SUB:
+                case Operation.MUL:
+                case Operation.DIV:
                 {
                     Debug.Assert(Input != null, "Wrong use: Arithmetic operations must have at least one expression in Input.");
 
@@ -563,19 +563,19 @@ namespace Com.Model
                     {
                         child.Evaluate();
 
-                        if (Operation == Operation.PLUS) res += Convert.ToDouble(child.Output);
-                        else if (Operation == Operation.MINUS) res -= Convert.ToDouble(child.Output);
-                        else if (Operation == Operation.TIMES) res *= Convert.ToDouble(child.Output);
-                        else if (Operation == Operation.DIVIDE) res /= Convert.ToDouble(child.Output);
+                        if (Operation == Operation.ADD) res += Convert.ToDouble(child.Output);
+                        else if (Operation == Operation.SUB) res -= Convert.ToDouble(child.Output);
+                        else if (Operation == Operation.MUL) res *= Convert.ToDouble(child.Output);
+                        else if (Operation == Operation.DIV) res /= Convert.ToDouble(child.Output);
                     }
 
                     Output = res;
 
                     break;
                 }
-                case Operation.LESS:
-                case Operation.GREATER:
-                case Operation.EQUAL:
+                case Operation.LES:
+                case Operation.GRE:
+                case Operation.EQ:
                 {
                     Debug.Assert(Input != null, "Wrong use: Logical operations must have at least one expression in Input.");
                     Debug.Assert(Operands.Count == 1, "Wrong use: Comparison expression must have a second an operand.");
@@ -586,15 +586,15 @@ namespace Com.Model
                     op1.Evaluate();
                     op2.Evaluate();
 
-                    if (Operation == Operation.LESS)
+                    if (Operation == Operation.LES)
                     {
                         Output = (Convert.ToDouble(op1.Output) < Convert.ToDouble(op2.Output));
                     }
-                    else if (Operation == Operation.GREATER)
+                    else if (Operation == Operation.GRE)
                     {
                         Output = (Convert.ToDouble(op1.Output) > Convert.ToDouble(op2.Output));
                     }
-                    else if (Operation == Operation.EQUAL)
+                    else if (Operation == Operation.EQ)
                     {
                         Output = object.Equals(Convert.ToDouble(op1.Output), Convert.ToDouble(op2.Output));
                     }
@@ -775,17 +775,23 @@ namespace Com.Model
         PROCEDURE, // Standard procedure which does not use 'this' (input) object and depends only on parameters
 
         // Arithmetics
-        PLUS,
-        MINUS,
-        TIMES,
-        DIVIDE,
+        MUL,
+        DIV,
+        ADD,
+        SUB,
 
         // Logic
-        LESS,
-        GREATER,
-        EQUAL,
+        LEQ,
+        GEQ,
+        GRE,
+        LES,
+
+        EQ,
+        NEQ,
+
         AND,
         OR,
+
         NEGATE,
     }
 	

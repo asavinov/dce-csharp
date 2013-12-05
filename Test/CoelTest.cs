@@ -39,15 +39,32 @@ namespace Test
 
             ast = builder.Visit(tree);
 
-            Assert.AreEqual(ast.Operation, Operation.MINUS);
-            Assert.AreEqual(ast.Operands[0].Operation, Operation.PLUS);
-            Assert.AreEqual(ast.Operands[1].Operation, Operation.DIVIDE);
-            Assert.AreEqual(ast.Operands[0].Operands[1].Operation, Operation.TIMES);
+            Assert.AreEqual(ast.Operation, Operation.SUB);
+            Assert.AreEqual(ast.Operands[0].Operation, Operation.ADD);
+            Assert.AreEqual(ast.Operands[1].Operation, Operation.DIV);
+            Assert.AreEqual(ast.Operands[0].Operands[1].Operation, Operation.MUL);
 
             Assert.AreEqual(ast.Operands[1].Operands[0].Output, "three three");
             Assert.AreEqual(ast.Operands[1].Operands[1].Output, 33.3);
             Assert.AreEqual(ast.Operands[0].Operands[1].Operands[1].Output, 2.2);
             Assert.AreEqual(ast.Operands[0].Operands[0].Output, 1);
+
+            //
+            // Test logical operations of comparision and equaliy
+            //
+            string logicalStr = "1 <= 2 * 2.2 || (\"three three\" / 33.3) < 44 && 10 > 20";
+
+            lexer = new ExprLexer(new AntlrInputStream(logicalStr));
+            parser = new ExprParser(new CommonTokenStream(lexer));
+            tree = parser.init_expr();
+            tree_str = tree.ToStringTree(parser);
+
+            ast = builder.Visit(tree);
+
+            Assert.AreEqual(ast.Operation, Operation.OR);
+            Assert.AreEqual(ast.Operands[0].Operation, Operation.LEQ);
+            Assert.AreEqual(ast.Operands[1].Operation, Operation.AND);
+            Assert.AreEqual(ast.Operands[1].Operands[1].Operation, Operation.GRE);
 
             //
             // Add simple access (function, variables, fields etc.)
@@ -61,13 +78,13 @@ namespace Test
 
             ast = builder.Visit(tree);
 
-            Assert.AreEqual(ast.Operation, Operation.MINUS);
+            Assert.AreEqual(ast.Operation, Operation.SUB);
 
-            Assert.AreEqual(ast.Operands[0].Operation, Operation.PLUS);
+            Assert.AreEqual(ast.Operands[0].Operation, Operation.ADD);
             Assert.AreEqual(ast.Operands[0].Operands[0].Name, "aaa");
             Assert.AreEqual(ast.Operands[0].Operands[0].Operands[0].Name, "p1");
             Assert.AreEqual(ast.Operands[0].Operands[0].Operands[1].Name, "p2");
-            Assert.AreEqual(ast.Operands[0].Operands[1].Operation, Operation.TIMES);
+            Assert.AreEqual(ast.Operands[0].Operands[1].Operation, Operation.MUL);
             Assert.AreEqual(ast.Operands[0].Operands[1].Operands[0].Name, "bbb");
             Assert.AreEqual(ast.Operands[0].Operands[1].Operands[1].Name, "bbb BBB");
 
@@ -83,7 +100,7 @@ namespace Test
 
             ast = builder.Visit(tree);
 
-            Assert.AreEqual(ast.Operation, Operation.PLUS);
+            Assert.AreEqual(ast.Operation, Operation.ADD);
 
             Assert.AreEqual(ast.Operands[0].Operation, Operation.DEPROJECTION);
             Assert.AreEqual(ast.Operands[0].Name, "bbb BBB");

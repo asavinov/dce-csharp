@@ -47,42 +47,116 @@ namespace Com.Query
         {
             Expression left = Visit(context.expression(0));
             Expression right = Visit(context.expression(1));
-            Expression e = null;
 
-            if (context.op.Type == ExprParser.MUL)
-            {
-                e = new Expression(context.op.Text, Operation.TIMES);
-            }
-            else if (context.op.Type == ExprParser.DIV)
-            {
-                e = new Expression(context.op.Text, Operation.DIVIDE);
-            }
-
+            Expression e = new Expression(context.op.Text);
             e.AddOperand(left);
             e.AddOperand(right);
 
-            return e;
+            if (context.op.Type == ExprParser.MUL)
+            {
+                e.Operation = Operation.MUL;
+            }
+            else if (context.op.Type == ExprParser.DIV)
+            {
+                e.Operation = Operation.DIV;
+            }
+
+            return e; 
         }
 
         public override Expression VisitAddSub(ExprParser.AddSubContext context) 
         {
             Expression left = Visit(context.expression(0));
             Expression right = Visit(context.expression(1));
-            Expression e = null;
+
+            Expression e = new Expression(context.op.Text);
+            e.AddOperand(left);
+            e.AddOperand(right);
 
             if (context.op.Type == ExprParser.ADD)
             {
-                e = new Expression(context.op.Text, Operation.PLUS);
+                e.Operation = Operation.ADD;
             }
             else if (context.op.Type == ExprParser.SUB)
             {
-                e = new Expression(context.op.Text, Operation.MINUS);
+                e.Operation = Operation.SUB;
             }
 
+            return e; 
+        }
+
+        public override Expression VisitCompare(ExprParser.CompareContext context) 
+        {
+            Expression left = Visit(context.expression(0));
+            Expression right = Visit(context.expression(1));
+
+            Expression e = new Expression(context.op.Text);
+            e.AddOperand(left);
+            e.AddOperand(right);
+
+            if (context.op.Type == ExprParser.LEQ)
+            {
+                e.Operation = Operation.LEQ;
+            }
+            else if (context.op.Type == ExprParser.GEQ)
+            {
+                e.Operation = Operation.GEQ;
+            }
+            else if (context.op.Type == ExprParser.GRE)
+            {
+                e.Operation = Operation.GRE;
+            }
+            else if (context.op.Type == ExprParser.LES)
+            {
+                e.Operation = Operation.LES;
+            }
+
+            return e;
+        }
+
+        public override Expression VisitEqual(ExprParser.EqualContext context) 
+        {
+            Expression left = Visit(context.expression(0));
+            Expression right = Visit(context.expression(1));
+
+            Expression e = new Expression(context.op.Text);
+            e.AddOperand(left);
+            e.AddOperand(right);
+
+            if (context.op.Type == ExprParser.EQ)
+            {
+                e.Operation = Operation.EQ;
+            }
+            else if (context.op.Type == ExprParser.NEQ)
+            {
+                e.Operation = Operation.NEQ;
+            }
+
+            return e;
+        }
+
+        public override Expression VisitAnd(ExprParser.AndContext context) 
+        {
+            Expression left = Visit(context.expression(0));
+            Expression right = Visit(context.expression(1));
+
+            Expression e = new Expression(context.op.Text, Operation.AND);
             e.AddOperand(left);
             e.AddOperand(right);
 
             return e; 
+        }
+
+        public override Expression VisitOr(ExprParser.OrContext context) 
+        {
+            Expression left = Visit(context.expression(0));
+            Expression right = Visit(context.expression(1));
+
+            Expression e = new Expression(context.op.Text, Operation.OR);
+            e.AddOperand(left);
+            e.AddOperand(right);
+
+            return e;
         }
 
         //
