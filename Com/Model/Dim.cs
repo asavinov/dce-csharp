@@ -206,6 +206,8 @@ namespace Com.Model
 
         #region Function methods (abstract)
 
+        public object Value { get; set; } // Static value (of the variable) which does not depend on the instance
+
         public virtual bool IsNull(Offset offset) { return false; } // Check if it is null
 
         public virtual object GetValue(Offset offset) { return null; } // Returned what is really stored without checking if it is null (it should return NullValue if it is really null). Use IsNull to check if the value is null.

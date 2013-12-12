@@ -825,7 +825,7 @@ namespace Com.Model
             foreach (PathMatch match in Matches)
             {
                 // Add Input of function as a variable the values of which (output) can be assigned for evaluation of the function during export/import
-                Expression varExpr = new Expression("source", Operation.VARIABLE, sourceDim == null ? match.SourceSet : sourceDim.LesserSet);
+                Expression varExpr = new Expression("source", Operation.PARAMETER, sourceDim == null ? match.SourceSet : sourceDim.LesserSet);
 
                 Expression funcExpr = null;
                 DimPath srcPath = match.SourceSet.GetGreaterPath(match.SourcePath.Path); // First, we try to find a direct path/function 

@@ -36,7 +36,7 @@ namespace Com.Model
             {
                 // Check validity of assignment
                 Debug.Assert(!(output != null && Operation == Operation.PRIMITIVE && !output.GetType().IsPrimitive), "Wrong use: constant value type has to correspond to operation type.");
-                Debug.Assert(!(output != null && Operation == Operation.VARIABLE && !(output is Offset || output is Offset[] || output is DataRow)), "Wrong use: wrong type for a variable.");
+                Debug.Assert(!(output != null && Operation == Operation.PARAMETER && !(output is Offset || output is Offset[] || output is DataRow)), "Wrong use: wrong type for a variable.");
 
                 Output = output;
             }
@@ -385,7 +385,7 @@ namespace Com.Model
                     }
                     break;
                 }
-                case Operation.VARIABLE:
+                case Operation.PARAMETER:
                 {
                     // Evaluating a variable means retrieving its current value and storing in the output
                     // Output is expected to store a value like Tuple, Offset or data row
@@ -539,7 +539,7 @@ namespace Com.Model
                         break;
                     }
 
-                    measureExpr.SetOutput(Operation.VARIABLE, groupExpr.Output); // Assign output of the group expression to the variable
+                    measureExpr.SetOutput(Operation.PARAMETER, groupExpr.Output); // Assign output of the group expression to the variable
 
                     measureExpr.Evaluate(); // Compute the measure group
 
@@ -642,7 +642,7 @@ namespace Com.Model
                 else // First segments in the path is a leaf of the expression tree - will be evaluated first
                 {
                     // The leaf expression produces initial value(s) to be projected and by default it is a variable
-                    if (leafExpr == null) leafExpr = new Expression("this", Operation.VARIABLE, lesserSet);
+                    if (leafExpr == null) leafExpr = new Expression("this", Operation.PARAMETER, lesserSet);
                     expr.Input = leafExpr;
                 }
 
@@ -687,7 +687,7 @@ namespace Com.Model
                 }
                 else
                 {
-                    expr.Input = new Expression("this", Operation.VARIABLE, lesserSet); // The deproject path starts from some variable which stores the initial value(s) to be deprojected
+                    expr.Input = new Expression("this", Operation.PARAMETER, lesserSet); // The deproject path starts from some variable which stores the initial value(s) to be deprojected
                 }
 
                 previousExpr = expr;
@@ -701,7 +701,7 @@ namespace Com.Model
             // Debug.Assert(group.OutputSet == measure.Input.OutputSet, "Wrong use: Measure is a property of group elements and has to start where groups end.");
 
             // Modify measure: accept many values (not single value by default)
-            List<Expression> nodes = measure.GetOperands(Operation.VARIABLE);
+            List<Expression> nodes = measure.GetOperands(Operation.PARAMETER);
             Debug.Assert(nodes != null && nodes.Count == 1, "Wrong use: Input nodes (variable) in measure expression must be 1.");
             nodes[0].OutputIsSetValued = true;
 
@@ -750,6 +750,17 @@ namespace Com.Model
 
     }
 
+    public class ExpressionFunction : Expression
+    {
+        public List<Expression> Statements { get; set; }
+
+        public ExpressionFunction()
+            : base()
+        {
+            Statements = new List<Expression>();
+        }
+    }
+
     public enum Operation
     {
         // Patterns or collections of operations (used for querying or imposing constraints)
@@ -764,8 +775,11 @@ namespace Com.Model
         COLLECTION, // It is a set of operands like { [Integer age=21, weight=55], [Integer 1, 3] }. The members are stored in operands.
         LOOP, // It is a loop producing a new set like (Set0 super, Set1 s1, Set2 s2 | predicate | return )
 
-        // Variables, references
-        VARIABLE, // Local variable with its name in Name. We should maintain a list of all variables with their values (because they can be used in multiple locations). Evaluating a variable will move this value to Output of this node.
+        // Statements
+        RETURN,
+
+        FUNCTION, // Function definition
+        PARAMETER, // Local variable/parameter/field with its name in Name. It stores a reference to a dimension (static or dynamic) with real values and hence it is always typed by the schema. We should maintain a list of all variables with their values (because they can be used in multiple locations). Evaluating a variable will move this value to Output of this node.
 
         // Functions
         DOT, // Apply the function to an instance. The function is Name and belongs to the Input set. Note that it is applied only in special contexts like measure expression where we have the illusion that it is applied to a set. 
@@ -773,6 +787,10 @@ namespace Com.Model
         DEPROJECTION, // Return all inputs of the function that have the specified outputs. The function is Name and belongs to the Output set.
         AGGREGATION, // Aggregation function like SUM or AVG. It is applied to a group of elements in Input and aggregates the values returned by the measure expression. 
         PROCEDURE, // Standard procedure which does not use 'this' (input) object and depends only on parameters
+
+        // Unary
+        NEG,
+        NOT,
 
         // Arithmetics
         MUL,
@@ -791,8 +809,6 @@ namespace Com.Model
 
         AND,
         OR,
-
-        NEGATE,
     }
 	
     public enum OperationType

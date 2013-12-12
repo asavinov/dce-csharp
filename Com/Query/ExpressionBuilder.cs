@@ -13,9 +13,71 @@ namespace Com.Query
     /// </summary>
     public class ExpressionBuilder : ExprBaseVisitor<Expression>
     {
-        public override Expression VisitInit_expr(ExprParser.Init_exprContext context)
+
+        public override Expression VisitExpr(ExprParser.ExprContext context)
         {
             return Visit(context.expression()); // Skip this rule
+        }
+
+        //
+        // Function
+        //
+
+        public override Expression VisitFunction(ExprParser.FunctionContext context) 
+        {
+            string type = GetType(context.type()); // Return type
+            string name = GetName(context.name()); // Function name
+
+            ExpressionFunction e = new ExpressionFunction();
+            e.Name = name;
+            e.Operation = Operation.FUNCTION;
+            e.OutputSetName = type;
+
+            // Find all parameter declarations and store them as operands of the expression
+            int paramCount = context.parameter().Count();
+            for (int i = 0; i < paramCount; i++)
+            {
+                Expression paramExpr = Visit(context.parameter(i));
+                if (i == 0) e.Input = paramExpr;
+                else e.AddOperand(paramExpr);
+            }
+
+            // Find all statements and store them in the expression
+            int stmtCount = context.statement().Count();
+            for (int i = 0; i < stmtCount; i++)
+            {
+                Expression stmtExpr = Visit(context.statement(i));
+                if (stmtExpr == null) continue;
+
+                e.Statements.Add(stmtExpr);
+            }
+
+            return e; 
+        }
+
+        public override Expression VisitParameter(ExprParser.ParameterContext context) 
+        {
+            string type = GetType(context.type()); // Parameter type
+            string name = GetName(context.name()); // Parameter name
+
+            Expression e = new Expression(name, Operation.PARAMETER);
+            e.OutputSetName = type;
+
+            return e; 
+        }
+
+        public override Expression VisitStatement(ExprParser.StatementContext context) 
+        {
+            if (context.GetChild(0).GetText() == "return")
+            {
+                Expression e = new Expression();
+                e.Name = "return";
+                e.Operation = Operation.RETURN;
+                e.Input = Visit(context.expression());
+                return e;
+            }
+
+            return null;
         }
 
         //
@@ -208,16 +270,7 @@ namespace Com.Query
         {
             // It is one call with no context and no relation to previous or next calls
 
-            string name = null;
-            if (context.ID() != null)
-            {
-                name = context.ID().GetText();
-            }
-            else if (context.DELIMITED_ID() != null)
-            {
-                name = context.DELIMITED_ID().GetText();
-                name = name.Substring(1, name.Length - 2); // Remove delimiters
-            }
+            string name = GetName(context.name());
 
             Expression e = new Expression(name, Operation.DOT); // Actually we do not know the operation
 
@@ -230,6 +283,26 @@ namespace Com.Query
             }
 
             return e;
+        }
+
+        protected string GetType(ExprParser.TypeContext context)
+        {
+            string name = context.GetText();
+            if (context.DELIMITED_ID() != null)
+            {
+                name = name.Substring(1, name.Length - 2); // Remove delimiters
+            }
+            return name;
+        }
+
+        protected string GetName(ExprParser.NameContext context)
+        {
+            string name = context.GetText();
+            if (context.DELIMITED_ID() != null)
+            {
+                name = name.Substring(1, name.Length - 2); // Remove delimiters
+            }
+            return name;
         }
 
     }

@@ -1,8 +1,22 @@
 grammar Expr;
 import Common;
 
-init_expr: expression ; // Artificial rule because a rule for expr does not produce a correct method
+expr: expression ; // Artificial rule because expression rule does not produce a correct method
 
+function
+  : type name '(' parameter (',' parameter)* ')' '{' statement+ '}'
+  ;
+
+parameter // Declaration of parameter, variable, fields and other typed storage elements
+  : type name
+  ;
+
+statement
+  : 'return' expression ';'
+  | ';'
+  | expression ';'
+  ;
+  
 expression
   : expression (op='.'|op='->'|op='<-') access # AccessPath // Access operator (dot, projection, deprojection etc.)
   | expression (op='*'|op='/') expression      # MulDiv
@@ -20,6 +34,14 @@ primary
   | '(' expression ')'                         # Parens
   ;
   
+access
+  : name arguments?
+  ;
+
+arguments
+    :   '(' (expression (',' expression)*)? ')'
+    ;
+
 literal // Primitive value
   : DECIMAL
   | INT
@@ -27,13 +49,9 @@ literal // Primitive value
   | 'null'
   ;
 
-access
-  : (ID | DELIMITED_ID) arguments?
-  ;
+type : (ID | DELIMITED_ID) ;
 
-arguments
-    :   '(' (expression (',' expression)*)? ')'
-    ;
+name : (ID | DELIMITED_ID) ;
 
 //qualifiedName
 //    :   Identifier ('.' Identifier)*

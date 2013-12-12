@@ -34,7 +34,7 @@ namespace Test
 
             lexer = new ExprLexer(new AntlrInputStream(literalStr));
             parser = new ExprParser(new CommonTokenStream(lexer));
-            tree = parser.init_expr();
+            tree = parser.expr();
             tree_str = tree.ToStringTree(parser);
 
             ast = builder.Visit(tree);
@@ -56,7 +56,7 @@ namespace Test
 
             lexer = new ExprLexer(new AntlrInputStream(logicalStr));
             parser = new ExprParser(new CommonTokenStream(lexer));
-            tree = parser.init_expr();
+            tree = parser.expr();
             tree_str = tree.ToStringTree(parser);
 
             ast = builder.Visit(tree);
@@ -73,7 +73,7 @@ namespace Test
 
             lexer = new ExprLexer(new AntlrInputStream(accessStr));
             parser = new ExprParser(new CommonTokenStream(lexer));
-            tree = parser.init_expr();
+            tree = parser.expr();
             tree_str = tree.ToStringTree(parser);
 
             ast = builder.Visit(tree);
@@ -95,7 +95,7 @@ namespace Test
 
             lexer = new ExprLexer(new AntlrInputStream(accessPathStr));
             parser = new ExprParser(new CommonTokenStream(lexer));
-            tree = parser.init_expr();
+            tree = parser.expr();
             tree_str = tree.ToStringTree(parser);
 
             ast = builder.Visit(tree);
@@ -129,12 +129,49 @@ namespace Test
 
             lexer = new ExprLexer(new AntlrInputStream(errorStr));
             parser = new ExprParser(new CommonTokenStream(lexer));
-            tree = parser.init_expr();
+            tree = parser.expr();
             tree_str = tree.ToStringTree(parser);
 
             var exception = ((ParserRuleContext)tree.GetChild(0)).exception;
             Assert.AreEqual(exception.GetType().Name, "InputMismatchException");
             Assert.AreEqual(exception.OffendingToken.Text, "bbb");
+        }
+
+        [TestMethod]
+        public void FunctionExpressionTest()
+        {
+            ExprLexer lexer;
+            ExprParser parser;
+            IParseTree tree;
+            string tree_str;
+            Expression ast;
+
+            ExpressionBuilder builder = new ExpressionBuilder();
+
+            //
+            // Test function expression parsing
+            //
+            string functionStr = "Double [My Function]([My Set] this, [Integer] [param 2]) { return a + this.b(); } ";
+
+            lexer = new ExprLexer(new AntlrInputStream(functionStr));
+            parser = new ExprParser(new CommonTokenStream(lexer));
+            tree = parser.function();
+            tree_str = tree.ToStringTree(parser);
+
+            ast = builder.Visit(tree);
+
+            Assert.AreEqual(ast.Name, "My Function");
+            Assert.AreEqual(ast.OutputSetName, "Double");
+
+            Assert.AreEqual(ast.Input.Name, "this");
+            Assert.AreEqual(ast.Input.OutputSetName, "My Set");
+
+            Assert.AreEqual(ast.Operands[0].Name, "param 2");
+            Assert.AreEqual(ast.Operands[0].OutputSetName, "Integer");
+
+            Assert.AreEqual(((ExpressionFunction)ast).Statements.Count, 1);
+            Assert.AreEqual(((ExpressionFunction)ast).Statements[0].Operation, Operation.RETURN);
+            Assert.AreEqual(((ExpressionFunction)ast).Statements[0].Input.Operation, Operation.ADD);
         }
 
     }

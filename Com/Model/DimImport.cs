@@ -117,7 +117,7 @@ namespace Com.Model
                 foreach (DataRow row in dataTable.Rows) // A row is <colName, primValue> collection
                 {
                     importExpression.SetOutput(Operation.ALL, null);
-                    importExpression.SetOutput(Operation.VARIABLE, row); // Set the input variable 'source'
+                    importExpression.SetOutput(Operation.PARAMETER, row); // Set the input variable 'source'
                     importExpression.Evaluate(); // Evaluate the expression tree by computing primtive tuple values
 //                    if (LesserSet.Find(importExpression)) continue; // Check if this and nested tuples exist already
 //                    if (!LesserSet.CanAppend(importExpression)) continue; // Check if it can be formally added
@@ -131,7 +131,7 @@ namespace Com.Model
             {
                 for (Offset offset = 0; offset < remoteSet.Length; offset++)
                 {
-                    importExpression.SetOutput(Operation.VARIABLE, offset); // Assign value of 'this' variable
+                    importExpression.SetOutput(Operation.PARAMETER, offset); // Assign value of 'this' variable
                     importExpression.Evaluate();
 //                    LesserSet.Find(importExpression);
 //                    if (!LesserSet.CanAppend(importExpression)) continue;

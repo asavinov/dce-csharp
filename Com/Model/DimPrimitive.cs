@@ -155,7 +155,7 @@ namespace Com.Model
             {
                 for (Offset offset = 0; offset < LesserSet.Length; offset++) // Compute the output function value for each input value (offset)
                 {
-                    SelectExpression.SetOutput(Operation.VARIABLE, offset); // Initialize 'this'
+                    SelectExpression.SetOutput(Operation.PARAMETER, offset); // Initialize 'this'
                     SelectExpression.Evaluate(); // Compute
                     object val = null;
                     if (SelectExpression.Operation == Operation.TUPLE)

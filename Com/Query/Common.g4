@@ -1,6 +1,9 @@
 lexer grammar CommonLexerRules;
 
 // Assign token names. They can be then used as constant in the program
+//NEG : '-' ;
+NOT : '!' ;
+
 MUL : '*' ;
 DIV : '/' ;
 ADD : '+' ;
