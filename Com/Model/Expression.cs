@@ -249,6 +249,7 @@ namespace Com.Model
 
             return res;
         }
+        public bool IsLeaf { get { return Input == null && Operands.Count == 0; } }
 
         public List<Expression> GetNodePath() // Return a node list with nodes starting from the root (if it has a non-null dimension) and ending with this node
         {
@@ -367,7 +368,7 @@ namespace Com.Model
         /// <summary>
         /// Compute output of the expression by applying it to a row of the data table. 
         /// </summary>
-        public object Evaluate()
+        public virtual object Evaluate()
         {
 			switch(Operation)
 			{
@@ -383,12 +384,6 @@ namespace Com.Model
                         Operands[0].Evaluate();
                         Output = Operands[0].Output;
                     }
-                    break;
-                }
-                case Operation.PARAMETER:
-                {
-                    // Evaluating a variable means retrieving its current value and storing in the output
-                    // Output is expected to store a value like Tuple, Offset or data row
                     break;
                 }
                 case Operation.TUPLE:
@@ -428,6 +423,22 @@ namespace Com.Model
                         else Output = offset;
                     }
 
+                    break;
+                }
+                case Operation.RETURN:
+                {
+                    if (Input != null)
+                    {
+                        Input.Evaluate();
+                        Output = Input.Output;
+                        ExpressionScope funcExpr = (ExpressionScope) Root;
+                        funcExpr.Output = Output;
+                    }
+                    break;
+                }
+                case Operation.PARAMETER:
+                {
+                    // Parameters are not evaluated - they are declarations. Their value (output) is set from outside.
                     break;
                 }
                 case Operation.DOT:
@@ -547,10 +558,10 @@ namespace Com.Model
 
                     break;
                 }
-                case Operation.ADD:
-                case Operation.SUB:
                 case Operation.MUL:
                 case Operation.DIV:
+                case Operation.ADD:
+                case Operation.SUB:
                 {
                     Debug.Assert(Input != null, "Wrong use: Arithmetic operations must have at least one expression in Input.");
 
@@ -563,19 +574,22 @@ namespace Com.Model
                     {
                         child.Evaluate();
 
-                        if (Operation == Operation.ADD) res += Convert.ToDouble(child.Output);
-                        else if (Operation == Operation.SUB) res -= Convert.ToDouble(child.Output);
-                        else if (Operation == Operation.MUL) res *= Convert.ToDouble(child.Output);
+                        if (Operation == Operation.MUL) res *= Convert.ToDouble(child.Output);
                         else if (Operation == Operation.DIV) res /= Convert.ToDouble(child.Output);
+                        else if (Operation == Operation.ADD) res += Convert.ToDouble(child.Output);
+                        else if (Operation == Operation.SUB) res -= Convert.ToDouble(child.Output);
                     }
 
                     Output = res;
 
                     break;
                 }
-                case Operation.LES:
+                case Operation.LEQ:
+                case Operation.GEQ:
                 case Operation.GRE:
+                case Operation.LES:
                 case Operation.EQ:
+                case Operation.NEQ:
                 {
                     Debug.Assert(Input != null, "Wrong use: Logical operations must have at least one expression in Input.");
                     Debug.Assert(Operands.Count == 1, "Wrong use: Comparison expression must have a second an operand.");
@@ -586,17 +600,29 @@ namespace Com.Model
                     op1.Evaluate();
                     op2.Evaluate();
 
-                    if (Operation == Operation.LES)
+                    if (Operation == Operation.LEQ)
                     {
-                        Output = (Convert.ToDouble(op1.Output) < Convert.ToDouble(op2.Output));
+                        Output = (Convert.ToDouble(op1.Output) <= Convert.ToDouble(op2.Output));
+                    }
+                    else if (Operation == Operation.GEQ)
+                    {
+                        Output = (Convert.ToDouble(op1.Output) >= Convert.ToDouble(op2.Output));
                     }
                     else if (Operation == Operation.GRE)
                     {
                         Output = (Convert.ToDouble(op1.Output) > Convert.ToDouble(op2.Output));
                     }
+                    else if (Operation == Operation.LES)
+                    {
+                        Output = (Convert.ToDouble(op1.Output) < Convert.ToDouble(op2.Output));
+                    }
                     else if (Operation == Operation.EQ)
                     {
                         Output = object.Equals(Convert.ToDouble(op1.Output), Convert.ToDouble(op2.Output));
+                    }
+                    else if (Operation == Operation.NEQ)
+                    {
+                        Output = !object.Equals(Convert.ToDouble(op1.Output), Convert.ToDouble(op2.Output));
                     }
 
                     break;
@@ -605,6 +631,160 @@ namespace Com.Model
 
             return Output;
 		}
+
+        /// <summary>
+        /// Resolve names of accessors and types (all uses) to object references representing storage elements (dimensions or variables). 
+        /// These dimensions and variables can be either in the local context (arguments and variables) or in the permanent context (schema). 
+        /// Validate the expression tree by checking that all used symboles exist (have been declared) and can be resolved. 
+        /// </summary>
+        public virtual void Resolve()
+        {
+            switch (Operation)
+            {
+                case Operation.DOT:
+                case Operation.PROJECTION:
+                case Operation.DEPROJECTION:
+                    {
+                        if (IsLeaf) // Any leaf must refer to the elements in the local context
+                        {
+                            // Find local context as function definition expression. We assume that any expression is within some function definition.
+                            ExpressionScope funcDef = ((ExpressionScope)Root).RootScope;
+
+                            Debug.Assert(funcDef.Operation == Operation.FUNCTION, "Wrong use: The root scope must be function definition.");
+
+                            // Try to bind/resolve this expression name to a argument in the local context
+                            Expression param = funcDef.Input;
+                            if (Name != param.Name) { param = null; }
+
+                            if (param == null)
+                            {
+                                foreach (Expression argExpr in funcDef.Operands)
+                                {
+                                    if (Name == argExpr.Name) { param = argExpr; break; }
+                                }
+                            }
+
+                            if (param != null) // Found. Resolve to local context.
+                            {
+                                Dimension = param.Dimension;
+                                OutputSet = param.OutputSet;
+                                OutputSetName = param.OutputSetName;
+                                OutputIsSetValued = param.OutputIsSetValued;
+                            }
+                            else // Cannot resolve to local context. Assume that 'this' is missing and add 'this' child accessor expression explicitly
+                            {
+                                Expression thisExpr = new Expression("this", Operation.DOT);
+                                this.Input = thisExpr;
+
+                                // Now this node is not a leaf. And we have to resolve it by using the child (but we can also fail)
+                                Resolve(); // Recursive call (will be evaluted in non-leaf branch)
+                            }
+                        }
+                        else // Resolve using 'this' context provided by the Input child expression
+                        {
+                            if (Input != null) Input.Resolve();
+                            foreach (Expression child in Operands)
+                            {
+                                child.Resolve();
+                            }
+
+                            Debug.Assert(Input != null, "Wrong use: Resovling access operation cannot be done without Input expression.");
+
+                            // Either set name (OutputSetName) or dimension name (Name) can be missing. 
+                            // If one name is missing then the second is used as the primary one and determines the second. If both are present then they must be consistent. 
+
+                            if (OutputSetName != null) // Resolve explicitly specified set name (type)
+                            {
+                                OutputSet = Input.OutputSet.Top.FindSubset(OutputSetName);
+                            }
+
+                            if (Operation == Operation.DEPROJECTION)
+                            {
+                                if (Name != null)
+                                {
+                                    List<Dim> lesserDims = Input.OutputSet.GetLesserDims(Name);
+                                    Dimension = lesserDims[0];
+                                }
+
+                                if (OutputSet == null)
+                                {
+                                    OutputSet = Dimension.LesserSet;
+                                }
+                                if (Dimension == null)
+                                {
+                                    throw new NotImplementedException("Find a dimension between two sets.");
+                                }
+
+                                OutputSetName = OutputSet.Name;
+                                OutputIsSetValued = true;
+                            }
+                            else
+                            {
+                                if (Name != null)
+                                {
+                                    Dimension = Input.OutputSet.GetGreaterDim(Name);
+                                }
+
+                                Debug.Assert(OutputSet != null || Dimension != null, "Wrong use: Either dimension name or set name must be specified.");
+
+                                // Now we will resolve a missing element: either set or dimension
+                                if (OutputSet == null)
+                                {
+                                    OutputSet = Dimension.GreaterSet;
+                                }
+                                if (Dimension == null)
+                                {
+                                    throw new NotImplementedException("Find a dimension between two sets.");
+                                }
+
+                                Debug.Assert(OutputSet != null && Dimension != null, "Wrong use: Both dimension and set must be resolved.");
+
+                                OutputSetName = OutputSet.Name;
+                                OutputIsSetValued = Input.OutputIsSetValued;
+                            }
+
+                        }
+                        break;
+                    }
+                case Operation.MUL:
+                case Operation.DIV:
+                case Operation.ADD:
+                case Operation.SUB:
+                    {
+                        List<Set> operandTypes = new List<Set>();
+
+                        if (Input != null) 
+                        { 
+                            Input.Resolve(); 
+                            operandTypes.Add(Input.OutputSet); 
+                        }
+                        foreach (Expression child in Operands)
+                        {
+                            child.Resolve();
+                            operandTypes.Add(child.OutputSet);
+                        }
+
+                        OutputSet = TypeConversion(Operation, operandTypes);
+                        if (OutputSet != null) OutputSetName = OutputSet.Name;
+                        OutputIsSetValued = false;
+
+                        break;
+                    }
+            }
+        }
+
+        protected Set TypeConversion(Operation op, List<Set> operandTypes)
+        {
+            if (operandTypes.Count == 0) return null;
+
+            Set type = operandTypes[0];
+            foreach (Set t in operandTypes)
+            {
+                if (type.Name == "Integer" && t.Name == "Double") type = t;
+            }
+
+            return type;
+        }
 
         public static Expression CreateProjectExpression(List<Dim> greaterDims, Operation op, Expression leafExpr = null)
         {
@@ -750,11 +930,114 @@ namespace Com.Model
 
     }
 
-    public class ExpressionFunction : Expression
+    public class ExpressionScope : Expression
     {
         public List<Expression> Statements { get; set; }
+        public ExpressionScope ParentScope { get; set; }
 
-        public ExpressionFunction()
+        public void AddStatement(ExpressionScope stmt) 
+        {
+            if (stmt.ParentScope != null) stmt.ParentScope.RemoveStatement(stmt);
+
+            Statements.Add(stmt);
+            stmt.ParentScope = this;
+        }
+
+        public void RemoveStatement(ExpressionScope stmt)
+        {
+            Statements.Remove(stmt);
+            stmt.ParentScope = null;
+        }
+
+        public ExpressionScope RootScope
+        {
+            get 
+            {
+                ExpressionScope root = this;
+                while (root.ParentScope != null)
+                {
+                    root = root.ParentScope;
+                }
+
+                return root;
+            }
+        }
+
+        public override object Evaluate()
+        {
+            foreach (Expression stmt in Statements)
+            {
+                stmt.Evaluate();
+            }
+
+            return Output;
+        }
+
+        public override void Resolve()
+        {
+            switch (Operation)
+            {
+                case Operation.RETURN:
+                    {
+                        if (Input != null) Input.Resolve();
+                        OutputSet = Input.OutputSet;
+                        OutputSetName = Input.OutputSetName;
+                        OutputIsSetValued = Input.OutputIsSetValued;
+                        break;
+                    }
+                case Operation.FUNCTION:
+                    {
+                        foreach (Expression stmt in Statements)
+                        {
+                            stmt.Resolve();
+                        }
+                        break;
+                    }
+            }
+        }
+
+        /// <summary>
+        /// Resolve names in the function definition into schema objects.
+        /// </summary>
+        public void ResolveFunction(SetTop top)
+        {
+            Input.OutputSet = top.FindSubset(Input.OutputSetName); // this type (domain set of the function)
+            if (Input.Dimension != null)
+            {
+                Input.OutputIsSetValued = false;
+                if (!Input.OutputIsSetValued)
+                {
+                    Input.Dimension = new Dim(Input.Name, Input.OutputSet, Input.OutputSet); // Variable
+                }
+                else
+                {
+                    throw new NotImplementedException("Multi-valued (function-valued) arguments and types are not implemented.");
+                }
+            }
+
+            foreach (Expression child in Operands)
+            {
+                child.OutputSet = top.FindSubset(child.OutputSetName); // Resolve argument types
+                if (child.Dimension != null)
+                {
+                    child.OutputIsSetValued = false;
+                    if (!child.OutputIsSetValued)
+                    {
+                        child.Dimension = new Dim(child.Name, child.OutputSet, child.OutputSet); // Variable
+                    }
+                    else
+                    {
+                        throw new NotImplementedException("Multi-valued (function-valued) arguments and types are not implemented.");
+                    }
+                }
+            }
+
+            OutputSet = top.FindSubset(OutputSetName); // Return value type (range set of the function)
+            OutputIsSetValued = false;
+            Dimension = Input.OutputSet.GetGreaterDim(Name); // Resolve function name into dimension object
+        }
+
+        public ExpressionScope()
             : base()
         {
             Statements = new List<Expression>();
@@ -773,10 +1056,10 @@ namespace Com.Model
         // Complex values. Structural composition
         TUPLE, // It is a combination of operands like [thing=[Integer age=21, color="red"], size=3] Names of operands identify tuple members. The output set specifies the set this tuple is from. 
         COLLECTION, // It is a set of operands like { [Integer age=21, weight=55], [Integer 1, 3] }. The members are stored in operands.
-        LOOP, // It is a loop producing a new set like (Set0 super, Set1 s1, Set2 s2 | predicate | return )
 
         // Statements
         RETURN,
+        LOOP, // Product. It is a loop producing a new set like (Set0 super, Set1 s1, Set2 s2 | predicate | return )
 
         FUNCTION, // Function definition
         PARAMETER, // Local variable/parameter/field with its name in Name. It stores a reference to a dimension (static or dynamic) with real values and hence it is always typed by the schema. We should maintain a list of all variables with their values (because they can be used in multiple locations). Evaluating a variable will move this value to Output of this node.
@@ -786,7 +1069,6 @@ namespace Com.Model
         PROJECTION, // Apply the function to a set but return only non-repeating outputs. The function is Name and belongs to the Input set. 
         DEPROJECTION, // Return all inputs of the function that have the specified outputs. The function is Name and belongs to the Output set.
         AGGREGATION, // Aggregation function like SUM or AVG. It is applied to a group of elements in Input and aggregates the values returned by the measure expression. 
-        PROCEDURE, // Standard procedure which does not use 'this' (input) object and depends only on parameters
 
         // Unary
         NEG,

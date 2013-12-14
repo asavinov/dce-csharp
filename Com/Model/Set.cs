@@ -371,6 +371,10 @@ namespace Com.Model
         {
             return LesserDims.Select(x => x.LesserSet).ToList();
         }
+        public List<Dim> GetLesserDims(string name)
+        {
+            return LesserDims.Where(d => d.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase)).ToList();
+        }
 
         #endregion
 

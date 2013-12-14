@@ -28,7 +28,7 @@ namespace Com.Query
             string type = GetType(context.type()); // Return type
             string name = GetName(context.name()); // Function name
 
-            ExpressionFunction e = new ExpressionFunction();
+            ExpressionScope e = new ExpressionScope();
             e.Name = name;
             e.Operation = Operation.FUNCTION;
             e.OutputSetName = type;
@@ -46,10 +46,10 @@ namespace Com.Query
             int stmtCount = context.statement().Count();
             for (int i = 0; i < stmtCount; i++)
             {
-                Expression stmtExpr = Visit(context.statement(i));
+                ExpressionScope stmtExpr = (ExpressionScope) Visit(context.statement(i));
                 if (stmtExpr == null) continue;
 
-                e.Statements.Add(stmtExpr);
+                e.AddStatement(stmtExpr);
             }
 
             return e; 
@@ -70,7 +70,7 @@ namespace Com.Query
         {
             if (context.GetChild(0).GetText() == "return")
             {
-                Expression e = new Expression();
+                ExpressionScope e = new ExpressionScope();
                 e.Name = "return";
                 e.Operation = Operation.RETURN;
                 e.Input = Visit(context.expression());

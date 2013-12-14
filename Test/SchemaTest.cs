@@ -47,7 +47,7 @@ namespace Test
             Assert.IsTrue(c11 == top.FindSubset("c11"));
             Assert.IsTrue(c12 == top.FindSubset("c12"));
 
-            // TODO: Delete leaf and intermediate element
+            // TODO: Delete leaf and intermediate sets
         }
 
         [TestMethod]

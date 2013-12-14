@@ -16,8 +16,7 @@ namespace Test
     [TestClass]
     public class CoelTest
     {
-        [TestMethod]
-        public void ExpressionBuilderTest()
+        protected Expression BuildExpr(string str)
         {
             ExprLexer lexer;
             ExprParser parser;
@@ -27,17 +26,60 @@ namespace Test
 
             ExpressionBuilder builder = new ExpressionBuilder();
 
-            //
-            // Test all primitive values (literals) within an arithmetic expressions
-            //
-            string literalStr = "1 + 2 * 2.2 - (\"three three\" / 33.3)";
-
-            lexer = new ExprLexer(new AntlrInputStream(literalStr));
+            lexer = new ExprLexer(new AntlrInputStream(str));
             parser = new ExprParser(new CommonTokenStream(lexer));
             tree = parser.expr();
             tree_str = tree.ToStringTree(parser);
 
             ast = builder.Visit(tree);
+
+            return ast;
+        }
+
+        protected Expression BuildFunction(string str)
+        {
+            ExprLexer lexer;
+            ExprParser parser;
+            IParseTree tree;
+            string tree_str;
+            Expression ast;
+
+            ExpressionBuilder builder = new ExpressionBuilder();
+
+            lexer = new ExprLexer(new AntlrInputStream(str));
+            parser = new ExprParser(new CommonTokenStream(lexer));
+            tree = parser.function();
+            tree_str = tree.ToStringTree(parser);
+
+            ast = builder.Visit(tree);
+
+            return ast;
+        }
+
+        [TestMethod]
+        public void ExpressionBuilderTest()
+        {
+            Expression ast;
+
+            //
+            // Test expressions with errors. 
+            //
+            string errorStr = "aaa(p1,p2) bbb()";
+
+            ExprLexer lexer = new ExprLexer(new AntlrInputStream(errorStr));
+            ExprParser parser = new ExprParser(new CommonTokenStream(lexer));
+            IParseTree tree = parser.expr();
+
+            var exception = ((ParserRuleContext)tree.GetChild(0)).exception;
+            Assert.AreEqual(exception.GetType().Name, "InputMismatchException");
+            Assert.AreEqual(exception.OffendingToken.Text, "bbb");
+
+            //
+            // Test all primitive values (literals) within an arithmetic expressions
+            //
+            string literalStr = "1 + 2 * 2.2 - (\"three three\" / 33.3)";
+
+            ast = BuildExpr(literalStr);
 
             Assert.AreEqual(ast.Operation, Operation.SUB);
             Assert.AreEqual(ast.Operands[0].Operation, Operation.ADD);
@@ -54,12 +96,7 @@ namespace Test
             //
             string logicalStr = "1 <= 2 * 2.2 || (\"three three\" / 33.3) < 44 && 10 > 20";
 
-            lexer = new ExprLexer(new AntlrInputStream(logicalStr));
-            parser = new ExprParser(new CommonTokenStream(lexer));
-            tree = parser.expr();
-            tree_str = tree.ToStringTree(parser);
-
-            ast = builder.Visit(tree);
+            ast = BuildExpr(logicalStr);
 
             Assert.AreEqual(ast.Operation, Operation.OR);
             Assert.AreEqual(ast.Operands[0].Operation, Operation.LEQ);
@@ -71,12 +108,7 @@ namespace Test
             //
             string accessStr = "aaa(p1,p2) + bbb() * [bbb BBB] - ([ccc CCC](p1*p2) / ddd(p1()+p2(), p3()))";
 
-            lexer = new ExprLexer(new AntlrInputStream(accessStr));
-            parser = new ExprParser(new CommonTokenStream(lexer));
-            tree = parser.expr();
-            tree_str = tree.ToStringTree(parser);
-
-            ast = builder.Visit(tree);
+            ast = BuildExpr(accessStr);
 
             Assert.AreEqual(ast.Operation, Operation.SUB);
 
@@ -93,12 +125,7 @@ namespace Test
             //
             string accessPathStr = "aaa(p1,p2) . bbb() <- [bbb BBB] + [ccc CCC](this.p1.p2()) -> ddd(p1()<-p2()->p3()) -> eee";
 
-            lexer = new ExprLexer(new AntlrInputStream(accessPathStr));
-            parser = new ExprParser(new CommonTokenStream(lexer));
-            tree = parser.expr();
-            tree_str = tree.ToStringTree(parser);
-
-            ast = builder.Visit(tree);
+            ast = BuildExpr(accessPathStr);
 
             Assert.AreEqual(ast.Operation, Operation.ADD);
 
@@ -121,44 +148,19 @@ namespace Test
             Assert.AreEqual(ast.Operands[1].Input.Operands[0].Name, "p3");
             Assert.AreEqual(ast.Operands[1].Input.Operands[0].Input.Name, "p2");
             Assert.AreEqual(ast.Operands[1].Input.Operands[0].Input.Input.Name, "p1");
-
-            //
-            // Test expressions with errors. 
-            //
-            string errorStr = "aaa(p1,p2) bbb()";
-
-            lexer = new ExprLexer(new AntlrInputStream(errorStr));
-            parser = new ExprParser(new CommonTokenStream(lexer));
-            tree = parser.expr();
-            tree_str = tree.ToStringTree(parser);
-
-            var exception = ((ParserRuleContext)tree.GetChild(0)).exception;
-            Assert.AreEqual(exception.GetType().Name, "InputMismatchException");
-            Assert.AreEqual(exception.OffendingToken.Text, "bbb");
         }
 
         [TestMethod]
         public void FunctionExpressionTest()
         {
-            ExprLexer lexer;
-            ExprParser parser;
-            IParseTree tree;
-            string tree_str;
             Expression ast;
-
-            ExpressionBuilder builder = new ExpressionBuilder();
 
             //
             // Test function expression parsing
             //
             string functionStr = "Double [My Function]([My Set] this, [Integer] [param 2]) { return a + this.b(); } ";
 
-            lexer = new ExprLexer(new AntlrInputStream(functionStr));
-            parser = new ExprParser(new CommonTokenStream(lexer));
-            tree = parser.function();
-            tree_str = tree.ToStringTree(parser);
-
-            ast = builder.Visit(tree);
+            ast = BuildFunction(functionStr);
 
             Assert.AreEqual(ast.Name, "My Function");
             Assert.AreEqual(ast.OutputSetName, "Double");
@@ -169,9 +171,71 @@ namespace Test
             Assert.AreEqual(ast.Operands[0].Name, "param 2");
             Assert.AreEqual(ast.Operands[0].OutputSetName, "Integer");
 
-            Assert.AreEqual(((ExpressionFunction)ast).Statements.Count, 1);
-            Assert.AreEqual(((ExpressionFunction)ast).Statements[0].Operation, Operation.RETURN);
-            Assert.AreEqual(((ExpressionFunction)ast).Statements[0].Input.Operation, Operation.ADD);
+            Assert.AreEqual(((ExpressionScope)ast).Statements.Count, 1);
+            Assert.AreEqual(((ExpressionScope)ast).Statements[0].Operation, Operation.RETURN);
+            Assert.AreEqual(((ExpressionScope)ast).Statements[0].Input.Operation, Operation.ADD);
+        }
+
+        [TestMethod]
+        public void SymbolResolutionTest()
+        {
+            ExpressionScope ast;
+
+            //
+            // Test schema. "Set A" -> b/c -> "Set B" -> d/i -> "Double"/"Integer"
+            //
+            SetTop top = new SetTop("Top");
+            Set setInteger = top.GetPrimitiveSubset("Integer");
+            Set setDouble = top.GetPrimitiveSubset("Double");
+
+            Set setA = new Set("Set A");
+            top.Root.AddSubset(setA);
+
+            Set setB = new Set("Set B");
+            top.Root.AddSubset(setB);
+
+            Dim dimB = setB.CreateDefaultLesserDimension("b", setA);
+            dimB.Add();
+
+            Dim dimC = setB.CreateDefaultLesserDimension("Function c", setA);
+            dimC.Add();
+
+            Dim dimD = setDouble.CreateDefaultLesserDimension("d", setB);
+            dimD.Add();
+
+            Dim dimI = setInteger.CreateDefaultLesserDimension("i", setB);
+            dimI.Add();
+
+            //
+            // Test symbol resolution, type resolution and validation
+            //
+            string functionStr = "[Set B] [Function c]([Set A] this, [Integer] [param 2], [Set B] [param 3]) { return b().d() * this.b().d() + [param 2] / [param 3] <- b(); } ";
+
+            ast = (ExpressionScope) BuildFunction(functionStr);
+
+            // Bind ast to the real schema
+            ast.ResolveFunction(top);
+
+            Assert.AreEqual(ast.Input.OutputSet, setA);
+            Assert.AreEqual(ast.Operands[0].OutputSet, setInteger);
+            Assert.AreEqual(ast.Operands[1].OutputSet, setB);
+
+            Assert.AreEqual(ast.OutputSet, setB);
+            Assert.AreEqual(ast.Dimension, dimC);
+
+            // Resolve all symboles used in the function definition
+            ast.Resolve();
+
+            Assert.AreEqual(ast.Statements[0].Input.Operands[0].Operands[0].OutputSet, setDouble);
+            Assert.AreEqual(ast.Statements[0].Input.Operands[0].Operands[0].Input.OutputSet, setB);
+            Assert.AreEqual(ast.Statements[0].Input.Operands[0].Operands[0].Input.Input.OutputSet, setA);
+
+            Assert.AreEqual(ast.Statements[0].Input.Operands[0].Operands[1].Input.Input.OutputSet, setA);
+
+            Assert.AreEqual(ast.Statements[0].Input.Operands[1].Operands[0].OutputSet, setInteger);
+
+            Assert.AreEqual(ast.Statements[0].Input.Operands[1].Operands[1].OutputSet, setA);
+            Assert.AreEqual(ast.Statements[0].Input.Operands[1].Operands[1].Input.OutputSet, setB);
         }
 
     }
