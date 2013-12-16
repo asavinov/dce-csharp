@@ -228,6 +228,12 @@ namespace Com.Model
 
             return res;
         }
+        public Expression GetInputLeaf()
+        {
+            Expression node = this;
+            while (node.Input != null) node = node.Input;
+            return node;
+        }
         public List<Expression> GetLeaves(Operation op = Operation.TUPLE) // Get a list of nodes which have the specified operation but no children with this operation. It is normally used to get nodes corresponding to primitive paths in a complex tuple.
         {
             List<Expression> res = new List<Expression>();
@@ -448,32 +454,38 @@ namespace Com.Model
                         break; // Do not evaluate some functions (e.g., they cannot be evaluated because 'this' element does not exist yet but we know their future output which can be added later).
 
                     if (Input != null) Input.Evaluate(); // Evaluate input object(s) before it can be used
-                    foreach (Expression child in Operands) // Evaluate all parameters before they can be used
+
+                    // Resolve the function name (if not yet resolved). In fact, it has to be resolved by the symbol resolution procedure. 
+                    if (Dimension == null)
                     {
-                        child.Evaluate();
+                        if (Input != null)
+                        {
+                            if (Input.OutputSet != null)
+                            {
+                                Dimension = Input.OutputSet.GetGreaterDim(Name);
+                                if (Dimension == null) Dimension = Input.OutputSet.GetGreaterPath(Name); // Alternatively, the function name could determine whether it is a dimension or a path (complex dimension)
+                            }
+                        }
+                        else
+                        {
+                        }
                     }
 
-                    // Find the function itself
-                    string functionName = Name;
-                    Dim dim = null;
-                    if (Input.OutputSet != null)
+                    // Compute the function. The way function is evaluated depends on the type of input 
+                    if (Input == null) // It is a leaf
                     {
-                        dim = Input.OutputSet.GetGreaterDim(functionName);
-                        if (dim == null) dim = Input.OutputSet.GetGreaterPath(functionName); // Alternatively, the functionName could determine whether it is a dimension or a path (complex dimension)
+                        Output = Dimension.Value;
                     }
-
-                    // Compute the function. 
-                    // The way function is evaluated depends on the type of input 
-                    if (Input.Output == null)
+                    else if (Input.Output == null)
                     {
                         Output = null;
                     }
-                    else if (Input.Output is DataRow)
+                    else if (Input.Output is DataRow) // Here we do not use resolved dimension object
                     {
                         DataRow thisRow = (DataRow)Input.Output;
                         try
                         {
-                            Output = thisRow[functionName];
+                            Output = thisRow[Name];
                         }
                         catch (Exception e)
                         {
@@ -493,21 +505,21 @@ namespace Com.Model
                         // Debug.Assert(Input.Output is Offset[], "Wrong use: projection/dot can be applied to only an array of offsets - not any other type.");
                         if (Operation == Operation.PROJECTION)
                         {
-                            Output = dim.ProjectValues((Offset[])Input.Output);
+                            Output = Dimension.ProjectValues((Offset[])Input.Output);
                         }
                         else if (Operation == Operation.DOT)
                         {
-                            Output = Array.CreateInstance(dim.SystemType, ((Array)Input.Output).Length);
+                            Output = Array.CreateInstance(Dimension.SystemType, ((Array)Input.Output).Length);
                             for (int i = 0; i < ((Offset[])Input.Output).Length; i++) // Individually and independently project all inputs
                             {
-                                (Output as Array).SetValue(dim.GetValue((Offset)(Input.Output as Array).GetValue(i)), i);
+                                (Output as Array).SetValue(Dimension.GetValue((Offset)(Input.Output as Array).GetValue(i)), i);
                             }
                         }
                     }
                     else if (!(Input.Output is Array)) // Project a single value. Also: Input.Operation == Operation.PRIMITIVE
                     {
                         Debug.Assert(Input.Output is Offset, "Wrong use: a function/dimension can be applied to only one offset - not any other type.");
-                        Output = dim.GetValue((Offset)Input.Output);
+                        Output = Dimension.GetValue((Offset)Input.Output);
                     }
 
                     break;
@@ -515,18 +527,26 @@ namespace Com.Model
                 case Operation.DEPROJECTION:
                 {
                     if (Input != null) Input.Evaluate(); // Evaluate 'this' object before it can be used
-                    foreach (Expression child in Operands) // Evaluate all parameters before they can be used
+
+                    // Resolve the function name (if not yet resolved). In fact, it has to be resolved by the symbol resolution procedure. 
+                    if (Dimension == null)
                     {
-                        child.Evaluate();
+                        Dimension = OutputSet != null ? OutputSet.GetGreaterDim(Name) : null;
                     }
 
-                    // Find the function itself
-                    string functionName = Name;
-                    Dim dim = null;
-                    dim = OutputSet != null ? OutputSet.GetGreaterDim(functionName) : null;
-
                     // Compute the function. 
-                    Output = dim.DeprojectValue(Input.Output);
+                    if (Input == null)
+                    {
+                        Output = Dimension.Value;
+                    }
+                    else if (Input.Output == null)
+                    {
+                        Output = null;
+                    }
+                    else
+                    {
+                        Output = Dimension.DeprojectValue(Input.Output);
+                    }
 
                     break;
                 }
@@ -538,7 +558,6 @@ namespace Com.Model
 
                     Expression groupExpr = Input;
                     Expression measureExpr = Operands[0];
-                    string aggregationFunction = Name;
                     Dim measureDim = measureExpr.Dimension; // It determines the type of the result and it knows how to aggregate its values
 
                     groupExpr.Evaluate(); // Compute the group
@@ -550,10 +569,11 @@ namespace Com.Model
                         break;
                     }
 
-                    measureExpr.SetOutput(Operation.PARAMETER, groupExpr.Output); // Assign output of the group expression to the variable
+                    measureExpr.SetOutput(Operation.COLLECTION, groupExpr.Output); // Assign output of the group expression to the variable
 
                     measureExpr.Evaluate(); // Compute the measure group
 
+                    string aggregationFunction = Name;
                     Output = measureDim.Aggregate(measureExpr.Output, aggregationFunction); // The dimension of each type knows how to aggregate its values
 
                     break;
@@ -641,6 +661,16 @@ namespace Com.Model
         {
             switch (Operation)
             {
+                case Operation.TUPLE:
+                    {
+                        if (Input != null) Input.Resolve();
+                        foreach (Expression child in Operands)
+                        {
+                            child.Resolve();
+                        }
+
+                        break;
+                    }
                 case Operation.DOT:
                 case Operation.PROJECTION:
                 case Operation.DEPROJECTION:
@@ -682,13 +712,13 @@ namespace Com.Model
                         }
                         else // Resolve using 'this' context provided by the Input child expression
                         {
+                            Debug.Assert(Input != null, "Wrong use: Resovling access operation cannot be done without Input expression.");
+
                             if (Input != null) Input.Resolve();
                             foreach (Expression child in Operands)
                             {
                                 child.Resolve();
                             }
-
-                            Debug.Assert(Input != null, "Wrong use: Resovling access operation cannot be done without Input expression.");
 
                             // Either set name (OutputSetName) or dimension name (Name) can be missing. 
                             // If one name is missing then the second is used as the primary one and determines the second. If both are present then they must be consistent. 
@@ -723,6 +753,7 @@ namespace Com.Model
                                 if (Name != null)
                                 {
                                     Dimension = Input.OutputSet.GetGreaterDim(Name);
+                                    if (Dimension == null) Dimension = Input.OutputSet.GetGreaterPath(Name);
                                 }
 
                                 Debug.Assert(OutputSet != null || Dimension != null, "Wrong use: Either dimension name or set name must be specified.");
@@ -746,6 +777,20 @@ namespace Com.Model
                         }
                         break;
                     }
+                case Operation.AGGREGATION:
+                    {
+                        if (Input != null) Input.Resolve();
+                        foreach (Expression child in Operands)
+                        {
+                            child.Resolve();
+                        }
+
+                        OutputSet = Operands[0].OutputSet;
+                        OutputSetName = OutputSet.Name;
+                        OutputIsSetValued = false;
+
+                        break;
+                    }
                 case Operation.MUL:
                 case Operation.DIV:
                 case Operation.ADD:
@@ -755,7 +800,7 @@ namespace Com.Model
 
                         if (Input != null) 
                         { 
-                            Input.Resolve(); 
+                            Input.Resolve();
                             operandTypes.Add(Input.OutputSet); 
                         }
                         foreach (Expression child in Operands)
@@ -822,8 +867,8 @@ namespace Com.Model
                 else // First segments in the path is a leaf of the expression tree - will be evaluated first
                 {
                     // The leaf expression produces initial value(s) to be projected and by default it is a variable
-                    if (leafExpr == null) leafExpr = new Expression("this", Operation.PARAMETER, lesserSet);
-                    expr.Input = leafExpr;
+                    //if (leafExpr == null) leafExpr = new Expression("this", Operation.DOT, lesserSet);
+                    //expr.Input = leafExpr;
                 }
 
                 previousExpr = expr;
@@ -867,7 +912,7 @@ namespace Com.Model
                 }
                 else
                 {
-                    expr.Input = new Expression("this", Operation.PARAMETER, lesserSet); // The deproject path starts from some variable which stores the initial value(s) to be deprojected
+                    //expr.Input = new Expression("this", Operation.DOT, lesserSet); // The deproject path starts from some variable which stores the initial value(s) to be deprojected
                 }
 
                 previousExpr = expr;
@@ -878,12 +923,16 @@ namespace Com.Model
 
         public static Expression CreateAggregateExpression(string function, Expression group, Expression measure)
         {
-            // Debug.Assert(group.OutputSet == measure.Input.OutputSet, "Wrong use: Measure is a property of group elements and has to start where groups end.");
+            // Add a collection of values to be aggregated as a leaf (this collection will store intermediate results produced from grouping)
+            Expression leaf = measure.GetInputLeaf();
+            Expression collection = new Expression("group", Operation.COLLECTION, group.OutputSet); // It stores the result of grouping (so it is a kind of intermediate variable)
+            leaf.Input = collection;
 
-            // Modify measure: accept many values (not single value by default)
-            List<Expression> nodes = measure.GetOperands(Operation.PARAMETER);
-            Debug.Assert(nodes != null && nodes.Count == 1, "Wrong use: Input nodes (variable) in measure expression must be 1.");
-            nodes[0].OutputIsSetValued = true;
+            // Make all nodes set-valued
+            for (Expression node = measure; node != null; node = node.Input)
+            {
+                node.OutputIsSetValued = true;
+            }
 
             // Create aggregation expression
             Expression expr = new Expression();
@@ -894,7 +943,7 @@ namespace Com.Model
             expr.OutputIsSetValued = false;
 
             expr.Name = function; // Name of the function
-            expr.Dimension = null;
+            expr.Dimension = null; // Here we need to resolve the aggregation function
 
             expr.Operation = Operation.AGGREGATION;
 
@@ -963,11 +1012,53 @@ namespace Com.Model
             }
         }
 
+        public static ExpressionScope CreateFunctionDeclaration(string name, string inputSetName, string outputSetName)
+        {
+            // Function expression
+            ExpressionScope funcExpr = new ExpressionScope();
+            funcExpr.Name = name;
+            funcExpr.Operation = Operation.FUNCTION;
+            funcExpr.OutputSetName = outputSetName;
+            funcExpr.OutputIsSetValued = false;
+
+            // This argument
+            Expression thisExpr = new Expression("this", Operation.PARAMETER);
+            thisExpr.OutputSetName = inputSetName;
+            thisExpr.OutputIsSetValued = false;
+
+            funcExpr.Input = thisExpr;
+
+            // Return statement (without expression)
+            ExpressionScope stmtExpr = new ExpressionScope();
+            stmtExpr.Name = "return";
+            stmtExpr.Operation = Operation.RETURN;
+            stmtExpr.OutputSetName = outputSetName;
+            stmtExpr.OutputIsSetValued = false;
+
+            funcExpr.AddStatement(stmtExpr);
+
+            return funcExpr;
+        }
+
         public override object Evaluate()
         {
-            foreach (Expression stmt in Statements)
+            switch (Operation)
             {
-                stmt.Evaluate();
+                case Operation.FUNCTION:
+                    {
+                        foreach (Expression stmt in Statements)
+                        {
+                            stmt.Evaluate();
+                        }
+                        break;
+                    }
+                case Operation.RETURN:
+                    {
+                        Input.Evaluate();
+                        Output = Input.Output;
+                        ParentScope.Output = Output; // Return statement changes the parent (local) state
+                        break;
+                    }
             }
 
             return Output;
@@ -1002,7 +1093,7 @@ namespace Com.Model
         public void ResolveFunction(SetTop top)
         {
             Input.OutputSet = top.FindSubset(Input.OutputSetName); // this type (domain set of the function)
-            if (Input.Dimension != null)
+            if (Input.Dimension == null)
             {
                 Input.OutputIsSetValued = false;
                 if (!Input.OutputIsSetValued)
@@ -1032,9 +1123,9 @@ namespace Com.Model
                 }
             }
 
-            OutputSet = top.FindSubset(OutputSetName); // Return value type (range set of the function)
+            if (OutputSet == null) OutputSet = top.FindSubset(OutputSetName); // Return value type (range set of the function)
             OutputIsSetValued = false;
-            Dimension = Input.OutputSet.GetGreaterDim(Name); // Resolve function name into dimension object
+            if (Dimension == null) Dimension = Input.OutputSet.GetGreaterDim(Name); // Resolve function name into dimension object
         }
 
         public ExpressionScope()

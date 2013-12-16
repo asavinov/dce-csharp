@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using Offset = System.Int32;
@@ -151,12 +152,20 @@ namespace Com.Model
 
         public override void ComputeValues()
         {
-            if (SelectExpression != null) // Derived dimension the values of which have to be computed and stored
+            if (SelectExpression != null) // Function definition the values of which have to be computed and stored
             {
+                Debug.Assert(SelectExpression.Operation == Operation.FUNCTION, "Wrong use: derived function has to be FUNCTION expression.");
+                Debug.Assert(SelectExpression.Input != null, "Wrong use: derived function must have Input representing this argument.");
+                Debug.Assert(SelectExpression.Input.Operation == Operation.PARAMETER, "Wrong use: derived function Input has to be of PARAMETER type.");
+                Debug.Assert(SelectExpression.Input.Dimension != null, "Wrong use: derived function Input has to reference a valid variable.");
+
                 for (Offset offset = 0; offset < LesserSet.Length; offset++) // Compute the output function value for each input value (offset)
                 {
-                    SelectExpression.SetOutput(Operation.PARAMETER, offset); // Initialize 'this'
+//                    SelectExpression.SetOutput(Operation.PARAMETER, offset);
+                    SelectExpression.Input.Dimension.Value = offset; // Initialize 'this'
                     SelectExpression.Evaluate(); // Compute
+                    SetValue(offset, SelectExpression.Output); // Store the final result
+/*
                     object val = null;
                     if (SelectExpression.Operation == Operation.TUPLE)
                     {
@@ -164,6 +173,7 @@ namespace Com.Model
                     }
                     val = SelectExpression.Output;
                     SetValue(offset, val); // Store the final result
+*/
                 }
             }
         }

@@ -825,24 +825,24 @@ namespace Com.Model
             foreach (PathMatch match in Matches)
             {
                 // Add Input of function as a variable the values of which (output) can be assigned for evaluation of the function during export/import
-                Expression varExpr = new Expression("source", Operation.PARAMETER, sourceDim == null ? match.SourceSet : sourceDim.LesserSet);
+                Expression thisExpr = new Expression("this", Operation.DOT, sourceDim == null ? match.SourceSet : sourceDim.LesserSet);
 
-                Expression funcExpr = null;
+                Expression srcExpr = null;
                 DimPath srcPath = match.SourceSet.GetGreaterPath(match.SourcePath.Path); // First, we try to find a direct path/function 
-                if (srcPath == null) // No direct path
+                if (srcPath == null) // No direct path. Use a sequence of simple dimensions
                 {
                     srcPath = match.SourcePath; // use a sequence of dimensions/functions
                     if (sourceDim != null) srcPath.InsertFirst(sourceDim);
-                    funcExpr = Expression.CreateProjectExpression(srcPath.Path, Operation.DOT, varExpr);
+                    srcExpr = Expression.CreateProjectExpression(srcPath.Path, Operation.DOT);
                 }
                 else // There is a direct path (relation attribute in a relational data source). Use attribute name as function name
                 {
-                    funcExpr = new Expression(srcPath.Name, Operation.DOT, match.TargetPath.GreaterSet);
-                    funcExpr.Input = varExpr;
+                    srcExpr = new Expression(srcPath.Name, Operation.DOT, match.TargetPath.GreaterSet);
                 }
+                srcExpr.GetInputLeaf().Input = thisExpr;
 
                 Expression leafTuple = expr.AddPath(match.TargetPath);
-                leafTuple.Input = funcExpr;
+                leafTuple.Input = srcExpr;
             }
 
             return expr;

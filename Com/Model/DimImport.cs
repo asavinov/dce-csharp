@@ -105,7 +105,12 @@ namespace Com.Model
         {
             Debug.Assert(ImportMapping != null && ImportMapping.SourceSet == GreaterSet && ImportMapping.TargetSet == LesserSet, "Target/Output of import mapping/expression must be equal to the set where it is stored.");
 
-            Expression importExpression = ImportMapping.GetTargetExpression(); // Build a tuple tree with paths in leaves
+            Expression tupleExpression = ImportMapping.GetTargetExpression(); // Build a tuple tree with paths in leaves
+
+            var funcExpr = ExpressionScope.CreateFunctionDeclaration(Name, GreaterSet.Name, LesserSet.Name);
+            funcExpr.Statements[0].Input = tupleExpression; // Return statement
+            funcExpr.ResolveFunction(GreaterSet.Top);
+            funcExpr.Resolve();
 
             Set remoteSet = GreaterSet;
             if (remoteSet.Top is SetTopOledb)
@@ -116,12 +121,13 @@ namespace Com.Model
                 // For each row, evaluate the expression and append the new element
                 foreach (DataRow row in dataTable.Rows) // A row is <colName, primValue> collection
                 {
-                    importExpression.SetOutput(Operation.ALL, null);
-                    importExpression.SetOutput(Operation.PARAMETER, row); // Set the input variable 'source'
-                    importExpression.Evaluate(); // Evaluate the expression tree by computing primtive tuple values
+//                    tupleExpression.SetOutput(Operation.ALL, null);
+//                    tupleExpression.SetOutput(Operation.PARAMETER, row); // Set the input variable 'source'
+                    funcExpr.Input.Dimension.Value = row; // Initialize 'this'
+                    funcExpr.Evaluate(); // Evaluate the expression tree by computing primtive tuple values
 //                    if (LesserSet.Find(importExpression)) continue; // Check if this and nested tuples exist already
 //                    if (!LesserSet.CanAppend(importExpression)) continue; // Check if it can be formally added
-                    LesserSet.Append(importExpression); // Append an element using the tuple composed of primitive values
+                    LesserSet.Append(tupleExpression); // Append an element using the tuple composed of primitive values
                 }
             }
             else if (remoteSet.Top is SetTopOdata)
@@ -131,11 +137,12 @@ namespace Com.Model
             {
                 for (Offset offset = 0; offset < remoteSet.Length; offset++)
                 {
-                    importExpression.SetOutput(Operation.PARAMETER, offset); // Assign value of 'this' variable
-                    importExpression.Evaluate();
-//                    LesserSet.Find(importExpression);
-//                    if (!LesserSet.CanAppend(importExpression)) continue;
-                    LesserSet.Append(importExpression);
+//                    tupleExpression.SetOutput(Operation.PARAMETER, offset); // Assign value of 'this' variable
+                    tupleExpression.Input.Dimension.Value = offset; // Initialize 'this'
+                    tupleExpression.Evaluate();
+                    //                    LesserSet.Find(importExpression);
+                    //                    if (!LesserSet.CanAppend(importExpression)) continue;
+                    LesserSet.Append(tupleExpression);
                 }
             }
         }

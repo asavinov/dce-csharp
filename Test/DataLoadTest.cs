@@ -216,18 +216,22 @@ namespace Test
 
             Dim d1 = ods.CreateDefaultLesserDimension("Order Details Status", newSet);
             d1.IsIdentity = true;
+            d1.Add();
+
             Dim d2 = os.CreateDefaultLesserDimension("Orders Status", newSet);
             d2.IsIdentity = true;
+            d2.Add();
 
             wsTop.Root.AddSubset(newSet);
-            d1.Add();
-            d2.Add();
 
             // Define filter
             Expression whereExpr = new Expression("EQUAL", Operation.EQ);
 
             Expression d1_Expr = Expression.CreateProjectExpression(new List<Dim> { d1, ods.GetGreaterDim("Status ID") }, Operation.DOT);
             Expression d2_Expr = Expression.CreateProjectExpression(new List<Dim> { d2, os.GetGreaterDim("Status ID") }, Operation.DOT);
+
+            d1_Expr.GetInputLeaf().Input = new Expression("this", Operation.DOT, newSet);
+            d2_Expr.GetInputLeaf().Input = new Expression("this", Operation.DOT, newSet);
 
             whereExpr.Input = d1_Expr;
             whereExpr.AddOperand(d2_Expr);
@@ -264,6 +268,9 @@ namespace Test
 
             d1_Expr = Expression.CreateProjectExpression(new List<Dim> { subset_ods.SuperDim, ods.GetGreaterDim("Status ID") }, Operation.DOT);
             d2_Expr = Expression.CreateProjectExpression(new List<Dim> { d2, os.GetGreaterDim("Status ID") }, Operation.DOT);
+
+            d1_Expr.GetInputLeaf().Input = new Expression("this", Operation.DOT, subset_ods);
+            d2_Expr.GetInputLeaf().Input = new Expression("this", Operation.DOT, subset_ods);
 
             whereExpr.Input = d1_Expr;
             whereExpr.AddOperand(d2_Expr);
@@ -307,8 +314,14 @@ namespace Test
 
             // Add derived dimension
             Dim derived1 = d3.GreaterSet.CreateDefaultLesserDimension("Customer Last Name", od);
-            derived1.SelectExpression = expr;
             derived1.Add();
+
+            var funcExpr = ExpressionScope.CreateFunctionDeclaration("Customer Last Name", "Order Details", "String");
+            funcExpr.Statements[0].Input = expr; // Return statement
+            funcExpr.ResolveFunction(wsTop);
+            funcExpr.Resolve();
+
+            derived1.SelectExpression = funcExpr;
 
             // Update
             derived1.ComputeValues();
@@ -354,11 +367,18 @@ namespace Test
 
             Expression projExpr = Expression.CreateProjectExpression(mesPath, Operation.DOT);
 
-            // Add derived dimension
             Expression aggreExpr = Expression.CreateAggregateExpression("SUM", deprExpr, projExpr);
+
+            // Add derived dimension
             Dim derived1 = d4.GreaterSet.CreateDefaultLesserDimension("Average List Price", cust);
-            derived1.SelectExpression = aggreExpr;
             derived1.Add();
+
+            var funcExpr1 = ExpressionScope.CreateFunctionDeclaration("Average List Price", cust.Name, d4.GreaterSet.Name);
+            funcExpr1.Statements[0].Input = aggreExpr; // Return statement
+            funcExpr1.ResolveFunction(wsTop);
+            funcExpr1.Resolve();
+
+            derived1.SelectExpression = funcExpr1;
 
             // Update
             derived1.ComputeValues();
@@ -406,16 +426,22 @@ namespace Test
             recoms.MeasureDimensions.SelectedFragment = recoms.MeasureDimensions.Alternatives.First(f => ((Dim)f.Fragment).Name == "List Price");
             recoms.AggregationFunctions.SelectedFragment = recoms.AggregationFunctions.Alternatives.First(f => f.Fragment == "SUM");
 
-            Expression aggreExpr = recoms.GetExpression();
             Dim derived1 = doubleSet.CreateDefaultLesserDimension("Average List Price", cust);
-            derived1.SelectExpression = aggreExpr;
             derived1.Add();
+
+            Expression aggreExpr = recoms.GetExpression();
+
+            var funcExpr = ExpressionScope.CreateFunctionDeclaration("Average List Price", cust.Name, doubleSet.Name);
+            funcExpr.Statements[0].Input = aggreExpr; // Return statement
+            funcExpr.ResolveFunction(wsTop);
+            funcExpr.Resolve();
+
+            derived1.SelectExpression = funcExpr;
 
             // Update
             derived1.ComputeValues();
 
             Assert.AreEqual(64.0, cust.GetValue("Average List Price", 2));
-
         }
 
         [TestMethod]
@@ -435,6 +461,9 @@ namespace Test
             Set targetSet = Mapper.ImportSet(dbTop.FindSubset("Order Details"), wsTop);
             targetSet.Populate();
 
+            Set products = wsTop.FindSubset("Products");
+            Set doubleSet = wsTop.GetPrimitiveSubset("Double");
+
             //
             // Create derived dimensions
             //
@@ -443,10 +472,6 @@ namespace Test
             // Column names are function names and they have to be assign to expression node names (DOT)
             // But where is 'this' variable and 'this' set? This set is Input.OutputSet. And the function will be applied to whatever is stored in Input.Output (interpreted as offset).
             // So Input.Output has to be assigned explicitly offset in a loop. Or we need to store a variable 'this' which, when evaluated, writes its current value to Input.Output.
-
-
-            Set products = wsTop.FindSubset("Products");
-            Set doubleSet = wsTop.GetPrimitiveSubset("Double");
 
             // Create simple (one-segment) function expressions
             Dim d1 = products.GetGreaterDim("List Price");
@@ -457,6 +482,10 @@ namespace Test
             Expression d2_Expr = Expression.CreateProjectExpression(new List<Dim> { d2 }, Operation.DOT);
             Expression d3_Expr = Expression.CreateProjectExpression(new List<Dim> { d3 }, Operation.DOT);
 
+            // Add derived dimension
+            Dim derived1 = doubleSet.CreateDefaultLesserDimension("Derived Column", products);
+            derived1.Add();
+
             Expression arithmExpr = new Expression("MINUS", Operation.SUB);
             arithmExpr.Input = d1_Expr;
 
@@ -466,10 +495,12 @@ namespace Test
 
             arithmExpr.AddOperand(plusExpr);
 
-            // Add derived dimension
-            Dim derived1 = doubleSet.CreateDefaultLesserDimension("Derived Column", products);
-            derived1.SelectExpression = arithmExpr;
-            derived1.Add();
+            var funcExpr1 = ExpressionScope.CreateFunctionDeclaration("Derived Column", "Products", "Double");
+            funcExpr1.Statements[0].Input = arithmExpr; // Return statement
+            funcExpr1.ResolveFunction(wsTop);
+            funcExpr1.Resolve();
+
+            derived1.SelectExpression = funcExpr1;
 
             // Update
             derived1.ComputeValues();
@@ -478,14 +509,20 @@ namespace Test
             // 
             // Another (simpler) test
             //
+            // Add derived dimension
+            Dim derived2 = doubleSet.CreateDefaultLesserDimension("Derived Column 2", products);
+            derived2.Add();
+
             plusExpr = new Expression("PLUS", Operation.ADD);
             plusExpr.Input = d1_Expr;
             plusExpr.AddOperand(d1_Expr);
 
-            // Add derived dimension
-            Dim derived2 = doubleSet.CreateDefaultLesserDimension("Derived Column 2", products);
-            derived2.SelectExpression = plusExpr;
-            derived2.Add();
+            var funcExpr2 = ExpressionScope.CreateFunctionDeclaration("Derived Column 2", "Products", "Double");
+            funcExpr2.Statements[0].Input = plusExpr; // Return statement
+            funcExpr2.ResolveFunction(wsTop);
+            funcExpr2.Resolve();
+
+            derived2.SelectExpression = funcExpr2; // plusExpr;
 
             // Update
             derived2.ComputeValues();
@@ -526,6 +563,11 @@ namespace Test
             Expression d1_Expr = Expression.CreateProjectExpression(new List<Dim> { subProducts.SuperDim, d1 }, Operation.DOT);
             Expression d2_Expr = Expression.CreateProjectExpression(new List<Dim> { subProducts.SuperDim, d2 }, Operation.DOT);
             Expression d3_Expr = Expression.CreateProjectExpression(new List<Dim> { subProducts.SuperDim, d3 }, Operation.DOT);
+
+            // Here values will be stored
+            d1_Expr.GetInputLeaf().Input = new Expression("this", Operation.DOT, subProducts);
+            d2_Expr.GetInputLeaf().Input = new Expression("this", Operation.DOT, subProducts);
+            d3_Expr.GetInputLeaf().Input = new Expression("this", Operation.DOT, subProducts);
 
             Expression logicalExpr = new Expression("GREATER", Operation.GRE);
 
@@ -575,8 +617,14 @@ namespace Test
             //
             // Populate new dimension and delete old one
             //
-            Expression expr = mapping.GetTargetExpression(sourceDim, targetDim);
-            targetDim.SelectExpression = expr;
+            Expression tupleExpr = mapping.GetTargetExpression(sourceDim, targetDim);
+
+            var funcExpr = ExpressionScope.CreateFunctionDeclaration(targetDim.Name, targetDim.LesserSet.Name, targetDim.GreaterSet.Name);
+            funcExpr.Statements[0].Input = tupleExpr; // Return statement
+            funcExpr.ResolveFunction(wsTop);
+            funcExpr.Resolve();
+
+            targetDim.SelectExpression = funcExpr;
 
             targetDim.ComputeValues(); // Evaluate tuple expression on the same set (not remove set), that is, move data from one dimension to the new dimension
 
@@ -607,8 +655,14 @@ namespace Test
             //
             // Populate new dimension and delete old one
             //
-            expr = mapping.GetTargetExpression(sourceDim, targetDim);
-            targetDim.SelectExpression = expr;
+            tupleExpr = mapping.GetTargetExpression(sourceDim, targetDim);
+
+            funcExpr = ExpressionScope.CreateFunctionDeclaration(targetDim.Name, targetDim.LesserSet.Name, targetDim.GreaterSet.Name);
+            funcExpr.Statements[0].Input = tupleExpr; // Return statement
+            funcExpr.ResolveFunction(wsTop);
+            funcExpr.Resolve();
+
+            targetDim.SelectExpression = funcExpr;
 
             targetDim.ComputeValues(); // Evaluate tuple expression on the same set (not remove set), that is, move data from one dimension to the new dimension
 

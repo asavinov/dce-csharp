@@ -223,7 +223,6 @@ namespace Com.Model
 
         public virtual void ComputeValues() { return; } // Set output values of the function by evaluating an expression (or using other means)
 
-
         public virtual void Append(object value) { } // Increment length and set the value (or insert last)
 
         public virtual void Insert(Offset offset, object value) { }
