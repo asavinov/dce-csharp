@@ -42,12 +42,20 @@ namespace Com.Model
         {
             if (GreaterSet != null) AddToDimensions(GreaterSet.ExportDims, greaterSetIndex);
             if (LesserSet != null) AddToDimensions(LesserSet.ImportDims, lesserSetIndex);
+
+            // Notify that a new child has been added
+            if (LesserSet != null) LesserSet.NotifyAdd(this);
+            if (GreaterSet != null) GreaterSet.NotifyAdd(this);
         }
 
         public override void Remove()
         {
             if (GreaterSet != null) GreaterSet.ExportDims.Remove(this);
             if (LesserSet != null) LesserSet.ImportDims.Remove(this);
+
+            // Notify that a new child has been removed
+            if (LesserSet != null) LesserSet.NotifyRemove(this);
+            if (GreaterSet != null) GreaterSet.NotifyRemove(this);
         }
 
         public override void Replace(Dim dim)
@@ -55,14 +63,8 @@ namespace Com.Model
             int greaterSetIndex = GreaterSet.ExportDims.IndexOf(dim);
             int lesserSetIndex = LesserSet.ImportDims.IndexOf(dim);
             dim.Remove();
-            if (GreaterSet != null)
-            {
-                AddToDimensions(GreaterSet.ExportDims, greaterSetIndex);
-            }
-            if (LesserSet != null)
-            {
-                AddToDimensions(LesserSet.ImportDims, lesserSetIndex);
-            }
+
+            this.Add(lesserSetIndex, greaterSetIndex);
         }
 
         #endregion

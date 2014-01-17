@@ -36,21 +36,30 @@ namespace Com.Model
         public override void Add(int lesserSetIndex, int greaterSetIndex = -1)
         {
             if (GreaterSet != null) AddToDimensions(GreaterSet.SubDims, greaterSetIndex);
-            if (LesserSet != null) if (!IsInLesserSet) LesserSet.SuperDim = this;
+            if (LesserSet != null) AddToDimensions(LesserSet.SuperDims, lesserSetIndex);
+
+            // Notify that a new child has been added
+            if (LesserSet != null) LesserSet.NotifyAdd(this);
+            if (GreaterSet != null) GreaterSet.NotifyAdd(this);
         }
 
         public override void Remove()
         {
             if (GreaterSet != null) GreaterSet.SubDims.Remove(this);
-            if (LesserSet != null) LesserSet.SuperDim = null;
+            if (LesserSet != null) LesserSet.SuperDims.Remove(this);
+
+            // Notify that a new child has been removed
+            if (LesserSet != null) LesserSet.NotifyRemove(this);
+            if (GreaterSet != null) GreaterSet.NotifyRemove(this);
         }
 
         public override void Replace(Dim dim)
         {
             int greaterSetIndex = GreaterSet.SubDims.IndexOf(dim);
+            int lesserSetIndex = LesserSet.SuperDims.IndexOf(dim);
             dim.Remove();
-            if (GreaterSet != null) AddToDimensions(GreaterSet.SubDims, greaterSetIndex);
-            if (LesserSet != null) if (!IsInLesserSet) LesserSet.SuperDim = this;
+
+            this.Add(lesserSetIndex, greaterSetIndex);
         }
 
         #endregion

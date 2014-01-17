@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Data;
@@ -14,7 +17,7 @@ namespace Com.Model
     /// A set is also characterized by width and length of its members. 
     /// And a set provides methods for manipulating its structure and intances. 
     /// </summary>
-    public class Set
+    public class Set : IEnumerable<Set>, INotifyCollectionChanged, INotifyPropertyChanged
     {
         #region Properties
 
@@ -96,7 +99,7 @@ namespace Com.Model
                 {
                     if (dim != null)
                     {
-                        SuperDims.Remove(dim);
+                        dim.Remove();
                     }
                     return;
                 }
@@ -114,7 +117,7 @@ namespace Com.Model
                 }
 
                 // Really add new dimension
-                SuperDims.Add(value);
+                value.Add();
             }
         }
 
@@ -194,7 +197,7 @@ namespace Com.Model
                 return null; // Nothing to remove
             }
 
-            subset.SuperDim = null;
+            subset.SuperDim.Remove();
 
             return subset;
         }
@@ -776,9 +779,19 @@ namespace Com.Model
         public bool IsAutoPopulated { get; set; }
 
         /// <summary>
-        /// Constraints on all possible instances. Only instances satisfying these constraints can exist. 
+        /// Constraints on all possible instances. It is written in terms of and is applied to source (already existing) instances - not instances of this set. Only instances satisfying these constraints are used for populating this set. 
         /// </summary>
         public Expression WhereExpression { get; set; }
+
+        /// <summary>
+        /// FROM expression specifies source sets used to populate this set. For each source set, an instance variable name is specified. 
+        /// </summary>
+        public Expression FromExpression { get; set; }
+
+        /// <summary>
+        /// SELECT expression is a function returning a tuple representing an element of this set. This return tuple is computed in terms of the source sets which are arguments of this expression. This expression can be based on a mapping from source to target and also can use arbitrary computations in terms of the source elements provided in arguments.
+        /// </summary>
+        public Expression SelectExpression { get; set; }
 
         /// <summary>
         /// Ordering of the instances. Instances will be sorted according to these criteria. 
@@ -958,6 +971,78 @@ namespace Com.Model
         public override int GetHashCode()
         {
             return Id.GetHashCode();
+        }
+
+        #endregion
+
+        #region Interfaces
+
+        //
+        // IEnumerable for accessing children (is needed for the root to serve as ItemsSource)
+        //
+        IEnumerator<Set> IEnumerable<Set>.GetEnumerator()
+        {
+            return SubSets.GetEnumerator();
+        }
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return SubSets.GetEnumerator();
+        }
+
+        //
+        // INotifyCollectionChanged, INotifyPropertyChanged
+        //
+        public event NotifyCollectionChangedEventHandler CollectionChanged;
+        protected virtual void OnCollectionChanged(NotifyCollectionChangedEventArgs e)
+        {
+            if (CollectionChanged != null)
+            {
+                CollectionChanged(this, e);
+            }
+        }
+        public virtual void NotifyAdd(Dim dim) // Convenience method: notifying about adding
+        {
+            if (dim == null) return;
+            if (dim.LesserSet != null)
+            {
+                dim.LesserSet.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, dim));
+                dim.LesserSet.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, dim.GreaterSet));
+
+            }
+            if (dim.GreaterSet != null)
+            {
+                dim.GreaterSet.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, dim));
+                dim.GreaterSet.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, dim.LesserSet));
+            }
+        }
+
+        public virtual void NotifyRemove(Dim dim) // Convenience method: notifying about removing
+        {
+            if (dim == null) return;
+            if (dim.LesserSet != null)
+            {
+                dim.LesserSet.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, dim));
+                dim.LesserSet.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, dim.GreaterSet));
+
+            }
+            if (dim.GreaterSet != null)
+            {
+                dim.GreaterSet.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, dim));
+                dim.GreaterSet.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, dim.LesserSet));
+
+            }
+        }
+
+        //
+        // INotifyPropertyChanged Members
+        //
+        public event PropertyChangedEventHandler PropertyChanged;
+        private void OnPropertyChanged(String propertyName = "")
+        {
+            if (PropertyChanged != null)
+            {
+                PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
+            }
         }
 
         #endregion

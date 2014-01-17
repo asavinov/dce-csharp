@@ -164,6 +164,10 @@ namespace Com.Model
         {
             if (GreaterSet != null) AddToDimensions(GreaterSet.LesserDims, greaterSetIndex);
             if (LesserSet != null) AddToDimensions(LesserSet.GreaterDims, lesserSetIndex);
+
+            // Notify that a new child has been added
+            if (LesserSet != null) LesserSet.NotifyAdd(this);
+            if (GreaterSet != null) GreaterSet.NotifyAdd(this);
         }
         protected void AddToDimensions(IList<Dim> dimList, int index = -1) 
         {
@@ -188,6 +192,10 @@ namespace Com.Model
         {
             if (GreaterSet != null) GreaterSet.LesserDims.Remove(this);
             if (LesserSet != null) LesserSet.GreaterDims.Remove(this);
+
+            // Notify that a new child has been removed
+            if (LesserSet != null) LesserSet.NotifyRemove(this);
+            if (GreaterSet != null) GreaterSet.NotifyRemove(this);
         }
 
         /// <summary>
@@ -195,11 +203,11 @@ namespace Com.Model
         /// </summary>
         public virtual void Replace(Dim dim)
         {
-            int lesserSetIndex = GreaterSet.LesserDims.IndexOf(dim);
-            int greaterSetIndex = LesserSet.GreaterDims.IndexOf(dim);
+            int greaterSetIndex = GreaterSet.LesserDims.IndexOf(dim);
+            int lesserSetIndex = LesserSet.GreaterDims.IndexOf(dim);
             dim.Remove();
-            if (GreaterSet != null) AddToDimensions(GreaterSet.LesserDims, lesserSetIndex);
-            if (LesserSet != null) AddToDimensions(LesserSet.GreaterDims, greaterSetIndex);
+
+            this.Add(lesserSetIndex, greaterSetIndex);
         }
 
         #endregion
