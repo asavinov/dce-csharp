@@ -52,6 +52,7 @@
     <Compile Include="Model\DimSet.cs" />
     <Compile Include="Model\DimSubset.cs" />
     <Compile Include="Model\DimSuper.cs" />
+    <Compile Include="Model\DimTree.cs" />
     <Compile Include="Model\Expression.cs" />
     <Compile Include="Model\Instance.cs">
       <SubType>Code</SubType>
