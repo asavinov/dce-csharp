@@ -68,6 +68,7 @@ namespace Com.Model
             : base(name, lesserSet, greaterSet)
         {
             IsIdentity = true;
+            IsSuper = true;
             // TODO: Check if sets are of correct type.
             // TODO: Parameterize the dimension accordingly. It is super dimension.
 	    }

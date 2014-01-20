@@ -95,6 +95,11 @@ namespace Com.Model
         /// </summary>
         public bool IsTemporary { get; set; }
 
+        /// <summary>
+        /// This dimension belongs to the inclusion hierarchy (super-dimension).
+        /// </summary>
+        public bool IsSuper { get; set; }
+
         #endregion
 
         #region Schema methods.

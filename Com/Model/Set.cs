@@ -17,7 +17,7 @@ namespace Com.Model
     /// A set is also characterized by width and length of its members. 
     /// And a set provides methods for manipulating its structure and intances. 
     /// </summary>
-    public class Set : IEnumerable<Set>, INotifyCollectionChanged, INotifyPropertyChanged
+    public class Set : INotifyCollectionChanged, INotifyPropertyChanged
     {
         #region Properties
 
@@ -977,22 +977,7 @@ namespace Com.Model
 
         #region Interfaces
 
-        //
-        // IEnumerable for accessing children (is needed for the root to serve as ItemsSource)
-        //
-        IEnumerator<Set> IEnumerable<Set>.GetEnumerator()
-        {
-            return SubSets.GetEnumerator();
-        }
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return SubSets.GetEnumerator();
-        }
-
-        //
-        // INotifyCollectionChanged, INotifyPropertyChanged
-        //
-        public event NotifyCollectionChangedEventHandler CollectionChanged;
+        public event NotifyCollectionChangedEventHandler CollectionChanged; // Operations with dimensions (of any kind)
         protected virtual void OnCollectionChanged(NotifyCollectionChangedEventArgs e)
         {
             if (CollectionChanged != null)
@@ -1003,34 +988,12 @@ namespace Com.Model
         public virtual void NotifyAdd(Dim dim) // Convenience method: notifying about adding
         {
             if (dim == null) return;
-            if (dim.LesserSet != null)
-            {
-                dim.LesserSet.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, dim));
-                dim.LesserSet.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, dim.GreaterSet));
-
-            }
-            if (dim.GreaterSet != null)
-            {
-                dim.GreaterSet.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, dim));
-                dim.GreaterSet.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, dim.LesserSet));
-            }
+            OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, dim));
         }
-
         public virtual void NotifyRemove(Dim dim) // Convenience method: notifying about removing
         {
             if (dim == null) return;
-            if (dim.LesserSet != null)
-            {
-                dim.LesserSet.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, dim));
-                dim.LesserSet.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, dim.GreaterSet));
-
-            }
-            if (dim.GreaterSet != null)
-            {
-                dim.GreaterSet.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, dim));
-                dim.GreaterSet.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, dim.LesserSet));
-
-            }
+            OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, dim));
         }
 
         //

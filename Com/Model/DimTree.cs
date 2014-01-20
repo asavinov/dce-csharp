@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -34,10 +35,11 @@ namespace Com.Model
         //
         // Tree methods
         //
-        public bool IsRoot { get { return Parent == null; } }
-        public bool IsLeaf { get { return Children == null || Children.Count == 0; } }
         public DimTree Parent { get; set; }
+        public bool IsRoot { get { return Parent == null; } }
+
         public List<DimTree> Children { get; set; }
+        public bool IsLeaf { get { return Children == null || Children.Count == 0; } }
         public void AddChild(DimTree child)
         {
             Debug.Assert(!Children.Contains(child), "Wrong use: this child node already exists in the tree.");
@@ -67,42 +69,11 @@ namespace Com.Model
         {
             return Children.FirstOrDefault(c => c.Dim == dim);
         }
-
-        public DimTree AddPath(DimPath path) // Find or create nodes corresponding to the path.
+        public IEnumerable<DimTree> Flatten() // Including this element
         {
-            Debug.Assert(path != null && path.LesserSet == Set, "Wrong use: path must start from the node it is added to.");
-
-            if (path.Path == null || path.Path.Count == 0) return null;
-
-            Dim seg;
-            DimTree node = this;
-            for (int i = 0; i < path.Path.Count; i++) // We add all segments sequentially
-            {
-                seg = path.Path[i];
-                DimTree child = GetChild(seg); // Find a child corresponding to this segment
-
-                if (child == null) // Add a new child corresponding to this segment
-                {
-                    child = (DimTree)Activator.CreateInstance(node.GetType());
-                    child.Dim = seg;
-                    node.AddChild(child);
-                }
-
-                node = child;
-            }
-
-            return node;
+            return new[] { this }.Union(Children.SelectMany(x => x.Flatten()));
         }
 
-        public void AddSourcePaths(SetMapping mapping)
-        {
-            mapping.Matches.ForEach(m => AddPath(m.SourcePath));
-        }
-
-        public void AddTargetPaths(SetMapping mapping)
-        {
-            mapping.Matches.ForEach(m => AddPath(m.TargetPath));
-        }
 
         public DimTree Root // Find the tree root
         {
@@ -158,11 +129,6 @@ namespace Com.Model
             }
         }
 
-        public IEnumerable<DimTree> Flatten() // Including this element
-        {
-            return new[] { this }.Union(Children.SelectMany(x => x.Flatten()));
-        }
-
         public List<List<DimTree>> GetRankedNodes() // Return a list where element n is a list of nodes with rank n (n=0 means a leaf with a primitive set)
         {
             int maxRank = MaxLeafRank;
@@ -212,7 +178,7 @@ namespace Com.Model
         }
 
         //
-        // NotifyCollectionChanged Members
+        // INotifyCollectionChanged Members
         //
         public event NotifyCollectionChangedEventHandler CollectionChanged;
         protected virtual void OnCollectionChanged(NotifyCollectionChangedEventArgs e)
@@ -238,6 +204,42 @@ namespace Com.Model
         {
             OnPropertyChanged(propertyName);
             Children.ForEach(c => c.NotifyAllOnPropertyChanged(propertyName));
+        }
+
+        public DimTree AddPath(DimPath path) // Find or create nodes corresponding to the path.
+        {
+            Debug.Assert(path != null && path.LesserSet == Set, "Wrong use: path must start from the node it is added to.");
+
+            if (path.Path == null || path.Path.Count == 0) return null;
+
+            Dim seg;
+            DimTree node = this;
+            for (int i = 0; i < path.Path.Count; i++) // We add all segments sequentially
+            {
+                seg = path.Path[i];
+                DimTree child = GetChild(seg); // Find a child corresponding to this segment
+
+                if (child == null) // Add a new child corresponding to this segment
+                {
+                    child = (DimTree)Activator.CreateInstance(node.GetType());
+                    child.Dim = seg;
+                    node.AddChild(child);
+                }
+
+                node = child;
+            }
+
+            return node;
+        }
+
+        public void AddSourcePaths(SetMapping mapping)
+        {
+            mapping.Matches.ForEach(m => AddPath(m.SourcePath));
+        }
+
+        public void AddTargetPaths(SetMapping mapping)
+        {
+            mapping.Matches.ForEach(m => AddPath(m.TargetPath));
         }
 
         /// <summary>
@@ -330,6 +332,7 @@ namespace Com.Model
         }
     }
 
+    
     /// <summary>
     /// Generic tree. Copied from: http://stackoverflow.com/questions/66893/tree-data-structure-in-c-sharp
     /// </summary>
@@ -386,6 +389,271 @@ namespace Com.Model
         {
             return new[] { Value }.Union(_children.SelectMany(x => x.Flatten()));
         }
+    }
+
+    /// <summary>
+    /// It is a representative of one dimension and a basic element of a tree composed of dimensions.
+    /// This class does not specify what kind of tree is created from dimensions and how dimensions are interpreted - it is specified in subclasses.
+    /// It inherits from ObservableCollection because we want it to notify TreeView (alternatively, we need to implement numerous interfaces manually). 
+    /// </summary>
+    public class DimNode : ObservableCollection<DimNode>
+    {
+        /// <summary>
+        /// It can be null for special nodes representing non-existing dimensions like bottom or top dimensions (normally root of the tree).
+        /// </summary>
+        private Dim _dim;
+        public Dim Dim { get { return _dim; } protected set { _dim = value; } }
+
+        public Set GreaterSet { get { return Dim != null ? Dim.GreaterSet : null; } }
+        public Set LesserSet { get { return Dim != null ? Dim.LesserSet : null; } }
+
+        //
+        // Tree methods
+        //
+
+        public DimNode Parent { get; protected set; }
+        public bool IsRoot { get { return Parent == null; } }
+        public DimNode Root // Find the tree root
+        {
+            get
+            {
+                DimNode node = this;
+                while (node.Parent != null) node = node.Parent;
+                return node;
+            }
+        }
+
+        public bool IsLeaf { get { return Count == 0; } }
+        public void AddChild(DimNode child)
+        {
+            Debug.Assert(!Contains(child), "Wrong use: this child node already exists in the tree.");
+
+            if (child.Parent != null)
+            {
+                child.Parent.RemoveChild(child);
+            }
+
+            child.Parent = this;
+            this.Add(child); // Notification will be sent by the base class
+
+            // this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, (object)child));
+        }
+        public bool RemoveChild(DimNode child)
+        {
+            child.Parent = null;
+            bool ret = this.Remove(child); // Notification will be sent by the base class
+
+            // this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, (object)child));
+
+            return ret;
+        }
+        public bool ExistsChild(Dim dim)
+        {
+            return GetChild(dim) != null;
+        }
+        public DimNode GetChild(Dim dim)
+        {
+            return this.FirstOrDefault(c => c.Dim == dim);
+        }
+        public IEnumerable<DimNode> Flatten() // All direct and indirect children (including this element)
+        {
+            return new[] { this }.Union(this.SelectMany(x => x.Flatten()));
+        }
+        public int MaxLeafRank // 0 if this node is a leaf
+        {
+            get
+            {
+                var leaves = Flatten().Where(s => s.IsLeaf);
+                int maxRank = 0;
+                foreach (DimNode n in leaves)
+                {
+                    int r = 0;
+                    for (DimNode t = n; t != this; t = t.Parent) r++;
+                    maxRank = r > maxRank ? r : maxRank;
+                }
+                return maxRank;
+            }
+        }
+
+        protected virtual void LesserSet_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e) // Changes in our lesser set
+        {
+        }
+
+        protected virtual void GreaterSet_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e) // Changes in our greater set
+        {
+        }
+
+        public void UnregisterListeners()
+        {
+            if (Dim.LesserSet != null) Dim.LesserSet.CollectionChanged -= LesserSet_CollectionChanged;
+            if (Dim.GreaterSet != null) Dim.GreaterSet.CollectionChanged -= GreaterSet_CollectionChanged;
+        }
+
+        public DimNode(Dim dim, DimNode parent = null)
+        {
+            Dim = dim;
+            if (parent != null) parent.AddChild(this);
+            if (Dim != null)
+            {
+                if (Dim.LesserSet != null) Dim.LesserSet.CollectionChanged += LesserSet_CollectionChanged;
+                if (Dim.GreaterSet != null) Dim.GreaterSet.CollectionChanged += GreaterSet_CollectionChanged;
+            }
+        }
+
+    }
+
+    /// <summary>
+    /// It is an element of a subset (inclusion) tree with only direct greater dimensions (attributes).
+    /// Two kinds of children: subsets (reference super-dimensions), and direct attributes (reference greater dimensions). 
+    /// </summary>
+    public class SubsetTree : DimNode
+    {
+
+        public IEnumerable<DimNode> SubsetChildren
+        {
+            get
+            {
+                return this.Where(c => ((SubsetTree)c).IsSubsetNode);
+            }
+        }
+
+        public IEnumerable<DimNode> DimensionChildren
+        {
+            get
+            {
+                return this.Where(c => ((SubsetTree)c).IsDimensionNode);
+            }
+        }
+
+        public bool IsSubsetNode // Does it represent a set node in the tree?
+        {
+            get
+            {
+                return Dim != null && (Dim.IsSuper || Dim is DimSuper);
+            }
+        }
+
+        public bool IsDimensionNode // Does it represent a dimension node in the tree?
+        {
+            get
+            {
+                return !IsSubsetNode && !(Dim is DimImport);
+            }
+        }
+
+        protected override void LesserSet_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e) // Changes in our lesser set
+        {
+            if (!IsSubsetNode) return; // Child nodes are added/deleted for only super-dimensions (for subset trees)
+
+            Dim dim = e.NewItems != null && e.NewItems.Count > 0 ? (Dim)e.NewItems[0] : null;
+            if (dim == null) return;
+
+            if (e.Action == NotifyCollectionChangedAction.Add) // Decide if this node has to add a new child node
+            {
+                if (dim.IsSuper || dim is DimSuper) // Inclusion
+                {
+                    if (dim.GreaterSet == Dim.LesserSet) // Add a subset child node (recursively)
+                    {
+                        if (!ExistsChild(dim))
+                        {
+                            // New child instances need to have the type of this instance (this instance can be an extension of this class so we do not know it)
+                            DimNode child = (DimNode)Activator.CreateInstance(this.GetType(), new Object[] { dim, null });
+                            AddChild(child);
+
+                            if (child is SubsetTree) ((SubsetTree)child).ExpandTree(true);
+                        }
+                    }
+                }
+                else if (dim is DimImport) { }
+                else // Poset
+                {
+                    if (dim.LesserSet == Dim.LesserSet) // Add an attribute child node (non-recursively)
+                    {
+                        if (!ExistsChild(dim))
+                        {
+                            // New child instances need to have the type of this instance (this instance can be an extension of this class so we do not know it)
+                            DimNode child = (DimNode)Activator.CreateInstance(this.GetType(), new Object[] { dim, null });
+                            AddChild(child);
+                        }
+                    }
+                }
+            }
+            else if (e.Action == NotifyCollectionChangedAction.Remove)
+            {
+                if (dim.IsSuper || dim is DimSuper) // Inclusion
+                {
+                    if (dim.GreaterSet == Dim.LesserSet) // Remove a subset child node (recursively)
+                    {
+                        DimNode child = GetChild(dim);
+                        if (child != null)
+                        {
+                            RemoveChild(child);
+                        }
+                    }
+                }
+                else if (dim is DimImport) { }
+                else // Poset
+                {
+                    if (dim.LesserSet == Dim.LesserSet) // Add an attribute child node (non-recursively)
+                    {
+                        DimNode child = GetChild(dim);
+                        if (child != null)
+                        {
+                            RemoveChild(child);
+                        }
+                    }
+                }
+            }
+        }
+
+        protected override void GreaterSet_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e) // Changes in our greater set
+        {
+        }
+
+        /// <summary>
+        /// Create and add child nodes for subsets of this node and direct greater dimensions. 
+        /// </summary>
+        public void ExpandTree(bool recursively = true)
+        {
+            if (LesserSet == null) // We cannot expand the set but try to expand the existing children
+            {
+                if (!recursively) return;
+                foreach (DimNode c in this)
+                {
+                    if (!(c is SubsetTree)) continue;
+                    ((SubsetTree)c).ExpandTree(recursively);
+                }
+                return;
+            }
+
+            foreach (Dim sd in LesserSet.SubDims)
+            {
+                if (ExistsChild(sd)) continue;
+
+                // New child instances need to have the type of this instance (this instance can be an extension of this class so we do not know it)
+                DimNode child = (DimNode)Activator.CreateInstance(this.GetType(), new Object[] { sd, null });
+                this.AddChild(child);
+
+                if (recursively && (child is SubsetTree)) ((SubsetTree)child).ExpandTree(recursively);
+            }
+
+            // Add child nodes for greater dimension (no recursion)
+            foreach (Dim gd in LesserSet.GreaterDims)
+            {
+                if (ExistsChild(gd)) continue;
+
+                // New child instances need to have the type of this instance (this instance can be an extension of this class so we do not know it)
+                DimNode child = (DimNode)Activator.CreateInstance(this.GetType(), new Object[] { gd, null });
+                this.AddChild(child);
+            }
+        }
+
+        public SubsetTree(Dim dim, DimNode parent = null)
+            : base(dim, parent)
+        {
+            // Register for events from the schema (or inside constructor?)
+        }
+
     }
 
 }

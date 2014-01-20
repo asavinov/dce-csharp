@@ -128,6 +128,27 @@ namespace Test
             // Test path correctness
             pathCount = epSet.GreaterPaths.Count;
             Assert.AreEqual(20, pathCount);
+
+            // Test tree
+            SubsetTree treeTop = new SubsetTree(null);
+            SubsetTree treeRoot = new SubsetTree(dbTop.Root.SuperDim, treeTop);
+            treeTop.ExpandTree();
+
+            Assert.AreEqual(20, treeRoot.Count); // 20 tables in the root 
+            Assert.AreEqual(20, treeRoot[8].Count); // Orders has 20 greater dimensions
+
+            // Check schema notifications and tree updates
+            Set t1 = new Set("New Set");
+            dbTop.Root.AddSubset(t1);
+            Assert.AreEqual(21, treeRoot.Count); // Now we have 1 more table in the root
+
+            Set t2 = new Set("New Subset");
+            dbTop.Root.FindSubset("Orders").AddSubset(t2);
+            Assert.AreEqual(21, treeRoot[8].Count); // In addition to 20 attributes, it has one new subset
+
+            Dim d1 = new DimPrimitive<double>("d1", t1, dbTop.GetPrimitiveSubset("Double"));
+            d1.Add();
+            Assert.AreEqual(1, treeRoot[20].Count); // 1 dimension in the new table
         }
 
         [TestMethod]
