@@ -217,7 +217,7 @@ namespace Com.Model
             for (int i = 0; i < path.Path.Count; i++) // We add all segments sequentially
             {
                 seg = path.Path[i];
-                DimTree child = GetChild(seg); // Find a child corresponding to this segment
+                DimTree child = node.GetChild(seg); // Find a child corresponding to this segment
 
                 if (child == null) // Add a new child corresponding to this segment
                 {
