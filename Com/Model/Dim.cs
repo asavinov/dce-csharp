@@ -233,6 +233,12 @@ namespace Com.Model
         /// It is a formula defining a function for this dimension. When evaluated, it returs a value of the greater set for the identity value of the lesser set.
         /// </summary>
         public Expression SelectExpression { get; set; }
+        /// <summary>
+        /// Specification of the function for mapped dimensions. 
+        /// It is also a specification of instantiation procedure for mapped sets where it is a definition of the output set tuples in terms of input set tuples.
+        /// The use for mapped set might not be a good idea but it requires rethinking the whole instantiation procedure. 
+        /// </summary>
+        public Mapping Mapping { get; set; }
 
         public virtual void ComputeValues() { return; } // Set output values of the function by evaluating an expression (or using other means)
 

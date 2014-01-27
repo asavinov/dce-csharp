@@ -106,7 +106,7 @@ namespace Test
             Set sourceSet = dbTop.FindSubset("Employees");
             mapper.MapSet(sourceSet, wsTop);
 
-            SetMapping bestMapping = mapper.GetBestMapping(sourceSet, wsTop);
+            Mapping bestMapping = mapper.GetBestMapping(sourceSet, wsTop);
             Set targetSet = bestMapping.TargetSet;
             DimImport dimImport = new DimImport(bestMapping); // Configure first set for import
             dimImport.Add();
@@ -123,7 +123,7 @@ namespace Test
             Set sourceSet2 = dbTop.FindSubset("Inventory Transactions");
             mapper.MapSet(sourceSet2, wsTop);
 
-            SetMapping bestMapping2 = mapper.GetBestMapping(sourceSet2, wsTop);
+            Mapping bestMapping2 = mapper.GetBestMapping(sourceSet2, wsTop);
             Set targetSet2 = bestMapping2.TargetSet;
             DimImport dimImport2 = new DimImport(bestMapping2); // Configure first set for import
             dimImport2.Add();
@@ -410,7 +410,7 @@ namespace Test
             //
             // Test aggregation recommendations. From Customers to Product
             // Grouping (deproject) expression: (Customers) <- (Orders) <- (Order Details)
-            // Measure (project) expr+ession: (Order Details) -> (Product) -> List Price
+            // Measure (project) tupleExpr+ession: (Order Details) -> (Product) -> List Price
             //
             RecommendedAggregations recoms = new RecommendedAggregations();
             recoms.SourceSet = cust;
@@ -594,84 +594,74 @@ namespace Test
             //
             // Load test data. 
             //
-            Set orderStatus = Mapper.ImportSet(dbTop.FindSubset("Orders Status"), wsTop); // We load it to get more (target) data
+            Set orderStatus = Mapper.ImportSet(dbTop.FindSubset("Orders Status"), wsTop); // We load it separately to get more (target) data
             orderStatus.Populate();
 
             Set mainSet = Mapper.ImportSet(dbTop.FindSubset("Order Details"), wsTop);
             mainSet.Populate();
 
-            //
-            // Define mapping (Orders Details) -> Status ID: From (Order Details Status) To (Orders Status)
-            //
-            Set sourceSet = wsTop.FindSubset("Order Details Status");
             Dim sourceDim = mainSet.GetGreaterDim("Status ID");
-            Set targetSet = wsTop.FindSubset("Orders Status");
-            Dim targetDim = targetSet.CreateDefaultLesserDimension(sourceDim.Name, mainSet); // TODO: set also other properties so that new dim is identical to the old one
+            Set sourceDimType = wsTop.FindSubset("Order Details Status");
 
-            SetMapping mapping = new SetMapping(sourceSet, targetSet);
-            mapping.AddMatch(new PathMatch( // Add two primitive paths each having one primitive dimension
-                new DimPath(sourceSet.GetGreaterDim("Status ID")),
-                new DimPath(targetSet.GetGreaterDim("Status ID")))
+            //
+            // Define a new derived (mapped) dimension: (Order Details) -> newDim -> (Orders Status)
+            // This new dim is supposed to clone existing dim: (Order Details) -> existingDim -> (Order Details Status)
+            // Thus we essentially implement "Change Type" pattern
+            //
+            Set mappedDimType = wsTop.FindSubset("Orders Status");
+            Dim mappedDim = mappedDimType.CreateDefaultLesserDimension(sourceDim.Name + " (1)", mainSet); // TODO: set also other properties so that new dim is identical to the old one
+            mappedDim.Add();
+
+            // Manually define a mapping: Source: (Orders Details) -> Status ID -> Status ID. Target: (Orders Status) -> Status ID.
+            Mapping mapping = new Mapping(mainSet, mappedDimType);
+            mapping.AddMatch(new PathMatch( // Add one match between two paths
+                new DimPath(new List<Dim> { sourceDim, sourceDimType.GetGreaterDim("Status ID") }),
+                new DimPath(mappedDimType.GetGreaterDim("Status ID")))
                 );
 
-            //
-            // Populate new dimension and delete old one
-            //
-            Expression tupleExpr = mapping.GetTargetExpression(sourceDim, targetDim);
+            mappedDim.Mapping = mapping;
 
-            var funcExpr = ExpressionScope.CreateFunctionDeclaration(targetDim.Name, targetDim.LesserSet.Name, targetDim.GreaterSet.Name);
-            funcExpr.Statements[0].Input = tupleExpr; // Return statement
-            funcExpr.ResolveFunction(wsTop);
-            funcExpr.Resolve();
+            // Populate new dimension
+            mappedDim.ComputeValues(); // Evaluate tuple expression on the same set (not remove set), that is, move data from one dimension to the new dimension
 
-            targetDim.SelectExpression = funcExpr;
-
-            targetDim.ComputeValues(); // Evaluate tuple expression on the same set (not remove set), that is, move data from one dimension to the new dimension
-
-            targetDim.Replace(sourceDim); // Remove old dimension (detach) and attach new dimension (if not attached)
-
-            Assert.AreEqual(2, targetDim.GetValue(14));
-            Assert.AreEqual(1, targetDim.GetValue(15));
+            Assert.AreEqual(2, mappedDim.GetValue(14));
+            Assert.AreEqual(1, mappedDim.GetValue(15));
 
             //
-            // Define mapping (Orders) -> Employee ID: From (Employees) To (Suppliers)
+            // Define a new derived (mapped) dimension: (Orders) -> newDim -> (Suppliers)
+            // This new dim is supposed to clone existing dim: (Orders) -> existingDim -> (Employees)
+            // Thus we essentially implement "Change Type" pattern
             //
-            targetSet = Mapper.ImportSet(dbTop.FindSubset("Suppliers"), wsTop);
-            targetSet.Populate();
-
             mainSet = wsTop.FindSubset("Orders");
 
-            sourceSet = wsTop.FindSubset("Employees");
+            sourceDimType = wsTop.FindSubset("Employees");
             sourceDim = mainSet.GetGreaterDim("Employee ID");
-            targetSet = wsTop.FindSubset("Suppliers");
-            targetDim = targetSet.CreateDefaultLesserDimension(sourceDim.Name, mainSet); // TODO: set also other properties so that new dim is identical to the old one
 
-            mapping = new SetMapping(sourceSet, targetSet);
-            mapping.AddMatch(new PathMatch( // Add two primitive paths each having one primitive dimension
-                new DimPath(sourceSet.GetGreaterDim("ID")),
-                new DimPath(targetSet.GetGreaterDim("ID")))
+            //
+            // Define a new derived (mapped) dimensions
+            //
+            mappedDimType = Mapper.ImportSet(dbTop.FindSubset("Suppliers"), wsTop);
+            mappedDimType.Populate();
+
+            mappedDim = mappedDimType.CreateDefaultLesserDimension(sourceDim.Name + " (1)", mainSet); // TODO: set also other properties so that new dim is identical to the old one
+            mappedDim.Add();
+
+            // Manually define a mapping
+            mapping = new Mapping(mainSet, mappedDimType);
+            mapping.AddMatch(new PathMatch( // Add one match between two paths
+                new DimPath(new List<Dim> { sourceDim, sourceDimType.GetGreaterDim("ID") }),
+                new DimPath(mappedDimType.GetGreaterDim("ID")))
                 );
 
-            //
-            // Populate new dimension and delete old one
-            //
-            tupleExpr = mapping.GetTargetExpression(sourceDim, targetDim);
+            mappedDim.Mapping = mapping;
 
-            funcExpr = ExpressionScope.CreateFunctionDeclaration(targetDim.Name, targetDim.LesserSet.Name, targetDim.GreaterSet.Name);
-            funcExpr.Statements[0].Input = tupleExpr; // Return statement
-            funcExpr.ResolveFunction(wsTop);
-            funcExpr.Resolve();
+            // Populate new dimension
+            mappedDim.ComputeValues(); // Evaluate tuple expression on the same set (not remove set), that is, move data from one dimension to the new dimension
 
-            targetDim.SelectExpression = funcExpr;
-
-            targetDim.ComputeValues(); // Evaluate tuple expression on the same set (not remove set), that is, move data from one dimension to the new dimension
-
-            targetDim.Replace(sourceDim); // Remove old dimension (detach) and attach new dimension (if not attached)
-
-            Assert.AreEqual(8, targetDim.GetValue(0));
-            Assert.AreEqual(2, targetDim.GetValue(1));
-            Assert.AreEqual(3, targetDim.GetValue(2));
-            Assert.AreEqual(5, targetDim.GetValue(3));
+            Assert.AreEqual(8, mappedDim.GetValue(0));
+            Assert.AreEqual(2, mappedDim.GetValue(1));
+            Assert.AreEqual(3, mappedDim.GetValue(2));
+            Assert.AreEqual(5, mappedDim.GetValue(3));
         }            
 
     }

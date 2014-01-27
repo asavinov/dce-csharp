@@ -232,12 +232,12 @@ namespace Com.Model
             return node;
         }
 
-        public void AddSourcePaths(SetMapping mapping)
+        public void AddSourcePaths(Mapping mapping)
         {
             mapping.Matches.ForEach(m => AddPath(m.SourcePath));
         }
 
-        public void AddTargetPaths(SetMapping mapping)
+        public void AddTargetPaths(Mapping mapping)
         {
             mapping.Matches.ForEach(m => AddPath(m.TargetPath));
         }

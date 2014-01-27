@@ -868,7 +868,7 @@ namespace Com.Model
                 {
                     // The leaf expression produces initial value(s) to be projected and by default it is a variable
                     //if (leafExpr == null) leafExpr = new Expression("this", Operation.DOT, lesserSet);
-                    //expr.Input = leafExpr;
+                    //tupleExpr.Input = leafExpr;
                 }
 
                 previousExpr = expr;
@@ -912,7 +912,7 @@ namespace Com.Model
                 }
                 else
                 {
-                    //expr.Input = new Expression("this", Operation.DOT, lesserSet); // The deproject path starts from some variable which stores the initial value(s) to be deprojected
+                    //tupleExpr.Input = new Expression("this", Operation.DOT, lesserSet); // The deproject path starts from some variable which stores the initial value(s) to be deprojected
                 }
 
                 previousExpr = expr;

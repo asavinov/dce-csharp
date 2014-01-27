@@ -71,43 +71,11 @@ namespace Com.Model
 
         #region Data methods
 
-        /// <summary>
-        /// Definition of this set tuples in terms of import dimension tuples. It is used to populate this set by using data from other sets via import dimensions. 
-        /// </summary>
-        public SetMapping _importMapping;
-        public SetMapping ImportMapping // We store mapping instead of expression because it is easier to maintain (edit)
-        {
-            get { return _importMapping; }
-            set
-            {
-                if (_importMapping == value) return;
-
-                if (value == null)
-                {
-                    _importMapping = value; // now the dimension is useless so maybe detach it from the sets
-                    return;
-                }
-
-                if (GreaterSet == null) GreaterSet = value.SourceSet;
-                if (LesserSet == null) GreaterSet = value.TargetSet;
-
-                Debug.Assert(value.SourceSet == GreaterSet && value.TargetSet == LesserSet, "Wrong use: the mapping source and target sets have to corresond to the dimension sets.");
-
-                // The mapping can reference new elements which have to be integrated into the schema
-                DimTree tree = value.GetTargetTree();
-                PathMatch match = value.Matches.FirstOrDefault(m => m.TargetPath.GreaterSet.IsPrimitive);
-                SetTop schema = match != null ? match.TargetPath.GreaterSet.Top : null; // We assume that primitive sets always have root defined (other sets might not have been added yet).
-                tree.IncludeInSchema(schema); // Include new elements in schema
-
-                _importMapping = value; // Configure set for import
-            }
-        }
-
         public override void ComputeValues()
         {
-            Debug.Assert(ImportMapping != null && ImportMapping.SourceSet == GreaterSet && ImportMapping.TargetSet == LesserSet, "Target/Output of import mapping/expression must be equal to the set where it is stored.");
+            Debug.Assert(Mapping != null && Mapping.SourceSet == GreaterSet && Mapping.TargetSet == LesserSet, "Target/Output of import mapping/expression must be equal to the set where it is stored.");
 
-            Expression tupleExpression = ImportMapping.GetTargetExpression(); // Build a tuple tree with paths in leaves
+            Expression tupleExpression = Mapping.GetTargetExpression(); // Build a tuple tree with paths in leaves
 
             var funcExpr = ExpressionScope.CreateFunctionDeclaration(Name, GreaterSet.Name, LesserSet.Name);
             funcExpr.Statements[0].Input = tupleExpression; // Return statement
@@ -151,11 +119,16 @@ namespace Com.Model
 
         #endregion
 
-        public DimImport(SetMapping mapping)
+        public DimImport(Mapping mapping)
             : this(mapping.SourceSet.Name, mapping.TargetSet, mapping.SourceSet)
         {
-            ImportMapping = mapping;
-            // this.Add();
+            Mapping = mapping;
+
+            // The mapping can reference new elements which have to be integrated into the schema
+            DimTree tree = Mapping.GetTargetTree();
+            PathMatch match = Mapping.Matches.FirstOrDefault(m => m.TargetPath.GreaterSet.IsPrimitive);
+            SetTop schema = match != null ? match.TargetPath.GreaterSet.Top : null; // We assume that primitive sets always have root defined (other sets might not have been added yet).
+            tree.IncludeInSchema(schema); // Include new elements in schema
         }
 
         public DimImport(string name, Set lesserSet, Set greaterSet) 

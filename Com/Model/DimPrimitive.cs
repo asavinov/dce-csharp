@@ -152,6 +152,33 @@ namespace Com.Model
 
         public override void ComputeValues()
         {
+            if (Mapping != null)
+            {
+                // 1. There are two versions of this method for sets and dims
+                // 2. Is it wrapped into FUNCTION and do we need it. 
+                // 3. Will it be processed by the generic evaluation loop below?
+
+                // TODO: Check this constraint
+                // Debug.Assert(Mapping.SourceSet == GreaterSet && Mapping.TargetSet == LesserSet, "Wrong use: the mapping source and target sets have to corresond to the dimension sets.");
+
+                // Build a function from the mapping for populating a mapped dimension (type change or new mapped dimension)
+                Expression tupleExpr = Mapping.GetTargetExpression(this);
+
+                // TODO: Ensure the presence of all dimensions and sets in the schema (they all have to be included in the schema)
+                // Maybe this check should be done only once after creating the mapping and not when it is transformed into an expression, that is, a valid mapping stored in the dimension cannot use hanging schema elements
+                //DimTree tree = mappping.GetTargetTree();
+                //PathMatch match = mappping.Matches.FirstOrDefault(m => m.TargetPath.GreaterSet.IsPrimitive);
+                //SetTop schema = match != null ? match.TargetPath.GreaterSet.Top : null; // We assume that primitive sets always have root defined (other sets might not have been added yet).
+                //tree.IncludeInSchema(schema); // Include new elements in schema
+
+                var funcExpr = ExpressionScope.CreateFunctionDeclaration(Name, LesserSet.Name, GreaterSet.Name);
+                funcExpr.Statements[0].Input = tupleExpr; // Return statement
+                funcExpr.ResolveFunction(LesserSet.Top);
+                funcExpr.Resolve();
+
+                SelectExpression = funcExpr;
+            }
+
             if (SelectExpression != null) // Function definition the values of which have to be computed and stored
             {
                 Debug.Assert(SelectExpression.Operation == Operation.FUNCTION, "Wrong use: derived function has to be FUNCTION expression.");

@@ -260,7 +260,7 @@ namespace Test
             Mapper mapper = new Mapper();
             mapper.SetCreationThreshold = 1.0;
             mapper.MapSet(ordersSource, wsTop);
-            SetMapping mapping = mapper.GetBestMapping(ordersSource, wsTop);
+            Mapping mapping = mapper.GetBestMapping(ordersSource, wsTop);
 
             MappingModel model = new MappingModel(mapping);
 
@@ -325,7 +325,7 @@ namespace Test
             // Interestingly, it is not necessary to use identities - we use any properties provided that source values uniquely determine some target instance.
             mapper.MapDim(new DimPath(sourceDim), new DimPath(targetDim));
 
-            SetMapping mapping = mapper.Mappings[0];
+            Mapping mapping = mapper.Mappings[0];
             DimPath sourcePath = new DimPath(sourceSet.GetGreaterDim("Last Name"));
             DimPath targetPath = mapping.GetMatchForSource(sourcePath).TargetPath;
             Assert.AreEqual(sourcePath.FirstSegment.Name, targetPath.FirstSegment.Name);
