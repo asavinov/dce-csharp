@@ -22,8 +22,8 @@ namespace Com.Model
         {
             get
             {
-                if (GreaterSet == null) return true;
-                var dimList = GreaterSet.ExportDims; // Only this line will be changed in this class extensions for other dimension types
+                if (GreaterSet == null) return false;
+                var dimList = GreaterSet.ImportDims; // Only this line will be changed in this class extensions for other dimension types
                 return dimList.Contains(this);
             }
         }
@@ -32,16 +32,16 @@ namespace Com.Model
         {
             get
             {
-                if (LesserSet == null) return true;
-                var dimList = LesserSet.ImportDims; // Only this line will be changed in this class extensions for other dimension types
+                if (LesserSet == null) return false;
+                var dimList = LesserSet.ExportDims; // Only this line will be changed in this class extensions for other dimension types
                 return dimList.Contains(this);
             }
         }
 
         public override void Add(int lesserSetIndex, int greaterSetIndex = -1)
         {
-            if (GreaterSet != null) AddToDimensions(GreaterSet.ExportDims, greaterSetIndex);
-            if (LesserSet != null) AddToDimensions(LesserSet.ImportDims, lesserSetIndex);
+            if (GreaterSet != null) AddToDimensions(GreaterSet.ImportDims, greaterSetIndex);
+            if (LesserSet != null) AddToDimensions(LesserSet.ExportDims, lesserSetIndex);
 
             // Notify that a new child has been added
             if (LesserSet != null) LesserSet.NotifyAdd(this);
@@ -50,8 +50,8 @@ namespace Com.Model
 
         public override void Remove()
         {
-            if (GreaterSet != null) GreaterSet.ExportDims.Remove(this);
-            if (LesserSet != null) LesserSet.ImportDims.Remove(this);
+            if (GreaterSet != null) GreaterSet.ImportDims.Remove(this);
+            if (LesserSet != null) LesserSet.ExportDims.Remove(this);
 
             // Notify that a new child has been removed
             if (LesserSet != null) LesserSet.NotifyRemove(this);
@@ -60,8 +60,8 @@ namespace Com.Model
 
         public override void Replace(Dim dim)
         {
-            int greaterSetIndex = GreaterSet.ExportDims.IndexOf(dim);
-            int lesserSetIndex = LesserSet.ImportDims.IndexOf(dim);
+            int greaterSetIndex = GreaterSet.ImportDims.IndexOf(dim);
+            int lesserSetIndex = LesserSet.ExportDims.IndexOf(dim);
             dim.Remove();
 
             this.Add(lesserSetIndex, greaterSetIndex);
@@ -73,46 +73,51 @@ namespace Com.Model
 
         public override void ComputeValues()
         {
-            Debug.Assert(Mapping != null && Mapping.SourceSet == GreaterSet && Mapping.TargetSet == LesserSet, "Target/Output of import mapping/expression must be equal to the set where it is stored.");
+            Debug.Assert(Mapping != null && Mapping.TargetSet == GreaterSet && Mapping.SourceSet == LesserSet, "Wrong use: source set of mapping must be lesser set of the dimension, and target set must be greater set.");
 
+            Set sourceSet = LesserSet;
+            Set targetSet = GreaterSet;
+
+            //
+            // Prepare the expression
+            //
             Expression tupleExpression = Mapping.GetTargetExpression(); // Build a tuple tree with paths in leaves
 
-            var funcExpr = ExpressionScope.CreateFunctionDeclaration(Name, GreaterSet.Name, LesserSet.Name);
+            var funcExpr = ExpressionScope.CreateFunctionDeclaration(Name, sourceSet.Name, targetSet.Name);
             funcExpr.Statements[0].Input = tupleExpression; // Return statement
-            funcExpr.ResolveFunction(GreaterSet.Top);
+            funcExpr.ResolveFunction(sourceSet.Top);
             funcExpr.Resolve();
 
-            Set remoteSet = GreaterSet;
-            if (remoteSet.Top is SetTopOledb)
+            //
+            // Evaluate the expression depending on the source set type
+            //
+            if (sourceSet.Top is SetTopOledb)
             {
                 // Request a (flat) result set from the remote set (data table)
-                DataTable dataTable = ((SetTopOledb)remoteSet.Top).ExportAll(remoteSet);
+                DataTable dataTable = ((SetTopOledb)sourceSet.Top).ExportAll(sourceSet);
 
                 // For each row, evaluate the expression and append the new element
                 foreach (DataRow row in dataTable.Rows) // A row is <colName, primValue> collection
                 {
-//                    tupleExpression.SetOutput(Operation.ALL, null);
-//                    tupleExpression.SetOutput(Operation.PARAMETER, row); // Set the input variable 'source'
                     funcExpr.Input.Dimension.Value = row; // Initialize 'this'
                     funcExpr.Evaluate(); // Evaluate the expression tree by computing primtive tuple values
-//                    if (LesserSet.Find(importExpression)) continue; // Check if this and nested tuples exist already
-//                    if (!LesserSet.CanAppend(importExpression)) continue; // Check if it can be formally added
-                    LesserSet.Append(tupleExpression); // Append an element using the tuple composed of primitive values
+                    //if (targetSet.Find(importExpression)) continue; // Check if this and nested tuples exist already
+                    //if (!targetSet.CanAppend(importExpression)) continue; // Check if it can be formally added
+                    targetSet.Append(tupleExpression); // Append an element using the tuple composed of primitive values
                 }
             }
-            else if (remoteSet.Top is SetTopOdata)
+            else if (sourceSet.Top is SetTopOdata)
             {
             }
-            else if (remoteSet.Top == LesserSet.Top) // Intraschema: direct access using offsets
+            else if (sourceSet.Top == LesserSet.Top) // Intraschema: direct access using offsets
             {
-                for (Offset offset = 0; offset < remoteSet.Length; offset++)
+                for (Offset offset = 0; offset < sourceSet.Length; offset++)
                 {
-//                    tupleExpression.SetOutput(Operation.PARAMETER, offset); // Assign value of 'this' variable
                     tupleExpression.Input.Dimension.Value = offset; // Initialize 'this'
                     tupleExpression.Evaluate();
-                    //                    LesserSet.Find(importExpression);
-                    //                    if (!LesserSet.CanAppend(importExpression)) continue;
-                    LesserSet.Append(tupleExpression);
+                    //targetSet.Find(importExpression);
+                    //if (!targetSet.CanAppend(importExpression)) continue;
+                    targetSet.Append(tupleExpression);
                 }
             }
         }
@@ -120,15 +125,9 @@ namespace Com.Model
         #endregion
 
         public DimImport(Mapping mapping)
-            : this(mapping.SourceSet.Name, mapping.TargetSet, mapping.SourceSet)
+            : this(mapping.SourceSet.Name, mapping.SourceSet, mapping.TargetSet)
         {
             Mapping = mapping;
-
-            // The mapping can reference new elements which have to be integrated into the schema
-            DimTree tree = Mapping.GetTargetTree();
-            PathMatch match = Mapping.Matches.FirstOrDefault(m => m.TargetPath.GreaterSet.IsPrimitive);
-            SetTop schema = match != null ? match.TargetPath.GreaterSet.Top : null; // We assume that primitive sets always have root defined (other sets might not have been added yet).
-            tree.IncludeInSchema(schema); // Include new elements in schema
         }
 
         public DimImport(string name, Set lesserSet, Set greaterSet) 
@@ -138,4 +137,5 @@ namespace Com.Model
             // TODO: Parameterize the dimension according to its purpose.
 	    }
     }
+
 }

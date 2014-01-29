@@ -107,10 +107,11 @@ namespace Test
             mapper.MapSet(sourceSet, wsTop);
 
             Mapping bestMapping = mapper.GetBestMapping(sourceSet, wsTop);
-            Set targetSet = bestMapping.TargetSet;
+            bestMapping.AddTargetToSchema(wsTop);
             DimImport dimImport = new DimImport(bestMapping); // Configure first set for import
             dimImport.Add();
 
+            Set targetSet = bestMapping.TargetSet;
             targetSet.Populate();
             Assert.AreEqual(9, targetSet.Length);
             Assert.AreEqual(6, targetSet.GetValue("ID", 5));
@@ -124,10 +125,11 @@ namespace Test
             mapper.MapSet(sourceSet2, wsTop);
 
             Mapping bestMapping2 = mapper.GetBestMapping(sourceSet2, wsTop);
-            Set targetSet2 = bestMapping2.TargetSet;
+            bestMapping2.AddTargetToSchema(wsTop);
             DimImport dimImport2 = new DimImport(bestMapping2); // Configure first set for import
             dimImport2.Add();
 
+            Set targetSet2 = bestMapping2.TargetSet;
             targetSet2.Populate();
             Assert.AreEqual(102, targetSet2.Length);
             Assert.AreEqual(1, targetSet2.GetValue("Transaction Type", 99)); // 1 is offset which should correspond to second record "Sold"

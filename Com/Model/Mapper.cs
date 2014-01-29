@@ -195,8 +195,8 @@ namespace Com.Model
         }
 
         /// <summary>
-        /// Create target mappings for the specified set and store them in the mapper. 
-        /// Mappings for all greater sets will be used and created if they do not exist in the mapper. 
+        /// Generate best mappings from the specified source set to all possible target sets in the specified schema. 
+        /// Best mappings from the source greater sets will be (re)used and created if they do not already exist in the mapper. 
         /// </summary>
         public List<Mapping> MapSet(Set sourceSet, SetTop targetSchema)
         {
@@ -496,6 +496,7 @@ namespace Com.Model
             mapper.SetCreationThreshold = 1.0;
             mapper.MapSet(sourceSet, targetSchema);
             Mapping bestMapping = mapper.GetBestMapping(sourceSet, targetSchema);
+            bestMapping.AddTargetToSchema(targetSchema);
 
             DimImport dimImport = new DimImport(bestMapping);
             dimImport.Add();
@@ -865,6 +866,24 @@ namespace Com.Model
             }
 
             return tupleExpr;
+        }
+
+        public void AddSourceToSchema(SetTop schema = null)
+        {
+            throw new NotImplementedException();
+        }
+        public void AddTargetToSchema(SetTop schema = null) // Ensure that all target elements exist in the specified schema
+        {
+            // The mapping can reference new elements which are not in the schema yet so we try to find them and add if necessary
+
+            if (schema == null) // Find the schema from the mapping elements
+            {
+                PathMatch match = Matches.FirstOrDefault(m => m.TargetPath.GreaterSet.IsPrimitive);
+                schema = match != null ? match.TargetPath.GreaterSet.Top : null; // We assume that primitive sets always have root defined (other sets might not have been added yet).
+            }
+
+            DimTree tree = GetTargetTree();
+            tree.AddToSchema(schema);
         }
 
         public override string ToString()

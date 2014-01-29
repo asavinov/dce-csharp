@@ -169,7 +169,7 @@ namespace Com.Model
                 //DimTree tree = mappping.GetTargetTree();
                 //PathMatch match = mappping.Matches.FirstOrDefault(m => m.TargetPath.GreaterSet.IsPrimitive);
                 //SetTop schema = match != null ? match.TargetPath.GreaterSet.Top : null; // We assume that primitive sets always have root defined (other sets might not have been added yet).
-                //tree.IncludeInSchema(schema); // Include new elements in schema
+                //tree.AddToSchema(schema); // Include new elements in schema
 
                 var funcExpr = ExpressionScope.CreateFunctionDeclaration(Name, LesserSet.Name, GreaterSet.Name);
                 funcExpr.Statements[0].Input = tupleExpr; // Return statement

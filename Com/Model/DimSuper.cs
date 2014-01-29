@@ -18,7 +18,7 @@ namespace Com.Model
         {
             get
             {
-                if (GreaterSet == null) return true;
+                if (GreaterSet == null) return false;
                 var dimList = GreaterSet.SubDims; // Only this line will be changed in this class extensions for other dimension types
                 return dimList.Contains(this);
             }
@@ -28,7 +28,7 @@ namespace Com.Model
         {
             get
             {
-                if (LesserSet == null) return true;
+                if (LesserSet == null) return false;
                 return LesserSet.SuperDim == this;
             }
         }

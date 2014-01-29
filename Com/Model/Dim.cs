@@ -121,7 +121,7 @@ namespace Com.Model
         {
             get
             {
-                if (GreaterSet == null) return true;
+                if (GreaterSet == null) return false;
                 var dimList = GreaterSet.LesserDims; // Only this line will be changed in this class extensions for other dimension types
                 return dimList.Contains(this);
             }
@@ -134,7 +134,7 @@ namespace Com.Model
         {
             get
             {
-                if (LesserSet == null) return true;
+                if (LesserSet == null) return false;
                 var dimList = LesserSet.GreaterDims; // Only this line will be changed in this class extensions for other dimension types
                 return dimList.Contains(this);
             }
@@ -230,13 +230,13 @@ namespace Com.Model
         public virtual void NullifyValues() { } // Note that import dimension implement it by removing instances.
 
         /// <summary>
-        /// It is a formula defining a function for this dimension. When evaluated, it returs a value of the greater set for the identity value of the lesser set.
+        /// It is a formula (expression) defining a function for this dimension. 
+        /// When evaluated, it computes a value of the greater set for the identity value of the lesser set.
         /// </summary>
         public Expression SelectExpression { get; set; }
         /// <summary>
-        /// Specification of the function for mapped dimensions. 
-        /// It is also a specification of instantiation procedure for mapped sets where it is a definition of the output set tuples in terms of input set tuples.
-        /// The use for mapped set might not be a good idea but it requires rethinking the whole instantiation procedure. 
+        /// One particular type of function specification used for defining mapped dimensions, import specification, copy specification etc.
+        /// It defines greater set (nested) tuple in terms of the lesser set (nested) tuple. The function computation procedure will transoform this mapping to a normal expression which will be evaluated as usual. 
         /// </summary>
         public Mapping Mapping { get; set; }
 

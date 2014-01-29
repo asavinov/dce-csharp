@@ -285,7 +285,7 @@ namespace Com.Model
         /// If a set is not included in the schema then include it. Inclusion is performed by storing all dimensions into the set including (a new) super-dimension. 
         /// TODO: In fact, all elements should have super-dimensions which specify the parent set or the root of the schema to include into, and then the parameter is not needed. 
         /// </summary>
-        public void IncludeInSchema(SetTop top)
+        public void AddToSchema(SetTop top)
         {
             if (Set.IsPrimitive)
             {
@@ -308,7 +308,7 @@ namespace Com.Model
             {
                 if (node.IsEmpty) continue; // Root has no dimension
 
-                node.IncludeInSchema(top); // Recursion
+                node.AddToSchema(top); // Recursion
             }
         }
 

@@ -277,14 +277,14 @@ namespace Test
             secNode = (MatchTreeNode)model.TargetTree.Children[0].Children[0];
             bool bbb = secNode.CanMatch; // Non-primitive cannot be matched
 
-
-            Set targetSet = mapping.TargetSet;
+            mapping.AddTargetToSchema(wsTop);
             DimImport dimImport = new DimImport(mapping); // Configure first set for import
             dimImport.Add();
 
             //
             // Use the output of the mapping model: create new suggested elements, create expression for importing a set, create expression for importing data
             //
+            Set targetSet = mapping.TargetSet;
 
             //
             // Find recommended mappings

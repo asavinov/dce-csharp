@@ -80,8 +80,8 @@ namespace Com.Model
         public List<Dim> SubDims { get; private set; }
         public List<Dim> GreaterDims { get; private set; }
         public List<Dim> LesserDims { get; private set; }
-        public List<Dim> ExportDims { get; private set; }
         public List<Dim> ImportDims { get; private set; }
+        public List<Dim> ExportDims { get; private set; }
 
         #region Inclusion. Super.
 
@@ -1031,11 +1031,11 @@ namespace Com.Model
 
             DimType = typeof(DimSet);
 
-            SuperDims = new List<Dim>();
+            SuperDims = new List<Dim>(); // Up arrows
             SubDims = new List<Dim>();
-            GreaterDims = new List<Dim>();
+            GreaterDims = new List<Dim>(); // Up arrows
             LesserDims = new List<Dim>();
-            ExportDims = new List<Dim>();
+            ExportDims = new List<Dim>(); // Up arrows
             ImportDims = new List<Dim>();
 
             SuperPaths = new List<DimPath>();
