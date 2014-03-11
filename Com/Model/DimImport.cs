@@ -71,6 +71,7 @@ namespace Com.Model
 
         #region Data methods
 
+        [System.Obsolete("Use set population method instead.", true)]
         public override void ComputeValues()
         {
             Debug.Assert(Mapping != null && Mapping.TargetSet == GreaterSet && Mapping.SourceSet == LesserSet, "Wrong use: source set of mapping must be lesser set of the dimension, and target set must be greater set.");
@@ -79,7 +80,7 @@ namespace Com.Model
             Set targetSet = GreaterSet;
 
             //
-            // Prepare the expression
+            // Prepare the expression from the mapping
             //
             Expression tupleExpression = Mapping.GetTargetExpression(); // Build a tuple tree with paths in leaves
 
@@ -124,6 +125,7 @@ namespace Com.Model
 
         #endregion
 
+        [System.Obsolete("Store mapping in the set.", true)]
         public DimImport(Mapping mapping)
             : this(mapping.SourceSet.Name, mapping.SourceSet, mapping.TargetSet)
         {

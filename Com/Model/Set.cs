@@ -76,12 +76,12 @@ namespace Com.Model
 
         #region Simple dimensions
 
-        public List<Dim> SuperDims { get; private set; }
+        public List<Dim> SuperDims { get; private set; } // Up arrows
         public List<Dim> SubDims { get; private set; }
-        public List<Dim> GreaterDims { get; private set; }
+        public List<Dim> GreaterDims { get; private set; } // Up arrows
         public List<Dim> LesserDims { get; private set; }
+        public List<Dim> ExportDims { get; private set; } // Up arrows
         public List<Dim> ImportDims { get; private set; }
-        public List<Dim> ExportDims { get; private set; }
 
         #region Inclusion. Super.
 
@@ -786,12 +786,14 @@ namespace Com.Model
         /// <summary>
         /// FROM expression specifies source sets used to populate this set. For each source set, an instance variable name is specified. 
         /// </summary>
-        public Expression FromExpression { get; set; }
+        [System.Obsolete("Source sets are specified by import dimensions. ")]
+        public Expression FromExpression { get; set; } // Actually, we do not need it because it is specified by import dimensions
 
         /// <summary>
         /// SELECT expression is a function returning a tuple representing an element of this set. This return tuple is computed in terms of the source sets which are arguments of this expression. This expression can be based on a mapping from source to target and also can use arbitrary computations in terms of the source elements provided in arguments.
         /// </summary>
         public Expression SelectExpression { get; set; }
+        public List<Mapping> Mapping { get; set; } // It a mapping from source (product of source sets) space to this target set which will be transformed into an expression for population
 
         /// <summary>
         /// Ordering of the instances. Instances will be sorted according to these criteria. 
@@ -803,7 +805,7 @@ namespace Com.Model
         /// </summary>
         public virtual void Populate() 
         {
-            if (ImportDims.Count == 0) // Product of local sets
+            if (ExportDims.Count == 0) // Product of local sets
             {
                 //
                 // Find local greater generation sets including the super-set. Create a tuple corresponding to these dimensions
@@ -914,14 +916,63 @@ namespace Com.Model
             }
             else if(true) // There are import dimensions so copy data from another set
             {
-                foreach (DimImport dim in ImportDims)
+                //
+                // Build source space specification (product). Currently we work with only one-dimensional source space. 
+                //
+                Dim sourceDim = ExportDims[0];
+                Mapping mapping = Mapping[0];
+
+                if (mapping == null) return;
+
+                Set sourceSet = sourceDim.GreaterSet;
+                Set targetSet = sourceDim.LesserSet; // this set
+
+                Debug.Assert(mapping.TargetSet == this && targetSet == this, "Wrong use: Mapping target and source dimension lesser set must be equal to this set.");
+                Debug.Assert(mapping.TargetSet == targetSet && mapping.SourceSet == sourceSet, "Wrong use: source set of mapping must be lesser set of the dimension, and target set must be greater set.");
+
+                //
+                // Prepare the expression from the mapping
+                //
+                Expression tupleExpression = mapping.GetTargetExpression(); // Build a tuple tree with paths in leaves
+
+                var funcExpr = ExpressionScope.CreateFunctionDeclaration(Name, sourceSet.Name, targetSet.Name);
+                funcExpr.Statements[0].Input = tupleExpression; // Return statement
+                funcExpr.ResolveFunction(sourceSet.Top);
+                funcExpr.Resolve();
+
+                //
+                // Evaluate the expression depending on the source set type
+                //
+                if (sourceSet.Top is SetTopOledb)
                 {
-                    dim.ComputeValues();
+                    // Request a (flat) result set from the remote set (data table)
+                    DataTable dataTable = ((SetTopOledb)sourceSet.Top).ExportAll(sourceSet);
+
+                    // For each row, evaluate the expression and append the new element
+                    foreach (DataRow row in dataTable.Rows) // A row is <colName, primValue> collection
+                    {
+                        funcExpr.Input.Dimension.Value = row; // Initialize 'this'
+                        funcExpr.Evaluate(); // Evaluate the expression tree by computing primtive tuple values
+                        targetSet.Append(tupleExpression); // Append an element using the tuple composed of primitive values
+                    }
                 }
+                else if (sourceSet.Top is SetTopOdata)
+                {
+                }
+                else if (sourceSet.Top == targetSet.Top) // Intraschema: direct access using offsets
+                {
+                    for (Offset offset = 0; offset < sourceSet.Length; offset++)
+                    {
+                        tupleExpression.Input.Dimension.Value = offset; // Initialize 'this'
+                        tupleExpression.Evaluate();
+                        targetSet.Append(tupleExpression);
+                    }
+                }
+
             }
             else
             {
-                // TODO: Here we might need a direct procedure by building the instances satisfying the condition as opposed to building all possible instances and then checking if they satisfy the condition. 
+                // Here we might need a direct procedure by building the instances satisfying the condition as opposed to building all possible instances and then checking if they satisfy the condition. 
                 // This direct procedure is used when building subsets of primitive sets or their combinations (it is not possible to generate all possible primitive values). 
                 // The direct procedure can be also used as optimization technique for normal sets where we can directly produce the necessary instances.
                 // We could even mix these two approaches by organizing a loop but skipping some large intervals if they are known to not to satisfy our conditions. Say, if age<30 then we could directly iterate only in this interval (in the presence of indexes). 
@@ -1046,6 +1097,8 @@ namespace Com.Model
             IsInstantiable = true;
             IsPrimitive = false;
             IsAutoPopulated = true;
+
+            Mapping = new List<Mapping>();
         }
 
         public Set(string name)

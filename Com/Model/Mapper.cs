@@ -495,13 +495,17 @@ namespace Com.Model
             Mapper mapper = new Mapper();
             mapper.SetCreationThreshold = 1.0;
             mapper.MapSet(sourceSet, targetSchema);
-            Mapping bestMapping = mapper.GetBestMapping(sourceSet, targetSchema);
-            bestMapping.AddTargetToSchema(targetSchema);
+            Mapping mapping = mapper.GetBestMapping(sourceSet, targetSchema);
+            mapping.AddTargetToSchema(targetSchema);
 
-            DimImport dimImport = new DimImport(bestMapping);
+            DimImport dimImport = new DimImport(mapping.SourceSet.Name, mapping.TargetSet, mapping.SourceSet);
             dimImport.Add();
 
-            return bestMapping.TargetSet;
+            Set targetSet = mapping.TargetSet;
+            targetSet.Mapping.Clear();
+            targetSet.Mapping.Add(mapping);
+
+            return targetSet;
         }
 
         public Mapper()
@@ -1316,7 +1320,12 @@ namespace Com.Model
     }
 
 
-    class StringSimilarity
+    // Check this: "fuzzy string comparisons using trigram cosine similarity"
+	// Check this: "TF-IDF cosine similarity between columns"
+	// minimum description length (MDL) similar to Jaccard similarity to compare two attributes. This measure computes the ratio of the size of the intersection of two columns' data to the size of their union.
+	//   V. Raman and J. M. Hellerstein. Potter's wheel: An interactive data cleaning system. In VLDB, 381-390, 2001.
+	// Welch's t-test for a pair of columns that contain numeric values. Given the columns' means and variances, the t-test gives the probability the columns were drawn from the same distribution.
+	class StringSimilarity
     {
         public static double ComputeStringSimilarity(string source, string target, int gramlength)
         {

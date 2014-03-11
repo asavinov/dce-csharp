@@ -106,12 +106,15 @@ namespace Test
             Set sourceSet = dbTop.FindSubset("Employees");
             mapper.MapSet(sourceSet, wsTop);
 
-            Mapping bestMapping = mapper.GetBestMapping(sourceSet, wsTop);
-            bestMapping.AddTargetToSchema(wsTop);
-            DimImport dimImport = new DimImport(bestMapping); // Configure first set for import
+            Mapping mapping = mapper.GetBestMapping(sourceSet, wsTop);
+            mapping.AddTargetToSchema(wsTop);
+            DimImport dimImport = new DimImport(mapping.SourceSet.Name, mapping.TargetSet, mapping.SourceSet); // Configure first set for import
             dimImport.Add();
 
-            Set targetSet = bestMapping.TargetSet;
+            Set targetSet = mapping.TargetSet;
+            targetSet.Mapping.Clear();
+            targetSet.Mapping.Add(mapping);
+
             targetSet.Populate();
             Assert.AreEqual(9, targetSet.Length);
             Assert.AreEqual(6, targetSet.GetValue("ID", 5));
@@ -124,12 +127,15 @@ namespace Test
             Set sourceSet2 = dbTop.FindSubset("Inventory Transactions");
             mapper.MapSet(sourceSet2, wsTop);
 
-            Mapping bestMapping2 = mapper.GetBestMapping(sourceSet2, wsTop);
-            bestMapping2.AddTargetToSchema(wsTop);
-            DimImport dimImport2 = new DimImport(bestMapping2); // Configure first set for import
+            Mapping mapping2 = mapper.GetBestMapping(sourceSet2, wsTop);
+            mapping2.AddTargetToSchema(wsTop);
+            DimImport dimImport2 = new DimImport(mapping2.SourceSet.Name, mapping2.TargetSet, mapping2.SourceSet); // Configure first set for import
             dimImport2.Add();
 
-            Set targetSet2 = bestMapping2.TargetSet;
+            Set targetSet2 = mapping2.TargetSet;
+            targetSet2.Mapping.Clear();
+            targetSet2.Mapping.Add(mapping2);
+
             targetSet2.Populate();
             Assert.AreEqual(102, targetSet2.Length);
             Assert.AreEqual(1, targetSet2.GetValue("Transaction Type", 99)); // 1 is offset which should correspond to second record "Sold"
