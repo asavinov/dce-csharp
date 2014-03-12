@@ -5,6 +5,7 @@ using System.Text;
 using System.Data.OleDb;
 using System.Data;
 using System.Diagnostics;
+
 using Offset = System.Int32;
 
 namespace Com.Model
@@ -51,6 +52,16 @@ namespace Com.Model
             try
             {
                 _connection.Open();
+
+                //
+                // Set top name as soon as we open a database
+                //
+                if (!string.IsNullOrEmpty(_connection.Database))
+                    Name = _connection.Database;
+                else if (!string.IsNullOrEmpty(_connection.DataSource))
+                    Name = System.IO.Path.GetFileNameWithoutExtension(_connection.DataSource);
+                else
+                    Name = "Data Source";
             }
             catch (Exception ex)
             {
@@ -98,17 +109,12 @@ namespace Com.Model
             return tableNames;
         }
 
-        public void ImportSchema()
+        public void ImportSchema(List<string> tableNames = null)
         {
-            // Set top name
-            if (!string.IsNullOrEmpty(_connection.Database))
-                Name = _connection.Database;
-            else if (!string.IsNullOrEmpty(_connection.DataSource))
-                Name = System.IO.Path.GetFileNameWithoutExtension(_connection.DataSource);
-            else
-                Name = "Data Source";
-
-            List<string> tableNames = ReadTables();
+            if (tableNames == null)
+            {
+                tableNames = ReadTables();
+            }
 
             // Create all sets
             foreach (string tableName in tableNames)
@@ -124,7 +130,7 @@ namespace Com.Model
                 ImportPaths(tableName);
             }
 
-            List<Set> sets = GetAllSubsets();
+            List<Set> sets = Root.GetAllSubsets();
             foreach (Set set in sets)
             {
                 foreach (DimPath path in set.GreaterPaths)
@@ -156,7 +162,15 @@ namespace Com.Model
             Debug.Assert(!tableSet.IsPrimitive, "Wrong use: cannot load paths into a primitive set.");
 
             DataTable pks = _connection.GetOleDbSchemaTable(OleDbSchemaGuid.Primary_Keys, new object[] { null, null, tableName });
-            DataTable fks = _connection.GetOleDbSchemaTable(OleDbSchemaGuid.Foreign_Keys, new object[] { null, null, null, null, null, tableName });
+            DataTable fks = null;
+            try
+            {
+                fks = _connection.GetOleDbSchemaTable(OleDbSchemaGuid.Foreign_Keys, new object[] { null, null, null, null, null, tableName });
+            }
+            catch (Exception e) // For csv, foreign keys are not supported exception is raised
+            {
+                fks = new DataTable();
+            }
             DataTable columns = _connection.GetOleDbSchemaTable(OleDbSchemaGuid.Columns, new object[] { null, null, tableName, null });
 
             foreach (DataRow col in columns.Rows) // Process all columns of the table (correspond to primitive paths of the set)
@@ -277,7 +291,7 @@ namespace Com.Model
         }
 
         /// <summary>
-        /// Load data corresponding the specified set from the underlying database. 
+        /// Load data corresponding to the specified set from the underlying database. 
         /// </summary>
         /// <param name="set"></param>
         /// <returns></returns>

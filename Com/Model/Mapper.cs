@@ -81,7 +81,7 @@ namespace Com.Model
                     throw new NotImplementedException();
                 }
             }
-            else if (sourceSchema.GetType() == typeof(SetTopOledb)) // SetTopOledb -> *
+            else if (sourceSchema is SetTopOledb) // SetTopOledb -> *
             {
                 if (targetSchema.GetType() == typeof(SetTop)) // SetTopOledb -> SetTop
                 {

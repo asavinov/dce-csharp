@@ -12,7 +12,12 @@ namespace Test
     public class DataLoadTest
     {
         public static string Northwind = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\\Users\\savinov\\git\\comcsharp\\Test\\Northwind.accdb";
+        public static string TextDbConnection = "Provider=Microsoft.ACE.OLEDB.12.0; Data Source=C:\\Users\\savinov\\git\\comcsharp\\Test; Extended Properties='Text;Excel 12.0;HDR=Yes;FMT=CSVDelimited;'";
         // Another provider: "Provider=Microsoft.Jet.OLEDB.4.0;"
+        // Provider=Microsoft.Jet.OLEDB.4.0
+        // Provider=Microsoft.ACE.OLEDB.12.0
+        // CSVDelimited
+        // Delimited(;)
 
         [TestMethod]
         public void PrimDimensinTest()
@@ -143,6 +148,42 @@ namespace Test
             Set pro = wsTop.FindSubset("Products");
             Assert.AreEqual(28, pro.Length);
             Assert.AreEqual(34.8m, pro.GetValue("List Price", 1));
+        }
+
+        [TestMethod]
+        public void TextDataImportTest()
+        {
+            // Create Oldedb top set
+            SetTopText dbTop = new SetTopText("Products");
+            dbTop.ConnectionString = TextDbConnection;
+            dbTop.Open();
+            dbTop.ImportSchema();
+
+            SetTop wsTop = new SetTop("My Mashup");
+
+            //
+            // Import first set. Employees
+            //
+            Mapper mapper = new Mapper();
+            mapper.SetCreationThreshold = 1.0;
+
+            Set sourceSet = dbTop.FindSubset("Products#csv");
+            mapper.MapSet(sourceSet, wsTop);
+
+            Mapping mapping = mapper.GetBestMapping(sourceSet, wsTop);
+            mapping.AddTargetToSchema(wsTop);
+            DimImport dimImport = new DimImport(mapping.SourceSet.Name, mapping.TargetSet, mapping.SourceSet); // Configure first set for import
+            dimImport.Add();
+
+            Set targetSet = mapping.TargetSet;
+            targetSet.Mapping.Clear();
+            targetSet.Mapping.Add(mapping);
+
+            targetSet.Populate();
+            Assert.AreEqual(45, targetSet.Length);
+            Assert.AreEqual(7, targetSet.GetValue("ID", 5));
+            Assert.AreEqual("Northwind Traders Olive Oil", targetSet.GetValue("Product Name", 3));
+            Assert.AreEqual(40, targetSet.GetValue("Target Level", 8));
         }
 
         [TestMethod]

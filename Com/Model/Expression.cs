@@ -410,7 +410,6 @@ namespace Com.Model
                     {
                         Output = Input.Output; // Ignore child expression output but we have to have no children if everything is correct
                     }
-
                     else // It is a non-leaf tuple and its value is by definition a combination of its children
                     {
                         Dictionary<Dim, object> values = new Dictionary<Dim, object>();
@@ -424,9 +423,12 @@ namespace Com.Model
                             values.Add(child.Dimension, child.Output);
                         }
 
-                        Offset offset = OutputSet.Find(values); // Output of a tuple is offset of an existing element or null if it does not exist 
-                        if (offset < 0) Output = null;
-                        else Output = offset;
+                        Output = null;
+                        if (values.Count > 0) // Uniqueness search only if there are identity dimensions - otherwise all records are unique by definition
+                        {
+                            Offset offset = OutputSet.Find(values); // Output of a tuple is offset of an existing element or null if it does not exist 
+                            if (offset >= 0) Output = offset;
+                        }
                     }
 
                     break;

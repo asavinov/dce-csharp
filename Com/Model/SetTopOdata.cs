@@ -9,7 +9,7 @@ namespace Com.Model
     /// <summary>
     /// Set with data loaded from OData connection.
     /// </summary>
-    public abstract class SetTopOdata : SetTop
+    public class SetTopOdata : SetTop
     {
         /// <summary>
         /// Connection to the remote database or engine where data is stored and processed.
