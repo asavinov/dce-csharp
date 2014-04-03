@@ -125,9 +125,8 @@ namespace Com.Model
 
         #endregion
 
-        [System.Obsolete("Store mapping in the set.", true)]
         public DimImport(Mapping mapping)
-            : this(mapping.SourceSet.Name, mapping.SourceSet, mapping.TargetSet)
+            : this(mapping.SourceSet.Name, mapping.TargetSet, mapping.SourceSet)
         {
             Mapping = mapping;
         }

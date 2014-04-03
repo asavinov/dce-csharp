@@ -779,24 +779,29 @@ namespace Com.Model
         public bool IsAutoPopulated { get; set; }
 
         /// <summary>
-        /// Constraints on all possible instances. It is written in terms of and is applied to source (already existing) instances - not instances of this set. Only instances satisfying these constraints are used for populating this set. 
+        /// Constraints on all possible instances. 
+        /// Currently, it is written in terms of and is applied to source (already existing) instances - not instances of this set. Only instances satisfying these constraints are used for populating this set. 
+        /// In future, we should probabyl apply these constraints to this set elements while the source set has its own constraints.
         /// </summary>
         public Expression WhereExpression { get; set; }
 
         /// <summary>
         /// FROM expression specifies source sets used to populate this set. For each source set, an instance variable name is specified. 
         /// </summary>
-        [System.Obsolete("Source sets are specified by import dimensions. ")]
+        [System.Obsolete("Source sets are specified by import dimensions or by greater dimensions. ", true)]
         public Expression FromExpression { get; set; } // Actually, we do not need it because it is specified by import dimensions
 
         /// <summary>
         /// SELECT expression is a function returning a tuple representing an element of this set. This return tuple is computed in terms of the source sets which are arguments of this expression. This expression can be based on a mapping from source to target and also can use arbitrary computations in terms of the source elements provided in arguments.
         /// </summary>
+        [System.Obsolete("Not used. A set is what tuples exist and not what attributes are going to be selected.", true)]
         public Expression SelectExpression { get; set; }
+        [System.Obsolete("A mapping between sets is not used. Use a mapping in dimensions which specifies a function from lesser to greater set. ", true)]
         public List<Mapping> Mapping { get; set; } // It a mapping from source (product of source sets) space to this target set which will be transformed into an expression for population
 
         /// <summary>
-        /// Ordering of the instances. Instances will be sorted according to these criteria. 
+        /// Ordering of the instances. 
+        /// Here again we have a choice: it is how source elements are sorted or it is how elements of this set have to be sorted. 
         /// </summary>
         public Expression OrderbyExpression { get; set; }
 
@@ -805,7 +810,7 @@ namespace Com.Model
         /// </summary>
         public virtual void Populate() 
         {
-            if (ExportDims.Count == 0) // Product of local sets
+            if (ExportDims.Count == 0) // Product of local sets (no project/de-project from another set)
             {
                 //
                 // Find local greater generation sets including the super-set. Create a tuple corresponding to these dimensions
@@ -914,13 +919,13 @@ namespace Com.Model
                 }
 
             }
-            else if(true) // There are import dimensions so copy data from another set
+            else if(true) // There are import dimensions so copy data from another set (projection of another set)
             {
                 //
                 // Build source space specification (product). Currently we work with only one-dimensional source space. 
                 //
                 Dim sourceDim = ExportDims[0];
-                Mapping mapping = Mapping[0];
+                Mapping mapping = sourceDim.Mapping;
 
                 if (mapping == null) return;
 
@@ -1098,7 +1103,8 @@ namespace Com.Model
             IsPrimitive = false;
             IsAutoPopulated = true;
 
-            Mapping = new List<Mapping>();
+// TO DELETE
+//            Mapping = new List<Mapping>();
         }
 
         public Set(string name)

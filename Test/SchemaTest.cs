@@ -278,12 +278,13 @@ namespace Test
             bool bbb = secNode.CanMatch; // Non-primitive cannot be matched
 
             mapping.AddTargetToSchema(wsTop);
-            DimImport dimImport = new DimImport(mapping.SourceSet.Name, mapping.TargetSet, mapping.SourceSet); // Configure first set for import
+            DimImport dimImport = new DimImport(mapping); // Configure first set for import
             dimImport.Add();
 
             Set targetSet = mapping.TargetSet;
-            targetSet.Mapping.Clear();
-            targetSet.Mapping.Add(mapping);
+// TO DELETE
+//            targetSet.Mapping.Clear();
+//            targetSet.Mapping.Add(mapping);
 
             //
             // Use the output of the mapping model: create new suggested elements, create expression for importing a set, create expression for importing data

@@ -113,14 +113,12 @@ namespace Test
 
             Mapping mapping = mapper.GetBestMapping(sourceSet, wsTop);
             mapping.AddTargetToSchema(wsTop);
-            DimImport dimImport = new DimImport(mapping.SourceSet.Name, mapping.TargetSet, mapping.SourceSet); // Configure first set for import
+            DimImport dimImport = new DimImport(mapping); // Configure first set for import
             dimImport.Add();
 
             Set targetSet = mapping.TargetSet;
-            targetSet.Mapping.Clear();
-            targetSet.Mapping.Add(mapping);
-
             targetSet.Populate();
+
             Assert.AreEqual(9, targetSet.Length);
             Assert.AreEqual(6, targetSet.GetValue("ID", 5));
             Assert.AreEqual("Mariya", targetSet.GetValue("First Name", 3));
@@ -134,14 +132,12 @@ namespace Test
 
             Mapping mapping2 = mapper.GetBestMapping(sourceSet2, wsTop);
             mapping2.AddTargetToSchema(wsTop);
-            DimImport dimImport2 = new DimImport(mapping2.SourceSet.Name, mapping2.TargetSet, mapping2.SourceSet); // Configure first set for import
+            DimImport dimImport2 = new DimImport(mapping2); // Configure first set for import
             dimImport2.Add();
 
             Set targetSet2 = mapping2.TargetSet;
-            targetSet2.Mapping.Clear();
-            targetSet2.Mapping.Add(mapping2);
-
             targetSet2.Populate();
+
             Assert.AreEqual(102, targetSet2.Length);
             Assert.AreEqual(1, targetSet2.GetValue("Transaction Type", 99)); // 1 is offset which should correspond to second record "Sold"
 
@@ -172,14 +168,12 @@ namespace Test
 
             Mapping mapping = mapper.GetBestMapping(sourceSet, wsTop);
             mapping.AddTargetToSchema(wsTop);
-            DimImport dimImport = new DimImport(mapping.SourceSet.Name, mapping.TargetSet, mapping.SourceSet); // Configure first set for import
+            DimImport dimImport = new DimImport(mapping); // Configure first set for import
             dimImport.Add();
 
             Set targetSet = mapping.TargetSet;
-            targetSet.Mapping.Clear();
-            targetSet.Mapping.Add(mapping);
-
             targetSet.Populate();
+
             Assert.AreEqual(45, targetSet.Length);
             Assert.AreEqual(7, targetSet.GetValue("ID", 5));
             Assert.AreEqual("Northwind Traders Olive Oil", targetSet.GetValue("Product Name", 3));

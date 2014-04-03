@@ -236,7 +236,8 @@ namespace Com.Model
         public Expression SelectExpression { get; set; }
         /// <summary>
         /// One particular type of function specification used for defining mapped dimensions, import specification, copy specification etc.
-        /// It defines greater set (nested) tuple in terms of the lesser set (nested) tuple. The function computation procedure will transoform this mapping to a normal expression which will be evaluated as usual. 
+        /// It defines greater set (nested) tuple in terms of the lesser set (nested) tuple. 
+        /// The function computation procedure can transoform this mapping to a normal expression for evaluation in a loop or it can translate it to a join or other target engine formats.
         /// </summary>
         public Mapping Mapping { get; set; }
 
