@@ -537,7 +537,7 @@ namespace Com.Model
         {
             get
             {
-                return !IsSubsetNode && !(Dim is DimImport);
+                return !IsSubsetNode && LesserSet.Top == GreaterSet.Top;
             }
         }
 
@@ -564,7 +564,6 @@ namespace Com.Model
                         }
                     }
                 }
-                else if (dim is DimImport) { }
                 else // Poset
                 {
                     if (dim.LesserSet == Dim.LesserSet) // Add an attribute child node (non-recursively)
@@ -591,7 +590,6 @@ namespace Com.Model
                         }
                     }
                 }
-                else if (dim is DimImport) { }
                 else // Poset
                 {
                     if (dim.LesserSet == Dim.LesserSet) // Add an attribute child node (non-recursively)

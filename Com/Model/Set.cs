@@ -80,8 +80,6 @@ namespace Com.Model
         public List<Dim> SubDims { get; private set; }
         public List<Dim> GreaterDims { get; private set; } // Up arrows
         public List<Dim> LesserDims { get; private set; }
-        public List<Dim> ExportDims { get; private set; } // Up arrows
-        public List<Dim> ImportDims { get; private set; }
 
         #region Inclusion. Super.
 
@@ -253,7 +251,7 @@ namespace Com.Model
         {
             get
             {
-                return IsPrimitive || GreaterDims.Count == 0; // All primitive sets are greatest by definition
+                return IsPrimitive || GreaterDims.Count(x => x.LesserSet.Top == x.GreaterSet.Top) == 0; // All primitive sets are greatest by definition
             }
         }
 
@@ -366,7 +364,7 @@ namespace Com.Model
         {
             get
             {
-                return LesserDims.Count == 0;
+                return LesserDims.Count(x => x.LesserSet.Top == x.GreaterSet.Top) == 0;
             }
         }
 
@@ -784,6 +782,7 @@ namespace Com.Model
         /// In future, we should probabyl apply these constraints to this set elements while the source set has its own constraints.
         /// </summary>
         public Expression WhereExpression { get; set; }
+        public List<Dim> ProjectDimensions { get; set; } // Output tuples of these dimensions are appended to this set (other tuples are excluded). Alternatively, this element must be referenced by at one lesser element COUNT(this<-proj_dim<-(Set)) > 0
 
         /// <summary>
         /// FROM expression specifies source sets used to populate this set. For each source set, an instance variable name is specified. 
@@ -810,7 +809,7 @@ namespace Com.Model
         /// </summary>
         public virtual void Populate() 
         {
-            if (ExportDims.Count == 0) // Product of local sets (no project/de-project from another set)
+            if (ProjectDimensions == null || ProjectDimensions.Count == 0) // Product of local sets (no project/de-project from another set)
             {
                 //
                 // Find local greater generation sets including the super-set. Create a tuple corresponding to these dimensions
@@ -924,13 +923,13 @@ namespace Com.Model
                 //
                 // Build source space specification (product). Currently we work with only one-dimensional source space. 
                 //
-                Dim sourceDim = ExportDims[0];
-                Mapping mapping = sourceDim.Mapping;
+                Dim projectDim = ProjectDimensions[0];
+                Mapping mapping = projectDim.Mapping;
 
                 if (mapping == null) return;
 
-                Set sourceSet = sourceDim.GreaterSet;
-                Set targetSet = sourceDim.LesserSet; // this set
+                Set sourceSet = projectDim.LesserSet;
+                Set targetSet = projectDim.GreaterSet; // this set
 
                 Debug.Assert(mapping.TargetSet == this && targetSet == this, "Wrong use: Mapping target and source dimension lesser set must be equal to this set.");
                 Debug.Assert(mapping.TargetSet == targetSet && mapping.SourceSet == sourceSet, "Wrong use: source set of mapping must be lesser set of the dimension, and target set must be greater set.");
@@ -1091,20 +1090,17 @@ namespace Com.Model
             SubDims = new List<Dim>();
             GreaterDims = new List<Dim>(); // Up arrows
             LesserDims = new List<Dim>();
-            ExportDims = new List<Dim>(); // Up arrows
-            ImportDims = new List<Dim>();
 
             SuperPaths = new List<DimPath>();
             SubPaths = new List<DimPath>();
             GreaterPaths = new List<DimPath>();
             LesserPaths = new List<DimPath>();
 
+            ProjectDimensions = new List<Dim>();
+
             IsInstantiable = true;
             IsPrimitive = false;
             IsAutoPopulated = true;
-
-// TO DELETE
-//            Mapping = new List<Mapping>();
         }
 
         public Set(string name)

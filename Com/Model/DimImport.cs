@@ -14,10 +14,11 @@ namespace Com.Model
     /// The import procedure will iterate through the identities of the greater set and the result of evaluation will be stored in the lesser set. 
     /// Theoretically, it is possible to import data from such artificial greater sets as user input, message channels and other unusual sources.
     /// </summary>
+    [System.Obsolete("Use normal dimensions and store their reference in ProjectDimensions field of Set.", true)]
     public class DimImport : Dim
     {
         #region Schema methods
-
+/*
         public override bool IsInGreaterSet
         {
             get
@@ -66,7 +67,7 @@ namespace Com.Model
 
             this.Add(lesserSetIndex, greaterSetIndex);
         }
-
+*/
         #endregion
 
         #region Data methods

@@ -498,14 +498,14 @@ namespace Com.Model
             Mapping mapping = mapper.GetBestMapping(sourceSet, targetSchema);
             mapping.AddTargetToSchema(targetSchema);
 
-            DimImport dimImport = new DimImport(mapping);
+            Dim dimImport = new Dim(mapping);
             dimImport.Add();
+            dimImport.GreaterSet.ProjectDimensions.Add(dimImport);
 
-/* TO DELETE
-            Set targetSet = mapping.TargetSet;
-            targetSet.Mapping.Clear();
-            targetSet.Mapping.Add(mapping);
-*/
+            // TO DELETE
+            //DimImport dimImport = new DimImport(mapping);
+            //dimImport.Add();
+
             return mapping.TargetSet;
         }
 

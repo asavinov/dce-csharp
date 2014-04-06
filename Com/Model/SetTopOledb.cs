@@ -463,6 +463,7 @@ namespace Com.Model
             foreach (Dim dim in set.GreaterDims) // One join for each greater set
             {
                 if (dim.IsPrimitive) continue; // Skip primitive dims, join only non-primitive sets
+                if (!dim.GreaterSet.IsIn(set.Top)) continue; // Skip inter-schema dimensions (e.g., import dimensions)
 
                 lesserPath.Add(dim);
                 string childTable = BuildFromSequential(lesserPath, dim.GreaterSet);

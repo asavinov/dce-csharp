@@ -317,6 +317,12 @@ namespace Com.Model
         {
         }
 
+        public Dim(Mapping mapping)
+            : this(mapping.SourceSet.Name, mapping.SourceSet, mapping.TargetSet)
+        {
+            Mapping = mapping;
+        }
+
         public Dim(string name, Set lesserSet, Set greaterSet)
             : this(name, lesserSet, greaterSet, false, false)
         {

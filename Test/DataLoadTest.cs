@@ -113,8 +113,9 @@ namespace Test
 
             Mapping mapping = mapper.GetBestMapping(sourceSet, wsTop);
             mapping.AddTargetToSchema(wsTop);
-            DimImport dimImport = new DimImport(mapping); // Configure first set for import
+            Dim dimImport = new Dim(mapping); // Configure first set for import
             dimImport.Add();
+            dimImport.GreaterSet.ProjectDimensions.Add(dimImport);
 
             Set targetSet = mapping.TargetSet;
             targetSet.Populate();
@@ -132,8 +133,9 @@ namespace Test
 
             Mapping mapping2 = mapper.GetBestMapping(sourceSet2, wsTop);
             mapping2.AddTargetToSchema(wsTop);
-            DimImport dimImport2 = new DimImport(mapping2); // Configure first set for import
+            Dim dimImport2 = new Dim(mapping2); // Configure first set for import
             dimImport2.Add();
+            dimImport2.GreaterSet.ProjectDimensions.Add(dimImport2);
 
             Set targetSet2 = mapping2.TargetSet;
             targetSet2.Populate();
@@ -168,8 +170,9 @@ namespace Test
 
             Mapping mapping = mapper.GetBestMapping(sourceSet, wsTop);
             mapping.AddTargetToSchema(wsTop);
-            DimImport dimImport = new DimImport(mapping); // Configure first set for import
+            Dim dimImport = new Dim(mapping); // Configure first set for import
             dimImport.Add();
+            dimImport.GreaterSet.ProjectDimensions.Add(dimImport);
 
             Set targetSet = mapping.TargetSet;
             targetSet.Populate();
@@ -705,7 +708,70 @@ namespace Test
             Assert.AreEqual(2, mappedDim.GetValue(1));
             Assert.AreEqual(3, mappedDim.GetValue(2));
             Assert.AreEqual(5, mappedDim.GetValue(3));
-        }            
+        }
+
+        [TestMethod]
+        public void SetExtractionTest()
+        {
+            // Create Oldedb top set
+            SetTopOledb dbTop = new SetTopOledb("Northwind");
+            dbTop.ConnectionString = Northwind;
+            dbTop.Open();
+            dbTop.ImportSchema();
+
+            SetTop wsTop = new SetTop("My Mashup");
+
+            //
+            // Load test data
+            //
+            Set targetSet = Mapper.ImportSet(dbTop.FindSubset("Order Details"), wsTop);
+            targetSet.Populate();
+
+            Set products = wsTop.FindSubset("Products");
+            Dim dim = products.GetGreaterDim("Category"); // This is a parameter for the whole operation
+
+            //
+            // Create a set to be extracted
+            //
+            Set extractedSet = new Set("Categories");
+            wsTop.Root.AddSubset(extractedSet);
+
+            Set idSet = dim.GreaterSet;
+            Dim idDim = idSet.CreateDefaultLesserDimension(dim.Name, extractedSet);
+            idDim.IsIdentity = true;
+            idDim.Add();
+
+            //
+            // Configure the new extracted set population procedure (mapped dimension)
+            //
+            Mapping mapping = new Mapping(products, extractedSet);
+            mapping.AddMatch(new PathMatch(new DimPath(dim), new DimPath(idDim))); 
+
+            Dim dimImport = extractedSet.CreateDefaultLesserDimension(extractedSet.Name, products);
+            dimImport.Mapping = mapping;
+            dimImport.Add();
+
+            // PROBLEM: we search for DimImport in order to distinguish product/subset population from project/import population where a source set is used.
+            // Solution 1: Still use DimImport for extracted set. Drawback: DimImport are not shown and cannot be used for operations
+            // Solution 2: Recognize extraction/projection dims differently, e.g., by storing them in the predicate or in a similar set field (e.g., FROM or Source or ImportDims or WhereDims or anywhere near the WhereExpression which currently stores only a conventional filter)
+            //   In other words, all dims are equal but some of them are part of the set predicate but we store it in some special form (for our specific prototype)
+            // Solution 3: Mixed. We store in Import/Export lists also normal dimensions which are stored in Greater/Lesser dims. Thus Import/Export lists are used as part of the WhereExpression (predicate) to recognize import/extract and other population patterns
+            //   The only difference from the previous approach is: we can use normal Dim class (DimImport is not needed), some normal dimensions are stored in Import/Export lists but not all Import/Export dims have to be stored in Greater/Lesser (if we do not want them to be shown/used as normal dims)
+            //   Alternative implementation is to use a flag Import/Export and a flag DoNotShow. 
+            // Solution 4: Always show import dimensions. Indeed, what is bad in that? This dimension has a definition as a mapping and therefore can be edited. We need only to recognize its special role.
+            //   Thus all dimensions are stored in Greter/Lesser list
+            //   Special roles are represented: Import/Export list, A flag, ...
+            //   Add/Remove works for Greater/Lesser for all dimensions (not Super/Sub) but can also check Import/Export if it is used
+
+            // The easiest implementation is to use Import/Export lists
+            // Necessary update: logic of add/remove for dimensions - a dimension can be in any of them or in both. 
+            
+            //
+            // Populate the extracted set (and dimension if necessary)
+            //
+            extractedSet.Populate();
+            dimImport.ComputeValues(); // ???
+        }
 
     }
 }

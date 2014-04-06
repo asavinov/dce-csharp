@@ -631,18 +631,18 @@ namespace Com.Model
             {
                 switch (dimType)
                 {
-                    case DimensionType.IDENTITY: return GreaterSet.GetIdentityDims();
-                    case DimensionType.ENTITY: return GreaterSet.GetEntityDims();
-                    case DimensionType.IDENTITY_ENTITY: return GreaterSet.GreaterDims;
+                    case DimensionType.IDENTITY: return GreaterSet.GreaterDims.Where(x => x.IsIdentity && x.LesserSet.Top == x.GreaterSet.Top).ToList();
+                    case DimensionType.ENTITY: return GreaterSet.GreaterDims.Where(x => !x.IsIdentity && x.LesserSet.Top == x.GreaterSet.Top).ToList();
+                    case DimensionType.IDENTITY_ENTITY: return GreaterSet.GreaterDims.Where(x => x.LesserSet.Top == x.GreaterSet.Top).ToList();
                 }
             }
             else
             {
                 switch (dimType)
                 {
-                    case DimensionType.IDENTITY: return LesserSet.LesserDims.Where(x => x.IsIdentity).ToList();
-                    case DimensionType.ENTITY: return LesserSet.LesserDims.Where(x => !x.IsIdentity).ToList();
-                    case DimensionType.IDENTITY_ENTITY: return LesserSet.LesserDims;
+                    case DimensionType.IDENTITY: return LesserSet.LesserDims.Where(x => x.IsIdentity && x.LesserSet.Top == x.GreaterSet.Top).ToList();
+                    case DimensionType.ENTITY: return LesserSet.LesserDims.Where(x => !x.IsIdentity && x.LesserSet.Top == x.GreaterSet.Top).ToList();
+                    case DimensionType.IDENTITY_ENTITY: return LesserSet.LesserDims.Where(x => x.LesserSet.Top == x.GreaterSet.Top).ToList();
                 }
             }
 
