@@ -963,13 +963,16 @@ namespace Com.Model
                 else if (sourceSet.Top is SetTopOdata)
                 {
                 }
-                else if (sourceSet.Top == targetSet.Top) // Intraschema: direct access using offsets
+                else if (sourceSet.Top == targetSet.Top) // Intra-schema: direct access using offsets
                 {
                     for (Offset offset = 0; offset < sourceSet.Length; offset++)
                     {
-                        tupleExpression.Input.Dimension.Value = offset; // Initialize 'this'
-                        tupleExpression.Evaluate();
+                        funcExpr.Input.Dimension.Value = offset; // Initialize 'this'
+                        funcExpr.Evaluate(); // Compute
                         targetSet.Append(tupleExpression);
+
+                        // TODO: append also an instance to the function (the function has to be nullifed before the procedure)
+                        //SetValue(offset, SelectExpression.Output); // Store the final result
                     }
                 }
 

@@ -347,6 +347,8 @@ namespace Com.Model
 
     }
 
+    // TODO: We probably should introduce a bit mask instead of the enumerator
+    // Bits: isIdentity, isPoset, isInclusion, isInterschema, isInverse, 
     public enum DimensionType
     {
         INCLUSION, // Both super and sub

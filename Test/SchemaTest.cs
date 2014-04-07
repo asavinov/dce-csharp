@@ -314,7 +314,7 @@ namespace Test
             Dim sourceDim = mainSet.GetGreaterDim("Employee ID");
             Set sourceSet = sourceDim.GreaterSet;
             Set targetSet = wsTop.FindSubset("Customers");
-            Dim targetDim = targetSet.CreateDefaultLesserDimension(sourceDim.Name, mainSet); // TODO: set also other properties so that new dim is identical to the old one
+            Dim targetDim = targetSet.CreateDefaultLesserDimension(sourceDim.Name, mainSet); // TODO: set also other properties so that new projDim is identical to the old one
 
             //
             // Initialize a mapping model 
@@ -345,7 +345,7 @@ namespace Test
             sourceDim = mainSet.GetGreaterDim("ID");
             sourceSet = sourceDim.GreaterSet;
             targetSet = wsTop.FindSubset("Customers");
-            targetDim = targetSet.CreateDefaultLesserDimension(sourceDim.Name, mainSet); // TODO: set also other properties so that new dim is identical to the old one
+            targetDim = targetSet.CreateDefaultLesserDimension(sourceDim.Name, mainSet); // TODO: set also other properties so that new projDim is identical to the old one
 
             mapper.MapDim(new DimPath(sourceDim), new DimPath(targetDim));
             string sourceName = "ID";
