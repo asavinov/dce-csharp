@@ -356,6 +356,21 @@ namespace Com.Model
             return GreaterDims.Where(x => !x.IsIdentity).ToList();
         }
 
+        public List<Set> GetPossibleGreaterSets() // All sets that can be used as greater sets in a new dimension
+        {
+            List<Set> all = Root.GetAllSubsets();
+            List<Set> result = new List<Set>();
+            foreach (Set set in all)
+            {
+                if (set == this) continue; // We cannot point to itself
+                if (set.IsLesser(this)) continue; // We cannot point to a lesser set (cycle)
+
+                result.Add(set);
+            }
+
+            return result;
+        }
+
         #endregion
 
         #region Poset. Lesser.
