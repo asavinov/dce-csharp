@@ -28,13 +28,15 @@ namespace Com.Model
         // Assume that the specified fragment has changed its selection, update all other fragment selections as well as relevances and other parameters.
         protected virtual void UpdateFragmentSelections(string selected) { }
 
+        public virtual void UpdateSelection(string selected) { }
+
         public virtual Expression GetExpression() { return null; }
 
         public virtual string IsValidExpression() { return null; }
 
         public virtual void Recommend() { }
 
-        public virtual void UpdateSelection(string selected) { }
+        public virtual void Clear() { Recommendations.Alternatives.Clear(); }
 
         public Recommender()
         {
@@ -200,7 +202,7 @@ namespace Com.Model
             }
 
             //
-            // 2. Given a lesser set, find all relationship paths as pairs of <grouping path, measure path
+            // 2. Given a lesser set, find all relationship paths as pairs of <grouping path, measure path>
             //
             foreach (Set set in lesserSets)
             {
@@ -224,6 +226,15 @@ namespace Com.Model
                 }
 
             }
+        }
+
+        public override void Clear()
+        {
+            base.Clear();
+
+            GroupingPaths.Alternatives.Clear();
+            FactSets.Alternatives.Clear();
+            MeasurePaths.Alternatives.Clear();
         }
 
         public RecommendedRelationships()
@@ -272,15 +283,26 @@ namespace Com.Model
 
             // Add more for aggregations
             MeasureDimensions.Alternatives.Clear();
-            foreach (Dim dim in this.TargetSet.GreaterDims)
+            if (this.TargetSet != null)
             {
-                var frag = new RecommendedFragment<Dim>(dim, 1.0);
-                MeasureDimensions.Alternatives.Add(frag);
+                foreach (Dim dim in this.TargetSet.GreaterDims)
+                {
+                    var frag = new RecommendedFragment<Dim>(dim, 1.0);
+                    MeasureDimensions.Alternatives.Add(frag);
+                }
             }
 
             AggregationFunctions.Alternatives.Clear();
             AggregationFunctions.Alternatives.Add(new RecommendedFragment<string>("SUM", 1.0));
             AggregationFunctions.Alternatives.Add(new RecommendedFragment<string>("AVG", 1.0));
+        }
+
+        public override void Clear()
+        {
+            base.Clear();
+
+            MeasureDimensions.Alternatives.Clear();
+            AggregationFunctions.Alternatives.Clear();
         }
 
         public RecommendedAggregations()
