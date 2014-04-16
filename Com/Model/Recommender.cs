@@ -182,7 +182,7 @@ namespace Com.Model
         public override void Recommend()
         {
             //
-            // 1. Find all possible lesser sets (relationship sets)
+            // 1. Find all possible lesser sets (relationship or fact sets)
             //
             var lesserSets = new List<Set>();
             if (this.FactSet != null) // Lesser set is provided
@@ -338,13 +338,34 @@ namespace Com.Model
                 else if (typeof(T) == typeof(Dim)) return ((Dim)(object)Fragment).Name;
                 else if (typeof(T) == typeof(List<Dim>))
                 {
+                    List<Dim> path = (List<Dim>)(object)Fragment;
                     string name = "";
-                    ((List<Dim>)(object)Fragment).ForEach(seg => name += "." + seg.Name);
+                    path.ForEach(seg => name += "." + seg.Name); // One version
+
+                    if (path == null || path.Count == 0) return "<EMPTY PATH>";
+
+                    name = "(" + path[0].LesserSet.Name + ") -> ";
+                    foreach (Dim seg in path)
+                    {
+                        name += seg.Name + " -> ";
+                    }
+                    name += "(" + path[path.Count - 1].GreaterSet.Name + ")";
+
                     return name;
                 }
                 else if (typeof(T) == typeof(DimPath))
                 {
-                    return ((DimPath)(object)Fragment).ComplexName;
+                    DimPath path = (DimPath)(object)Fragment;
+                    string name = path.ComplexName; // One version
+
+                    name = "(" + path.LesserSet.Name + ") -> ";
+                    foreach (Dim seg in path.Path)
+                    {
+                        name += seg.Name + " -> ";
+                    }
+                    name += "(" + path.GreaterSet.Name + ")";
+
+                    return name;
                 }
                 else if (typeof(T) == typeof(DimTree))
                 {
