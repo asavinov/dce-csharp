@@ -191,7 +191,9 @@ namespace Com.Model
             }
             else // Generate all possible lesser sets
             {
+                // All least sets of the source set(s)
                 var allPaths = new PathEnumerator(null, new List<Set> { this.SourceSet }, true, DimensionType.IDENTITY_ENTITY).ToList();
+                // All lesser sets of the source set(s)
                 foreach (var path in allPaths)
                 {
                     foreach (Dim seg in path.Path)
@@ -208,7 +210,17 @@ namespace Com.Model
             {
                 var gPaths = new PathEnumerator(new List<Set> { set }, new List<Set> { this.SourceSet }, false, DimensionType.IDENTITY_ENTITY).ToList();
                 var mPaths = new PathEnumerator(new List<Set> { set }, new List<Set> { this.TargetSet }, false, DimensionType.IDENTITY_ENTITY).ToList();
-                if (gPaths.Count == 0 || mPaths.Count == 0) continue;
+
+                if (gPaths.Count == 0) continue; // In fact, there must be at least one path - because the set is known to be a lesser set
+
+                if (set == this.TargetSet) // Target (measure) set is the same as fact set
+                {
+                    List<Dim> loop = new List<Dim>();
+                    loop.Add(new Dim(set));
+                    mPaths.Add(new DimPath(loop));
+                }
+
+                if (mPaths.Count == 0) continue;
 
                 RecommendedFragment<Set> frag = new RecommendedFragment<Set>(set, 1.0);
                 this.FactSets.Alternatives.Add(frag);
@@ -216,7 +228,7 @@ namespace Com.Model
                 gPaths.ForEach(gp => this.GroupingPaths.Alternatives.Add(new RecommendedFragment<List<Dim>>(gp.Path, 1.0)));
                 mPaths.ForEach(mp => this.MeasurePaths.Alternatives.Add(new RecommendedFragment<List<Dim>>(mp.Path, 1.0)));
 
-                // For each pair of down-up paths build a relationship path
+                // For each pair of grouping paths build a complete relationship path
                 foreach (var gp in gPaths)
                 {
                     foreach (var mp in mPaths)
@@ -257,6 +269,13 @@ namespace Com.Model
 
             var measureDim = MeasureDimensions.SelectedObject;
             var measurePath = MeasurePaths.SelectedObject;
+            if (measurePath.Count > 0)
+            {
+                if (measurePath[0].LesserSet == measurePath[measurePath.Count - 1].GreaterSet) // It is the case where we have a loop segment when measure table is the same as fact table
+                {
+                    measurePath.Clear();
+                }
+            }
             measurePath.Add(measureDim);
 
             var projExpr = Com.Model.Expression.CreateProjectExpression(measurePath, Operation.DOT);
