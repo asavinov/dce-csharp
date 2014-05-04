@@ -240,6 +240,7 @@ namespace Com.Model
         /// The function computation procedure can transoform this mapping to a normal expression for evaluation in a loop or it can translate it to a join or other target engine formats.
         /// </summary>
         public Mapping Mapping { get; set; }
+        public Expression WhereExpression { get; set; } // It describes the domain of the function or where the function returns null independent of other definitions
 
         public virtual void ComputeValues() { return; } // Set output values of the function by evaluating an expression (or using other means)
 

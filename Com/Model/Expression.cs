@@ -55,9 +55,10 @@ namespace Com.Model
         /// </summary>
         public string Name { get; set; }
         public Dim Dimension { get; set; } // Dimension/functin this expression defines. Its lesser and greater sets should correspond to this expression intput and output sets.
+        public Expression WhereExpression { get; set; } // It corresponds to the field in the function and describes the domain (where it is not null). We use it if the function object is not used - otherwise use the same field in the function object. 
 
         /// <summary>
-        /// Operation for this node. What do we do in order to compute the output using input value and operand values. 
+        /// Operation for this node. Elementary function of the engine. What do we do in order to compute the output using input value and operand values.
         /// This operation corresponds to the syntactic node type in the grammar and essentially the grammar has the same values for operations. 
         /// </summary>
         public Operation Operation { get; set; }

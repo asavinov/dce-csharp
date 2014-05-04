@@ -16,11 +16,7 @@ namespace Com.Model
     /// </summary>
     public class SetTop : Set
     {
-        private DataSourceType _type=DataSourceType.LOCAL; // Where data is stored and processed (engine)
-        public DataSourceType DataSourceType
-        {
-            get { return _type; }
-        }
+        public DataSourceType DataSourceType { get; protected set; } // Where data is stored and processed (engine). Replace class name
 
         public override int Width
         {
@@ -118,6 +114,7 @@ namespace Com.Model
         public SetTop()
             : base()
         {
+            DataSourceType = DataSourceType.LOCAL;
         }
 
         public SetTop(string name)

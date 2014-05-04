@@ -23,6 +23,8 @@ namespace Com.Model
         public SetTopText(string name)
             : base(name) // C#: If nothing specified, then base() will always be called by default
         {
+            DataSourceType = DataSourceType.CSV;
+
             // Do we need separate data types for CSV (text) files? 
             // Probably yes. But we can create ALL oledb types and then use only those suitable for texts
         }

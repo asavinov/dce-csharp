@@ -40,6 +40,7 @@ namespace Com.Model
         public SetTopOdata(string name)
             : base(name) // C#: If nothing specified, then base() will always be called by default
         {
+            DataSourceType = DataSourceType.ODATA;
         }
 
     }

@@ -1134,8 +1134,11 @@ namespace Com.Model
     public enum DataSourceType
     {
         LOCAL, // This database
-        CSV,
+        ACCESS,
+        OLEDB,
         SQL, // Generic (standard) SQL
+        CSV,
+        ODATA,
         EXCEL
     }
 
