@@ -545,11 +545,12 @@ namespace Com.Model
         {
             if (!IsSubsetNode) return; // Child nodes are added/deleted for only super-dimensions (for subset trees)
 
-            Dim dim = e.NewItems != null && e.NewItems.Count > 0 ? (Dim)e.NewItems[0] : null;
-            if (dim == null) return;
-
+            Dim dim = null;
             if (e.Action == NotifyCollectionChangedAction.Add) // Decide if this node has to add a new child node
             {
+                dim = e.NewItems != null && e.NewItems.Count > 0 ? (Dim)e.NewItems[0] : null;
+                if (dim == null) return;
+
                 if (dim.IsSuper || dim is DimSuper) // Inclusion
                 {
                     if (dim.GreaterSet == Dim.LesserSet) // Add a subset child node (recursively)
@@ -579,6 +580,9 @@ namespace Com.Model
             }
             else if (e.Action == NotifyCollectionChangedAction.Remove)
             {
+                dim = e.OldItems != null && e.OldItems.Count > 0 ? (Dim)e.OldItems[0] : null;
+                if (dim == null) return;
+
                 if (dim.IsSuper || dim is DimSuper) // Inclusion
                 {
                     if (dim.GreaterSet == Dim.LesserSet) // Remove a subset child node (recursively)
