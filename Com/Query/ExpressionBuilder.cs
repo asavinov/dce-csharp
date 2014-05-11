@@ -10,6 +10,7 @@ namespace Com.Query
 {
     /// <summary>
     /// A visitor which build an abstract syntax tree from a parse tree.
+    /// Its methods are called for the nodes of a parse tree and return a node of AST.
     /// </summary>
     public class ExpressionBuilder : ExprBaseVisitor<Expression>
     {

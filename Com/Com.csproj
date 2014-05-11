@@ -67,6 +67,7 @@
     <Compile Include="Model\SetTop.cs" />
     <Compile Include="Model\SetTopText.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Query\AstNode.cs" />
     <Compile Include="Query\ExprBaseVisitor.cs" />
     <Compile Include="Query\ExpressionBuilder.cs" />
     <Compile Include="Query\ExprLexer.cs" />
@@ -75,6 +76,19 @@
     <Compile Include="Query\Query.cs" />
     <Compile Include="Query\QueryOperation.cs" />
     <Compile Include="Query\QueryParam.cs" />
+    <Compile Include="Query\ScriptBaseVisitor.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Query\ScriptBuilder.cs" />
+    <Compile Include="Query\scriptLexer.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Query\ScriptParser.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Query\ScriptVisitor.cs">
+      <SubType>Code</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <WCFMetadata Include="Service References\" />

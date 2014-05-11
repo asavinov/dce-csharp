@@ -56,6 +56,25 @@ namespace Test
             return ast;
         }
 
+        protected AstNode BuildScript(string str)
+        {
+            ScriptLexer lexer;
+            ScriptParser parser;
+            IParseTree tree;
+            string tree_str;
+            AstNode ast;
+
+            lexer = new ScriptLexer(new AntlrInputStream(str));
+            parser = new ScriptParser(new CommonTokenStream(lexer));
+            tree = parser.script();
+            tree_str = tree.ToStringTree(parser);
+
+            ScriptBuilder builder = new ScriptBuilder();
+            ast = builder.Visit(tree);
+
+            return ast;
+        }
+
         [TestMethod]
         public void ExpressionBuilderTest()
         {
@@ -236,6 +255,26 @@ namespace Test
 
             Assert.AreEqual(ast.Statements[0].Input.Operands[1].Operands[1].OutputSet, setA);
             Assert.AreEqual(ast.Statements[0].Input.Operands[1].Operands[1].Input.OutputSet, setB);
+        }
+
+        [TestMethod]
+        public void ScriptBuilderTest()
+        {
+            AstNode ast;
+
+            //
+            // Script with statements
+            //
+            string scriptStr = " SET( String strVar ); SET mySet; mySet = SET( String strVar, Double dblVar, Integer intVar = 25 + 26 ); ; ";
+
+            ast = BuildScript(scriptStr);
+
+            Assert.AreEqual(ast.Children.Count, 3);
+            Assert.AreEqual(ast.Rule, AstRule.SCRIPT);
+
+            Assert.AreEqual(ast.Children[0].Rule, AstRule.SEXPR);
+            Assert.AreEqual(ast.Children[1].Rule, AstRule.VARIABLE);
+            Assert.AreEqual(ast.Children[2].Rule, AstRule.ASSIGNMENT);
         }
 
     }
