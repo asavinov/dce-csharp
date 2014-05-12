@@ -13,6 +13,7 @@ namespace Test
     {
         public static string Northwind = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\\Users\\savinov\\git\\comcsharp\\Test\\Northwind.accdb";
         public static string TextDbConnection = "Provider=Microsoft.ACE.OLEDB.12.0; Data Source=C:\\Users\\savinov\\git\\comcsharp\\Test; Extended Properties='Text;Excel 12.0;HDR=Yes;FMT=CSVDelimited;'";
+
         // Another provider: "Provider=Microsoft.Jet.OLEDB.4.0;"
         // Provider=Microsoft.Jet.OLEDB.4.0
         // Provider=Microsoft.ACE.OLEDB.12.0

@@ -153,6 +153,7 @@ namespace Com.Query
         MEMBER, // It is a node in a set/product node definition
 
         NAME, // Name of a set member, variable, argument, function etc.
+        TYPE, // It is a role of the child node.
 
         NONE,
     }

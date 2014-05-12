@@ -68,7 +68,7 @@ namespace Com.Query
             else if (context.GetChild(0) is ScriptParser.NameContext && context.GetChild(1).GetText() == "=")
             {
                 n.Rule = AstRule.ASSIGNMENT;
-                AstNode name = new AstNode(context.GetChild(0).GetText());
+                AstNode name = (AstNode)Visit(context.GetChild(0));
                 AstNode expr = (AstNode)Visit(context.GetChild(2));
 
                 n.AddChild(name);
@@ -97,15 +97,7 @@ namespace Com.Query
                 }
 
                 AstNode expr = (AstNode)Visit(context.sexpr());
-                AstNode func;
-                if (context.GetChild(2) is ScriptParser.NameContext)
-                {
-                    func = new AstNode(context.GetChild(2).GetText());
-                }
-                else
-                {
-                    func = (AstNode)Visit(context.GetChild(2));
-                }
+                AstNode func = (AstNode)Visit(context.GetChild(2));
 
                 n.AddChild(expr);
                 n.AddChild(func);
@@ -125,8 +117,8 @@ namespace Com.Query
             }
             if (context.GetChild(0) is ScriptParser.NameContext) 
             {
-                n.Rule = AstRule.NAME;
-                n.Name = context.GetText();
+                AstNode name = (AstNode)Visit(context.GetChild(0));
+                n = name;
             }
 
             return n; 
@@ -146,24 +138,41 @@ namespace Com.Query
             return n;
         }
 
-        protected string GetType(ScriptParser.TypeContext context)
+        public override AstNode VisitName(ScriptParser.NameContext context) 
         {
-            string name = context.GetText();
+            AstNode n = new AstNode();
+            n.Rule = AstRule.NAME;
+
             if (context.DELIMITED_ID() != null)
             {
-                name = name.Substring(1, name.Length - 2); // Remove delimiters
+                string name = context.DELIMITED_ID().GetText();
+                n.Name = name.Substring(1, name.Length - 2); // Remove delimiters
             }
-            return name;
+            else
+            {
+                n.Name = context.ID().GetText();
+            }
+
+            return n; 
         }
 
-        protected string GetName(ScriptParser.NameContext context)
+        public override AstNode VisitType(ScriptParser.TypeContext context) 
         {
-            string name = context.GetText();
-            if (context.DELIMITED_ID() != null)
+            AstNode n = new AstNode();
+            n.Rule = AstRule.TYPE;
+
+            if (context.GetChild(0) is ScriptParser.SexprContext)
             {
-                name = name.Substring(1, name.Length - 2); // Remove delimiters
+                AstNode sexpr = (AstNode)Visit(context.sexpr());
+                n.AddChild(sexpr);
             }
-            return name;
+            if (context.GetChild(0) is ScriptParser.Primitive_setContext)
+            {
+                AstNode prim = new AstNode(context.primitive_set().GetText());
+                n.AddChild(prim);
+            }
+
+            return n.Children[0]; // We do not use TYPE node - this role is defined by the position
         }
 
     }

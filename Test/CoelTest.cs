@@ -266,7 +266,6 @@ namespace Test
             // Script with statements
             //
             string scriptStr = " SET( String strVar ); SET mySet; mySet = SET( String strVar, Double dblVar, Integer intVar = 25 + 26 ); ; ";
-
             ast = BuildScript(scriptStr);
 
             Assert.AreEqual(ast.Children.Count, 3);
@@ -277,11 +276,22 @@ namespace Test
             Assert.AreEqual(ast.Children[2].Rule, AstRule.ASSIGNMENT);
 
             //
-            // Set expressions
+            // Types as set expressions
             //
-            string exprStr = " mySet1 = startSet -> func1 -> func2; mySet2 = SET( String strVar, Double dblVar, Integer intVar = dblVar + 26 ); ";
-
+            string exprStr = " mySet1 = startSet -> func1 -> func2; SET( SET(mySet1 var1, String var2) -> func1 varWithComputedType, Double doubleVar ); ";
             ast = BuildScript(exprStr);
+
+            Assert.AreEqual(ast.Children.Count, 2);
+
+            Assert.AreEqual(ast.Children[0].Children[1].Rule, AstRule.PROJECTION);
+            Assert.AreEqual(ast.Children[1].Children[0].Children[0].Children[0].Rule, AstRule.PROJECTION);
+            Assert.AreEqual(ast.Children[1].Children[0].Children[0].Children[0].Children[0].Rule, AstRule.PRODUCT);
+
+            //
+            // Function definition via value expressions or function body
+            //
+            string funcStr = " mySet2 = SET( Integer primFunc = doubleVar + f1.f2.f3, MySet tupleFunc = TUPLE( att1 = f1.f2, att2 = TUPLE(primFunc+25, f3+f4 ) ) ); ";
+            ast = BuildScript(funcStr);
         }
 
     }

@@ -9,11 +9,11 @@ script
   ;
 
 statement
-  : 'RETURN' sexpr ';'
-  | ';'
-  | sexpr ';'
-  | 'SET' ID ('=' sexpr)? ';'
+  : 'RETURN' sexpr ';' // Return
+  | 'SET' ID ('=' sexpr)? ';' // Variable declaration
   | name '=' sexpr ';' // Set assignment
+  | sexpr ';'
+  | ';'
   ;
 
 //
@@ -60,20 +60,20 @@ func_body
 //
 vexpr
 // Composition. Access operator.
-  : vexpr (op='.') name              //# AccessPath
-  | '(' type ')' vexpr
-  | vexpr (op='*'|op='/') vexpr      //# MulDiv
-  | vexpr (op='+'|op='-') vexpr      //# AddSub
-  | vexpr (op='<=' | op='>=' | op='>' | op='<') vexpr //# Compare
-  | vexpr (op='==' | op='!=') vexpr  //# Equal
-  | vexpr (op='&&') vexpr            //# And
-  | vexpr (op='||') vexpr            //# Or
-  | literal                          //# LiteralRule // Primitive value
-  | name                             //# AccessRule // Start without prefix (variable or function)
-  | '(' vexpr ')'                    //# Parens // Priority, scope
+  : vexpr (op='.') name
 // Casting (explicitly specify expression type). It can be used for conversion, for deriving function type etc.
+  | '(' type ')' vexpr
+  | vexpr (op='*'|op='/') vexpr
+  | vexpr (op='+'|op='-') vexpr
+  | vexpr (op='<=' | op='>=' | op='>' | op='<') vexpr
+  | vexpr (op='==' | op='!=') vexpr
+  | vexpr (op='&&') vexpr
+  | vexpr (op='||') vexpr
+  | literal // Primitive value
+  | name // Start without prefix (variable or function)
+  | '(' vexpr ')' // Priority, scope
 // Tuple (combination)
-  | 'TUPLE' '(' vexpr (',' vexpr)* ')'
+  | 'TUPLE' '(' name '=' vexpr (',' name '=' vexpr)* ')'
 // Aggregation
 // Global/system/external function call
   ;
@@ -84,10 +84,8 @@ name : (ID | DELIMITED_ID) ;
 // Value type. But it specifies a concrete set like variable (by reference), set expression, primitive set
 //
 type
-  : sexpr
-  | ID // Variable
-  | DELIMITED_ID // Set name or variable?
-  | primitive_set // Reserved names
+  : primitive_set // Reserved names
+  | sexpr
   ;
 
 // Primitive sets. A primitive set is a collection of primitive values (domain).
