@@ -21,15 +21,15 @@ statement
 //
 sexpr
 // Access operator. Applying a function to a set expression is also a set expression (returns a new set)
-//  : sexpr (op='.'|op='->'|op='<-') [ name | func_body ] # AccessPath
+  : sexpr (op='.'|op='->'|op='<-') (name | func_body)
 // Set definition. A set is a number of members
-  : 'SET' '(' member (',' member)* ')'
-// Func definition (assignment?). Adding a function to a set. 
+  | 'SET' '(' member (',' member)* ')'
+// Func definition (assignment?). Adding a function to a set. If it is independent then it is a statement. If it is assignment then it is also a statement (with function type). 
 // Set/function population with values (data operations)
 // Priority of operations via grouping
 //  | '(' sexpr ')' # Parens
 // Access: set variable or function call
-//  | name
+  | name
   ;
 
 //

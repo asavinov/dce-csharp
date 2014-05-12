@@ -275,6 +275,13 @@ namespace Test
             Assert.AreEqual(ast.Children[0].Rule, AstRule.SEXPR);
             Assert.AreEqual(ast.Children[1].Rule, AstRule.VARIABLE);
             Assert.AreEqual(ast.Children[2].Rule, AstRule.ASSIGNMENT);
+
+            //
+            // Set expressions
+            //
+            string exprStr = " mySet1 = startSet -> func1 -> func2; mySet2 = SET( String strVar, Double dblVar, Integer intVar = dblVar + 26 ); ";
+
+            ast = BuildScript(exprStr);
         }
 
     }

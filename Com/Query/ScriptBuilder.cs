@@ -28,7 +28,6 @@ namespace Com.Query
             {
                 AstNode stmt = (AstNode)Visit(context.statement(i));
                 if (stmt == null) continue;
-
                 n.AddChild(stmt);
             }
 
@@ -38,6 +37,8 @@ namespace Com.Query
         public override AstNode VisitStatement(ScriptParser.StatementContext context) 
         {
             AstNode n = new AstNode();
+
+            // Determine the type of statement
 
             if (context.GetChild(0).GetText() == "RETURN")
             {
@@ -68,7 +69,7 @@ namespace Com.Query
             {
                 n.Rule = AstRule.ASSIGNMENT;
                 AstNode name = new AstNode(context.GetChild(0).GetText());
-                AstNode expr = new AstNode(context.GetChild(2).GetText());
+                AstNode expr = (AstNode)Visit(context.GetChild(2));
 
                 n.AddChild(name);
                 n.AddChild(expr);
@@ -77,12 +78,72 @@ namespace Com.Query
             return n; 
         }
 
-        public virtual AstNode VisitSexpr(ScriptParser.SexprContext context) 
+        public override AstNode VisitSexpr(ScriptParser.SexprContext context) 
         {
             AstNode n = new AstNode();
-            n.Rule = AstRule.SEXPR;
+
+            // Determine the type of expression
+
+            if (context.GetChild(0) is ScriptParser.SexprContext)
+            {
+                string op = context.op.Text; // Alternatively, context.GetChild(1).GetText()
+                if(op == "." || op == "->") 
+                {
+                    n.Rule = AstRule.PROJECTION;
+                }
+                else if(op == "<-")
+                {
+                    n.Rule = AstRule.DEPROJECTION;
+                }
+
+                AstNode expr = (AstNode)Visit(context.sexpr());
+                AstNode func;
+                if (context.GetChild(2) is ScriptParser.NameContext)
+                {
+                    func = new AstNode(context.GetChild(2).GetText());
+                }
+                else
+                {
+                    func = (AstNode)Visit(context.GetChild(2));
+                }
+
+                n.AddChild(expr);
+                n.AddChild(func);
+            }
+            else if (context.GetChild(0).GetText() == "SET")
+            {
+                n.Rule = AstRule.PRODUCT;
+
+                // Find all members and store them in the product node
+                int mmbrCount = context.member().Count();
+                for (int i = 0; i < mmbrCount; i++)
+                {
+                    AstNode mmbr = (AstNode)Visit(context.member(i));
+                    if (mmbr == null) continue;
+                    n.AddChild(mmbr);
+                }
+            }
+            if (context.GetChild(0) is ScriptParser.NameContext) 
+            {
+                n.Rule = AstRule.NAME;
+                n.Name = context.GetText();
+            }
 
             return n; 
+        }
+
+        public override AstNode VisitMember(ScriptParser.MemberContext context) 
+        {
+            AstNode n = new AstNode();
+            n.Rule = AstRule.MEMBER;
+
+            AstNode type = (AstNode)Visit(context.type());
+            n.AddChild(type);
+
+            AstNode name = (AstNode)Visit(context.name());
+            n.AddChild(name);
+
+            return n;
         }
 
         protected string GetType(ScriptParser.TypeContext context)

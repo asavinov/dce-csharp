@@ -126,11 +126,13 @@ namespace Com.Query
             : this()
         {
             Name = name;
+            Rule = AstRule.NAME;
         }
 
         public AstNode()
         {
             Children = new List<AstNode>();
+            Rule = AstRule.NONE;
         }
 
     }
@@ -145,8 +147,13 @@ namespace Com.Query
 
         SEXPR, // Set-oriented expression. It evaluates to a set. 
         PROJECTION, // Operation of applying a function to a set which evaluates to another set
+        DEPROJECTION, // Deprojection
         PRODUCT, // New set is defined as a product of greater sets as well as other members. Syntactically, it is a list of members of various types. 
 
-        NAME, // Name of a set member, variable, argument etc.
+        MEMBER, // It is a node in a set/product node definition
+
+        NAME, // Name of a set member, variable, argument, function etc.
+
+        NONE,
     }
 }
