@@ -290,8 +290,12 @@ namespace Test
             //
             // Function definition via value expressions or function body
             //
-            string funcStr = " mySet2 = SET( Integer primFunc = doubleVar + f1.f2.f3, MySet tupleFunc = TUPLE( att1 = f1.f2, att2 = TUPLE(primFunc+25, f3+f4 ) ) ); ";
+            string funcStr = " mySet2 = SET( Integer primFunc = doubleVar + f1.f2, MySet tupleFunc = TUPLE( Integer att1=f1.f2, MySet att2=TUPLE(Double aaa=primFunc+25, Integer bbb=f3+f4 ) ) ); ";
             ast = BuildScript(funcStr);
+
+            Assert.AreEqual(ast.Children[0].Children[1].Children[0].Children[2].Name, "+");
+            Assert.AreEqual(ast.Children[0].Children[1].Children[1].Children[2].Rule, AstRule.TUPLE);
+            Assert.AreEqual(ast.Children[0].Children[1].Children[1].Children[2].Children[0].Children[1].Name, "att1");
         }
 
     }

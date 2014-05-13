@@ -111,7 +111,6 @@ namespace Com.Query
                 for (int i = 0; i < mmbrCount; i++)
                 {
                     AstNode mmbr = (AstNode)Visit(context.member(i));
-                    if (mmbr == null) continue;
                     n.AddChild(mmbr);
                 }
             }
@@ -124,16 +123,95 @@ namespace Com.Query
             return n; 
         }
 
+        public override AstNode VisitVexpr(ScriptParser.VexprContext context) 
+        { 
+            AstNode n = new AstNode();
+
+            // Determine the type of expression
+
+            if (context.op != null)
+            {
+                string op = context.op.Text; // Alternatively, context.GetChild(1).GetText()
+
+                n.Name = op;
+                // TODO: Set node rule field according to the operation (using switch)
+                if (op == ".")
+                {
+                }
+
+                AstNode expr1 = (AstNode)Visit(context.GetChild(0));
+                AstNode expr2 = (AstNode)Visit(context.GetChild(2));
+
+                n.AddChild(expr1);
+                n.AddChild(expr2);
+            }
+            else if (context.GetChild(0).GetText() == "TUPLE")
+            {
+                n.Rule = AstRule.TUPLE;
+
+                // Find all members and store them in the tuple node
+                int mmbrCount = context.member().Count();
+                for (int i = 0; i < mmbrCount; i++)
+                {
+                    AstNode mmbr = (AstNode)Visit(context.member(i));
+                    n.AddChild(mmbr);
+                }
+            }
+            else if (context.literal() != null)
+            {
+                n.Rule = AstRule.LITERAL;
+                string name = context.literal().GetText();
+
+                if (context.literal().INT() != null)
+                {
+                }
+                else if (context.literal().DECIMAL() != null)
+                {
+                }
+                else if (context.literal().STRING() != null)
+                {
+                    name = name.Substring(1, name.Length - 2); // Remove quotes
+                }
+                n.Name = name;
+            }
+            else if (context.name() != null)
+            {
+                n.Rule = AstRule.NAME;
+                string name = context.name().GetText();
+                n.Name = name;
+            }
+
+            return n; 
+        }
+
         public override AstNode VisitMember(ScriptParser.MemberContext context) 
         {
             AstNode n = new AstNode();
             n.Rule = AstRule.MEMBER;
 
+            // Type of the member
             AstNode type = (AstNode)Visit(context.type());
             n.AddChild(type);
 
+            // Name of the member (attribute, field etc.)
             AstNode name = (AstNode)Visit(context.name());
             n.AddChild(name);
+
+            // Definition as a function. It can be one value expression or a complete function definition (body as a sequence of statements)
+            if (context.func_body() != null)
+            {
+                if (context.func_body().GetChild(0) is ScriptParser.VexprContext)
+                {
+                    AstNode vexpr = (AstNode)Visit(context.func_body());
+                    n.AddChild(vexpr);
+                }
+                else if (context.func_body().GetChild(0).GetText() == "{")
+                {
+                    AstNode scope = new AstNode();
+                    scope.Rule = AstRule.SCOPE;
+                    n.AddChild(scope);
+                }
+            }
 
             return n;
         }

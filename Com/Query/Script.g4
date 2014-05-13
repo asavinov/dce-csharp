@@ -33,7 +33,30 @@ sexpr
   ;
 
 //
-// A member of a set.
+// Value expression
+//
+vexpr
+// Composition. Access operator.
+  : vexpr (op='.') name
+// Casting (explicitly specify expression type). It can be used for conversion, for deriving function type etc.
+  | '(' type ')' vexpr
+  | vexpr (op='*'|op='/') vexpr
+  | vexpr (op='+'|op='-') vexpr
+  | vexpr (op='<=' | op='>=' | op='>' | op='<') vexpr
+  | vexpr (op='==' | op='!=') vexpr
+  | vexpr (op='&&') vexpr
+  | vexpr (op='||') vexpr
+  | literal // Primitive value
+  | name // Start without prefix (variable or function)
+  | '(' vexpr ')' // Priority, scope
+// Tuple (combination)
+  | 'TUPLE' '(' member (',' member)* ')'
+// Aggregation
+// Global/system/external function call
+  ;
+
+//
+// A member/field of a (complex) value (tuple) or set.
 //
 member
 // Free variable (greater sets, identity dimensions, keys). Special case: Super/Parent, Key (unique, used for varying)
@@ -54,30 +77,7 @@ func_body
 // Full-featured function body consisting of a sequence of value statements
   | '{' (vexpr ';')+ '}'
   ;
-
-//
-// Value expression
-//
-vexpr
-// Composition. Access operator.
-  : vexpr (op='.') name
-// Casting (explicitly specify expression type). It can be used for conversion, for deriving function type etc.
-  | '(' type ')' vexpr
-  | vexpr (op='*'|op='/') vexpr
-  | vexpr (op='+'|op='-') vexpr
-  | vexpr (op='<=' | op='>=' | op='>' | op='<') vexpr
-  | vexpr (op='==' | op='!=') vexpr
-  | vexpr (op='&&') vexpr
-  | vexpr (op='||') vexpr
-  | literal // Primitive value
-  | name // Start without prefix (variable or function)
-  | '(' vexpr ')' // Priority, scope
-// Tuple (combination)
-  | 'TUPLE' '(' name '=' vexpr (',' name '=' vexpr)* ')'
-// Aggregation
-// Global/system/external function call
-  ;
-
+  
 name : (ID | DELIMITED_ID) ;
 
 //

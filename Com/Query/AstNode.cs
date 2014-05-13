@@ -152,6 +152,12 @@ namespace Com.Query
 
         MEMBER, // It is a node in a set/product node definition
 
+        SCOPE, // Scope
+
+        TUPLE, // Tuple
+
+        LITERAL, // Literal. A single primitive value
+
         NAME, // Name of a set member, variable, argument, function etc.
         TYPE, // It is a role of the child node.
 
