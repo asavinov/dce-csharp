@@ -10,8 +10,8 @@ script
 
 statement
   : 'RETURN' sexpr ';' // Return
-  | 'SET' ID ('=' sexpr)? ';' // Variable declaration
-  | name '=' sexpr ';' // Set assignment
+  | ID ID ('=' sexpr)? ';' // Variable declaration
+  | ID '=' sexpr ';' // Variable assignment
   | sexpr ';'
   | ';'
   ;
@@ -21,15 +21,15 @@ statement
 //
 sexpr
 // Access operator. Applying a function to a set expression is also a set expression (returns a new set)
-  : sexpr (op='.'|op='->'|op='<-') (name | func_body)
+  : sexpr (op='.'|op='->'|op='<-') call
 // Set definition. A set is a number of members
   | 'SET' '(' member (',' member)* ')'
 // Func definition (assignment?). Adding a function to a set. If it is independent then it is a statement. If it is assignment then it is also a statement (with function type). 
 // Set/function population with values (data operations)
 // Priority of operations via grouping
-//  | '(' sexpr ')' # Parens
+//  | '(' sexpr ')'
 // Access: set variable or function call
-  | name
+  | call
   ;
 
 //
@@ -37,7 +37,7 @@ sexpr
 //
 vexpr
 // Composition. Access operator.
-  : vexpr (op='.') name
+  : vexpr (op='.') call
 // Casting (explicitly specify expression type). It can be used for conversion, for deriving function type etc.
   | '(' type ')' vexpr
   | vexpr (op='*'|op='/') vexpr
@@ -47,12 +47,23 @@ vexpr
   | vexpr (op='&&') vexpr
   | vexpr (op='||') vexpr
   | literal // Primitive value
-  | name // Start without prefix (variable or function)
-  | '(' vexpr ')' // Priority, scope
+  | call // Start without prefix (variable or function)
+  | '(' vexpr ')' // Priority
 // Tuple (combination)
   | 'TUPLE' '(' member (',' member)* ')'
 // Aggregation
 // Global/system/external function call
+  ;
+
+//
+// Access/call request. The procedure can be specified by-reference using ID or by-value using in-place definition (e.g., for projection where it specifies a value-function body)
+//
+call
+  : (ID | vscope) ( '(' (param (',' param)*)? ')' )?
+  ;
+
+param
+  : (name '=')? vexpr
   ;
 
 //
@@ -61,7 +72,7 @@ vexpr
 member
 // Free variable (greater sets, identity dimensions, keys). Special case: Super/Parent, Key (unique, used for varying)
 // Bound variable (function). Special cases: Name, Where, Data (non-key and not a function, data loaded explicitly)
-  : type name ('=' func_body)?
+  : type name ('=' (vscope | vexpr))?
 // Property. We can attach various options and properties as key-value pairs
   ;
 
@@ -71,11 +82,11 @@ member
 // Function signature can be declared explicitly or derived from the context. 
 // Examples of context: set definition where this body is used, expression where this body is used, returned value type declared in the body (for deriving output type) including explicit casting of this expression.
 //
-func_body
+vscope
 // A single expression like arithmetic, logical (for predicates), tuple (for mapping), composition (dot) etc. 
-  : vexpr
+//  : vexpr // Produces error in grammar
 // Full-featured function body consisting of a sequence of value statements
-  | '{' (vexpr ';')+ '}'
+  : '{' (vexpr ';')+ '}'
   ;
   
 name : (ID | DELIMITED_ID) ;
@@ -93,7 +104,7 @@ primitive_set
   : 'Double'
   | 'Integer'
   | 'String'
-  | 'Set' // Root or Reference or Surrogate
+  | 'Root' // Root or Reference or Surrogate
   | 'Top'
   | 'Bottom'
   ;

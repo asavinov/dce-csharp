@@ -146,11 +146,14 @@ namespace Com.Query
         RETURN, // Return a set
 
         SEXPR, // Set-oriented expression. It evaluates to a set. 
+        DOT, // 
         PROJECTION, // Operation of applying a function to a set which evaluates to another set
         DEPROJECTION, // Deprojection
         PRODUCT, // New set is defined as a product of greater sets as well as other members. Syntactically, it is a list of members of various types. 
 
         MEMBER, // It is a node in a set/product node definition
+        CALL, // Any call including by-reference (using ID) or by-value (using definition)
+        PARAM, // It is a parameter of a call
 
         SCOPE, // Scope
 

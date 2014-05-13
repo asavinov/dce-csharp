@@ -265,7 +265,7 @@ namespace Test
             //
             // Script with statements
             //
-            string scriptStr = " SET( String strVar ); SET mySet; mySet = SET( String strVar, Double dblVar, Integer intVar = 25 + 26 ); ; ";
+            string scriptStr = " SET( String strVar ); Set mySet; mySet = SET( String strVar, Double dblVar ); ; ";
             ast = BuildScript(scriptStr);
 
             Assert.AreEqual(ast.Children.Count, 3);
@@ -278,7 +278,7 @@ namespace Test
             //
             // Types as set expressions
             //
-            string exprStr = " mySet1 = startSet -> func1 -> func2; SET( SET(mySet1 var1, String var2) -> func1 varWithComputedType, Double doubleVar ); ";
+            string exprStr = " mySet1 = startSet -> func1 -> func2; SET( SET(mySet1 var1, String var2) -> func2 varWithComputedType, Double doubleVar ); ";
             ast = BuildScript(exprStr);
 
             Assert.AreEqual(ast.Children.Count, 2);
@@ -290,12 +290,25 @@ namespace Test
             //
             // Function definition via value expressions or function body
             //
-            string funcStr = " mySet2 = SET( Integer primFunc = doubleVar + f1.f2, MySet tupleFunc = TUPLE( Integer att1=f1.f2, MySet att2=TUPLE(Double aaa=primFunc+25, Integer bbb=f3+f4 ) ) ); ";
+            string funcStr = " SET( Integer primFunc = doubleVar + f1.{f2+f3;}, MySet tupleFunc = TUPLE( Integer att1=f1.f2, MySet att2=TUPLE(Double aaa=primFunc+25, Integer bbb=f3+f4 ) ) ); ";
             ast = BuildScript(funcStr);
 
-            Assert.AreEqual(ast.Children[0].Children[1].Children[0].Children[2].Name, "+");
-            Assert.AreEqual(ast.Children[0].Children[1].Children[1].Children[2].Rule, AstRule.TUPLE);
-            Assert.AreEqual(ast.Children[0].Children[1].Children[1].Children[2].Children[0].Children[1].Name, "att1");
+            Assert.AreEqual(ast.Children[0].Children[0].Children[0].Children[2].Name, "+");
+            Assert.AreEqual(ast.Children[0].Children[0].Children[0].Children[2].Children[1].Children[1].Rule, AstRule.CALL);
+            Assert.AreEqual(ast.Children[0].Children[0].Children[1].Children[2].Rule, AstRule.TUPLE);
+            Assert.AreEqual(ast.Children[0].Children[0].Children[1].Children[2].Children[0].Children[1].Name, "att1");
+
+
+            //
+            // Test commands and procedures
+            //
+            string commandStr = " SCHEMA mySchema = OpenOledbCsv(param1=\"FileName\", param2=25.5); Set mySet = mySchema.Load(\"MyTable\"); mySet.Eval(); mySchema.Store(set=mySet, \"NewTable\"); ";
+            ast = BuildScript(commandStr);
+
+            Assert.AreEqual(ast.Children[0].Children[2].Children.Count, 3);
+            Assert.AreEqual(ast.Children[0].Children[2].Children[0].Name, "OpenOledbCsv");
+            Assert.AreEqual(ast.Children[0].Children[2].Children[1].Children[0].Name, "param1");
+            Assert.AreEqual(ast.Children[0].Children[2].Children[1].Children[1].Name, "FileName");
         }
 
     }
