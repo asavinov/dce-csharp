@@ -63,7 +63,7 @@ call
   ;
 
 param
-  : (name '=')? vexpr
+  : (name '=')? (vscope | vexpr)
   ;
 
 //

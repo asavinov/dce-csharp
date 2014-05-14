@@ -311,5 +311,67 @@ namespace Test
             Assert.AreEqual(ast.Children[0].Children[2].Children[1].Children[1].Name, "FileName");
         }
 
+        [TestMethod]
+        public void ScriptSchemaOperationsTest()
+        {
+            AstNode ast;
+
+            string commandStr = @"Set mySet = SET( String Name = ""MySet"", Root Super, String f1, Double f2, Double f3 = f2+100.0 ); ";
+            // It is equivalent to AddSet("MySet") followed by a sequence of AddFunction
+            // Markups: super for super-function, key for identity dimension. 
+            // If Name is not specified then some default (autoincremented) name like "MySet 1"
+
+            ast = BuildScript(commandStr);
+
+            // Translate and execute ast
+            //Script script = new Script("Top"); // Create executable context
+
+            // Every script (source sequence of instructions) is executed against some context 
+            // This context stores: reference to the default database, local variables created during execution, remote databases
+            // We can execute several sequences of instructions against the same context without destroying it. For example, these can be user commands
+
+            //script.Execute(ast);
+
+            // Question: do we destroy local variables declared in each individual input script or retain them between scripts?
+            // The same question about functions/sets: some of them are needed only as temporary/intermediate data structures for computing some result possibly resulted from optimizer by extracting some functions. 
+            // For example, if some function definition involves aggregation then the aggregation will be computed as a temporary dimension and then we do not need it. 
+            // One solution is to introduce scope for each individual input instruction call and using also a parent (permanent) scope with the schema. 
+
+            // The difference between permanent and temporary functions is that the former are stored in the schema while the latter are stored in local variables.
+            // Thus we need a mechanism for specifying whether a new function has to be added to a schema (and hence it exist in permanent context)
+            // or has to be stored in a local variable and hence destroyed along with this context. 
+
+            // Another issue is how do we use temporary functions. One way is that we simply include 
+            // them by-name (of the variable) or by-definition in other expressions. But after calcualtions
+            // are finished then the context is destroyed along with these variables. So what about the definitions? 
+            // These definitions are supposed to be also temporary and produced as a result of the same optimization where local variables have been created. 
+            // In other words, optimization/translation results in a new local context created for each instruction (but maybe reusing a common parent context for all instructions).
+
+            // Probably we need a hierarchical execution context where each level has its variables and objects (for resolution)
+            // Child contexts are created for executing instructions from the parent contexts (and then are destroyed). 
+            // Note however that the optimizier can well generate common fragments (functions) that are needed by many instructions or many permanent/temporary functions. 
+            // In this case, it computes these fragments in advance and then stores in a common context for all these instructions. 
+
+            // For example, evaluating one function, all functions of a set or all functions 
+            // is a script composed of many expressions extracted from these functions. 
+            // Thus many extracted functions are created as temporary objects used from the new optimized definitions. 
+
+            // Definitions are scripts, that is, instructions that have to be executed. 
+            // Starting evaluation means executing one or many expressions (in a loop) but these 
+            // expressions can call other expressions. 
+
+            // A solution is to create a permanent root context with the permanent schema (a set of functions and variables)
+            // And each script against this schema is executed in a local context. 
+            // The scripts however are produced by an optimizer. 
+            // Say, calling Eval in one script results in another script produced from the function definition.
+
+            // Note however that functions are normally evaluated together. 
+            // So first, new functions are extracted and then a dependency graph is built using permanent and temporary functions. 
+            // And then they are evaluated according to this graph. 
+            // The question is what kind of context structure we need and how contexts are instantiated and used for resolution. 
+
+            commandStr = @"AddMember( ""f3"", mySet, Double, f2+100.0 ); ";
+        }
+
     }
 }
