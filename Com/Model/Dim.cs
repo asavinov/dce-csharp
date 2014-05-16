@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Diagnostics;
+
+using Com.Query;
+
 using Offset = System.Int32;
 
 namespace Com.Model
@@ -77,6 +80,11 @@ namespace Com.Model
         public bool IsIdentity { get; set; }
 
         /// <summary>
+        /// This dimension belongs to the inclusion hierarchy (super-dimension).
+        /// </summary>
+        public bool IsSuper { get; set; }
+
+        /// <summary>
         /// Reversed dimension has the opposite semantic interpretation (direction). It is used to resolve semantic cycles. 
         /// For example, when a department references its manager then this dimension is makred by this flag. 
         /// One use is when deciding +how to interpret input and output dimensions of sets and lesser/greater sets of dimensions.
@@ -89,16 +97,11 @@ namespace Com.Model
         public bool IsNullable { get; set; }
 
         /// <summary>
-        /// Temporary dimension is discarded after it has been used for computing other dimensions.
-        /// It is normally invisible (private) dimension. 
+        /// Temporary dimension is used for computing other dimensions.
+        /// It is not stored as permanent part of the schema and should not be visible for user because it has not been created by users.
         /// It can be created in the scope of some other dimension, expression or query, and then it is automatically deleted when the process exits this scope.
         /// </summary>
         public bool IsTemporary { get; set; }
-
-        /// <summary>
-        /// This dimension belongs to the inclusion hierarchy (super-dimension).
-        /// </summary>
-        public bool IsSuper { get; set; }
 
         #endregion
 
@@ -241,6 +244,23 @@ namespace Com.Model
         /// </summary>
         public Mapping Mapping { get; set; }
         public Expression WhereExpression { get; set; } // It describes the domain of the function or where the function returns null independent of other definitions
+
+
+        public AstNode SelectAst { get; set; } // It is a source (user, non-executable) format for representing the value-operations for computing this function
+        // Fact set is a set for looping through and providing input for measure and group functions. By default, it is this (lesser) set.
+        public Set LoopSet { get; set; } // Dependency on a lesser set and lesser functions
+        // It is a translated, optimized and directly executable code (value operatinos) for computing output values given an input value (input is fact set which by default is this set)
+        public ValueOp MeasureCode { get; set; } // Input=FactSet. Output as declared by this function output (generaly, as consumed by the accumulator operator). By default, it is an expression for computing this function output given this set input (so normal evaluation). In the simplest case, it is a single call of an existing function.
+        public ValueOp GroupCode { get; set; } // Input=FactSet. Output as declared by this function input (this set)
+        public ValueOp AccuCode { get; set; } // Accumulator expression which computes a new value by taking into account the current value and a new output. For built-in functions it has a single system procedure call like SUM, AVG etc.
+        // Principle: LoopSet.GroupCode + ThisSet.ThisFunc = LoopSet.MeasureCode
+        // Principle: if LoopSet == ThisSet then GroupCode = null, ThisFunc = MeasureCode
+        public Dim CountDim { get; set; } // Input=ThisSet. This dimension will store group counts
+
+        public List<Dim> Dependencies { get; set; } // Other functions this function directly depends upon. Computed from the definition of this function.
+        // Find and store all outputs of this function by evaluating (executing) its definition in a loop for all input elements of the fact set (not necessarily this set)
+        public virtual void Eval() { return; } 
+
 
         public virtual void ComputeValues() { return; } // Set output values of the function by evaluating an expression (or using other means)
 

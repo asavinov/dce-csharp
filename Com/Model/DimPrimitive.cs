@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text;
 using Offset = System.Int32;
 
+using Com.Query;
+
 namespace Com.Model
 {
     /// <summary>
@@ -145,9 +147,73 @@ namespace Com.Model
             _cells[offset] = val;
         }
 
+        public override void UpdateValue(Offset offset, object value, ValueOp updater) // Replace an existing value with the new value and update the index. 
+        {
+            if(updater == null) 
+            { 
+                SetValue(offset, value);
+                return;
+            }
+
+            if (updater.OpType == ValueOpType.CALL_PROC)
+            {
+                double currentValue = Convert.ToDouble(GetValue(offset));
+                double doubleValue = Convert.ToDouble(value);
+                switch (updater.Name)
+                {
+                    case "+": { currentValue += doubleValue; break; }
+                    // TODO: Other operations.
+                    // OPTIMIZATION: It is very inefficient. We have to think about direct implementations for each primitive type resolved before the main loop
+                    // It can a special procedure for each primitive type which makes takes as a parameter group-measure-count-this functions but is implemented for one primitive type.
+                    // In this case, we always assume that group-measure functions are already pre-computed and then aggregation is reduced to such a procedure where the loop is implemented for each type directly on the array (cell) using arithmetic operatinos
+                }
+                SetValue(offset, currentValue);
+            }
+        }
+
         public override void NullifyValues() // Reset values and index to initial state (all nulls)
         {
             throw new NotImplementedException();
+        }
+
+        public override void Eval() // Compute the output values of this function according to the definition and store them for direct access
+        {
+            // TODO: Turn off indexing (sorting) and index after populating all values
+
+            bool isAggregated = false;
+            if (LoopSet != null && LoopSet != LesserSet)
+            {
+                Debug.Assert(LoopSet.IsLesser(LesserSet), "Wrong use: the fact set must be less than this set for aggregation.");
+                isAggregated = true;
+            }
+
+            if (isAggregated)
+            {
+                for (Offset offset = 0; offset < LoopSet.Length; offset++) // Generate all input elements (surrogates)
+                {
+                    // TODO: Set 'this' parameter in the context (should be resolved in advance)
+                    MeasureCode.Eval(); // Evaluate the expression (what if it has multiple statements and where is its context?)
+
+                    // TODO: Set 'this' parameter in the context (should be resolved in advance)
+                    GroupCode.Eval(); // Evalute the group
+
+                    Offset group = (Offset)GroupCode.Value;
+                    UpdateValue(group, MeasureCode.Value, AccuCode); // Update the final result
+
+                    // TODO: Increment group counts function
+                }
+            }
+            else
+            {
+                for (Offset offset = 0; offset < LesserSet.Length; offset++) // Generate all input elements (surrogates)
+                {
+                    // TODO: Set 'this' parameter in the context (should be resolved in advance)
+                    MeasureCode.Eval(); // Evaluate the expression (what if it has multiple statements and where is its context?)
+                    SetValue(offset, MeasureCode.Value); // Store the final result
+                }
+            }
+
+            // TODO: Turn on indexing (sorting) and index the whole function
         }
 
         public override void ComputeValues()
