@@ -581,7 +581,7 @@ namespace Com.Model
         public virtual bool Find(Expression expr) // Use only identity dims (for general case use Search which returns a subset of elements)
         {
             // Find: Find the tuple and all nested tuples. Is applied only if the value is null - otherwise it assumed existing and no recursion is made. 
-            // Result: Output is set to offset for found tuples and (remains) null if not found.
+            // Value: Output is set to offset for found tuples and (remains) null if not found.
 
             Debug.Assert(expr.OutputSet == this, "Wrong use: expression OutputSet must be equal to the set its value is appended/found.");
 
@@ -693,7 +693,7 @@ namespace Com.Model
             // Append: append *this* tuple to the set and, if necessary, all greater tuples. If necessary means "if no value for dimension is provided"  which means does not exist. 
             // In particular, if all child expressions have values then only this set will be appended. 
             // In particular, if this set has a value then it will not be appended (because it exists).
-            // Result: offset of new appended instance. 
+            // Value: offset of new appended instance. 
 
             Debug.Assert(expr.OutputSet == this, "Wrong use: expression OutputSet must be equal to the set its value is appended/found.");
 

@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
-using System.Diagnostics;
 
 using Offset = System.Int32;
 
@@ -141,7 +141,7 @@ namespace Com.Query
     {
         SCRIPT, // List of set statements. A program for set processing.
         STATEMENT, // Statement in a script
-        VARIABLE, // Allocation/declaration of a new variable (with optional initialization)
+        ALLOC, // Allocation/declaration of a new variable (with optional initialization)
         ASSIGNMENT, // Assignment to an existing variable
         RETURN, // Return a set
 

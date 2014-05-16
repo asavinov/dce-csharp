@@ -20,7 +20,7 @@ namespace Com.Model
     public class Expression
     {
         /// <summary>
-        /// Result of evaluation. Return value of the funciton computed for the input value.
+        /// Value of evaluation. Return value of the funciton computed for the input value.
         /// </summary>
         public object Output { get; set; }
         public Set OutputSet { get; set; } // Type/range of the result, that is, the set the values are taken from
@@ -854,7 +854,7 @@ namespace Com.Model
 
                 Expression expr = new Expression();
 
-                expr.Output = null; // Result of evaluation
+                expr.Output = null; // Value of evaluation
                 expr.OutputSet = dim.GreaterSet;
                 expr.OutputSetName = dim.GreaterSet.Name;
                 expr.OutputIsSetValued = false;
@@ -900,7 +900,7 @@ namespace Com.Model
 
                 Expression expr = new Expression();
 
-                expr.Output = null; // Result of evaluation
+                expr.Output = null; // Value of evaluation
                 expr.OutputSet = dim.LesserSet;
                 expr.OutputSetName = dim.LesserSet.Name;
                 expr.OutputIsSetValued = true;
@@ -941,7 +941,7 @@ namespace Com.Model
             // Create aggregation expression
             Expression expr = new Expression();
 
-            expr.Output = null; // Result of evaluation
+            expr.Output = null; // Value of evaluation
             expr.OutputSet = measure.OutputSet;
             expr.OutputSetName = measure.OutputSet.Name;
             expr.OutputIsSetValued = false;

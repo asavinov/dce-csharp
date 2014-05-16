@@ -74,9 +74,8 @@
     <Compile Include="Query\ExprLexer.cs" />
     <Compile Include="Query\ExprParser.cs" />
     <Compile Include="Query\ExprVisitor.cs" />
-    <Compile Include="Query\Query.cs" />
-    <Compile Include="Query\QueryOperation.cs" />
-    <Compile Include="Query\QueryParam.cs" />
+    <Compile Include="Query\ValueOp.cs" />
+    <Compile Include="Query\SetOp.cs" />
     <Compile Include="Query\ScriptBaseVisitor.cs">
       <SubType>Code</SubType>
     </Compile>

@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Text;
 
 using Com.Model;
+
+using Offset = System.Int32;
 
 namespace Com.Query
 {
@@ -57,7 +60,7 @@ namespace Com.Query
             }
             else if (context.ID(0) != null && context.ID(1) != null)
             {
-                n.Rule = AstRule.VARIABLE;
+                n.Rule = AstRule.ALLOC;
 
                 AstNode type = new AstNode(context.ID(0).GetText());
                 n.AddChild(type);
