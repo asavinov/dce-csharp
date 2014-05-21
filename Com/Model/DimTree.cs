@@ -340,7 +340,13 @@ namespace Com.Model
     public class TreeNode<T>
     {
         private readonly T _value;
+
         private readonly List<TreeNode<T>> _children = new List<TreeNode<T>>();
+
+
+        public TreeNode()
+        {
+        }
 
         public TreeNode(T value)
         {

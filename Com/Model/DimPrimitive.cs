@@ -147,7 +147,7 @@ namespace Com.Model
             _cells[offset] = val;
         }
 
-        public override void UpdateValue(Offset offset, object value, ValueOp updater) // Replace an existing value with the new value and update the index. 
+        public override void UpdateValue(Offset offset, object value, ValueOp updater) // Change the existing value by applying the specified operation. 
         {
             if(updater == null) 
             { 

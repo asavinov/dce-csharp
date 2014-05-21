@@ -51,7 +51,7 @@ vexpr
   | '(' vexpr ')' // Priority
 // Tuple (combination)
   | 'TUPLE' '(' member (',' member)* ')'
-// Aggregation
+// Aggregation. Generally, it is not a value op (it cannot be executed) but in source code we can use aggregation-like expressions which have to be compiled into separate (aggregation) functions.
 // Global/system/external function call
   ;
 

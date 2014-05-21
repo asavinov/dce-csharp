@@ -230,6 +230,8 @@ namespace Com.Model
 
         public virtual void SetValue(Offset offset, object value) { }
 
+        public virtual void UpdateValue(Offset offset, object value, ValueOp updater) { }
+
         public virtual void NullifyValues() { } // Note that import dimension implement it by removing instances.
 
         /// <summary>

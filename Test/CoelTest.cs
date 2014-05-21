@@ -329,15 +329,17 @@ namespace Test
             //script.Execute(ast);
 
             // What do we need:
-            // 1. Convert source string into script AST (AstNode) representing syntactic structure (what the user has written).
-            // 2. Translate AST to executable form. 
-            // 3. Executable form is a flat set-op program with set/function object creations (definitions), evaluations etc.
-            // 4. Created functions/set get definitions as val-op programs inside each defining one function. 
-            //    Thus we have to be able to generate val-op programs which are completely independent and isolated pieces of val-op instructions associated with (stored in) function objects. 
-            //    We have to recognize AstNodes which represent val-op programs as opposed to set-op programs. These val-op pieces are then translated differently (and stored in function definitions rather than in set-op script - from this script they are accessed by-name).
+            // 1. Convert source string into script AST (AstNode) representing syntactic structure (what the user has written) with mixed script- and value-ops.
+            // 2. Translate script AST (AstNode) to executable form (separately ScriptOp and ValueOp). Here we guarantee only executable operations and some optimization by defining/instantiating temporary functinos/sets/values/variables.
+            // 3. Attach generated code to a ScriptContext for executation and resolve. For test purposes, we can attach function code to ValueContext and resolve.
+            // 4. Evaluate script which will result in evaluation of functions by creating ValueContext for the function code. For test purposes, we can evaluate function code individually with dedicated ValueContext.
+
+            // The most difficult part is translation where we create new intermediate functions and need to provide a definition for them.
+            // Alternative: either we provide definition in source form as AstNode (and translate later) or in compiled form (ValueOp) directly. 
+
+            // We can compile AstNode for functions into ValueOp and test separately in ValueContext.
 
             // While executing a set-op program, some instructions (Eval) result in creating a loop in which a val-op program is iteratively executed.
-            // Other set-op instructions result in creating schema objects along with definitions (as val-op programs)
 
             // Problem. AstNode contains val-op function definitions which can be translated into one expression, a sequence of val-op, or some fragments could be extracted and translated into a new function (which replaces this fragment)
             // We can reserve a special field in Dim for storing a translated val-op program (optimized with use of intermediate functions)
