@@ -87,15 +87,21 @@ namespace Com.Query
         public string TypeName { get; set; } // Type name
         public Set Type { get; set; } // Type of the value(s) corresponding to the referenced object. For values it is a concrete set, for functions it is the return set, for sets it is not used (or is equal to the set itself).
 
+        public ContextVariable(string typeName, string name, object content)
+            : this(typeName, name)
+        {
+            Content = content;
+        }
+        
+        public ContextVariable(string typeName, string name)
+            : this(name)
+        {
+            TypeName = typeName;
+        }
+
         public ContextVariable(string name)
         {
             Name = name;
-        }
-
-        public ContextVariable(string name, object content)
-            : this(name)
-        {
-            Content = content;
         }
     }
 

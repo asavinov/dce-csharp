@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 using Antlr4.Runtime;
@@ -271,9 +272,9 @@ namespace Test
             Assert.AreEqual(ast.Children.Count, 3);
             Assert.AreEqual(ast.Rule, AstRule.SCRIPT);
 
-            Assert.AreEqual(ast.Children[0].Rule, AstRule.SEXPR);
-            Assert.AreEqual(ast.Children[1].Rule, AstRule.ALLOC);
-            Assert.AreEqual(ast.Children[2].Rule, AstRule.ASSIGNMENT);
+            Assert.AreEqual(ast.GetChild(0).Rule, AstRule.SEXPR);
+            Assert.AreEqual(ast.GetChild(1).Rule, AstRule.ALLOC);
+            Assert.AreEqual(ast.GetChild(2).Rule, AstRule.ASSIGNMENT);
 
             //
             // Types as set expressions
@@ -283,9 +284,9 @@ namespace Test
 
             Assert.AreEqual(ast.Children.Count, 2);
 
-            Assert.AreEqual(ast.Children[0].Children[1].Rule, AstRule.PROJECTION);
-            Assert.AreEqual(ast.Children[1].Children[0].Children[0].Children[0].Rule, AstRule.PROJECTION);
-            Assert.AreEqual(ast.Children[1].Children[0].Children[0].Children[0].Children[0].Rule, AstRule.PRODUCT);
+            Assert.AreEqual(ast.GetChild(0).GetChild(1).Rule, AstRule.PROJECTION);
+            Assert.AreEqual(ast.GetChild(1).GetChild(0).GetChild(0).GetChild(0).Rule, AstRule.PROJECTION);
+            Assert.AreEqual(ast.GetChild(1).GetChild(0).GetChild(0).GetChild(0).GetChild(0).Rule, AstRule.PRODUCT);
 
             //
             // Function definition via value expressions or function body
@@ -293,10 +294,10 @@ namespace Test
             string funcStr = " SET( Integer primFunc = doubleVar + f1.{f2+f3;}, MySet tupleFunc = TUPLE( Integer att1=f1.f2, MySet att2=TUPLE(Double aaa=primFunc+25, Integer bbb=f3+f4 ) ) ); ";
             ast = BuildScript(funcStr);
 
-            Assert.AreEqual(ast.Children[0].Children[0].Children[0].Children[2].Name, "+");
-            Assert.AreEqual(ast.Children[0].Children[0].Children[0].Children[2].Children[1].Children[1].Rule, AstRule.CALL);
-            Assert.AreEqual(ast.Children[0].Children[0].Children[1].Children[2].Rule, AstRule.TUPLE);
-            Assert.AreEqual(ast.Children[0].Children[0].Children[1].Children[2].Children[0].Children[1].Name, "att1");
+            Assert.AreEqual(ast.GetChild(0).GetChild(0).GetChild(0).GetChild(2).Name, "+");
+            Assert.AreEqual(ast.GetChild(0).GetChild(0).GetChild(0).GetChild(2).GetChild(1).GetChild(1).Rule, AstRule.CALL);
+            Assert.AreEqual(ast.GetChild(0).GetChild(0).GetChild(1).GetChild(2).Rule, AstRule.TUPLE);
+            Assert.AreEqual(ast.GetChild(0).GetChild(0).GetChild(1).GetChild(2).GetChild(0).GetChild(1).Name, "att1");
 
 
             //
@@ -305,35 +306,53 @@ namespace Test
             string commandStr = " SCHEMA mySchema = OpenOledbCsv(param1=\"FileName\", param2=25.5); Set mySet = mySchema.Load(\"MyTable\"); mySet.Eval(); mySchema.Store(set=mySet, \"NewTable\"); ";
             ast = BuildScript(commandStr);
 
-            Assert.AreEqual(ast.Children[0].Children[2].Children.Count, 3);
-            Assert.AreEqual(ast.Children[0].Children[2].Children[0].Name, "OpenOledbCsv");
-            Assert.AreEqual(ast.Children[0].Children[2].Children[1].Children[0].Name, "param1");
-            Assert.AreEqual(ast.Children[0].Children[2].Children[1].Children[1].Name, "FileName");
+            Assert.AreEqual(ast.GetChild(0).GetChild(2).Children.Count, 3);
+            Assert.AreEqual(ast.GetChild(0).GetChild(2).GetChild(0).Name, "OpenOledbCsv");
+            Assert.AreEqual(ast.GetChild(0).GetChild(2).GetChild(1).GetChild(0).Name, "param1");
+            Assert.AreEqual(ast.GetChild(0).GetChild(2).GetChild(1).GetChild(1).Name, "FileName");
         }
 
         [TestMethod]
-        public void ScriptSchemaOperationsTest()
+        public void ScriptTranslationTest()
         {
             AstNode ast;
 
-            string commandStr = @"Set mySet = SET( String Name = ""MySet"", Root Super, String f1, Double f2, Double f3 = f2+100.0 ); ";
+            //
+            // 1. LOAD tables from external data sources
+            //
+            string loadStr = @" Schema mySchema = OpenOledb(connection=""FileName""); Set mySet = mySchema.Load(table=""Products""); ";
+            ast = BuildScript(loadStr);
+            List<ScriptOp> scriptOps = ast.TranslateNode();
+
+            //
+            // 2. PRODUCT - define a new set as a product of existing sets
+            //
+            //   - define empty set (with name member)
+            //   - define with free dimensions (key or id keyword for member annotation needed)
+            //   - define a function member. translated into a AddFunction API call non-key member. 
+            string productStr = @"Set mySet = SET( String Name = ""MySet"", Root Super, String f1, Double f2, Double f3 = f2+100.0 ); ";
             // It is equivalent to AddSet("MySet") followed by a sequence of AddFunction
             // Markups: super for super-function, key for identity dimension. 
             // If Name is not specified then some default (autoincremented) name like "MySet 1"
 
-            ast = BuildScript(commandStr);
 
-            // Translate and execute ast
-            //Script script = new Script("Top"); // Create executable context
+            //
+            // 3. AddFunction - add a function (also key?) to a set (Later: DelFunction, UpdateFunction etc.)
+            //
+            // commandStr = @"AddMember( ""f3"", mySet, Double, f2+100.0 ); ";
 
-            //script.Execute(ast);
 
+            //
+            // 4. Eval calls - for a set, for a function (do not use dependencies)
+            //
+
+
+            //
+            // 5. Store data to an external data source
+            //
+            
+            
             // What do we need:
-            // 1. Convert source string into script AST (AstNode) representing syntactic structure (what the user has written) with mixed script- and value-ops.
-            // 2. Translate script AST (AstNode) to executable form (separately ScriptOp and ValueOp). Here we guarantee only executable operations and some optimization by defining/instantiating temporary functinos/sets/values/variables.
-            // 3. Attach generated code to a ScriptContext for executation and resolve. For test purposes, we can attach function code to ValueContext and resolve.
-            // 4. Evaluate script which will result in evaluation of functions by creating ValueContext for the function code. For test purposes, we can evaluate function code individually with dedicated ValueContext.
-
             // The most difficult part is translation where we create new intermediate functions and need to provide a definition for them.
             // Alternative: either we provide definition in source form as AstNode (and translate later) or in compiled form (ValueOp) directly. 
 
@@ -348,7 +367,38 @@ namespace Test
             // We could bind this translated/optimized definition to a context (script or another) which stores all the necessary objects. 
             // Another option is to store references to all used dimension objects (temporary or schema) in local context as variables and then use only these variables.
 
-            commandStr = @"AddMember( ""f3"", mySet, Double, f2+100.0 ); ";
+            // Why not to simply interpret a script? 
+            // A script is intended for defining new objects - connections, sets and function - therefore performance is not important
+            // We need performance only during function evaluation and here we should compile function definitions. 
+            // Problem: scripts need transformations:
+            // - processing composition like projection. It is not clear if it can be processed hierarchically because we might need to produce (and hence define) new intermediate sets.
+            // - unnesting/flatenning set operations like nested products. Probably we need to extract and define explicitly nested sets by storing them in variables. 
+            // - computing dependent functions/sets which the evaluation of which has to be inserted in code explicitly because they are needed for other functions
+            // - refactoring function bodies by extracting defs and defining new function/set objects as well as changing existing functions
+
+            // So compilation is needed because of the following properties:
+            // - target operations are flat - no nesting 
+            // - all target operations are very simple and are mapped directly to API operations
+            // - any target operation applies some operation to context and changes some context object
+            // - advantage of having flat operations is easier to analyze and optimize (reorganize) because we see all operations in the list while nesting hides operations and context changes
+            // The simplest approach is to introduce one unique variable storing an intermediate result of each generated instruction. 
+            // In particular, variables will be created for each:
+            // - nested projection/de-projection/dot operation. Do it mechanically and remember this variable as a parameter of another operation which consumes the result. So projection/de-projection always use variables - no other way is supported.
+            // - nested product operation. Here member types must be variables so product supports only variables its member types - nothing else is supported. The variables are assigned before this operation by extracting the type definition (in nested manner). 
+            // - if some function depends on another function then the evaluation operation is simply inserted before.
+            // - if some function body is refactored then we change this function definition and insert another function definition and evaluation operations.
+
+            // Problem of flattening: operations use and change context (rather than nested parameters)
+            // and it is necessary to reuse context variables and introduce shared context variables to transfer objects between operations.
+            // One solution is to introduce one context variable for each use. Advantage is that each variable is allocated for one use only and there is no interference because of change of the sequence of operations.
+            // Another approach is to reuse a well-known variable like LastResult. Here we save variables but depend on the sequence of operations. 
+
+
+            // QUESTION: how to deal with aggregation functions (must have). first version and general case. grammar, ast, sexpr, vexpr.
+            // define principles
+            // define syntax rules for recognizing aggregation
+            // what about correlated queries
+
         }
 
     }

@@ -74,15 +74,15 @@
     <Compile Include="Query\ExprLexer.cs" />
     <Compile Include="Query\ExprParser.cs" />
     <Compile Include="Query\ExprVisitor.cs" />
+    <Compile Include="Query\scriptLexer.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Query\ValueOp.cs" />
     <Compile Include="Query\ScriptOp.cs" />
     <Compile Include="Query\ScriptBaseVisitor.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Query\ScriptBuilder.cs" />
-    <Compile Include="Query\scriptLexer.cs">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="Query\ScriptParser.cs">
       <SubType>Code</SubType>
     </Compile>

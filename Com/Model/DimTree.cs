@@ -369,7 +369,19 @@ namespace Com.Model
 
         public TreeNode<T> AddChild(T value)
         {
-            var node = new TreeNode<T>(value) { Parent = this };
+            //if (value == null) return null;
+
+            TreeNode<T> node = null;
+
+            if (value is TreeNode<T>) // The child IS already a node so we do not create a new one
+            {
+                node = value as TreeNode<T>;
+            }
+            else
+            {
+                node = new TreeNode<T>(value) { Parent = this };
+            }
+
             _children.Add(node);
             return node;
         }

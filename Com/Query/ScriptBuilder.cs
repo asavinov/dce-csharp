@@ -30,7 +30,10 @@ namespace Com.Query
             for (int i = 0; i < stmtCount; i++)
             {
                 AstNode stmt = (AstNode)Visit(context.statement(i));
-                n.AddChild(stmt);
+                if (stmt != null)
+                {
+                    n.AddChild(stmt);
+                }
             }
 
             return n; 
@@ -46,7 +49,10 @@ namespace Com.Query
             {
                 n.Rule = AstRule.RETURN;
                 AstNode expr = (AstNode)Visit(context.GetChild(1));
-                n.AddChild(expr);
+                if (expr != null)
+                {
+                    n.AddChild(expr);
+                }
             }
             else if (context.GetChild(0).GetText() == ";")
             {
@@ -56,22 +62,34 @@ namespace Com.Query
             {
                 n.Rule = AstRule.SEXPR;
                 AstNode expr = (AstNode)Visit(context.GetChild(0));
-                n.AddChild(expr);
+                if (expr != null)
+                {
+                    n.AddChild(expr);
+                }
             }
             else if (context.ID(0) != null && context.ID(1) != null)
             {
                 n.Rule = AstRule.ALLOC;
 
                 AstNode type = new AstNode(context.ID(0).GetText());
-                n.AddChild(type);
+                if (type != null)
+                {
+                    n.AddChild(type);
+                }
 
                 AstNode name = new AstNode(context.ID(1).GetText());
-                n.AddChild(name);
+                if (name != null)
+                {
+                    n.AddChild(name);
+                }
 
                 if(context.GetChild(2).GetText() == "=") 
                 {
                     AstNode expr = (AstNode)Visit(context.GetChild(3));
-                    n.AddChild(expr);
+                    if (expr != null)
+                    {
+                        n.AddChild(expr);
+                    }
                 }
             }
             else if (context.ID() != null && context.GetChild(1).GetText() == "=")
@@ -79,11 +97,16 @@ namespace Com.Query
                 n.Rule = AstRule.ASSIGNMENT;
 
                 AstNode name = new AstNode(context.ID(0).GetText());
-                n.AddChild(name);
-                n.AddChild(name);
+                if (name != null)
+                {
+                    n.AddChild(name);
+                }
 
                 AstNode expr = (AstNode)Visit(context.GetChild(2));
-                n.AddChild(expr);
+                if (expr != null)
+                {
+                    n.AddChild(expr);
+                }
             }
 
             return n; 
@@ -98,7 +121,7 @@ namespace Com.Query
             if (context.GetChild(0) is ScriptParser.SexprContext)
             {
                 string op = context.op.Text;
-                if(op == ".") 
+                if (op == ".")
                 {
                     n.Rule = AstRule.DOT;
                 }
@@ -112,10 +135,16 @@ namespace Com.Query
                 }
 
                 AstNode expr = (AstNode)Visit(context.sexpr());
-                AstNode call = (AstNode)Visit(context.GetChild(2));
+                if (expr != null)
+                {
+                    n.AddChild(expr);
+                }
 
-                n.AddChild(expr);
-                n.AddChild(call);
+                AstNode call = (AstNode)Visit(context.GetChild(2));
+                if (call != null)
+                {
+                    n.AddChild(call);
+                }
             }
             else if (context.GetChild(0).GetText() == "SET")
             {
@@ -126,7 +155,10 @@ namespace Com.Query
                 for (int i = 0; i < mmbrCount; i++)
                 {
                     AstNode mmbr = (AstNode)Visit(context.member(i));
-                    n.AddChild(mmbr);
+                    if (mmbr != null)
+                    {
+                        n.AddChild(mmbr);
+                    }
                 }
             }
             else if (context.GetChild(0) is ScriptParser.CallContext) 
@@ -149,17 +181,37 @@ namespace Com.Query
                 string op = context.op.Text; // Alternatively, context.GetChild(1).GetText()
 
                 n.Name = op;
-                if (op == ".")
-                {
-                    n.Rule = AstRule.DOT;
-                }
-                // TODO: Set node rule field according to the operation (add, substract etc.)
+                if (op == ".") n.Rule = AstRule.DOT;
+
+                else if (op == "*") n.Rule = AstRule.MUL;
+                else if (op == "/") n.Rule = AstRule.DIV;
+                else if (op == "+") n.Rule = AstRule.ADD;
+                else if (op == "-") n.Rule = AstRule.SUB;
+
+                else if (op == "<=") n.Rule = AstRule.LEQ;
+                else if (op == ">=") n.Rule = AstRule.GEQ;
+                else if (op == ">") n.Rule = AstRule.GRE;
+                else if (op == "<") n.Rule = AstRule.LES;
+
+                else if (op == "==") n.Rule = AstRule.EQ;
+                else if (op == "!=") n.Rule = AstRule.NEQ;
+
+                else if (op == "&&") n.Rule = AstRule.AND;
+                else if (op == "||") n.Rule = AstRule.OR;
+
+                else ; // ERROR: unknown operation
 
                 AstNode expr1 = (AstNode)Visit(context.GetChild(0));
-                AstNode expr2 = (AstNode)Visit(context.GetChild(2));
+                if (expr1 != null)
+                {
+                    n.AddChild(expr1);
+                }
 
-                n.AddChild(expr1);
-                n.AddChild(expr2);
+                AstNode expr2 = (AstNode)Visit(context.GetChild(2));
+                if (expr2 != null)
+                {
+                    n.AddChild(expr2);
+                }
             }
             else if (context.GetChild(0).GetText() == "TUPLE")
             {
@@ -170,7 +222,10 @@ namespace Com.Query
                 for (int i = 0; i < mmbrCount; i++)
                 {
                     AstNode mmbr = (AstNode)Visit(context.member(i));
-                    n.AddChild(mmbr);
+                    if (mmbr != null)
+                    {
+                        n.AddChild(mmbr);
+                    }
                 }
             }
             else if (context.literal() != null)
@@ -213,14 +268,20 @@ namespace Com.Query
             {
                 func = (AstNode)Visit(context.vscope());
             }
-            n.AddChild(func);
+            if (func != null)
+            {
+                n.AddChild(func);
+            }
 
             // Find all parameters and add them as nodes
             int paramCount = context.param().Count();
             for (int i = 0; i < paramCount; i++)
             {
                 AstNode param = (AstNode)Visit(context.param(i));
-                n.AddChild(param);
+                if (param != null)
+                {
+                    n.AddChild(param);
+                }
             }
 
             return n;
@@ -237,10 +298,16 @@ namespace Com.Query
             {
                 name = (AstNode)Visit(context.name());
             }
-            n.AddChild(name);
+            if (name != null)
+            {
+                n.AddChild(name);
+            }
 
             AstNode expr = (AstNode)Visit(context.vexpr());
-            n.AddChild(expr);
+            if (expr != null)
+            {
+                n.AddChild(expr);
+            }
 
             return n;
         }
@@ -252,11 +319,17 @@ namespace Com.Query
 
             // Type of the member
             AstNode type = (AstNode)Visit(context.type());
-            n.AddChild(type);
+            if (type != null)
+            {
+                n.AddChild(type);
+            }
 
             // Name of the member (attribute, field etc.)
             AstNode name = (AstNode)Visit(context.name());
-            n.AddChild(name);
+            if (name != null)
+            {
+                n.AddChild(name);
+            }
 
             // Definition as a function. It can be one value expression or a complete function definition (body as a sequence of statements)
             AstNode val = null;
@@ -268,7 +341,10 @@ namespace Com.Query
             {
                 val = (AstNode)Visit(context.vscope());
             }
-            n.AddChild(val);
+            if (val != null)
+            {
+                n.AddChild(val);
+            }
 
             return n;
         }
@@ -276,14 +352,17 @@ namespace Com.Query
         public override AstNode VisitVscope(ScriptParser.VscopeContext context)
         {
             AstNode n = new AstNode();
-            n.Rule = AstRule.SCOPE;
+            n.Rule = AstRule.VSCOPE;
 
             // Find all statements and store them in the script
             int stmtCount = context.vexpr().Count();
             for (int i = 0; i < stmtCount; i++)
             {
                 AstNode stmt = (AstNode)Visit(context.vexpr(i));
-                n.AddChild(stmt);
+                if (stmt != null)
+                {
+                    n.AddChild(stmt);
+                }
             }
 
             return n;
@@ -315,15 +394,22 @@ namespace Com.Query
             if (context.GetChild(0) is ScriptParser.SexprContext)
             {
                 AstNode sexpr = (AstNode)Visit(context.sexpr());
-                n.AddChild(sexpr);
+                if (sexpr != null)
+                {
+                    n.AddChild(sexpr);
+                }
             }
-            if (context.GetChild(0) is ScriptParser.Primitive_setContext)
+            else if (context.GetChild(0) is ScriptParser.Prim_setContext)
             {
-                AstNode prim = new AstNode(context.primitive_set().GetText());
-                n.AddChild(prim);
+                AstNode prim = new AstNode(context.prim_set().GetText());
+                if (prim != null)
+                {
+                    n.AddChild(prim);
+                }
             }
 
-            return n.Children[0]; // We do not use TYPE node - this role is defined by the position
+            return (AstNode)n.Children[0]; // We do not use TYPE node as a parent node - this role is defined by the position
+//            return n; // TYPE node include one child with the type spec
         }
 
     }

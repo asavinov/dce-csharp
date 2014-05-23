@@ -10,7 +10,7 @@ script
 
 statement
   : 'RETURN' sexpr ';' // Return
-  | ID ID ('=' sexpr)? ';' // Variable declaration
+  | ID ID ('=' sexpr)? ';' // Variable allocation
   | ID '=' sexpr ';' // Variable assignment
   | sexpr ';'
   | ';'
@@ -56,6 +56,19 @@ vexpr
   ;
 
 //
+// Function (body) definition. 
+// Together with function signature (input and output types) it evaluates to a function type (function object).
+// Function signature can be declared explicitly or derived from the context. 
+// Examples of context: set definition where this body is used, expression where this body is used, returned value type declared in the body (for deriving output type) including explicit casting of this expression.
+//
+vscope
+// A single expression like arithmetic, logical (for predicates), tuple (for mapping), composition (dot) etc. 
+//  : vexpr // Produces error in grammar
+// Full-featured function body consisting of a sequence of value statements
+  : '{' (vexpr ';')+ '}'
+  ;
+  
+//
 // Access/call request. The procedure can be specified by-reference using ID or by-value using in-place definition (e.g., for projection where it specifies a value-function body)
 //
 call
@@ -76,31 +89,16 @@ member
 // Property. We can attach various options and properties as key-value pairs
   ;
 
-//
-// Function (body) definition. 
-// Together with function signature (input and output types) it evaluates to a function type (function object).
-// Function signature can be declared explicitly or derived from the context. 
-// Examples of context: set definition where this body is used, expression where this body is used, returned value type declared in the body (for deriving output type) including explicit casting of this expression.
-//
-vscope
-// A single expression like arithmetic, logical (for predicates), tuple (for mapping), composition (dot) etc. 
-//  : vexpr // Produces error in grammar
-// Full-featured function body consisting of a sequence of value statements
-  : '{' (vexpr ';')+ '}'
-  ;
-  
 name : (ID | DELIMITED_ID) ;
 
-//
 // Value type. But it specifies a concrete set like variable (by reference), set expression, primitive set
-//
 type
-  : primitive_set // Reserved names
+  : prim_set // Reserved names
   | sexpr
   ;
 
 // Primitive sets. A primitive set is a collection of primitive values (domain).
-primitive_set
+prim_set
   : 'Double'
   | 'Integer'
   | 'String'
