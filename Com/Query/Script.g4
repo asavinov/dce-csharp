@@ -116,3 +116,8 @@ literal
   | STRING
   | 'null'
   ;
+
+// Problems:
+// - How to process primitive types: script types like Schema, Set, Function etc., value types (primitive sets) like String, Double etc.
+// - Script can work with values and normal value expressions like string operations and number operations. The only difference is that it is never executed in a loop. Second difference: script calls may have lambda (Function type) parameters (with only vexpr) which should be distinguished. 
+// - 

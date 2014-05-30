@@ -16,56 +16,104 @@ namespace Com.Query
     public class ScriptOp : TreeNode<ScriptOp>
     {
         /**
-         * Type of operation. What kind of operation has to be executed. It determines the meaning of operands and their processing.  
+         * Type of operation/action. What kind of operation has to be executed. It determines the meaning of operands and their processing.  
          */
         public ScriptOpType OpType { get; set; }
+
+        /**
+         * Function, variable or another kind of run-time object used for the operation which has been resolved from the name.  
+         */
+        public string Name { get; set; } // Action/accessor name relative to the execution context. 
+        public object Action { get; set; } // Action/accessor run-time object resolved from the name. It can be a context variable, dimension, set etc.
+
+        /**
+         * Run-time result of the action which is returned by the node and consumed by the parent node or next node.
+         */
+        public ContextVariable Result { get; set; }
+
+        /// <summary>
+        /// Evaluate one instruction. Change the state in the (parent) context depending on its current state.
+        /// Names are resolved for each instruction. Alternatively, we could first resolve all names in all instructions in a separate pass and then execute without resolution.
+        /// </summary>
+        public virtual object Execute() 
+        {
+            // Context stores the current state which is read and then written as a result of the operation execution
+            ScriptContext ctx = (ScriptContext)Parent;
+            string name;
+
+            switch (OpType)
+            {
+                case ScriptOpType.NOP: 
+                    break;
+
+                case ScriptOpType.CONTEXT: break; // Not possible: we overload this type of nodes
+
+                case ScriptOpType.ALLOC:
+                    name = ""; // TODO: read name (and type) of the new variable
+                    ctx.AllocVariable(name);
+                    break;
+                case ScriptOpType.FREE:
+                    name = ""; // TODO: read name of the variable
+                    ctx.FreeVariable(name);
+                    break;
+
+                case ScriptOpType.WRITE: // ASSIGN
+                    break;
+            }
+
+            return null; // TODO: Return content of the 'return' variable
+        }
+
+        public ScriptOp(ScriptOpType opType, string name)
+            : this(opType)
+        {
+            Name = name;
+        }
+
+        public ScriptOp(ScriptOpType opType)
+            : this()
+        {
+            OpType = opType;
+        }
 
         public ScriptOp()
         {
             OpType = ScriptOpType.NOP;
-        }
-
-        public ScriptOp(ScriptOpType opType)
-        {
-            OpType = opType;
+            Result = new ContextVariable("return");
         }
     }
 
     public enum ScriptOpType
     {
-        NOP, // Not initialized.
+        NOP, // No action
+        CONTEXT, // Context/scope. Operands are instructions to be executed sequentially. The class is overloaded to include context.
 
-        CONTEXT, // It is a context/scope object with execution state.
+        ALLOC, // Create a new variable
+        FREE, // Delete an existing variable
 
-        // All variables/arguments used in a program have to be allocated in advance and then binding/resolution has to be done for concrete context along with all needed variables/arguments
-        ALLOC, // Allocate a set variable in some context
-        FREE, // Frees a set variable from a context
+        VALUE, // Stores directly the result in code (in instruction), e.g., parameter by-value in source code including tuples. No action is performed (but the value has to be transformed into the run-time representation).
+        TUPLE, // Stores directly the result in code (in instruction), e.g., parameter by-value in source code including tuples. No action is performed (but the value has to be transformed into the run-time representation).
 
-        ASSIGN, // Copy some content to an existing variable. The content is normally returned from some call or expression but can be also context from another variable (which is also an expression).
-        
+        DOT, // Essentially, the same as CALL but the first argument is named 'this' and has special interpretation
+        CALL, // Generic procedure call including system calls, arithmetic operations etc.
+        READ, // Read accossor or getter. Read value from a variable/function or find a surrogate for a tuple. Normally used in method parameters.
+        WRITE, // Assignment, write accessor or setter. Write value to an existing variable/function (do nothing if it does not exist). Normally is used for assignment. 
+        UPDATE, // Update value by applying some operation. Normally is used for affecting directly a target rather than loading it, changing and then storing.
+        APPEND, // Append a value if it does not exist and write it if does exist. The same as write except that a new element can be added
+        INSERT, // The same as append except that a position is specified
+
         //
-        // Create new set object. Result is a set object.
+        // ??? Special action types specific to the syntax of COEL - DO WE NEED THIS in executable code or translator will convert everything to normal API???
         //
 
+        // Result is a new set reference (not populated)
+        PRODUCT, // Create/define a new set as product of other sets. Its sets belong to schema or context?
         // Operands: function name or definition, source set (can be another set-creation operation like projection or product)
         // Result is a new set reference (not populated)
         PROJECTION, // Create/define a new set using projection operation
-        // Result is a new set reference (not populated)
-        PRODUCT, // Create/define a new set as product of other sets. Its sets belong to schema or context?
+        DEPROJECTION,
 
-        //
-        // Create new function object. Result is a function object.
-        //
-        
         FUNCTION, // Create/define a new function. In local context or in schema? 
-
-        //
-        // Evalute function(s) or set(s). Result is new/changed data arrays (in functions) and set sizes.
-        //
-
-        EVAL_FUNC, // Evaluate a function in a loop by interpreting its body (value-expression) and storing the output
-        EVAL_AGGR, // Evaluate a function in a loop on fact by updating its existing values
-        EVAL_SET, // Populate a set by producing all its identity (free) functions. 
     }
 
     /// <summary>
@@ -78,6 +126,37 @@ namespace Com.Query
         public List<SetTop> Schemas { get; set; } // State. Each schema stores a list of function objects as well as sets and maybe also schema-level variables.
 
         public List<ContextVariable> Variables { get; set; } // State. A list of named and typed variables each storing a shared run-time object references that can be used by operations within this context. 
+        public ContextVariable GetVariable(string name) 
+        {
+            return Variables.FirstOrDefault(n => n.Name == name);
+        }
+        public ContextVariable AllocVariable(string name)
+        {
+            ContextVariable var = GetVariable(name);
+            if (var != null) return var;
+
+            var = new ContextVariable(name);
+            Variables.Add(var);
+            return var;
+        }
+        public ContextVariable FreeVariable(string name)
+        {
+            ContextVariable var = GetVariable(name);
+            if (var == null) return null;
+
+            Variables.Remove(var);
+            return var;
+        }
+
+        public override object Execute() // The same as evaluate
+        {
+            foreach (ScriptOp op in Children)
+            {
+                op.Execute();
+            }
+
+            return null; // TODO: Return content of the 'return' variable
+        }
 
         public ScriptContext()
         {
@@ -101,9 +180,6 @@ namespace Com.Query
         // For example, an argument of an instruction (code) could reference some variable by-name but finding this variable will require knowing the context object attached to the code.
 
         public VariableClass Class { get; set; } // Kind of object represented by the variable like Schema, Set, Function, Value, Tuple, Array etc.
-        public bool ValueIsReference { get; set; } // If true then the value stores a reference (name) to storage element where the value is stored and have to be retrieved from. 
-        // Otherwise, the value field stores a run-time object that has to be used without further resolution and directly corresponds to the specified type. 
-        // Alternatively, we can introduce REFERENCE type (along with SET, DIM etc.) but then type information is represented only in the last storage element which really stores the value, which however might not be evailable and hence it will be difficult to resolve this reference without having its type.
 
         public string TypeName { get; set; } // Name of the set the represented element is a member in. 
         public Set Type { get; set; } // Set object the represented element is a member in. 
@@ -115,22 +191,21 @@ namespace Com.Query
         public object Value { get; set; } // Content having the name of this variable and its type. It can a name to another variable or real content like run-time reference to a set, dimension, schema or value. It also can be also any data that is used by the interpreter like AST with a functino body definition as a value-expression. 
         // If it is a name (reference), then it can be a fully-qualified name with prefix like 'this:myVar' or 'My Schema:My Set:My Dimension'.
 
-        public ContextVariable(VariableClass typeName, string name, object content)
-            : this(typeName, name)
+        public ContextVariable(VariableClass varClass, string name, object content)
+            : this(varClass, name)
         {
             Value = content;
         }
 
-        public ContextVariable(VariableClass typeName, string name)
+        public ContextVariable(VariableClass varClass, string name)
             : this(name)
         {
-            Class = typeName;
+            Class = varClass;
         }
 
         public ContextVariable(string name)
         {
             Name = name;
-            ValueIsReference = false;
         }
     }
 
@@ -140,7 +215,8 @@ namespace Com.Query
         SET, // The variable stores a reference to a set object
         DIM, // The variable stores a reference to a dimension object
         VAL, // The variable stores a value
-        TUPLE, // The variable stores a tuple (complex value)
+        TUPLE, // The variable stores a tuple (complex value) - DO WE NEED THIS?
+        AST, // The variable stores an ast tree - DO WE NEED THIS?
     }
 
 }

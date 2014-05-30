@@ -320,9 +320,10 @@ namespace Test
             //
             // 1. LOAD tables from external data sources
             //
-            string loadStr = @" Schema mySchema = OpenOledb(connection=""FileName""); Set mySet = mySchema.Load(table=""Products""); ";
+            string loadStr = @" Schema mySchema; mySchema = OpenOledb(connection=""MyFileName"", param1=someVar); Set mySet; mySet = mySchema.Load(table=""Products""); ";
             ast = BuildScript(loadStr);
-            List<ScriptOp> scriptOps = ast.TranslateNode();
+            ScriptContext script = ast.Translate();
+            script.Execute();
 
             //
             // 2. PRODUCT - define a new set as a product of existing sets
