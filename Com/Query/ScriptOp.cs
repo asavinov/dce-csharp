@@ -31,6 +31,15 @@ namespace Com.Query
          */
         public ContextVariable Result { get; set; }
 
+        public ScriptOp GetChild(int child) { return (ScriptOp)Children[child]; }
+
+        public ScriptContext GetContext() 
+        {
+            ScriptOp node = this;
+            while ( !(node is ScriptContext) && node != null ) node = (ScriptOp)node.Parent;
+            return (ScriptContext)node; 
+        }
+
         /// <summary>
         /// Evaluate one instruction. Change the state in the (parent) context depending on its current state.
         /// Names are resolved for each instruction. Alternatively, we could first resolve all names in all instructions in a separate pass and then execute without resolution.
@@ -38,7 +47,7 @@ namespace Com.Query
         public virtual object Execute() 
         {
             // Context stores the current state which is read and then written as a result of the operation execution
-            ScriptContext ctx = (ScriptContext)Parent;
+            ScriptContext ctx = GetContext();
             string name;
 
             switch (OpType)
@@ -46,19 +55,56 @@ namespace Com.Query
                 case ScriptOpType.NOP: 
                     break;
 
-                case ScriptOpType.CONTEXT: break; // Not possible: we overload this type of nodes
+                case ScriptOpType.CONTEXT: // Not possible: it is overloaded and processed by a subclass
+                    break;
 
                 case ScriptOpType.ALLOC:
-                    name = ""; // TODO: read name (and type) of the new variable
-                    ctx.AllocVariable(name);
+                    ctx.AllocVariable(Name);
+                    // TODO: process the type of the variable
                     break;
+
                 case ScriptOpType.FREE:
-                    name = ""; // TODO: read name of the variable
-                    ctx.FreeVariable(name);
+                    ctx.FreeVariable(Name);
+                    break;
+
+                case ScriptOpType.DOT:
+                case ScriptOpType.CALL:
+                    // Check if it is a variable
+                    if (OpType == ScriptOpType.CALL && Children.Count == 0)
+                    {
+                        ContextVariable var = ctx.GetVariable(Name);
+                        if (var != null)
+                        {
+                            Result.Value = var.Value;
+                            break;
+                        }
+                    }
+
+                    // Process all parameters so that they have values that can be used in this run-time call
+                    foreach (ScriptOp op in Children)
+                    {
+                        op.Execute();
+                    }
+
+                    // Try to find a run-time procedure/method from our API corresponding to this instruction and its parameters (resolution, binding)
+                    if (Name == "OpenOledb")
+                    {
+
+                    }
+                    else if (Name == "Load")
+                    {
+
+                    }
+
                     break;
 
                 case ScriptOpType.WRITE: // ASSIGN
-                    break;
+                    {
+                        ContextVariable var = ctx.GetVariable(Name);
+                        GetChild(0).Execute();
+                        var.Value = GetChild(0).Result.Value;
+                        break;
+                    }
             }
 
             return null; // TODO: Return content of the 'return' variable

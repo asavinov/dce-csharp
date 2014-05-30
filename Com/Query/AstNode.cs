@@ -181,27 +181,16 @@ namespace Com.Query
 
                 case AstRule.DOT: // Semantically, the same as CALL. Uses two children: the first describes the first special parameter 'this' and the second is the method (CALL) itself with the rest of parameters.
                     {
-                        Debug.Assert(GetChild(1).Rule == AstRule.NAME, "Wrong use: second child of a DOT node has to be the method NAME.");
-                        op = new ScriptOp(ScriptOpType.DOT, GetChild(1).Name);
+                        Debug.Assert(GetChild(1).Rule == AstRule.CALL, "Wrong use: second child of a DOT node has to be CALL.");
+                        op = new ScriptOp(ScriptOpType.DOT, GetChild(1).GetChild(0).Name);
 
-                        // Add first special parameter 'this' converted from the first node. Similar to processing in PARAM node.
-                        // TODO: check first param type: Debug.Assert(GetChild(1).Rule == AstRule.PARAM, "Wrong use: non-first child of a CALL node has to be PARAM.");
-                        // TODO: We have to add a PARAM with the name 'this'. In the syntax node, it does not have name (because used before dot).
-
-                        op = new ScriptOp(ScriptOpType.VALUE, "this");
-                        if (GetChild(0).Rule == AstRule.NAME) // Variable name. The very first element in the dot sequence
-                        {
-                            // TODO: we need it to be a variable access
-                            op.Result = new ContextVariable(VariableClass.VAL, "this", GetChild(0).Name);
-                        }
-                        else // Expression parameter
-                        {
-                            ops = GetChild(1).TranslateNode();
-                            op.AddChild(ops[ops.Count - 1]); // Assumption: only one operation is generated
-                        }
+                        // Add first special parameter 'this' converted from the first sexpr node. Similar to the result from processing in PARAM node.
+                        ScriptOp p1 = new ScriptOp(ScriptOpType.VALUE, "this");
 
                         ops = GetChild(0).TranslateNode();
-                        op.AddChild(ops[ops.Count - 1]); // Assumption: only one operation is generated
+                        p1.AddChild(ops[ops.Count - 1]); // Assumption: only one operation is generated
+
+                        op.AddChild(p1);
 
                         // Add the rest of (normal) parameters. The same as for CALL but they are children of the second child of DOT node.
                         int argCount = GetChild(1).Children.Count;
@@ -214,6 +203,7 @@ namespace Com.Query
                             op.AddChild(ops[ops.Count - 1]); // Assumption: only one operation is generated
                         }
 
+                        scriptOps.Add(op);
                         break;
                     }
 
@@ -248,7 +238,7 @@ namespace Com.Query
 
                     break;
 
-                case AstRule.PARAM:
+                case AstRule.PARAM: // Parameter returns a VALUE which either stores a literal or accesses context variable/function
                     op = new ScriptOp(ScriptOpType.VALUE, GetChild(0).Name);
                     if (GetChild(1).Rule == AstRule.LITERAL) // Value parameter
                     {
@@ -294,11 +284,22 @@ namespace Com.Query
             return null;
         }
 
-        public AstNode(string name)
-            : this()
+        public AstNode(AstRule rule, string name)
+            : this(rule)
         {
             Name = name;
-            Rule = AstRule.NAME;
+        }
+
+        public AstNode(string name)
+            : this(AstRule.NAME)
+        {
+            Name = name;
+        }
+
+        public AstNode(AstRule rule)
+            : this()
+        {
+            Rule = rule;
         }
 
         public AstNode()

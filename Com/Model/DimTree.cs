@@ -376,6 +376,7 @@ namespace Com.Model
             if (value is TreeNode<T>) // The child IS already a node so we do not create a new one
             {
                 node = value as TreeNode<T>;
+                node.Parent = this;
             }
             else
             {

@@ -22,8 +22,7 @@ namespace Com.Query
 
         public override AstNode VisitScript(ScriptParser.ScriptContext context) 
         {
-            AstNode n = new AstNode();
-            n.Rule = AstRule.SCRIPT;
+            AstNode n = new AstNode(AstRule.SCRIPT);
 
             // Find all statements and store them in the script
             int stmtCount = context.statement().Count();
@@ -256,8 +255,7 @@ namespace Com.Query
 
         public override AstNode VisitCall(ScriptParser.CallContext context)
         {
-            AstNode n = new AstNode();
-            n.Rule = AstRule.CALL;
+            AstNode n = new AstNode(AstRule.CALL);
 
             AstNode func = null;
             if (context.ID() != null) // Call by-reference (by-name)
@@ -289,8 +287,7 @@ namespace Com.Query
 
         public override AstNode VisitParam(ScriptParser.ParamContext context)
         {
-            AstNode n = new AstNode();
-            n.Rule = AstRule.PARAM;
+            AstNode n = new AstNode(AstRule.PARAM);
 
             // Name of the parameter
             AstNode name = null;
@@ -314,8 +311,7 @@ namespace Com.Query
 
         public override AstNode VisitMember(ScriptParser.MemberContext context)
         {
-            AstNode n = new AstNode();
-            n.Rule = AstRule.MEMBER;
+            AstNode n = new AstNode(AstRule.MEMBER);
 
             // Type of the member
             AstNode type = (AstNode)Visit(context.type());
@@ -351,8 +347,7 @@ namespace Com.Query
 
         public override AstNode VisitVscope(ScriptParser.VscopeContext context)
         {
-            AstNode n = new AstNode();
-            n.Rule = AstRule.VSCOPE;
+            AstNode n = new AstNode(AstRule.VSCOPE);
 
             // Find all statements and store them in the script
             int stmtCount = context.vexpr().Count();
@@ -370,8 +365,7 @@ namespace Com.Query
 
         public override AstNode VisitName(ScriptParser.NameContext context) 
         {
-            AstNode n = new AstNode();
-            n.Rule = AstRule.NAME;
+            AstNode n = new AstNode(AstRule.NAME);
 
             if (context.DELIMITED_ID() != null)
             {
@@ -388,8 +382,7 @@ namespace Com.Query
 
         public override AstNode VisitType(ScriptParser.TypeContext context) 
         {
-            AstNode n = new AstNode();
-            n.Rule = AstRule.TYPE;
+            AstNode n = new AstNode(AstRule.TYPE);
 
             if (context.GetChild(0) is ScriptParser.SexprContext)
             {
