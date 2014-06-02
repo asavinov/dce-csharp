@@ -247,8 +247,8 @@ namespace Com.Model
         public Mapping Mapping { get; set; }
         public Expression WhereExpression { get; set; } // It describes the domain of the function or where the function returns null independent of other definitions
 
-
-        public AstNode SelectAst { get; set; } // It is a source (user, non-executable) format for representing the value-operations for computing this function
+        // Source (user, non-executable) formula for computing this function consisting of value-operations
+        public AstNode FormulaAst { get; set; } // Analogous to SelectExpression
         // Fact set is a set for looping through and providing input for measure and group functions. By default, it is this (lesser) set.
         public Set LoopSet { get; set; } // Dependency on a lesser set and lesser functions
         // It is a translated, optimized and directly executable code (value operatinos) for computing output values given an input value (input is fact set which by default is this set)

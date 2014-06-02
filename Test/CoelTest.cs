@@ -313,17 +313,40 @@ namespace Test
         }
 
         [TestMethod]
-        public void ScriptTranslationTest()
+        public void ScriptExecutionTest()
         {
             AstNode ast;
+            ScriptContext script = new ScriptContext();
 
             //
             // 1. LOAD tables from external data sources
             //
-            string loadStr = @" Schema mySchema; mySchema = OpenOledb(connection=""MyFileName"", param1=someVar); Set mySet; mySet = mySchema.Load(table=""Products""); ";
+            string loadStr = @" 
+Connection myConnection; 
+myConnection = OpenOledb(connection=""Provider=Microsoft.ACE.OLEDB.12.0; Data Source=C:\Users\savinov\git\comcsharp\Test; Extended Properties='Text;Excel 12.0;HDR=Yes;FMT=CSVDelimited;'"", param1=someVar); 
+Set mySet; 
+mySet = myConnection.Load(table=""Products#csv""); 
+";
             ast = BuildScript(loadStr);
-            ScriptContext script = ast.Translate();
+            script.Generate(ast);
             script.Execute();
+
+            Assert.AreEqual(((SetTop)script.GetVariable("myConnection").Value).Name, "Test");
+            Assert.AreEqual(((Set)script.GetVariable("mySet").Value).Name, "Products#csv");
+            Assert.AreEqual(((Set)script.GetVariable("mySet").Value).GreaterDims.Count, 14);
+
+            //
+            // 2. AddFunction - add a function to a set (Later: DelFunction, UpdateFunction etc.)
+            //
+            // What about flags: key, super, etc.
+            // In general, we may have numerous parameters. Maybe use key-value pairs like JSON and parse JSON? At least, this could be used in a special argument named 'parameters'.
+            string functionStr = @" mySet.AddFunction( name = ""MyFunc"", type = ""Double"", formula = { [List Price] * [Standard Cost] + 100.0; } ); ";
+            ast = BuildScript(functionStr);
+            script.ClearChildren();
+            script.Generate(ast);
+            script.Execute();
+
+            Assert.AreEqual(((Set)script.GetVariable("mySet").Value).GreaterDims.Count, 15);
 
             //
             // 2. PRODUCT - define a new set as a product of existing sets
@@ -331,16 +354,11 @@ namespace Test
             //   - define empty set (with name member)
             //   - define with free dimensions (key or id keyword for member annotation needed)
             //   - define a function member. translated into a AddFunction API call non-key member. 
-            string productStr = @"Set mySet = SET( String Name = ""MySet"", Root Super, String f1, Double f2, Double f3 = f2+100.0 ); ";
+            string productStr = @" Set mySet = SET( String Name = ""MySet"", Root Super, String f1, Double f2, Double f3 = f2+100.0 ); ";
             // It is equivalent to AddSet("MySet") followed by a sequence of AddFunction
             // Markups: super for super-function, key for identity dimension. 
             // If Name is not specified then some default (autoincremented) name like "MySet 1"
 
-
-            //
-            // 3. AddFunction - add a function (also key?) to a set (Later: DelFunction, UpdateFunction etc.)
-            //
-            // commandStr = @"AddMember( ""f3"", mySet, Double, f2+100.0 ); ";
 
 
             //

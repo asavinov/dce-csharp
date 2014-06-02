@@ -258,9 +258,9 @@ namespace Com.Query
             AstNode n = new AstNode(AstRule.CALL);
 
             AstNode func = null;
-            if (context.ID() != null) // Call by-reference (by-name)
+            if (context.name() != null) // Call by-reference (by-name)
             {
-                func = new AstNode(context.ID().GetText());
+                func = (AstNode)Visit(context.name());
             }
             else if (context.vscope() != null) // Call by-value (using in-place definition)
             {
@@ -300,12 +300,21 @@ namespace Com.Query
                 n.AddChild(name);
             }
 
-            AstNode expr = (AstNode)Visit(context.vexpr());
-            if (expr != null)
+            // Definition as a function. It can be one value expression or a complete function definition (body as a sequence of statements)
+            AstNode val = null;
+            if (context.vexpr() != null)
             {
-                n.AddChild(expr);
+                val = (AstNode)Visit(context.vexpr());
             }
-
+            else if (context.vscope() != null)
+            {
+                val = (AstNode)Visit(context.vscope());
+            }
+            if (val != null)
+            {
+                n.AddChild(val);
+            }
+            
             return n;
         }
 

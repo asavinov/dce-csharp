@@ -397,6 +397,11 @@ namespace Com.Model
             return _children.Remove(node);
         }
 
+        public void ClearChildren()
+        {
+            _children.Clear();
+        }
+
         public void Traverse(Action<T> action)
         {
             action(Value);

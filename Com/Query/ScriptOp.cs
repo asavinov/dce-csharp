@@ -32,6 +32,10 @@ namespace Com.Query
         public ContextVariable Result { get; set; }
 
         public ScriptOp GetChild(int child) { return (ScriptOp)Children[child]; }
+        public ScriptOp GetChild(string name) 
+        {
+            return (ScriptOp)Children.FirstOrDefault(x => ((ScriptOp)x).Name == name);
+        }
 
         public ScriptContext GetContext() 
         {
@@ -48,7 +52,8 @@ namespace Com.Query
         {
             // Context stores the current state which is read and then written as a result of the operation execution
             ScriptContext ctx = GetContext();
-            string name;
+            SetTop top = ctx.Schemas[0];
+            string name, type;
 
             switch (OpType)
             {
@@ -65,6 +70,17 @@ namespace Com.Query
 
                 case ScriptOpType.FREE:
                     ctx.FreeVariable(Name);
+                    break;
+
+                case ScriptOpType.VALUE:
+                    if (Children.Count != 0) // Expression (not value/literal), e.g., a variable
+                    {
+                        foreach (ScriptOp op in Children)
+                        {
+                            op.Execute();
+                        }
+                        Result.Value = GetChild(Children.Count - 1).Result.Value;
+                    }
                     break;
 
                 case ScriptOpType.DOT:
@@ -89,11 +105,87 @@ namespace Com.Query
                     // Try to find a run-time procedure/method from our API corresponding to this instruction and its parameters (resolution, binding)
                     if (Name == "OpenOledb")
                     {
+                        // Find parameter 'connection' among children
+                        ScriptOp child = GetChild("connection");
+                        string connection = null;
+                        if (child != null)
+                        {
+                            connection = (string)child.Result.Value;
+                        }
+                        else { break; } // ERROR: parameter wrong or not found
 
+                        SetTopOledb dbTop = new SetTopOledb("");
+                        dbTop.ConnectionString = connection;
+                        dbTop.Open();
+                        dbTop.ImportSchema();
+                        Result.Value = dbTop;
                     }
                     else if (Name == "Load")
                     {
+                        ScriptOp child = GetChild("this");
+                        SetTop db = null;
+                        if (child != null)
+                        {
+                            db = (SetTop)child.Result.Value;
+                        }
+                        else { break; } // ERROR: parameter wrong or not found
 
+                        // Find parameter 'table' among children
+                        child = GetChild("table");
+                        string table = null;
+                        if (child != null)
+                        {
+                            table = (string)child.Result.Value;
+                        }
+                        else { break; } // ERROR: parameter wrong or not found
+
+                        Set set = Mapper.ImportSet(db.FindSubset(table), top);
+                        Result.Value = set;
+                    }
+                    else if (Name == "AddFunction")
+                    {
+                        ScriptOp child = GetChild("this");
+                        Set set = null;
+                        if (child != null)
+                        {
+                            set = (Set)child.Result.Value;
+                        }
+                        else { break; } // ERROR: parameter wrong or not found
+
+                        // Find parameter 'name' among children
+                        child = GetChild("name");
+                        name = null;
+                        if (child != null)
+                        {
+                            name = (string)child.Result.Value;
+                        }
+                        else { break; } // ERROR: parameter wrong or not found
+
+                        // Find parameter 'type' among children
+                        child = GetChild("type");
+                        type = null;
+                        if (child != null)
+                        {
+                            type = (string)child.Result.Value;
+                        }
+                        else { break; } // ERROR: parameter wrong or not found
+
+                        // Find parameter 'formula' among children
+                        child = GetChild("formula");
+                        AstNode formula = null;
+                        if (child != null)
+                        {
+                            formula = (AstNode)child.Result.Value;
+                        }
+                        else { break; } // ERROR: parameter wrong or not found
+
+                        // TOD: Really add a new function with this definition
+                        Set typeSet = top.FindSubset(type);
+                        Dim dim = typeSet.CreateDefaultLesserDimension(name, set);
+                        dim.FormulaAst = formula;
+                        dim.Add();
+
+                        Result.Value = dim;
                     }
 
                     break;
@@ -143,7 +235,7 @@ namespace Com.Query
         DOT, // Essentially, the same as CALL but the first argument is named 'this' and has special interpretation
         CALL, // Generic procedure call including system calls, arithmetic operations etc.
         READ, // Read accossor or getter. Read value from a variable/function or find a surrogate for a tuple. Normally used in method parameters.
-        WRITE, // Assignment, write accessor or setter. Write value to an existing variable/function (do nothing if it does not exist). Normally is used for assignment. 
+        WRITE, // Assignment, write accessor, setter, copy value to a variable. Write value to an existing variable/function (do nothing if it does not exist). Normally is used for assignment. 
         UPDATE, // Update value by applying some operation. Normally is used for affecting directly a target rather than loading it, changing and then storing.
         APPEND, // Append a value if it does not exist and write it if does exist. The same as write except that a new element can be added
         INSERT, // The same as append except that a position is specified
@@ -194,6 +286,21 @@ namespace Com.Query
             return var;
         }
 
+        /// <summary>
+        /// Generate instructions from the ast and append them to this context.
+        /// </summary>
+        public void Generate(AstNode ast)
+        {
+            if (ast.Rule != AstRule.SCRIPT) return; // Wrong use
+
+            List<ScriptOp> instructions = ast.TranslateNode();
+
+            foreach (ScriptOp op in instructions)
+            {
+                this.AddChild(op);
+            }
+        }
+
         public override object Execute() // The same as evaluate
         {
             foreach (ScriptOp op in Children)
@@ -209,6 +316,8 @@ namespace Com.Query
             OpType = ScriptOpType.CONTEXT;
 
             Schemas = new List<SetTop>();
+            SetTop top = new SetTop("My Mashup");
+            Schemas.Add(top);
 
             Variables = new List<ContextVariable>();
         }
@@ -262,7 +371,8 @@ namespace Com.Query
         DIM, // The variable stores a reference to a dimension object
         VAL, // The variable stores a value
         TUPLE, // The variable stores a tuple (complex value) - DO WE NEED THIS?
-        AST, // The variable stores an ast tree - DO WE NEED THIS?
+        ARRAY, // A collection of value (of certain type), e.g., for initializing a function.
+        AST, // AST node representing a hierarchy - DO WE NEED THIS?
     }
 
 }

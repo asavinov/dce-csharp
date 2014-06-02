@@ -26,107 +26,12 @@ namespace Com.Query
         public AstNode GetChild(int child) { return (AstNode)Children[child]; }
 
         /// <summary>
-        /// Generate an executable program from this script.
-        /// </summary>
-        public ScriptContext Translate()
-        {
-            if (Rule != AstRule.SCRIPT) return null; // Wrong use
-
-            List<ScriptOp> instructions = TranslateNode();
-
-            // Simply copy all generated instructions. In future, we will optimize this sequence and maybe create a graph of operations
-            ScriptContext scriptCtx = new ScriptContext();
-            foreach(ScriptOp op in instructions) 
-            {
-                scriptCtx.AddChild(op);
-            }
-
-            return scriptCtx;
-        }
-
-        /// <summary>
-        /// Analyze this syntactic node and generate instructions in the script context.
+        /// Analyze this and all child syntactic nodes and generate a list of script instructions.
+        /// Note that AST is flattened during translation (e.g., depth-first strategy) because the output is a sequence while the input is a (syntactic) hierarchy.
+        /// Flatenning can be based on extracting expressions (e.g., function definitions), storing their result explicitly in a variable and then reading this variable via a parameter in the next instructions.
         /// </summary>
         public List<ScriptOp> TranslateNode()
         {
-            // What do we need for scripts?
-            // Normal expressions with typed variables and call expressions and some special COEL syntactic rules like PRODUCT and PROJECTION.
-            // Differences: 
-            // - Function (lambda with vexrp) type in parameters and variables, 
-            // - Primitive value types (primitive sets), ...
-            // - Access to set members which are functions like mySet.MyFunc = {...}
-
-            // Fltenning as our translation strategy
-            // - Depth-first strategy by collecting sequences. An intermediate node returns a sequence of operations.
-            // - Return principle. Every intermediate node translation has to save its result in some variable ('return' by default)
-            // - Every node reads variables and write one variable. Including intermediate nodes.
-
-            // - Every script instruction is an operation while its children are variables. Operations: call (named method), copy/write (assignment), arithmetic ('+' etc.)
-            // - Alternative: operation name stored in this node or in the first child node (with 'method' parameter)
-            //   - Solution: store as a parameter because in this case we can pass methods by-reference in variables
-            //   - Exceptions with special node types: ASSIGNMENT (copy), PROJECTION, ... (if CALL then name in the first parameter)
-            //   - Flexible: if Name (of CALL) is empty then search for 'method' parameter
-            // - Special children: 'this', 'return' where the result is stored (assigned)
-            // - Variables can be either values or references to other variables.
-            // - Issue: Variable by-reference is (conceptually) a call, i.e., a call without parameters is access on a variable.
-            // - Issue: Value with functions (lambda) are encoded as AstNode with vexpr (alternatively, translated value-ops but we might need to refactor the later during optimization)
-            // - Issue: Only context variables contain run-time values while operation children represent either values or code for accessing context variables.
-
-
-            // Assignment is copy method between variables. The value is returned from an expression: call a method, variable access, arithmetics etc.
-            // Assignment can copy a value to a variable. The value has to be encoded: primitive, function, array.
-            // Operation: op code (var name, method name, arithmetics, projection etc.), read parameters, write parameters. Input params can be values or variable access. Output is always a variable (or nothing for procedures).
-            // Theoretically, all values specified in code could be ASSIGNED to variables in the context and cannot be used in parameters. In this case, only variables can be used in parameters. 
-            // Any operation is a processor which reads input values/variables and writes to output variable(s). 
-            // Principle: Our task is to choose the type of processor (op node type) and provide parameters: input parameters as values or variables, output parameter as a variable.
-            // Challange: implement this principle for each ast node so that it works recursively. 
-            // Each node returns one or more operations but how to mix operation nodes and variable/parameter nodes? 
-            // What do we do with non-operational nodes: names, params, annotations etc. Do we process them and return Variable (child parameter nodes) or they are processed always from their parent operational node?
-            // What do we do with lambda/function nodes (parameters, assignments, return value etc.): treat AstNode for vexpr as a value, translate using vexpr translator and use its result as a value.
-
-            // AstNode is a syntactic representation so it distinguishes various forms operations can be written in. 
-            // For example, DOT, PROJECTION, CALL, SET are simply various syntactic constructs for representing one idea: how inputs are read and how outputs are written using some processor (code of operation). 
-            // Difficulty: different constructs may have different child structure/conventions
-            // Difficulty: reprsenting/translating values (in parameters), 
-            // Difficulty: representing/translating variables (in parameters). 
-            // Syntactically, variables are not distinguishable from function calls - only semantic distinction during resolution. 
-            // Therefore -> should we describe access on variables as calls? No. 
-            // Then how to distinguish between function calls which are translated into operations and variable access which are translated into paramters/variable access? 
-            // For example, is a parameter 'aaa' a variable or some system procedure?
-            // The difference is that variable accesses are translated into parameter node while procedure accesses are transalted into new operation node (followed by a parameter node)
-            // 1. approach is to distinguish them syntactically: variables do not have parantheses, while procedures always have paranthese. This works for scripts but bad for vexpr. 
-            // 2. approach is that the translator is able to determine the role by trying to resolve the name in the local context of variables (perhaps nested). 
-            // 3. approach is that even if a parameter is a variable, we generate an operation of access with return to an intermediate variable (which is guaranteed to be a variable).
-            // 4. we switch conception and assume that access to a variable just as methods are normal nodes so we may have nested operations.
-            // we may have a return result directly in the node or a makred child node (return node). 
-            // Important is only that any node can be 
-            // - a variable (no children) and the result value is searched as stored among local variables only (but local variables could theoretically also point to other variables if they store an access command)
-            // - a procedure (children are parameters) and the result is generated by a procedure which are resolved using well-known locations (schema etc.)
-            // - a value (no children) and the result is directly stored in the node so no access/resolution is needed but the question is whether it is in encoded or run-time format. Parameters should store encoded values while variables a run-time value.
-            // Thus any node is assumed to represent some result consumed by its parent node: 
-            // - write to a variable. Here the parameter node represents what needs to be written into this operation node representing a variable. It is a setter but the operation node encodes a variable only that has to be changed. Alternatively, output (written) variable could be written as a special parameter but then we get a flat structure which is probably not good.
-            // - read from a variable. Here the result represents a read value. The variable either is this operation node or its child. 
-            // - procedure. Procedurs consume parameters and return some value that can be consumed. 
-            // We understand how reading is done: we always specify some name as an offset relative to the context (either variable name or procedure name).
-            // However, we do not want to always store the result in a variable because it is already another operation - write (assignment).
-            // It is better to assume that any operation returns some value to its parent. The parent can be a script or another node which knows how to consume it. 
-            // In this case, it is not necessary to distinguish between variables and methods we just write READ NAME
-            // Then we have to disntuish values. Moreover, in code, they need a special (original) encoding (maybe via its children or via its name). Execution means converting *this* direct represendation into a run-time object without using the context or resolution. 
-            // A variable can contain a value or a reference (getter, reader) to another variable or method call. 
-            // Thus we must syntactically recongnize values as opposed to relative access, and then represent them as different types of nodes. 
-            // Thus we can think about a named getter/reader (variables or procedures), named setters/writers (variables), and named values (literals, values).
-
-            // What we cannot do it now? Because now getter/reader from local vars has a special status of primitive operation which must be recongnized in advance and translated into a dedicated operation.
-            // In other words, depending on the decision (getter or method) we get different structure of code. 
-            // But we want to have the same structure of code independent of whether it is a getter or method call. 
-            // Therefore, all nodes are either named accessors or values (terminal accessor). 
-            // An accessor can be getter/reader, setter/writer (=assignment), updater or whaterver, and may have arguments (then it can be treated as a call). An accessor produces a result after its work. 
-            // A value is a terminal accessor which encodes its output result in itself without external access. It can be marked as a terminal accessor in addition to readers/writers and whatever. 
-            // If the interpreter sees that the node has operation (in code) type VAL then it simply converts its content into a result run-time object. (We can reuse them in context state and then the node simply stores a run-time object which can be read/written.)
-            // If the interpreter sees a reader then it resolves the name and uses the child nodes as parameters by storing the result as its output. 
-            // A writer means assignment, that is, it takes the whatever another expression returns and writes into a variable (here we can use only variables as name). 
-
-
             List<ScriptOp> scriptOps = new List<ScriptOp>();
             string name;
             string type;
@@ -244,7 +149,11 @@ namespace Com.Query
                     {
                         op.Result = new ContextVariable(VariableClass.VAL, GetChild(0).Name, GetChild(1).Name);
                     }
-                    else // Expression parameter
+                    else if (GetChild(1).Rule == AstRule.VSCOPE) // Value of type lambda (v-ops for function definition)
+                    {
+                        op.Result = new ContextVariable(VariableClass.VAL, GetChild(0).Name, GetChild(1));
+                    }
+                    else // Script expression parameter
                     {
                         ops = GetChild(1).TranslateNode();
                         op.AddChild(ops[ops.Count - 1]); // Assumption: only one operation is generated
@@ -255,21 +164,7 @@ namespace Com.Query
 
                 case AstRule.SEXPR:
                     AstNode sexpr = GetChild(0);
-
-                    if (sexpr.Rule == AstRule.PRODUCT)
-                    {
-                        // Operands (greater sets) could theoretically produce nested operations so flatenning might be needed
-                    }
-                    else if (sexpr.Rule == AstRule.DOT || sexpr.Rule == AstRule.PROJECTION || sexpr.Rule == AstRule.DEPROJECTION)
-                    {
-                        // First child is a nested exprssion (so it is a nested operation which will generated a sequence of instructions but possibly a concrete argument like variable)
-                        // Second argument is a function that is applied to the result (set) of the first child
-                    }
-                    else if (sexpr.Rule == AstRule.CALL)
-                    {
-                        // Operands could theoretically produce nested operations so flatenning might be needed
-                    }
-
+                    scriptOps.AddRange(sexpr.TranslateNode());
                     break;
             }
 
@@ -279,7 +174,7 @@ namespace Com.Query
         /// <summary>
         /// Analyze this syntactic node and generate instructions in the value context defining a function.
         /// </summary>
-        public ValueContext TranslateFunction()
+        public ValueContext TranslateFormula()
         {
             return null;
         }

@@ -72,7 +72,7 @@ vscope
 // Access/call request. The procedure can be specified by-reference using ID or by-value using in-place definition (e.g., for projection where it specifies a value-function body)
 //
 call
-  : (ID | vscope) ( '(' (param (',' param)*)? ')' )?
+  : (name | vscope) ( '(' (param (',' param)*)? ')' )?
   ;
 
 param
@@ -118,6 +118,41 @@ literal
   ;
 
 // Problems:
-// - How to process primitive types: script types like Schema, Set, Function etc., value types (primitive sets) like String, Double etc.
-// - Script can work with values and normal value expressions like string operations and number operations. The only difference is that it is never executed in a loop. Second difference: script calls may have lambda (Function type) parameters (with only vexpr) which should be distinguished. 
-// - 
+// - Typing: How to process primitive types: script types like Schema, Set, Function etc., value types (primitive sets) like String, Double etc.
+
+// - Differences between s-ops (scripts) and v-ops (function definitions): 
+//   - scripts have lambdas (function defs with v-ops) as a data type which can be stored in variables and passed in parameters. 
+//   - scripts have special data types like Set, Connection, Function etc. while v-ops have only normal primitive data types (although they represent real sets of the schema).
+//   - scripts might have special syntactic conventions (in addition to normal calls): PRODUCT, PROJECTION, access to set members like functions mySet.MyFunc = {...}
+//   - The use of delimited identifiers might be different (it is not clear yet). In any case, we need to use functions by name and it is convenient also to use sets my their name (rather than variable name)
+//   - Common: script can work with values and normal value expressions like string operations and number operations. 
+//   - script is never executed in a loop. 
+//   - sexpr/vespr issues. The necessity to syntactically distinguish normal script expressions (sexpr like aaa+bbb) from vexpr used for function definitions (lambda, vscope etc.) The latter is not parsed by the script translator and is used as a kind of value for definining objects by assigning some their field.
+//   - V-expr could be Java code etc. 
+//   - Posdsible syntactic indicators: scope {}, keyword like lambda/func or whatever (means that a function body is provided), parameter type (it actually always is present for parameters but can be reconstructed from various sources: keywords, param name, scope etc. described in this section).
+// - Use of delimited identifiers: formally describe where and how. Set names. Function names. Variable names. In scripts and v-expressions.
+// - Distinguishing variables from functions: 
+//   - Syntactically, variables are not distinguishable from functions
+//   1. approach is to distinguish them syntactically: variables do not have parantheses, while procedures always have paranthese. This works for scripts but bad for vexpr. 
+//   2. approach is that the translator is able to determine the role by trying to resolve the name in the local context of variables (perhaps nested). 
+//   3. approach is that even if a parameter is a variable, we generate an operation of access with return to an intermediate variable (which is guaranteed to be a variable).
+//   4. we switch conception and assume that access to a variable just as methods are normal nodes so we may have nested operations.
+
+//
+// Translation and scripts
+// 
+
+// - Alternative for call/method representation: either in the first child node or in this node (and then children can be only parameters). 
+//   - Storing as the first parameter allows us to store a definition for the function easier. Storing in this node means storing a name only. 
+//   - Use case: ASSIGMNET (write) store variable name as name
+//   - Flexible approach: if Name is empty then search for the first parameter called 'method'
+// - Parameter conventions:
+//   - 'this' and 'return' (as well as 'method') are a special parameter
+//   - parameter is always VALUE which either stores a literal or can contain a CALL or another expression (in non-flat mode). In flat mode, it contains either value or accesses a variable (problem - variable is a call, i.e., expression).
+//   - parameters as well as variables can store a function definition, e.g., as ast, as string or as v-ops. So it is a separate value type. 
+// - Possibility to have nested execution contexts (but initially use only the parent). 
+//   - Creation. For example, a context could be created explicitly from s-scope or implicitly for processing hierarchical nodes which are flattened but we do not want to insert everything in one common root context. 
+//   - Use and resolution.
+// - Principle: context stores the current state of execution in its variables (possibly in nested contexts) and schema objects.
+//   - any operation changes the current state by changing the variables or objects.
+//  - parsing or not parsing vexpr-values is another issue. One option is to parse them as usual. Another option is to simply store them as a literal and parse separately.
