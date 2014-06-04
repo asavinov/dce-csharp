@@ -241,7 +241,8 @@ namespace Com.Query
         INSERT, // The same as append except that a position is specified
 
         //
-        // ??? Special action types specific to the syntax of COEL - DO WE NEED THIS in executable code or translator will convert everything to normal API???
+        // Special action types specific to the syntax of COEL
+        // Alternatively, the translator could translate everything into API calls
         //
 
         // Result is a new set reference (not populated)

@@ -132,10 +132,57 @@ namespace Com.Query
                         break;
                     }
 
+                case AstRule.PRODUCT: // Create a new set with its functions in one statement
+                    // 1. Find set name
+                    foreach (AstNode n in Children)
+                    {
+                        Debug.Assert(n.GetChild(1).Rule == AstRule.NAME, "Wrong use: first child of a MEMBER node has to be the member NAME.");
+                        if (n.GetChild(1).Name != "Name") continue;
+                        // TODO: Check correct value type (e.g., it cannot be lambda)
+
+                        // TODO: In fact, we have to simply copy the value as expression to the API call as a parameter
+                        if (n.GetChild(2).Rule == AstRule.LITERAL)
+                        {
+                            name = n.GetChild(2).Name;
+                        }
+                        else
+                        {
+                            // TODO: s-expr as a name. It has to be used as a parameter for the API call
+                        }
+                    }
+                    // If not specified then warning and automatic name like "My Set 3"
+
+                    // 2. Create a new set object using API call AddSet("MySet")
+                    op = new ScriptOp(ScriptOpType.CALL, "AddSet");
+                    //ops = nameNodeValue.TranslateNode();
+                    //op.AddChild(ops[ops.Count - 1]); // Assumption: only one operation is generated
+
+
+                    // 3. In a loop, add functions using AddFunction API call. 
+                    foreach (AstNode n in Children)
+                    {
+                        // Special members: Name, Super or annotation (super-dim), no definition or annotation like key or id, Where for prodicate or annotation (no body - warning, must be Bool).
+                        // Special processing for type (first child in the member) as s-expr (rather than primitive type).
+                        Debug.Assert(n.Rule == AstRule.MEMBER, "Wrong use: all children of a PRODUCT node have to be MEMBERs.");
+                        if (n.GetChild(1).Name == "Name") continue;
+
+                        op = new ScriptOp(ScriptOpType.CALL, "AddFunction");
+
+                        // Parameters: name, type (greater set), formula (optional)
+
+                    }
+
+                    break;
+
                 case AstRule.PROJECTION: // The same as DOT but the function can be specified by-value (as a body or lambda) rather than by-name
+                    // TODO: Refactor. We want to translate everything to API calls (without COEL-specific statements)
+                    // So we need to define a new (possibly intermediate) set from the specification of the function output. 
+                    // The popoulation procedure of the set is defined via projection. 
+                    // Define a new (temporary) function if the body is provided. 
+                    // Ensure that it works if this new set is used for the next projection/de-projection or another operation in an expression.
+
                     // 1. If function is lambda then extract it and define in the corresponding set
                     // This definition is equivalent to operations executed when a new function is defined for a set (copy the corresponding block as if it were defined by the user)
-
                     name = GetChild(0).Name;
 
                     // 2. After that use the new (automatic) name of the function in the projection operation
@@ -143,7 +190,32 @@ namespace Com.Query
 
                     break;
 
-                case AstRule.PARAM: // Parameter returns a VALUE which either stores a literal or accesses context variable/function
+                case AstRule.MEMBER: // Member returns a VALUE (with s-type) which either stores a literal (including lambda) or s-expr (including variables and calls)
+
+                    // TODO: Implement translation of s-type - new sets might have to be created as separate operations. And then these new intermediate sets will be used as types of members.
+
+                    op = new ScriptOp(ScriptOpType.VALUE, GetChild(1).Name);
+                    if (Children.Count < 3)
+                    {
+                        // TODO: Value is not specified - free dimension (key)
+                    }
+                    if (GetChild(2).Rule == AstRule.LITERAL) // Value parameter
+                    {
+                        op.Result = new ContextVariable(VariableClass.VAL, GetChild(1).Name, GetChild(2).Name);
+                    }
+                    else if (GetChild(2).Rule == AstRule.VSCOPE) // Value of type lambda (v-ops for function definition)
+                    {
+                        op.Result = new ContextVariable(VariableClass.VAL, GetChild(1).Name, GetChild(2));
+                    }
+                    else // Script expression parameter
+                    {
+                        ops = GetChild(1).TranslateNode();
+                        op.AddChild(ops[ops.Count - 1]); // Assumption: only one operation is generated
+                    }
+
+                    break;
+
+                case AstRule.PARAM: // Parameter returns a VALUE which either stores a literal or s-expr (including variables and calls)
                     op = new ScriptOp(ScriptOpType.VALUE, GetChild(0).Name);
                     if (GetChild(1).Rule == AstRule.LITERAL) // Value parameter
                     {

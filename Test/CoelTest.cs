@@ -351,13 +351,12 @@ mySet = myConnection.Load(table=""Products#csv"");
             //
             // 2. PRODUCT - define a new set as a product of existing sets
             //
-            //   - define empty set (with name member)
-            //   - define with free dimensions (key or id keyword for member annotation needed)
-            //   - define a function member. translated into a AddFunction API call non-key member. 
-            string productStr = @" Set mySet = SET( String Name = ""MySet"", Root Super, String f1, Double f2, Double f3 = f2+100.0 ); ";
-            // It is equivalent to AddSet("MySet") followed by a sequence of AddFunction
-            // Markups: super for super-function, key for identity dimension. 
-            // If Name is not specified then some default (autoincremented) name like "MySet 1"
+            string productStr = @" Set mySet; mySet = SET( String Name = ""MySet"", Root Super, String f1, Double f2 = {f1+100.0;}, Boolean Where = {f2>0;} ); ";
+            ast = BuildScript(productStr);
+            script.ClearChildren();
+            //script.Generate(ast);
+            //script.Execute();
+
 
 
 
