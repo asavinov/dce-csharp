@@ -100,14 +100,15 @@ type
 // Primitive sets. A primitive set is a collection of primitive values (domain).
 prim_set
   : 'Root' // Root or Reference or Surrogate
+  | 'Top'
+  | 'Bottom'
+  | 'Void' // No value is returned or stored. Could be equivalent to Top.
   | 'Integer'
   | 'Double'
   | 'Decimal'
   | 'String'
   | 'Boolean'
   | 'DateTime'
-  | 'Top'
-  | 'Bottom'
   ;
 
 //
