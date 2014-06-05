@@ -134,42 +134,68 @@ namespace Com.Query
 
                 case AstRule.PRODUCT: // Create a new set with its functions in one statement
                     // 1. Find set name
+                    ScriptOp nameOp = null;
                     foreach (AstNode n in Children)
                     {
-                        Debug.Assert(n.GetChild(1).Rule == AstRule.NAME, "Wrong use: first child of a MEMBER node has to be the member NAME.");
                         if (n.GetChild(1).Name != "Name") continue;
-                        // TODO: Check correct value type (e.g., it cannot be lambda)
+                        // TODO: Check correct value type (e.g., it has to be string and cannot be lambda)
 
-                        // TODO: In fact, we have to simply copy the value as expression to the API call as a parameter
-                        if (n.GetChild(2).Rule == AstRule.LITERAL)
-                        {
-                            name = n.GetChild(2).Name;
-                        }
-                        else
-                        {
-                            // TODO: s-expr as a name. It has to be used as a parameter for the API call
-                        }
+                        ops = n.TranslateNode();
+                        nameOp = ops[ops.Count - 1]; // Assumption: only one operation is generated
+                        break;
                     }
-                    // If not specified then warning and automatic name like "My Set 3"
+                    if (nameOp == null) // If not specified then warning and automatic name like "My Set 3"
+                    {
+                        nameOp = new ScriptOp(ScriptOpType.VALUE, "Name");
+                        nameOp.Result = new ContextVariable(VariableClass.VAL, "Name", "My Set X");
+                    }
 
+                    //
                     // 2. Create a new set object using API call AddSet("MySet")
+                    //
                     op = new ScriptOp(ScriptOpType.CALL, "AddSet");
-                    //ops = nameNodeValue.TranslateNode();
-                    //op.AddChild(ops[ops.Count - 1]); // Assumption: only one operation is generated
+                    op.AddChild(nameOp);
 
+                    // TODO: assign the return value to a newly allocated variable and remember the name of this variable
+                    // We do not know the name of the new set, so we will not be able to add functions
+                    // Therefore, we have to store a reference to the new set in a intermediate variable which will be then used to create new functions
+                    // We need a new assignment operator with value produced by the set creation call above
 
+                    //
                     // 3. In a loop, add functions using AddFunction API call. 
+                    //
+                    List<ScriptOp> funcOps = new List<ScriptOp>();
+                    ScriptOp funcOp;
                     foreach (AstNode n in Children)
                     {
                         // Special members: Name, Super or annotation (super-dim), no definition or annotation like key or id, Where for prodicate or annotation (no body - warning, must be Bool).
                         // Special processing for type (first child in the member) as s-expr (rather than primitive type).
                         Debug.Assert(n.Rule == AstRule.MEMBER, "Wrong use: all children of a PRODUCT node have to be MEMBERs.");
+                        Debug.Assert(n.GetChild(1).Rule == AstRule.NAME, "Wrong use: first child of a MEMBER node has to be the member NAME.");
                         if (n.GetChild(1).Name == "Name") continue;
 
-                        op = new ScriptOp(ScriptOpType.CALL, "AddFunction");
+                        funcOp = new ScriptOp(ScriptOpType.CALL, "AddFunction");
 
-                        // Parameters: name, type (greater set), formula (optional)
+                        // Function name
+                        ScriptOp funcNameOp = new ScriptOp(ScriptOpType.VALUE, "name");
+                        funcNameOp.Result = new ContextVariable(VariableClass.VAL, "name", n.GetChild(1).Name);
+                        funcOp.AddChild(funcNameOp);
 
+                        // Input set. The same for all added functions
+                        ScriptOp inSetOp = new ScriptOp(ScriptOpType.VALUE, "inputSet");
+                        inSetOp.Result = new ContextVariable(VariableClass.VAL, "inputSet", "");
+                        funcOp.AddChild(inSetOp);
+
+                        // Output set. 
+                        // TODO: In fact, it is a result of expression
+                        ScriptOp outSetOp = new ScriptOp(ScriptOpType.VALUE, "outputSet");
+                        outSetOp.Result = new ContextVariable(VariableClass.VAL, "outputSet", n.GetChild(0).Name);
+                        funcOp.AddChild(outSetOp);
+
+                        // Function formula
+                        ScriptOp formulaOp = new ScriptOp(ScriptOpType.VALUE, "formula");
+                        formulaOp.Result = new ContextVariable(VariableClass.VAL, "formula", n.GetChild(0).Name);
+                        funcOp.AddChild(formulaOp);
                     }
 
                     break;
