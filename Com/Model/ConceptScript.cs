@@ -49,7 +49,7 @@ namespace Com.Model
         }
     }
 
-    public interface CsTable
+    public interface CsTable // One table object
     {
         string N { get; set; }
         CsColumn C(string name); // Name resolution
@@ -85,7 +85,7 @@ namespace Com.Model
     {
     }
 
-    public interface CsColumn
+    public interface CsColumn // One column object
     {
         string N { get; set; }
 
@@ -116,6 +116,62 @@ namespace Com.Model
         // Here we manipulate primitive data types: Reference, Void (empty, null), String, Double etc.
         //
 
+    }
+
+    public interface CsFormula // How a function is represented and evaluated. It uses API of the column storage like read, write (typed or untyped).
+    {
+        void Initialize(); // Initialize the value. Is called one time before the function evaluation. Important for aggregation.
+        void Evaluate(object input); // Called for each iteration over this set. Compute the output and write it to the functino storage. The implementatino can be typed or untyped. 
+        bool Evaluate(object input, object output); // Called for all pairs of input and output *if* the definition is a join prodicate.
+        void Finish(); // Is called one time after the function evaluation. Can be important for aggregation, say, devide the accumulated measure on the accumulated count. 
+    }
+
+    public interface CsColumnData // It is interface for managing function data as a mapping to output values (implemented by some kind of storage manager). Input always offset. Output type is a parameter.
+    {
+        DataType CsType { get; } // Check the output value type. Can be needed to choose appropriate typed methods.
+        Offset Length { get; set; }
+
+        //
+        // Untyped methods. Default conversion will be done according to the function type.
+        //
+        bool IsNullValue(Offset input);
+        object ReadValue(Offset input);
+        void WriteValue(Offset input, object value);
+        void WriteValue(object value); // Convenience, performance method: set all outputs to the specified value
+        void InsertValue(Offset input, object value); // Changle length. Do we need this?
+
+        //
+        // Typed methods for each primitive type like GetInteger(). No NULL management since we use real values including NULL.
+        //
+
+        //
+        // Index control.
+        //
+        // bool IsAutoIndexed { get; set; } // Index is maintained automatically
+        // void Index(); // Index all and build new index
+        // void Index(Offset start, Offset end); // The specified interval has been changed (or inserted?)
+    }
+
+    public interface CsTableData // It is interface for manipulating data in a table.
+    {
+        Offset FindTuple(CsRecord record); // If many records can satisfy then another method has to be used. What is many found? Maybe return negative number with the number of records (-1 or Length means not found, positive means found 1)? 
+
+        void InsertTuple(Offset input, CsRecord record); // All keys are required? Are non-keys allowed?
+
+        void RemoveTuple(Offset input); // We use it to remove a tuple that does not satisfy filter constraints. Note that filter constraints can use only data that is loaded (some columns will be computed later). So the filter predicate has to be validated for sets which are projected/loaded or all other functions have to be evaluated during set population. 
+    }
+
+    public interface CsRecord // It is a complex data type generalizing primitive values and with leaves as primitive values (possibly surrogates). The main manipulation object for table data methods.
+    {
+        string Name { get; set; } // It is column/attribute/function name
+        CsColumn Column { get; set; } // It is resolved column object corresponding to the name
+
+        object Value { get; set; } // Untyped. Surrogate for non-leaf
+        // TODO: do we need typed methods?
+
+        List<CsRecord> Children { get; } // Child records
+        bool IsLeaf { get; } // Convenience
+        CsRecord Parent { get; } // Parent
     }
 
 }

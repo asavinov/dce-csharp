@@ -380,7 +380,9 @@ mySet = myConnection.Load(table=""Products#csv"");
 
             //
             // Create connection
-            // Load one table only using a universal API method (in future we could use selected attributes, mapping, conversion, filters and other options)
+            // Load one table only using a universal API method. 
+            // Types are chosen automatically. Keys are read if available (but not FKs). In future we could use selected attributes, mapping, conversion, filters and other options.
+            // Table update (Eval) has to load data again by using the correct set populatino specification. 
             //
 
             //
@@ -422,6 +424,40 @@ mySet = myConnection.Load(table=""Products#csv"");
             // Aggregated function. Special case with separate set of parameters:
             // Fact set, Grouping function, Aggregation function, Counting function, Update (aggregation) function (in future, can be custom), Initialization function/value.
             //
+        
+            // ======================================================================
+            // Our strategy: 1. define sets and columns 2. evaluate sets and columns
+            // Evaluation strategy:
+            // - depends on how the set/function has been defined (which pattern has been used)
+            // - use dependencies to build a sequence and evaluate individual sets/functions independently according to this sequence -> evaluation functions do not check dependencies, they assume that all needed functions have been computed
+            // - strategíes of function population: - get function formula object (evaluator), - get function storage object, - get necessary set objects for looping
+            //   - loop on input set (direct evaluation), 
+            //   - loop on output set (inverse evaluation), 
+            //   - loop on input-output sets (join), 
+            //   - loop on input of projection function (set population via import/copy), 
+            //   - loop on the fact set (aggregated function)
+            // - strategies of set population: - generation loop, - generate a new tuple, - append the tuple, - evaluate all other functions of this set (needed for filter), - evaluate the filter, - remove tuple if false
+            //   - loop on all key output sets surrogates by building a tuple, evaluating filter, append if the tuple is true
+            //   - loop on the input set of projection function, get return tuple, evaluating filter, append if the tuple is true
+            //   - request data from external set, loop on the output data set, get return record/tuple, evaluate filter, append if the tuple is true
+            // - QUESTION: is it true that set population means populating all its functinos simultaniously?
+
+            // Function definition and population patterns:
+            // - function predicate is normal set predicate (no any difference), optional component, determines where output is null before real evaluation. is used in combination with other function definitions. if not null, then the function is really computed.
+            // - primitve, arithmetic including surrogates
+            // - complex, tuple -> only this can be used for copying (set population), essentially a combination of primitive functions
+            // - join, predicate on intput, output. Is evaluated in a loop for all pairs (not in one loop for all inputs)
+            // - aggregation -> normally primitive output
+            // - inverse, determine input for the given output -> loop on the output set -> QUESTION: single-valued or also multi-valued? If multi-valued then how to represent, as function storage or certain (special - only surrogates) type with surrogates?
+            //   - inverse can return surrogate or tuple
+            //
+            // Set definition and population patterns. How dependencies are represented? For each new element, evaluate the set predicate.
+            // - all possible identities (filter is applied as usual)
+            //   - subset is a particular case or a separate pattern? Or an automatically detected separate pattern, say, with storage optimization?
+            // - outputs from a (lesser) function (filter is applied as usual). Can be viewed as loading/copying data -> to which columns?
+            //   -> QUESTION: Which functions are set and which are not? Require identity tuple be present in?
+            // - loading external set. Is also viewed as copying via projection. 
+            //   - QUESTION: is the representation the same as for normal projection? Output format can be different (rows). Function specification can be different. 
         }
 
     }
