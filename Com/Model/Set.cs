@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Data;
 using System.Diagnostics;
+
 using Offset = System.Int32;
 
 namespace Com.Model
@@ -17,7 +18,7 @@ namespace Com.Model
     /// A set is also characterized by width and length of its members. 
     /// And a set provides methods for manipulating its structure and intances. 
     /// </summary>
-    public class Set : INotifyCollectionChanged, INotifyPropertyChanged
+    public class Set : INotifyCollectionChanged, INotifyPropertyChanged, CsTable
     {
         #region Properties
 
@@ -1080,6 +1081,18 @@ namespace Com.Model
                 PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
             }
         }
+
+        #endregion
+
+        #region CsTable interface
+
+        public string N { get { return Name; } set { Name = value; } }
+
+        public CsColumn C(string name) { return GetGreaterDim(name); }
+
+        public List<CsColumn> OutputColumns { get { return GreaterDims.Cast<CsColumn>().ToList(); } }
+
+        public List<CsColumn> InputColumns { get { return LesserDims.Cast<CsColumn>().ToList(); } }
 
         #endregion
 

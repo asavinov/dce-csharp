@@ -16,7 +16,7 @@ namespace Com.Model
     /// Extensions also can define functions defined via a formula or a query to an external database.
     /// It is only important that a function somehow impplements a mapping from its lesser set to its greater set. 
     /// </summary>
-    public class Dim
+    public class Dim : CsColumn
     {
         #region Properties
 
@@ -276,6 +276,21 @@ namespace Com.Model
         public virtual object ProjectValues(Offset[] offsets) { return null; }
 
         public virtual Offset[] DeprojectValue(object value) { return null; } // Accepts both a single object or an array. Do we need it as public?
+
+        #endregion
+
+        #region CsColumn interface
+
+        public string N { get { return Name; } set { Name = value; } }
+
+        public void Include() { Add(); }
+        public void Exclude() { Remove(); }
+
+        public CsTable Input { get { return LesserSet; } }
+        public CsTable Output { get { return GreaterSet; } }
+
+        public bool IsKey { get { return IsIdentity; } }
+        public bool IsParent { get { return IsSuper; } }
 
         #endregion
 

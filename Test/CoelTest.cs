@@ -369,54 +369,59 @@ mySet = myConnection.Load(table=""Products#csv"");
             // 5. Store data to an external data source
             //
             
-            
-            // What do we need:
-            // The most difficult part is translation where we create new intermediate functions and need to provide a definition for them.
-            // Alternative: either we provide definition in source form as AstNode (and translate later) or in compiled form (ValueOp) directly. 
+        }
 
-            // We can compile AstNode for functions into ValueOp and test separately in ValueContext.
+        [TestMethod]
+        public void ConceptScriptTest()
+        {
+            ConceptScript cs = new ConceptScript("My Script");
 
-            // While executing a set-op program, some instructions (Eval) result in creating a loop in which a val-op program is iteratively executed.
+            CsTable t = cs.CreateTable("My Table");
 
-            // Problem. AstNode contains val-op function definitions which can be translated into one expression, a sequence of val-op, or some fragments could be extracted and translated into a new function (which replaces this fragment)
-            // We can reserve a special field in Dim for storing a translated val-op program (optimized with use of intermediate functions)
-            // This translated program is also bound to objects (dimensions and variables) and is ready for execution.
-            // In this case, such a function definition cannot be executed only using schema - it might need temporary (extracted) dimensions. 
-            // We could bind this translated/optimized definition to a context (script or another) which stores all the necessary objects. 
-            // Another option is to store references to all used dimension objects (temporary or schema) in local context as variables and then use only these variables.
+            //
+            // Create connection
+            // Load one table only using a universal API method (in future we could use selected attributes, mapping, conversion, filters and other options)
+            //
 
-            // Why not to simply interpret a script? 
-            // A script is intended for defining new objects - connections, sets and function - therefore performance is not important
-            // We need performance only during function evaluation and here we should compile function definitions. 
-            // Problem: scripts need transformations:
-            // - processing composition like projection. It is not clear if it can be processed hierarchically because we might need to produce (and hence define) new intermediate sets.
-            // - unnesting/flatenning set operations like nested products. Probably we need to extract and define explicitly nested sets by storing them in variables. 
-            // - computing dependent functions/sets which the evaluation of which has to be inserted in code explicitly because they are needed for other functions
-            // - refactoring function bodies by extracting defs and defining new function/set objects as well as changing existing functions
+            //
+            // Define a new product set using a custom super set and filter. Defining a simple subset with predicate. 
+            //
 
-            // So compilation is needed because of the following properties:
-            // - target operations are flat - no nesting 
-            // - all target operations are very simple and are mapped directly to API operations
-            // - any target operation applies some operation to context and changes some context object
-            // - advantage of having flat operations is easier to analyze and optimize (reorganize) because we see all operations in the list while nesting hides operations and context changes
-            // The simplest approach is to introduce one unique variable storing an intermediate result of each generated instruction. 
-            // In particular, variables will be created for each:
-            // - nested projection/de-projection/dot operation. Do it mechanically and remember this variable as a parameter of another operation which consumes the result. So projection/de-projection always use variables - no other way is supported.
-            // - nested product operation. Here member types must be variables so product supports only variables its member types - nothing else is supported. The variables are assigned before this operation by extracting the type definition (in nested manner). 
-            // - if some function depends on another function then the evaluation operation is simply inserted before.
-            // - if some function body is refactored then we change this function definition and insert another function definition and evaluation operations.
+            //
+            // Define a relationship between tables (projection function) using tuple as output
+            // It is a new column between two tables with a definition as a return tuple corresponding to the output set structure
+            // ( Products product = (Integer ID = this.[Product ID]) )
+            // The function is populated by finding tuples in the output set (null if not found). Output set is not changed.
+            //
 
-            // Problem of flattening: operations use and change context (rather than nested parameters)
-            // and it is necessary to reuse context variables and introduce shared context variables to transfer objects between operations.
-            // One solution is to introduce one context variable for each use. Advantage is that each variable is allocated for one use only and there is no interference because of change of the sequence of operations.
-            // Another approach is to reuse a well-known variable like LastResult. Here we save variables but depend on the sequence of operations. 
+            //
+            // Define a relationship between tables (projection function) using a predicate (join)
+            // It is a function that returns true if input and output are mapped
+            //
 
+            //
+            // Extract a new set via projection. API operation could return a new set (like a constructor).
+            // - Define a new empty set manually. Define a projection function between two existing sets as a tuple. Populate the function (append if not found). The set is populated as a result of function population.
+            // ( Categories category = (String [Category] = this.[Product Category]) )
+            // - Use projection operation which analyzes the output tuple of the function, create a new set and configures it via projection function.
+            // [Products] -> ( Categories category = (String [Category] = this.[Product Category]) )
+            //
 
-            // QUESTION: how to deal with aggregation functions (must have). first version and general case. grammar, ast, sexpr, vexpr.
-            // define principles
-            // define syntax rules for recognizing aggregation
-            // what about correlated queries
+            //
+            // Project by creating a subset. Here we create a subset by using an existing function to an existing super-set.
+            // [Order Details] -> [Order ID]
+            //
 
+            //
+            // Defining a multidimensional grouping function with several paths (tuple) to an existing set.
+            // ( CategoryRegion group = (Category cat = this.f1.f2, Region reg = this.f3.f4) )
+            // Filtering of facts and intermediate elements?
+            // The same as extraction but with existing set (extraction creates a new set according to the function output tuple).
+
+            //
+            // Aggregated function. Special case with separate set of parameters:
+            // Fact set, Grouping function, Aggregation function, Counting function, Update (aggregation) function (in future, can be custom), Initialization function/value.
+            //
         }
 
     }

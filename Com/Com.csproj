@@ -44,6 +44,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Model\Aggregator.cs" />
+    <Compile Include="Model\ConceptScript.cs" />
     <Compile Include="Model\Dim.cs" />
     <Compile Include="Model\DimBool.cs" />
     <Compile Include="Model\DimImport.cs" />

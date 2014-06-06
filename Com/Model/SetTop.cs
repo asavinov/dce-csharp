@@ -14,7 +14,7 @@ namespace Com.Model
     /// Top set is used to represent a whole database like a local mash up or a remote database. 
     /// It also can describe how its instances are loaded from a remote source and stored.
     /// </summary>
-    public class SetTop : Set
+    public class SetTop : Set, CsSchema
     {
         public DataSourceType DataSourceType { get; protected set; } // Where data is stored and processed (engine). Replace class name
 
@@ -110,6 +110,16 @@ namespace Com.Model
                 }
             }
         }
+
+        #region CsSchema
+
+        public CsTable T(string name)
+        {
+            Set set = FindSubset(name);
+            return set;
+        }
+
+        #endregion
 
         public SetTop()
             : base()
