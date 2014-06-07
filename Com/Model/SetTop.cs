@@ -82,9 +82,9 @@ namespace Com.Model
 
                     switch (dataType) // Set properties explicitly for each data type
                     {
+                        case DataType.Void:
                         case DataType.Top:
                         case DataType.Bottom:
-                        case DataType.Void:
                             break;
                         case DataType.Root:
                             setPrimitive.DimType = typeof(DimTop);
@@ -148,9 +148,9 @@ namespace Com.Model
     public enum DataType
     {
         // Built-in types in C#: http://msdn.microsoft.com/en-us/library/vstudio/ya5y69ds.aspx
+        Void, // Nothing, no value. Can be equivalent to Top or Null.
         Top,
         Bottom,
-        Void, // Nothing, no value. Can be equivalent to Top or Null.
         Root, // It is surrogate or reference
         Integer,
         Double,

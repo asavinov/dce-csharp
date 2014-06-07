@@ -376,7 +376,7 @@ mySet = myConnection.Load(table=""Products#csv"");
         {
             ConceptScript cs = new ConceptScript("My Script");
 
-            CsTable t = cs.CreateTable("My Table");
+            //CsTable t = cs.CreateTable("My Table");
 
             //
             // Create connection

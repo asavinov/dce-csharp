@@ -10,7 +10,7 @@ using Com.Query;
 namespace Com.Model
 {
     /// <summary>
-    /// Primitive dimension. 
+    /// Primitive dimension.
     /// 
     /// One array of type T stores elements in their original order without sorting. 
     /// Second array stores indexes (offsets) of elements in the first array in sorted order.
@@ -20,8 +20,8 @@ namespace Com.Model
         private T[] _cells; // Each cell contains a T value in arbitrary original order
         private int[] _offsets; // Each cell contains an offset to an element in cells in ascending or descending order
 
-        private int NullCount; // Nulls are stored in the beginning of array of indexes (that is, treated as absolute minimum)
-        private T NullValue; // It is what is written in cell instead of null if null is not supported by the type. If null is supported then null is stored (instead, we can use NullValue=null).
+        private int _nullCount; // Nulls are stored in the beginning of array of indexes (that is, treated as absolute minimum)
+        private T _nullValue; // It is what is written in cell instead of null if null is not supported by the type. If null is supported then null is stored (instead, we can use _nullValue=null).
 
         // Memory management parameters for instances (used by extensions and in future will be removed from this class).
         protected static int initialSize = 1024 * 8; // In elements
@@ -72,7 +72,7 @@ namespace Com.Model
                 if (value == Length) return;
 
                 // Ensure that there is enough memory
-                if (allocatedSize < value) // Not enough storage for the new element
+                if (value > allocatedSize) // Not enough storage for the new element
                 {
                     allocatedSize += incrementSize * ((value - allocatedSize) / incrementSize + 1);
                     System.Array.Resize<T>(ref _cells, allocatedSize); // Resize the storage for values
@@ -97,9 +97,9 @@ namespace Com.Model
         {
             // For non-nullable storage, use the index to find if this cell is in the null interval of the index (beginning)
             int pos = FindIndex(offset);
-            return pos < NullCount;
+            return pos < _nullCount;
             // For nullable storage: simply check the value (actually this method is not needed for nullable storage because the user can compare the values returned from GetValue)
-            // return EqualityComparer<T>.Default.Equals(NullValue, _cells[offset]);
+            // return EqualityComparer<T>.Default.Equals(_nullValue, _cells[offset]);
         }
 
         public override object GetValue(Offset offset)
@@ -116,17 +116,17 @@ namespace Com.Model
 
             if (value == null)
             {
-                val = NullValue;
-                interval = new Tuple<int,int>(0, NullCount);
+                val = _nullValue;
+                interval = new Tuple<int,int>(0, _nullCount);
 
-                if (oldPos >= NullCount) NullCount++; // If old value is not null, then increase the number of nulls
+                if (oldPos >= _nullCount) _nullCount++; // If old value is not null, then increase the number of nulls
             }
             else
             {
                 val = ObjectToGeneric(value);
                 interval = FindIndexes(val);
 
-                if (oldPos < NullCount) NullCount--; // If old value is null, then decrease the number of nulls
+                if (oldPos < _nullCount) _nullCount--; // If old value is null, then decrease the number of nulls
             }
 
             // Find sorted position within this value interval (by increasing offsets)
@@ -275,9 +275,9 @@ namespace Com.Model
 
             if (value == null)
             {
-                val = NullValue;
-                interval = new Tuple<int, int>(0, NullCount);
-                NullCount++;
+                val = _nullValue;
+                interval = new Tuple<int, int>(0, _nullCount);
+                _nullCount++;
             }
             else
             {
@@ -333,7 +333,23 @@ namespace Com.Model
 
         #region Index methods
 
-        private Tuple<int,int> FindIndexes(T value)
+        private int FindIndex(int offset) // Find an index for an offset of a cell (rather than a value in this cell)
+        {
+            // A value can be stored at many different offsets while one offset has always one index and therefore a single valueis returned rather than an interval.
+
+            // First, we try to find it in the null interval
+            int pos = Array.BinarySearch(_offsets, 0, _nullCount, offset);
+            if (pos >= 0 && pos < _nullCount) return pos; // It is null
+            
+            // Second, try to find it as a value (find the value area and then find the offset in the value interval)
+            Tuple<int,int> indexes = FindIndexes(_cells[offset]);
+            pos = Array.BinarySearch(_offsets, indexes.Item1, indexes.Item2 - indexes.Item1, offset);
+            if (pos >= indexes.Item1 && pos < indexes.Item2) return pos;
+
+            return -1; // Not found (error - all valid offset must be present in the index)
+        }
+
+        private Tuple<int, int> FindIndexes(T value)
         {
             // Returns an interval of indexes which all reference the specified value
             // min is inclusive and max is exclusive
@@ -348,16 +364,17 @@ namespace Com.Model
             //mid = Array.BinarySearch(_offsets, 0, _count, value, comparer);
 
             // Binary search in a sorted array with ascending values: http://stackoverflow.com/questions/8067643/binary-search-of-a-sorted-array
-            int mid = NullCount, first = NullCount, last = Length;
+            int mid = _nullCount, first = _nullCount, last = _length;
             while (first < last)
             {
                 mid = (first + last) / 2;
 
-                if (Comparer<T>.Default.Compare(value, _cells[_offsets[mid]]) > 0) // Less: target > mid
+                int comp = Comparer<T>.Default.Compare(value, _cells[_offsets[mid]]);
+                if (comp > 0) // Less: target > mid
                 {
-                    first = mid+1;
+                    first = mid + 1;
                 }
-                else if (Comparer<T>.Default.Compare(value, _cells[_offsets[mid]]) < 0) // Greater: target < mynumbers[mid]
+                else if (comp < 0) // Greater: target < mynumbers[mid]
                 {
                     last = mid;
                 }
@@ -374,28 +391,12 @@ namespace Com.Model
 
             // One element is found. Now find min and max positions for the interval of equal values.
             // Optimization: such search is not efficient - it is simple scan. One option would be use binary serach within interval [first, mid] and [mid, last]
-            for (first = mid; first >= NullCount && EqualityComparer<T>.Default.Equals(value, _cells[_offsets[first]]); first--)
+            for (first = mid; first >= _nullCount && EqualityComparer<T>.Default.Equals(value, _cells[_offsets[first]]); first--)
                 ;
-            for (last = mid; last < Length && EqualityComparer<T>.Default.Equals(value, _cells[_offsets[last]]); last++) 
+            for (last = mid; last < _length && EqualityComparer<T>.Default.Equals(value, _cells[_offsets[last]]); last++)
                 ;
 
-            return new Tuple<int, int>(first+1, last);
-        }
-
-        private int FindIndex(int offset) // Find an index for an offset of a cell (rather than a value in this cell)
-        {
-            // A value can be stored at many different offsets while one offset has always one index and therefore a single valueis returned rather than an interval.
-
-            // First, we try to find it in the null interval
-            int pos = Array.BinarySearch(_offsets, 0, NullCount, offset);
-            if (pos >= 0 && pos < NullCount) return pos; // It is null
-            
-            // Second, try to find it as a value (find the value area and then find the offset in the value interval)
-            Tuple<int,int> indexes = FindIndexes(_cells[offset]);
-            pos = Array.BinarySearch(_offsets, indexes.Item1, indexes.Item2 - indexes.Item1, offset);
-            if (pos >= indexes.Item1 && pos < indexes.Item2) return pos;
-
-            return -1; // Not found (error - all valid offset must be present in the index)
+            return new Tuple<int, int>(first + 1, last);
         }
 
         private void FullSort()
@@ -406,12 +407,12 @@ namespace Com.Model
             T[] tempCells = (T[])_cells.Clone();
 
             // Reset offsets befroe sorting (so it will be completely new sort)
-            for (int i = 0; i < Length; i++)
+            for (int i = 0; i < _length; i++)
             {
                 _offsets[i] = i; // Now each offset represents (references) an element of the function (from domain) but they are unsorted
             }
 
-            Array.Sort<T, int>(tempCells, _offsets, 0, Length);
+            Array.Sort<T, int>(tempCells, _offsets, 0, _length);
             // Now offsets are sorted and temp array can be deleted
         }
 
@@ -476,7 +477,7 @@ namespace Com.Model
 
             if (value == null)
             {
-                indexes = new Tuple<int, int>(0, NullCount);
+                indexes = new Tuple<int, int>(0, _nullCount);
             }
             else
             {
@@ -610,7 +611,7 @@ namespace Com.Model
             _cells = new T[allocatedSize];
             _offsets = new int[allocatedSize];
 
-            NullCount = Length;
+            _nullCount = Length;
 
             if (IsInstantiable)
             {
@@ -621,31 +622,31 @@ namespace Com.Model
             Type type = typeof(T);
             if (type == typeof(int))
             {
-                NullValue = ObjectToGeneric(int.MinValue);
+                _nullValue = ObjectToGeneric(int.MinValue);
                 Aggregator = new IntAggregator() as IAggregator<T>;
             }
             else if (type == typeof(double))
             {
-                NullValue = ObjectToGeneric(double.NaN);
+                _nullValue = ObjectToGeneric(double.NaN);
                 Aggregator = new DoubleAggregator() as IAggregator<T>;
             }
             else if (type == typeof(decimal))
             {
-                NullValue = ObjectToGeneric(decimal.MinValue);
+                _nullValue = ObjectToGeneric(decimal.MinValue);
                 Aggregator = new DecimalAggregator() as IAggregator<T>;
             }
             else if (!type.IsValueType) // Reference type
             {
-                NullValue = default(T);
+                _nullValue = default(T);
             }
             else if (Nullable.GetUnderlyingType(type) != null) // Nullable<T> (like int?)
             {
-                NullValue = default(T);
+                _nullValue = default(T);
             }
             else
             {
                 // Check if type is nullable: http://stackoverflow.com/questions/374651/how-to-check-if-an-object-is-nullable
-                NullValue = default(T);
+                _nullValue = default(T);
             }
         }
 

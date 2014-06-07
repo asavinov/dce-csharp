@@ -89,17 +89,17 @@ namespace Com.Model
     {
         string N { get; set; }
 
+        bool IsKey { get; }
+        bool IsParent { get; } // Changing this property may influence storage type
+
+        CsTable Input { get; }
+        CsTable Output { get; }
+
         void Include(); // Add to schema
         void Exclude(); // Remove from schema
 
-        //
-        // Properties 
-        //
-        CsTable Input { get; }
-        CsTable Output { get; } 
 
-        bool IsKey { get; }
-        bool IsParent { get; } // Changing this property may influence storage type
+
 
         //
         // Dependencies and evaluation
@@ -118,6 +118,19 @@ namespace Com.Model
 
     }
 
+    // Let us assume that the user wants to write a custom evaluation/calcuation procedure in native language rather than as expression. 
+    // What interface it has to implement and how to integrate this class into the CsColumn object. 
+    // If the user provides an expression then this expression is then used to generate this same interface via interpreter or even source code translation.
+    // This interface is used only by the evaluation procedure which retrieves and then calls methods like Compute(this), Compute(input, output) in a loop. 
+    // Thus the evaluation procedure uses storage object to store results and evaluation object to compute values. 
+    // Note however that the (user) evaluation object needs direct access to storage objects of other columns (so may be it can also access its own storage object), for reading data and computing its own data.
+    // It can get storage objects from the set, from its own column, by resovling names or directly from outside. These storage objects are stored in fields of the class and used for access in the formula. 
+    // This evaluation procedure retrieves this instance and uses it. 
+    // But the class (or instance) can be provided from diffent sources: generated from expression, provided in source form, provided in a library. 
+    // { expression, source code, library, ...} -> Instance of evaluator (uses storage references to other columns)) -> Is used by the evaluator in its loops
+
+    // This class is used only by the column evaluation procedure. 
+    // An instance is requested each time for evaluation and is somehow produced from the column formula representation format: expression, source code, user class, library
     public interface CsFormula // How a function is represented and evaluated. It uses API of the column storage like read, write (typed or untyped).
     {
         void Initialize(); // Initialize the value. Is called one time before the function evaluation. Important for aggregation.
@@ -126,10 +139,11 @@ namespace Com.Model
         void Finish(); // Is called one time after the function evaluation. Can be important for aggregation, say, devide the accumulated measure on the accumulated count. 
     }
 
+    
     public interface CsColumnData // It is interface for managing function data as a mapping to output values (implemented by some kind of storage manager). Input always offset. Output type is a parameter.
     {
         DataType CsType { get; } // Check the output value type. Can be needed to choose appropriate typed methods.
-        Offset Length { get; set; }
+        Offset Size { get; set; }
 
         //
         // Untyped methods. Default conversion will be done according to the function type.
@@ -137,8 +151,8 @@ namespace Com.Model
         bool IsNullValue(Offset input);
         object ReadValue(Offset input);
         void WriteValue(Offset input, object value);
-        void WriteValue(object value); // Convenience, performance method: set all outputs to the specified value
-        void InsertValue(Offset input, object value); // Changle length. Do we need this?
+        //void WriteValue(object value); // Convenience, performance method: set all outputs to the specified value
+        //void InsertValue(Offset input, object value); // Changle length. Do we need this?
 
         //
         // Typed methods for each primitive type like GetInteger(). No NULL management since we use real values including NULL.

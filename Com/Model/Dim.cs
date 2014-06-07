@@ -226,7 +226,7 @@ namespace Com.Model
 
         public virtual bool IsNull(Offset offset) { return false; } // Check if it is null
 
-        public virtual object GetValue(Offset offset) { return null; } // Returned what is really stored without checking if it is null (it should return NullValue if it is really null). Use IsNull to check if the value is null.
+        public virtual object GetValue(Offset offset) { return null; } // Returned what is really stored without checking if it is null (it should return _nullValue if it is really null). Use IsNull to check if the value is null.
 
         public virtual void SetValue(Offset offset, object value) { }
 
@@ -239,17 +239,20 @@ namespace Com.Model
         /// When evaluated, it computes a value of the greater set for the identity value of the lesser set.
         /// </summary>
         public Expression SelectExpression { get; set; }
+
         /// <summary>
         /// One particular type of function specification used for defining mapped dimensions, import specification, copy specification etc.
         /// It defines greater set (nested) tuple in terms of the lesser set (nested) tuple. 
         /// The function computation procedure can transoform this mapping to a normal expression for evaluation in a loop or it can translate it to a join or other target engine formats.
         /// </summary>
         public Mapping Mapping { get; set; }
+
         public Expression WhereExpression { get; set; } // It describes the domain of the function or where the function returns null independent of other definitions
 
         // Source (user, non-executable) formula for computing this function consisting of value-operations
         public AstNode FormulaAst { get; set; } // Analogous to SelectExpression
         // Fact set is a set for looping through and providing input for measure and group functions. By default, it is this (lesser) set.
+
         public Set LoopSet { get; set; } // Dependency on a lesser set and lesser functions
         // It is a translated, optimized and directly executable code (value operatinos) for computing output values given an input value (input is fact set which by default is this set)
         public ValueOp MeasureCode { get; set; } // Input=FactSet. Output as declared by this function output (generaly, as consumed by the accumulator operator). By default, it is an expression for computing this function output given this set input (so normal evaluation). In the simplest case, it is a single call of an existing function.
