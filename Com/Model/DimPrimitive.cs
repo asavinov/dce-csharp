@@ -29,7 +29,20 @@ namespace Com.Model
 
         protected int allocatedSize; // How many elements (maximum) fit into the allocated memory
 
+        protected bool _autoindex = true; // If true then index will be automatically maintained. If false then indexing has to be done manually.
+
         protected static IAggregator<T> Aggregator;
+        public static T Aggregate<T, TProcessor>(T[] values, string function, TProcessor proc) where TProcessor : IAggregator<T>
+        {
+            switch (function)
+            {
+                case "SUM": return proc.Sum(values);
+                case "AVG": return proc.Avg(values);
+                default: throw new Exception("There is no such aggregation operation.");
+            }
+        }
+
+        #region Data methods. Untyped.
 
         public override Type SystemType
         {
@@ -69,7 +82,7 @@ namespace Com.Model
             }
             protected set
             {
-                if (value == Length) return;
+                if (value == _length) return;
 
                 // Ensure that there is enough memory
                 if (value > allocatedSize) // Not enough storage for the new element
@@ -80,37 +93,35 @@ namespace Com.Model
                 }
 
                 // Update data and index in the case of increase (append to last) and decrease (delete last)
-                if (value > Length)
+                if (value > _length)
                 {
-                    while (value > Length) Append(null); // OPTIMIZE: Instead of appending individual values, write a method for appending an interval of offset (with default value)
+                    while (value > _length) Append(null); // OPTIMIZE: Instead of appending individual values, write a method for appending an interval of offset (with default value)
                 }
-                else if (value < Length)
+                else if (value < _length)
                 {
                     // TODO: remove last elements
                 }
             }
         }
 
-        #region Manipulate function (slow). Inherited object-based interface. Not generic. 
-
-        public override bool IsNull(Offset offset)
+        public override bool IsNull(Offset input)
         {
             // For non-nullable storage, use the index to find if this cell is in the null interval of the index (beginning)
-            int pos = FindIndex(offset);
+            int pos = FindIndex(input);
             return pos < _nullCount;
             // For nullable storage: simply check the value (actually this method is not needed for nullable storage because the user can compare the values returned from GetValue)
             // return EqualityComparer<T>.Default.Equals(_nullValue, _cells[offset]);
         }
 
-        public override object GetValue(Offset offset)
+        public override object GetValue(Offset input)
         {
-            return _cells[offset]; // We do not check the range of offset - the caller must guarantee its validity
+            return _cells[input]; // We do not check the range of offset - the caller must guarantee its validity
         }
 
-        public override void SetValue(Offset offset, object value) // Replace an existing value with the new value and update the index. 
+        public override void SetValue(Offset input, object value) // Replace an existing value with the new value and update the index. 
         {
             T val = default(T);
-            int oldPos = FindIndex(offset); // Old sorted position of the cell we are going to change
+            int oldPos = FindIndex(input); // Old sorted position of the cell we are going to change
             Tuple<int,int> interval;
             int pos = -1; // New sorted position for this cell
 
@@ -130,45 +141,21 @@ namespace Com.Model
             }
 
             // Find sorted position within this value interval (by increasing offsets)
-            pos = Array.BinarySearch(_offsets, interval.Item1, interval.Item2 - interval.Item1, offset);
+            pos = Array.BinarySearch(_offsets, interval.Item1, interval.Item2 - interval.Item1, input);
             if (pos < 0) pos = ~pos;
 
             if (pos > oldPos)
             {
                 Array.Copy(_offsets, oldPos + 1, _offsets, oldPos, (pos - 1) - oldPos); // Shift backward by overwriting old
-                _offsets[pos - 1] = offset;
+                _offsets[pos - 1] = input;
             }
             else if (pos < oldPos)
             {
                 Array.Copy(_offsets, pos, _offsets, pos + 1, oldPos - pos); // Shift forward by overwriting old pos
-                _offsets[pos] = offset;
+                _offsets[pos] = input;
             }
 
-            _cells[offset] = val;
-        }
-
-        public override void UpdateValue(Offset offset, object value, ValueOp updater) // Change the existing value by applying the specified operation. 
-        {
-            if(updater == null) 
-            { 
-                SetValue(offset, value);
-                return;
-            }
-
-            if (updater.OpType == ValueOpType.CALL_PROC)
-            {
-                double currentValue = Convert.ToDouble(GetValue(offset));
-                double doubleValue = Convert.ToDouble(value);
-                switch (updater.Name)
-                {
-                    case "+": { currentValue += doubleValue; break; }
-                    // TODO: Other operations.
-                    // OPTIMIZATION: It is very inefficient. We have to think about direct implementations for each primitive type resolved before the main loop
-                    // It can a special procedure for each primitive type which makes takes as a parameter group-measure-count-this functions but is implemented for one primitive type.
-                    // In this case, we always assume that group-measure functions are already pre-computed and then aggregation is reduced to such a procedure where the loop is implemented for each type directly on the array (cell) using arithmetic operatinos
-                }
-                SetValue(offset, currentValue);
-            }
+            _cells[input] = val;
         }
 
         public override void NullifyValues() // Reset values and index to initial state (all nulls)
@@ -176,93 +163,10 @@ namespace Com.Model
             throw new NotImplementedException();
         }
 
-        public override void Eval() // Compute the output values of this function according to the definition and store them for direct access
-        {
-            // TODO: Turn off indexing (sorting) and index after populating all values
-
-            bool isAggregated = false;
-            if (LoopSet != null && LoopSet != LesserSet)
-            {
-                Debug.Assert(LoopSet.IsLesser(LesserSet), "Wrong use: the fact set must be less than this set for aggregation.");
-                isAggregated = true;
-            }
-
-            if (isAggregated)
-            {
-                for (Offset offset = 0; offset < LoopSet.Length; offset++) // Generate all input elements (surrogates)
-                {
-                    // TODO: Set 'this' parameter in the context (should be resolved in advance)
-                    MeasureCode.Eval(); // Evaluate the expression (what if it has multiple statements and where is its context?)
-
-                    // TODO: Set 'this' parameter in the context (should be resolved in advance)
-                    GroupCode.Eval(); // Evalute the group
-
-                    Offset group = (Offset)GroupCode.Value;
-                    UpdateValue(group, MeasureCode.Value, AccuCode); // Update the final result
-
-                    // TODO: Increment group counts function
-                }
-            }
-            else
-            {
-                for (Offset offset = 0; offset < LesserSet.Length; offset++) // Generate all input elements (surrogates)
-                {
-                    // TODO: Set 'this' parameter in the context (should be resolved in advance)
-                    MeasureCode.Eval(); // Evaluate the expression (what if it has multiple statements and where is its context?)
-                    SetValue(offset, MeasureCode.Value); // Store the final result
-                }
-            }
-
-            // TODO: Turn on indexing (sorting) and index the whole function
-        }
-
-        public override void ComputeValues()
-        {
-            if (Mapping != null)
-            {
-                Debug.Assert(Mapping.SourceSet == LesserSet && Mapping.TargetSet == GreaterSet, "Wrong use: the mapping source and target sets have to corresond to the dimension sets.");
-
-                // Build a function from the mapping for populating a mapped dimension (type change or new mapped dimension)
-                Expression tupleExpr = Mapping.GetTargetExpression(this);
-
-                var funcExpr = ExpressionScope.CreateFunctionDeclaration(Name, LesserSet.Name, GreaterSet.Name);
-                funcExpr.Statements[0].Input = tupleExpr; // Return statement
-                funcExpr.ResolveFunction(LesserSet.Top);
-                funcExpr.Resolve();
-
-                SelectExpression = funcExpr;
-            }
-
-            if (SelectExpression != null) // Function definition the values of which have to be computed and stored
-            {
-                Debug.Assert(SelectExpression.Operation == Operation.FUNCTION, "Wrong use: derived function has to be FUNCTION expression.");
-                Debug.Assert(SelectExpression.Input != null, "Wrong use: derived function must have Input representing this argument.");
-                Debug.Assert(SelectExpression.Input.Operation == Operation.PARAMETER, "Wrong use: derived function Input has to be of PARAMETER type.");
-                Debug.Assert(SelectExpression.Input.Dimension != null, "Wrong use: derived function Input has to reference a valid variable.");
-
-                for (Offset offset = 0; offset < LesserSet.Length; offset++) // Compute the output function value for each input value (offset)
-                {
-//                    SelectExpression.SetOutput(Operation.PARAMETER, offset);
-                    SelectExpression.Input.Dimension.Value = offset; // Initialize 'this'
-                    SelectExpression.Evaluate(); // Compute
-                    SetValue(offset, SelectExpression.Output); // Store the final result
-/*
-                    object val = null;
-                    if (SelectExpression.Operation == Operation.TUPLE)
-                    {
-                        SelectExpression.OutputSet.Find(SelectExpression);
-                    }
-                    val = SelectExpression.Output;
-                    SetValue(offset, val); // Store the final result
-*/
-                }
-            }
-        }
-
         public override void Append(object value)
         {
             // Ensure that there is enough memory
-            if (allocatedSize == Length) // Not enough storage for the new element (we need Length+1)
+            if (_length == allocatedSize) // Not enough storage for the new element (we need _length+1)
             {
                 allocatedSize += incrementSize;
                 System.Array.Resize<T>(ref _cells, allocatedSize); // Resize the storage for values
@@ -287,16 +191,40 @@ namespace Com.Model
 
             pos = interval.Item2; // New value has the largest offset and hence is inserted after the end of the interval of values
 
-            Array.Copy(_offsets, pos, _offsets, pos + 1, Length - pos); // Free an index element by shifting other elements forward
+            Array.Copy(_offsets, pos, _offsets, pos + 1, _length - pos); // Free an index element by shifting other elements forward
 
-            _cells[Length] = val;
-            _offsets[pos] = Length;
+            _cells[_length] = val;
+            _offsets[pos] = _length;
             _length = _length + 1;
         }
 
-        public override void Insert(Offset offset, object value)
+        public override void Insert(Offset input, object value)
         {
             throw new NotImplementedException();
+        }
+
+        public override void UpdateValue(Offset input, object value, ValueOp updater) // Change the existing value by applying the specified operation. 
+        {
+            if (updater == null)
+            {
+                SetValue(input, value);
+                return;
+            }
+
+            if (updater.OpType == ValueOpType.CALL_PROC)
+            {
+                double currentValue = Convert.ToDouble(GetValue(input));
+                double doubleValue = Convert.ToDouble(value);
+                switch (updater.Name)
+                {
+                    case "+": { currentValue += doubleValue; break; }
+                    // TODO: Other operations.
+                    // OPTIMIZATION: It is very inefficient. We have to think about direct implementations for each primitive type resolved before the main loop
+                    // It can a special procedure for each primitive type which makes takes as a parameter group-measure-count-this functions but is implemented for one primitive type.
+                    // In this case, we always assume that group-measure functions are already pre-computed and then aggregation is reduced to such a procedure where the loop is implemented for each type directly on the array (cell) using arithmetic operatinos
+                }
+                SetValue(input, currentValue);
+            }
         }
 
         public override object Aggregate(object values, string function) // It is actually static but we cannot use static virtual methods in C#
@@ -329,21 +257,17 @@ namespace Com.Model
             }
         }
 
-        #endregion
-
-        #region Index methods
-
-        private int FindIndex(int offset) // Find an index for an offset of a cell (rather than a value in this cell)
+        private int FindIndex(int input) // Find an index for an offset of a cell (rather than a value in this cell)
         {
             // A value can be stored at many different offsets while one offset has always one index and therefore a single valueis returned rather than an interval.
 
             // First, we try to find it in the null interval
-            int pos = Array.BinarySearch(_offsets, 0, _nullCount, offset);
+            int pos = Array.BinarySearch(_offsets, 0, _nullCount, input);
             if (pos >= 0 && pos < _nullCount) return pos; // It is null
             
             // Second, try to find it as a value (find the value area and then find the offset in the value interval)
-            Tuple<int,int> indexes = FindIndexes(_cells[offset]);
-            pos = Array.BinarySearch(_offsets, indexes.Item1, indexes.Item2 - indexes.Item1, offset);
+            Tuple<int,int> indexes = FindIndexes(_cells[input]);
+            pos = Array.BinarySearch(_offsets, indexes.Item1, indexes.Item2 - indexes.Item1, input);
             if (pos >= indexes.Item1 && pos < indexes.Item2) return pos;
 
             return -1; // Not found (error - all valid offset must be present in the index)
@@ -423,15 +347,6 @@ namespace Com.Model
             // http://www.csharp-examples.net/sort-array/
             Comparer<T> comparer = Comparer<T>.Default;
             Array.Sort(_offsets, /* 0, _count, */ (a, b) => comparer.Compare(_cells[a], _cells[b]));
-        }
-
-        #endregion
-
-        #region Project and de-project
-
-        public T project(int offset)
-        {
-            return _cells[offset];
         }
 
         public T[] project(int[] offsets)
@@ -525,18 +440,6 @@ namespace Com.Model
             return result;
         }
 
-        public static T Aggregate<T, TProcessor>(T[] values, string function, TProcessor proc) where TProcessor : IAggregator<T>
-        {
-            switch (function)
-            {
-                case "SUM": return proc.Sum(values);
-                case "AVG": return proc.Avg(values);
-                default: throw new Exception("There is no such aggregation operation.");
-            }
-        }
-
-        #endregion
-
         protected T ObjectToGeneric(object value)
         {
             // You can use Convert.ChangeType method, if the types you use implement IConvertible (all primitive types do):
@@ -601,12 +504,101 @@ namespace Com.Model
             // Array.ConvertAll<object, T>(values, Convert.ToChar);
         }
 
+        #endregion
+
+        #region Formula methods
+
+        public override void Eval() // Compute the output values of this function according to the definition and store them for direct access
+        {
+            // TODO: Turn off indexing (sorting) and index after populating all values
+
+            bool isAggregated = false;
+            if (LoopSet != null && LoopSet != LesserSet)
+            {
+                Debug.Assert(LoopSet.IsLesser(LesserSet), "Wrong use: the fact set must be less than this set for aggregation.");
+                isAggregated = true;
+            }
+
+            if (isAggregated)
+            {
+                for (Offset offset = 0; offset < LoopSet.Length; offset++) // Generate all input elements (surrogates)
+                {
+                    // TODO: Set 'this' parameter in the context (should be resolved in advance)
+                    MeasureCode.Eval(); // Evaluate the expression (what if it has multiple statements and where is its context?)
+
+                    // TODO: Set 'this' parameter in the context (should be resolved in advance)
+                    GroupCode.Eval(); // Evalute the group
+
+                    Offset group = (Offset)GroupCode.Value;
+                    UpdateValue(group, MeasureCode.Value, AccuCode); // Update the final result
+
+                    // TODO: Increment group counts function
+                }
+            }
+            else
+            {
+                for (Offset offset = 0; offset < LesserSet.Length; offset++) // Generate all input elements (surrogates)
+                {
+                    // TODO: Set 'this' parameter in the context (should be resolved in advance)
+                    MeasureCode.Eval(); // Evaluate the expression (what if it has multiple statements and where is its context?)
+                    SetValue(offset, MeasureCode.Value); // Store the final result
+                }
+            }
+
+            // TODO: Turn on indexing (sorting) and index the whole function
+        }
+
+        public override void ComputeValues()
+        {
+            if (Mapping != null)
+            {
+                Debug.Assert(Mapping.SourceSet == LesserSet && Mapping.TargetSet == GreaterSet, "Wrong use: the mapping source and target sets have to corresond to the dimension sets.");
+
+                // Build a function from the mapping for populating a mapped dimension (type change or new mapped dimension)
+                Expression tupleExpr = Mapping.GetTargetExpression(this);
+
+                var funcExpr = ExpressionScope.CreateFunctionDeclaration(Name, LesserSet.Name, GreaterSet.Name);
+                funcExpr.Statements[0].Input = tupleExpr; // Return statement
+                funcExpr.ResolveFunction(LesserSet.Top);
+                funcExpr.Resolve();
+
+                SelectExpression = funcExpr;
+            }
+
+            if (SelectExpression != null) // Function definition the values of which have to be computed and stored
+            {
+                Debug.Assert(SelectExpression.Operation == Operation.FUNCTION, "Wrong use: derived function has to be FUNCTION expression.");
+                Debug.Assert(SelectExpression.Input != null, "Wrong use: derived function must have Input representing this argument.");
+                Debug.Assert(SelectExpression.Input.Operation == Operation.PARAMETER, "Wrong use: derived function Input has to be of PARAMETER type.");
+                Debug.Assert(SelectExpression.Input.Dimension != null, "Wrong use: derived function Input has to reference a valid variable.");
+
+                for (Offset offset = 0; offset < LesserSet.Length; offset++) // Compute the output function value for each input value (offset)
+                {
+                    //                    SelectExpression.SetOutput(Operation.PARAMETER, offset);
+                    SelectExpression.Input.Dimension.Value = offset; // Initialize 'this'
+                    SelectExpression.Evaluate(); // Compute
+                    SetValue(offset, SelectExpression.Output); // Store the final result
+                    /*
+                                        object val = null;
+                                        if (SelectExpression.Operation == Operation.TUPLE)
+                                        {
+                                            SelectExpression.OutputSet.Find(SelectExpression);
+                                        }
+                                        val = SelectExpression.Output;
+                                        SetValue(offset, val); // Store the final result
+                    */
+                }
+            }
+        }
+
+        #endregion
+
         public DimPrimitive(string name, Set lesserSet, Set greaterSet)
             : base(name, lesserSet, greaterSet)
         {
             // TODO: Check if output (greater) set is of correct type
 
-            Length = 0;
+            _length = 0;
             allocatedSize = initialSize;
             _cells = new T[allocatedSize];
             _offsets = new int[allocatedSize];
@@ -619,6 +611,7 @@ namespace Com.Model
             }
 
             // Initialize what representative value will be used instead of nulls
+            _nullValue = default(T); // Check if type is nullable: http://stackoverflow.com/questions/374651/how-to-check-if-an-object-is-nullable
             Type type = typeof(T);
             if (type == typeof(int))
             {
@@ -641,11 +634,6 @@ namespace Com.Model
             }
             else if (Nullable.GetUnderlyingType(type) != null) // Nullable<T> (like int?)
             {
-                _nullValue = default(T);
-            }
-            else
-            {
-                // Check if type is nullable: http://stackoverflow.com/questions/374651/how-to-check-if-an-object-is-nullable
                 _nullValue = default(T);
             }
         }

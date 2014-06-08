@@ -40,28 +40,6 @@ namespace Com.Model
         public string RelationalFkName { get; set; } // For dimensions, which were created from FK, it stores the original FK name
         public string RelationalPkName { get; set; } // PK this column belongs to according to the schema
 
-        public virtual Type SystemType
-        {
-            get { return GreaterSet != null ? GreaterSet.SystemType : null; }
-        }
-
-        public virtual int Width // Width of instances. It depends on the implementation (and might not be the same for all dimensions of the greater set). 
-        {
-            get { return GreaterSet != null ? GreaterSet.Width : 0; }
-        }
-
-        public virtual Offset Length // How many instances. 
-        {
-            get // Dimensions to not have their own instandes and this number if the number of elements in the lesser set (the same for all dimensions of the set).
-            {
-                return LesserSet != null ? LesserSet.Length : 0;
-            }
-            protected set // Setter is not for public API - only a whole set length can be changed. This setter is used to reallocate.
-            { 
-                // Do nothing because this implementation does not manage elements but it can be overriden in sub-classes
-            } 
-        } 
-
         /// <summary>
         /// Whether this function is has a primitive range (greater set). 
         /// </summary>
@@ -220,7 +198,30 @@ namespace Com.Model
 
         #endregion
 
-        #region Function methods (abstract)
+        #region Data methods (abstract)
+
+        public virtual Type SystemType
+        {
+            get { return GreaterSet != null ? GreaterSet.SystemType : null; }
+        }
+
+        public virtual int Width // Width of instances. It depends on the implementation (and might not be the same for all dimensions of the greater set). 
+        {
+            get { return GreaterSet != null ? GreaterSet.Width : 0; }
+        }
+
+        public virtual Offset Length // How many instances. 
+        {
+            get // Dimensions to not have their own instandes and this number if the number of elements in the lesser set (the same for all dimensions of the set).
+            {
+                return LesserSet != null ? LesserSet.Length : 0;
+            }
+            protected set // Setter is not for public API - only a whole set length can be changed. This setter is used to reallocate.
+            {
+                // Do nothing because this implementation does not manage elements but it can be overriden in sub-classes
+            }
+        } 
+
 
         public object Value { get; set; } // Static value (of the variable) which does not depend on the instance
 
@@ -230,9 +231,23 @@ namespace Com.Model
 
         public virtual void SetValue(Offset offset, object value) { }
 
+        public virtual void NullifyValues() { } // Note that import dimension implement it by removing instances.
+
+        public virtual void Append(object value) { } // Increment length and set the value (or insert last)
+
+        public virtual void Insert(Offset offset, object value) { }
+
         public virtual void UpdateValue(Offset offset, object value, ValueOp updater) { }
 
-        public virtual void NullifyValues() { } // Note that import dimension implement it by removing instances.
+        public virtual object Aggregate(object values, string function) { return null; } // It is actually static but we cannot use static virtual methods in C#
+
+        public virtual object ProjectValues(Offset[] offsets) { return null; }
+
+        public virtual Offset[] DeprojectValue(object value) { return null; } // Accepts both a single object or an array. Do we need it as public?
+
+        #endregion
+
+        #region Formula and evaluation
 
         /// <summary>
         /// It is a formula (expression) defining a function for this dimension. 
@@ -264,21 +279,9 @@ namespace Com.Model
 
         public List<Dim> Dependencies { get; set; } // Other functions this function directly depends upon. Computed from the definition of this function.
         // Find and store all outputs of this function by evaluating (executing) its definition in a loop for all input elements of the fact set (not necessarily this set)
-        public virtual void Eval() { return; } 
-
+        public virtual void Eval() { return; }
 
         public virtual void ComputeValues() { return; } // Set output values of the function by evaluating an expression (or using other means)
-
-        public virtual void Append(object value) { } // Increment length and set the value (or insert last)
-
-        public virtual void Insert(Offset offset, object value) { }
-
-
-        public virtual object Aggregate(object values, string function) { return null; } // It is actually static but we cannot use static virtual methods in C#
-
-        public virtual object ProjectValues(Offset[] offsets) { return null; }
-
-        public virtual Offset[] DeprojectValue(object value) { return null; } // Accepts both a single object or an array. Do we need it as public?
 
         #endregion
 
