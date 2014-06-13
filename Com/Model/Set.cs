@@ -20,17 +20,12 @@ namespace Com.Model
     /// </summary>
     public class Set : INotifyCollectionChanged, INotifyPropertyChanged, CsTable
     {
-        #region Properties
-
         /// <summary>
         /// Unique set id (in this database) . In C++, this Id field would be used as a reference filed
         /// </summary>
         public Guid Id { get; private set; }
 
-        /// <summary>
-        /// A set name. Note that in the general case a set has an associated structure (concept, type) which may have its own name. 
-        /// </summary>
-        public string Name { get; set; }
+        #region Properties - simplify, clean, remove, reduce to standard interface
 
         /// <summary>
         /// Additional names specific to the relational model and maybe other PK-FK-based models.
@@ -75,57 +70,29 @@ namespace Com.Model
 
         #endregion
 
-        #region Simple dimensions
+        #region CsTable interface
 
-        public List<Dim> SuperDims { get; private set; } // Up arrows
-        public List<Dim> SubDims { get; private set; }
-        public List<Dim> GreaterDims { get; private set; } // Up arrows
-        public List<Dim> LesserDims { get; private set; }
+        /// <summary>
+        /// A set name. Note that in the general case a set has an associated structure (concept, type) which may have its own name. 
+        /// </summary>
+        public string Name { get; set; }
 
-        #region Inclusion. Super.
+        public CsDataType DataType { get; protected set; }
 
-        public DimSuper SuperDim
+        //
+        // Outputs
+        //
+
+        public List<CsColumn> GreaterDims { get; private set; } // Outgoing up arrows. Outputs
+        public CsColumn SuperDim
         {
             get
             {
-                Debug.Assert(SuperDims != null && SuperDims.Count < 2, "Wrong use: more than one super dimension.");
-                return SuperDims.Count == 0 ? null : (DimSuper)SuperDims[0];
-            }
-            set
-            {
-                DimSuper dim = SuperDim;
-                if (value == null) // Remove the current super-dimension
-                {
-                    if (dim != null)
-                    {
-                        dim.Remove();
-                    }
-                    return;
-                }
-
-                if (dim != null) // Remove the current super-dimension if present before setting a new one (using this same method)
-                {
-                    SuperDim = null;
-                }
-
-                Debug.Assert(value.LesserSet == this && value.GreaterSet != null, "Wrong use: dimension greater and lesser sets must be set correctly.");
-
-                if (false) // TODO: Check value.GreaterSet for validity - we cannot break poset relation
-                {
-                    // ERROR: poset relation is broken
-                }
-
-                // Really add new dimension
-                value.Add();
+                return GreaterDims.FirstOrDefault(x => x.IsSuper);
             }
         }
 
-        public Set SuperSet
-        {
-            get { return SuperDim != null ? SuperDim.GreaterSet : null; }
-        }
-
-        public SetTop Top
+        public CsSchema Top
         {
             get
             {
@@ -135,30 +102,63 @@ namespace Com.Model
             }
         }
 
-        public bool IsTop
+        public List<CsColumn> KeyColumns { get { return GreaterDims.Where(x => x.IsIdentity).ToList(); } }
+
+        public List<CsColumn> NonkeyColumns { get { return GreaterDims.Where(x => !x.IsIdentity).ToList(); } }
+
+        public CsColumn GetGreaterDim(string name)
         {
-            get { return SuperDim == null; }
+            return GreaterDims.FirstOrDefault(d => d.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
         }
 
-        public SetRoot Root
+        //
+        // Inputs
+        //
+
+        public List<CsColumn> LesserDims { get; private set; } // Incoming arrows. Inputs
+        public List<CsColumn> SubDims { get { return LesserDims.Where(x => x.IsSuper).ToList(); } }
+
+        public CsTable getTable(string name) { return LesserDims.FirstOrDefault(d => d.LesserSet.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase)).LesserSet; }
+
+        public CsTable FindSubset(string name)
+        {
+            CsTable set = null;
+            if (Name.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+            {
+                set = this;
+            }
+
+            foreach (Dim d in SubDims)
+            {
+                if (set != null) break;
+                set = d.LesserSet.FindSubset(name);
+            }
+
+            return set;
+        }
+
+        #endregion
+
+        #region Auxiliary (old) schema methods - simplify, clean, remove by reducing to CsTable methods
+
+        #region Inclusion. Super.
+
+        public CsTable SuperSet { get { return SuperDim != null ? SuperDim.GreaterSet : null; } }
+
+        public SetRoot Root // TODO: move to the methods for getting primitive sets of the schema
         {
             get
             {
                 if (this is SetTop) return (SetRoot) ((SetTop)this).GetPrimitiveSubset("Root");
                 Set set = this;
-                while (!(set is SetRoot)) set = set.SuperSet;
+                while (!(set is SetRoot)) set = (Set)set.SuperSet;
                 return (SetRoot)set;
             }
         }
 
-        public bool IsRoot
-        {
-            get { return this is SetRoot; }
-        }
-
         public bool IsIn(Set parent) // Return true if this set is included in the specified set, that is, the specified set is a direct or indirect super-set of this set
         {
-            for (Set set = this; set != null; set = set.SuperSet)
+            for (CsTable set = this; set != null; set = set.SuperDim.GreaterSet)
             {
                 if (set == parent) return true;
             }
@@ -201,18 +201,18 @@ namespace Com.Model
             return subset;
         }
 
-        public List<Set> SubSets
+        public List<CsTable> SubSets
         {
             get { return SubDims.Select(x => x.LesserSet).ToList(); }
         }
 
-        public List<Set> GetAllSubsets()
+        public List<CsTable> GetAllSubsets()
         {
             int count = SubSets.Count;
-            List<Set> result = new List<Set>(SubSets);
+            List<CsTable> result = new List<CsTable>(SubSets);
             for (int i = 0; i < count; i++)
             {
-                List<Set> subsets = result[i].GetAllSubsets();
+                List<CsTable> subsets = ((Set)result[i]).GetAllSubsets();
                 if (subsets == null || subsets.Count == 0)
                 {
                     continue;
@@ -221,27 +221,6 @@ namespace Com.Model
             }
 
             return result;
-        }
-        public List<Set> GetLeastSubsets()
-        {
-            return GetAllSubsets().Where(s => s.LesserDims.Count == 0 && !s.IsPrimitive).ToList();
-        }
-
-        public Set FindSubset(string name)
-        {
-            Set set = null;
-            if (Name.Equals(name, StringComparison.InvariantCultureIgnoreCase))
-            {
-                set = this;
-            }
-
-            foreach (Dim d in SubDims)
-            {
-                if (set != null) break;
-                set = d.LesserSet.FindSubset(name);
-            }
-
-            return set;
         }
 
         #endregion
@@ -310,7 +289,7 @@ namespace Com.Model
             get // It is computed recursively - we sum up greater set arities of all our identity dimensions up to the prmitive sets with arity 1
             {
                 if (IsPrimitive) return 1;
-                return GreaterDims.Where(x => x.IsIdentity).Sum(x => x.GreaterSet.IdentityPrimitiveArity);
+                return GreaterDims.Where(x => x.IsIdentity).Sum(x => ((Set)x.GreaterSet).IdentityPrimitiveArity);
             }
         }
 
@@ -336,35 +315,22 @@ namespace Com.Model
             }
         }
 */
-        public Dim GetGreaterDim(string name)
+        public CsColumn GetGreaterDimByFkName(string name)
         {
-            return GreaterDims.FirstOrDefault(d => d.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+            return GreaterDims.FirstOrDefault(d => ((Dim)d).RelationalFkName.Equals(name, StringComparison.InvariantCultureIgnoreCase));
         }
-        public Dim GetGreaterDimByFkName(string name)
-        {
-            return GreaterDims.FirstOrDefault(d => d.RelationalFkName.Equals(name, StringComparison.InvariantCultureIgnoreCase));
-        }
-        public List<Set> GetGreaterSets()
+        public List<CsTable> GetGreaterSets()
         {
             return GreaterDims.Select(x => x.GreaterSet).ToList();
         }
-        public List<Dim> GetIdentityDims()
+        public List<CsTable> GetPossibleGreaterSets() // All sets that can be used as greater sets in a new dimension
         {
-            return GreaterDims.Where(x => x.IsIdentity).ToList();
-        }
-        public List<Dim> GetEntityDims()
-        {
-            return GreaterDims.Where(x => !x.IsIdentity).ToList();
-        }
-
-        public List<Set> GetPossibleGreaterSets() // All sets that can be used as greater sets in a new dimension
-        {
-            List<Set> all = Root.GetAllSubsets();
-            List<Set> result = new List<Set>();
-            foreach (Set set in all)
+            List<CsTable> all = Root.GetAllSubsets();
+            List<CsTable> result = new List<CsTable>();
+            foreach (CsTable set in all)
             {
                 if (set == this) continue; // We cannot point to itself
-                if (set.IsLesser(this)) continue; // We cannot point to a lesser set (cycle)
+                if (((Set)set).IsLesser(this)) continue; // We cannot point to a lesser set (cycle)
 
                 result.Add(set);
             }
@@ -384,11 +350,11 @@ namespace Com.Model
             }
         }
 
-        public List<Set> GetLesserSets()
+        public List<CsTable> GetLesserSets()
         {
             return LesserDims.Select(x => x.LesserSet).ToList();
         }
-        public List<Dim> GetLesserDims(string name)
+        public List<CsColumn> GetLesserDims(string name)
         {
             return LesserDims.Where(d => d.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase)).ToList();
         }
@@ -408,13 +374,13 @@ namespace Com.Model
         {
             Debug.Assert(path.GreaterSet != null && path.LesserSet != null, "Wrong use: path must specify a lesser and greater sets before it can be added to a set.");
             RemoveGreaterPath(path);
-            path.GreaterSet.LesserPaths.Add(path);
-            path.LesserSet.GreaterPaths.Add(path);
+            ((Set)path.GreaterSet).LesserPaths.Add(path);
+            ((Set)path.LesserSet).GreaterPaths.Add(path);
         }
         public void RemoveGreaterPath(DimPath path)
         {
-            if (path.GreaterSet != null) path.GreaterSet.LesserPaths.Remove(path);
-            if (path.LesserSet != null) path.LesserSet.GreaterPaths.Remove(path);
+            if (path.GreaterSet != null) ((Set)path.GreaterSet).LesserPaths.Remove(path);
+            if (path.LesserSet != null) ((Set)path.LesserSet).GreaterPaths.Remove(path);
         }
         public void RemoveGreaterPath(string name)
         {
@@ -622,7 +588,7 @@ namespace Com.Model
             }
             
             // Now all other dimensions
-            foreach (Dim dim in GetIdentityDims()) // OPTIMIZE: the order of dimensions matters (use statistics, first dimensins with better filtering). Also, first identity dimensions.
+            foreach (Dim dim in KeyColumns) // OPTIMIZE: the order of dimensions matters (use statistics, first dimensins with better filtering). Also, first identity dimensions.
             {
                 // First, find or append the value recursively. It will be in Output
                 Expression childExpr = expr.GetOperand(dim);
@@ -801,20 +767,6 @@ namespace Com.Model
         public List<Dim> ProjectDimensions { get; set; } // Output tuples of these dimensions are appended to this set (other tuples are excluded). Alternatively, this element must be referenced by at one lesser element COUNT(this<-proj_dim<-(Set)) > 0
 
         /// <summary>
-        /// FROM expression specifies source sets used to populate this set. For each source set, an instance variable name is specified. 
-        /// </summary>
-        [System.Obsolete("Source sets are specified by import dimensions or by greater dimensions. ", true)]
-        public Expression FromExpression { get; set; } // Actually, we do not need it because it is specified by import dimensions
-
-        /// <summary>
-        /// SELECT expression is a function returning a tuple representing an element of this set. This return tuple is computed in terms of the source sets which are arguments of this expression. This expression can be based on a mapping from source to target and also can use arbitrary computations in terms of the source elements provided in arguments.
-        /// </summary>
-        [System.Obsolete("Not used. A set is what tuples exist and not what attributes are going to be selected.", true)]
-        public Expression SelectExpression { get; set; }
-        [System.Obsolete("A mapping between sets is not used. Use a mapping in dimensions which specifies a function from lesser to greater set. ", true)]
-        public List<Mapping> Mapping { get; set; } // It a mapping from source (product of source sets) space to this target set which will be transformed into an expression for population
-
-        /// <summary>
         /// Ordering of the instances. 
         /// Here again we have a choice: it is how source elements are sorted or it is how elements of this set have to be sorted. 
         /// </summary>
@@ -832,7 +784,7 @@ namespace Com.Model
                 //
                 var dims = new List<Dim>();
                 dims.Add(SuperDim);
-                dims.AddRange(GetIdentityDims());
+                dims.AddRange(KeyColumns);
 
                 Expression tupleExpr = new Expression(this.Name, Operation.TUPLE, this); // Represents a record to be appended to the set
                 for(int i=0; i<dims.Count; i++) 
@@ -1084,18 +1036,6 @@ namespace Com.Model
 
         #endregion
 
-        #region CsTable interface
-
-        public string N { get { return Name; } set { Name = value; } }
-
-        public CsColumn C(string name) { return GetGreaterDim(name); }
-
-        public List<CsColumn> OutputColumns { get { return GreaterDims.Cast<CsColumn>().ToList(); } }
-
-        public List<CsColumn> InputColumns { get { return LesserDims.Cast<CsColumn>().ToList(); } }
-
-        #endregion
-
         #region Constructors and initializers.
 
         public virtual Dim CreateDefaultLesserDimension(string name, Set lesserSet)
@@ -1117,10 +1057,8 @@ namespace Com.Model
 
             DimType = typeof(DimSet);
 
-            SuperDims = new List<Dim>(); // Up arrows
-            SubDims = new List<Dim>();
-            GreaterDims = new List<Dim>(); // Up arrows
-            LesserDims = new List<Dim>();
+            GreaterDims = new List<CsColumn>(); // Up arrows
+            LesserDims = new List<CsColumn>();
 
             SuperPaths = new List<DimPath>();
             SubPaths = new List<DimPath>();

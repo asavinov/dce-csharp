@@ -573,7 +573,7 @@ namespace Com.Model
 
         private void CreateDataTypes() // Create all primitive data types from some specification like Enum, List or XML
         {
-            SetRoot setRoot = new SetRoot(DataType.Root);
+            SetRoot setRoot = new SetRoot(CsDataType.Root);
             AddSubset(setRoot);
             setRoot.DimType = typeof(DimTop);
 

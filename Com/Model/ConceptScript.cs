@@ -28,7 +28,7 @@ namespace Com.Model
 
             // Add super-dimension
             CsColumn superCol = this.CreateColumn("Super", table, super, true, true);
-            superCol.Include();
+            superCol.Add();
 
             return table;
         }
@@ -51,28 +51,28 @@ namespace Com.Model
 
     public interface CsTable // One table object
     {
-        string N { get; set; }
-        CsColumn C(string name); // Name resolution
+        string Name { get; set; }
+
+        CsDataType DataType { get; protected set; }
 
         //
-        // Column/schema information
+        // Outputs
         //
-        List<CsColumn> OutputColumns { get; }
-        List<CsColumn> InputColumns { get; }
-
-        //CsColumn Super { get; set; } // Convenience method
-        //CsColumn Where { get; set; } // Boolean function definition must be true for all elements
-        // OrderBy - what should be here - comparator?
-
-        //void Eval();
-        // TODO: Type of population: manual (external API), projection (from external), projection (from internal), all
+        List<CsColumn> GreaterDims { get; protected set; }
+        CsColumn SuperDim { get; }
+        CsSchema Top { get; }
+        List<CsColumn> KeyColumns { get; }
+        List<CsColumn> NonkeyColumns { get; }
+        CsColumn GetGreaterDim(string name);
 
         //
-        // Tuple manipulation: append, insert, remove, read, write.
-        // Here we use TUPLE and its constituents as primitive types: Reference etc.
-        // Column names or references are important. Types (table references or names) are necessary and important. Maybe also flags like Super, Key would be useful. 
-        // TUPLE could be used as a set structure specification (e.g., param for set creation).
+        // Inputs
         //
+
+        List<CsColumn> LesserDims { get; protected set; }
+        List<CsColumn> SubDims { get; }
+        CsTable getTable(string name);
+        CsTable FindSubset(string name);
 
     }
 
@@ -87,16 +87,17 @@ namespace Com.Model
 
     public interface CsColumn // One column object
     {
-        string N { get; set; }
+        string Name { get; set; }
 
-        bool IsKey { get; }
-        bool IsParent { get; } // Changing this property may influence storage type
+        bool IsIdentity { get; }
+        bool IsSuper { get; } // Changing this property may influence storage type
+        // Other properties: isNullable, isPrimitive, IsInstantiable (is supposed/able to have instances = lesser set instantiable), isTemporary
 
-        CsTable Input { get; }
-        CsTable Output { get; }
+        CsTable LesserSet { get; }
+        CsTable GreaterSet { get; }
 
-        void Include(); // Add to schema
-        void Exclude(); // Remove from schema
+        void Add(); // Add to schema
+        void Remove(); // Remove from schema
 
         CsColumnData ColumnData { get; }
         CsColumnDefinition ColumnDefinition { get; }
@@ -104,7 +105,7 @@ namespace Com.Model
 
     public interface CsColumnData // It is interface for managing function data as a mapping to output values (implemented by some kind of storage manager). Input always offset. Output type is a parameter.
     {
-        DataType CsType { get; } // Check the output value type. Can be needed to choose appropriate typed methods.
+        CsDataType CsType { get; } // Check the output value type. Can be needed to choose appropriate typed methods.
         Offset Size { get; set; }
 
         //
@@ -153,6 +154,19 @@ namespace Com.Model
         void InsertTuple(Offset input, CsRecord record); // All keys are required? Are non-keys allowed?
 
         void RemoveTuple(Offset input); // We use it to remove a tuple that does not satisfy filter constraints. Note that filter constraints can use only data that is loaded (some columns will be computed later). So the filter predicate has to be validated for sets which are projected/loaded or all other functions have to be evaluated during set population. 
+
+        //CsColumn Where { get; set; } // Boolean function definition must be true for all elements
+        // OrderBy - what should be here - comparator?
+
+        //void Eval();
+        // TODO: Type of population: manual (external API), projection (from external), projection (from internal), all
+
+        //
+        // Tuple manipulation: append, insert, remove, read, write.
+        // Here we use TUPLE and its constituents as primitive types: Reference etc.
+        // Column names or references are important. Types (table references or names) are necessary and important. Maybe also flags like Super, Key would be useful. 
+        // TUPLE could be used as a set structure specification (e.g., param for set creation).
+        //
     }
 
     public interface CsRecord // It is a complex data type generalizing primitive values and with leaves as primitive values (possibly surrogates). The main manipulation object for table data methods.
@@ -166,6 +180,25 @@ namespace Com.Model
         List<CsRecord> Children { get; } // Child records
         bool IsLeaf { get; } // Convenience
         CsRecord Parent { get; } // Parent
+    }
+
+    /// <summary>
+    /// Primitive data types used in our local database system. 
+    /// We need to enumerate data types for each kind of database along with the primitive mappings to other databases.
+    /// </summary>
+    public enum CsDataType
+    {
+        // Built-in types in C#: http://msdn.microsoft.com/en-us/library/vstudio/ya5y69ds.aspx
+        Void, // Nothing, no value. Can be equivalent to Top or Null.
+        Top,
+        Bottom,
+        Root, // It is surrogate or reference
+        Integer,
+        Double,
+        Decimal,
+        String,
+        Boolean,
+        DateTime,
     }
 
 }

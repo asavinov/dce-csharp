@@ -86,7 +86,7 @@ namespace Com.Model
                 if (targetSchema.GetType() == typeof(SetTop)) // SetTopOledb -> SetTop
                 {
                     OleDbType sourceType = (OleDbType)sourceSet.DataType;
-                    DataType? targetType;
+                    CsDataType? targetType;
 
                     // Mappings: 
                     // http://msdn.microsoft.com/en-us/library/system.data.oledb.oledbtype(v=vs.110).aspx
@@ -101,13 +101,13 @@ namespace Com.Model
                         case OleDbType.UnsignedInt: // DBTYPE_UI4 -> UInt32
                         case OleDbType.UnsignedSmallInt: // DBTYPE_UI2 -> UInt16
                         case OleDbType.UnsignedTinyInt: // DBTYPE_UI1 -> Byte
-                            targetType = DataType.Integer;
+                            targetType = CsDataType.Integer;
                             break;
 
                         // Double
                         case OleDbType.Double: // DBTYPE_R8
                         case OleDbType.Single: // DBTYPE_R4 -> Single
-                            targetType = DataType.Double;
+                            targetType = CsDataType.Double;
                             break;
 
                         // Decimal
@@ -115,12 +115,12 @@ namespace Com.Model
                         case OleDbType.Decimal: // DBTYPE_DECIMAL
                         case OleDbType.Numeric: // DBTYPE_NUMERIC
                         case OleDbType.VarNumeric:
-                            targetType = DataType.Decimal;
+                            targetType = CsDataType.Decimal;
                             break;
 
                         // Boolean
                         case OleDbType.Boolean: // DBTYPE_BOOL
-                            targetType = DataType.Boolean;
+                            targetType = CsDataType.Boolean;
                             break;
 
                         // DateTime
@@ -129,7 +129,7 @@ namespace Com.Model
                         case OleDbType.DBTime: // DBTYPE_DBTIME ->  TimeSpan
                         case OleDbType.DBTimeStamp: // DBTYPE_DBTIMESTAMP
                         case OleDbType.Filetime: // DBTYPE_FILETIME
-                            targetType = DataType.DateTime;
+                            targetType = CsDataType.DateTime;
                             break;
 
                         // Strings
@@ -140,7 +140,7 @@ namespace Com.Model
                         case OleDbType.VarChar: //
                         case OleDbType.VarWChar: //
                         case OleDbType.WChar: // DBTYPE_WSTR
-                            targetType = DataType.String;
+                            targetType = CsDataType.String;
                             break;
 
                         // Binary

@@ -278,7 +278,7 @@ namespace Com.Model
         /// </summary>
         public bool IsInSchema()
         {
-            return !IsEmpty ? !Dim.IsHanging : true;
+            return !IsEmpty ? !(Dim.IsInLesserSet && Dim.IsInGreaterSet) : true;
         }
 
         /// <summary>

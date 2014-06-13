@@ -18,8 +18,6 @@ namespace Com.Model
     /// </summary>
     public class Dim : CsColumn
     {
-        #region Properties
-
         private static int uniqueId;
 
         /// <summary>
@@ -27,73 +25,71 @@ namespace Com.Model
         /// </summary>
         public Guid Id { get; private set; }
 
+        #region CsColumn interface
+
         /// <summary>
         /// This name is unique within the lesser set.
         /// </summary>
         public string Name { get; set; }
 
         /// <summary>
-        /// Additional names specific to the relational model and maybe other PK-FK-based models.
-        /// These fields can be extracted into some child class if it will be created like relational dimension, path dimension etc.
+        /// Whether it is an identity dimension.
         /// </summary>
-        public string RelationalColumnName { get; set; } // For paths, it is the original column name used in the database (can be moved to a child class if such will be introduced for relational dimensions or for path dimensions). 
-        public string RelationalFkName { get; set; } // For dimensions, which were created from FK, it stores the original FK name
-        public string RelationalPkName { get; set; } // PK this column belongs to according to the schema
+        public bool IsIdentity { get; protected set; }
+
+        /// <summary>
+        /// This dimension belongs to the inclusion hierarchy (super-dimension).
+        /// </summary>
+        public bool IsSuper { get; protected set; }
+
+        /// <summary>
+        /// Lesser (input) set. 
+        /// </summary>
+        public CsTable LesserSet { get; protected set; }
+
+        /// <summary>
+        /// Greater (output) set.
+        /// </summary>
+        public CsTable GreaterSet { get; protected set; }
+
+        /// <summary>
+        /// Add (attach) to its lesser and greater sets if not added yet. 
+        /// Dimension type is important because different dimensions are stored in different collections.
+        /// </summary>
+        public void Add()
+        {
+            if (GreaterSet != null) GreaterSet.LesserDims.Add(this);
+            if (LesserSet != null) LesserSet.GreaterDims.Add(this);
+
+            // Notify that a new child has been added
+            if (LesserSet != null) ((Set)LesserSet).NotifyAdd(this);
+            if (GreaterSet != null) ((Set)GreaterSet).NotifyAdd(this);
+        }
+
+        /// <summary>
+        /// Remove (detach) from its lesser and greater sets if it is there. Depends on the dimension type.
+        /// </summary>
+        public void Remove()
+        {
+            if (GreaterSet != null) GreaterSet.LesserDims.Remove(this);
+            if (LesserSet != null) LesserSet.GreaterDims.Remove(this);
+
+            // Notify that a new child has been removed
+            if (LesserSet != null) ((Set)LesserSet).NotifyRemove(this);
+            if (GreaterSet != null) ((Set)GreaterSet).NotifyRemove(this);
+        }
+
+        public CsColumnData ColumnData { get { return null; } }
+        public CsColumnDefinition ColumnDefinition { get { return null; } }
+
+        #endregion
+
+        #region Auxiliary (old) schema methods - Simplify, clean, reduce to CsColumn, remove
 
         /// <summary>
         /// Whether this function is has a primitive range (greater set). 
         /// </summary>
         public bool IsPrimitive { get { return GreaterSet == null ? false : GreaterSet.IsPrimitive; } }
-
-        /// <summary>
-        /// Whether this dimension is supposed (able) to have instances. Some dimensions are used for conceptual purposes. 
-        /// It is not about having zero instances - it is about the ability to have instances (essentially supporting the corresponding interface for working with instances).
-        /// It characterizes and depends on the domain (lesser set). 
-        /// </summary>
-        public bool IsInstantiable { get { return LesserSet == null ? false : LesserSet.IsInstantiable; } }
-
-        /// <summary>
-        /// Whether it is an identity dimension.
-        /// </summary>
-        public bool IsIdentity { get; set; }
-
-        /// <summary>
-        /// This dimension belongs to the inclusion hierarchy (super-dimension).
-        /// </summary>
-        public bool IsSuper { get; set; }
-
-        /// <summary>
-        /// Reversed dimension has the opposite semantic interpretation (direction). It is used to resolve semantic cycles. 
-        /// For example, when a department references its manager then this dimension is makred by this flag. 
-        /// One use is when deciding +how to interpret input and output dimensions of sets and lesser/greater sets of dimensions.
-        /// </summary>
-        public bool IsReversed { get; set; }
-
-        /// <summary>
-        /// Whether this function is allowed to store nulls as output values, that is, to have no output assigned to inputs.
-        /// </summary>
-        public bool IsNullable { get; set; }
-
-        /// <summary>
-        /// Temporary dimension is used for computing other dimensions.
-        /// It is not stored as permanent part of the schema and should not be visible for user because it has not been created by users.
-        /// It can be created in the scope of some other dimension, expression or query, and then it is automatically deleted when the process exits this scope.
-        /// </summary>
-        public bool IsTemporary { get; set; }
-
-        #endregion
-
-        #region Schema methods.
-
-        /// <summary>
-        /// Greater (output) set.
-        /// </summary>
-        public Set GreaterSet { get; set; }
-
-        /// <summary>
-        /// Lesser (input) set. 
-        /// </summary>
-        public Set LesserSet { get; set; }
 
         /// <summary>
         /// false if this dimension references the greaer set but is not included into it (not part of the schema).
@@ -119,81 +115,6 @@ namespace Com.Model
                 var dimList = LesserSet.GreaterDims; // Only this line will be changed in this class extensions for other dimension types
                 return dimList.Contains(this);
             }
-        }
-
-        /// <summary>
-        /// true if it is included in both lesser and greater sets. Depends on the dimension type.
-        /// </summary>
-        public bool IsHanging
-        {
-            get
-            {
-                return IsInLesserSet && IsInGreaterSet;
-            }
-        }
-
-        /// <summary>
-        /// Add (attach) to its lesser and greater sets if not added yet. 
-        /// Dimension type is important because different dimensions are stored in different collections.
-        /// </summary>
-        public void Add()
-        {
-            Add(-1, -1);
-        }
-
-        /// <summary>
-        /// Add to its lesser and greater sets if not added yet. 
-        /// Dimension type is important because different dimensions are stored in different collections.
-        /// Ensure that the dimension has the specified indexes. Change indexes if the current position is different from the requested.
-        /// </summary>
-        public virtual void Add(int lesserSetIndex, int greaterSetIndex = -1)
-        {
-            if (GreaterSet != null) AddToDimensions(GreaterSet.LesserDims, greaterSetIndex);
-            if (LesserSet != null) AddToDimensions(LesserSet.GreaterDims, lesserSetIndex);
-
-            // Notify that a new child has been added
-            if (LesserSet != null) LesserSet.NotifyAdd(this);
-            if (GreaterSet != null) GreaterSet.NotifyAdd(this);
-        }
-        protected void AddToDimensions(IList<Dim> dimList, int index = -1) 
-        {
-            if (index < 0 || index > dimList.Count) index = dimList.Count;
-            int current_index = dimList.IndexOf(this);
-            if (current_index < 0) // Does not exist
-            {
-                dimList.Insert(index, this);
-            }
-            else if (index != current_index) // Exists but has different index
-            {
-                if (index == dimList.Count) index = dimList.Count - 1;
-                dimList.RemoveAt(current_index);
-                dimList.Insert(index, this);
-            }
-        }
-
-        /// <summary>
-        /// Remove (detach) from its lesser and greater sets if it is there. Depends on the dimension type.
-        /// </summary>
-        public virtual void Remove()
-        {
-            if (GreaterSet != null) GreaterSet.LesserDims.Remove(this);
-            if (LesserSet != null) LesserSet.GreaterDims.Remove(this);
-
-            // Notify that a new child has been removed
-            if (LesserSet != null) LesserSet.NotifyRemove(this);
-            if (GreaterSet != null) GreaterSet.NotifyRemove(this);
-        }
-
-        /// <summary>
-        /// Remove the specified dimension and add this dimension at the same position.
-        /// </summary>
-        public virtual void Replace(Dim dim)
-        {
-            int greaterSetIndex = GreaterSet.LesserDims.IndexOf(dim);
-            int lesserSetIndex = LesserSet.GreaterDims.IndexOf(dim);
-            dim.Remove();
-
-            this.Add(lesserSetIndex, greaterSetIndex);
         }
 
         #endregion
@@ -285,24 +206,6 @@ namespace Com.Model
 
         #endregion
 
-        #region CsColumn interface
-
-        public string N { get { return Name; } set { Name = value; } }
-
-        public void Include() { Add(); }
-        public void Exclude() { Remove(); }
-
-        public CsTable Input { get { return LesserSet; } }
-        public CsTable Output { get { return GreaterSet; } }
-
-        public bool IsKey { get { return IsIdentity; } }
-        public bool IsParent { get { return IsSuper; } }
-
-        public CsColumnData ColumnData { get { return null; } }
-        public CsColumnDefinition ColumnDefinition { get { return null; } }
-
-        #endregion
-
         #region Overriding System.Object and interfaces
 
         public override string ToString()
@@ -335,6 +238,18 @@ namespace Com.Model
 
         #endregion
 
+        #region Relational attribute (TODO: should be moved to a subclass along with related methods)
+
+        /// <summary>
+        /// Additional names specific to the relational model and maybe other PK-FK-based models.
+        /// These fields can be extracted into some child class if it will be created like relational dimension, path dimension etc.
+        /// </summary>
+        public string RelationalColumnName { get; set; } // For paths, it is the original column name used in the database (can be moved to a child class if such will be introduced for relational dimensions or for path dimensions). 
+        public string RelationalFkName { get; set; } // For dimensions, which were created from FK, it stores the original FK name
+        public string RelationalPkName { get; set; } // PK this column belongs to according to the schema
+
+        #endregion
+
         #region Constructors and initializers.
 
         public Dim()
@@ -353,7 +268,6 @@ namespace Com.Model
             Name = dim.Name;
 
             IsIdentity = dim.IsIdentity;
-            IsReversed = dim.IsReversed;
 
             LesserSet = dim.LesserSet;
             GreaterSet = dim.GreaterSet;
@@ -375,19 +289,16 @@ namespace Com.Model
         {
         }
 
-        public Dim(string name, Set lesserSet, Set greaterSet, bool isIdentity, bool isReversed)
+        public Dim(string name, Set lesserSet, Set greaterSet, bool isIdentity, bool isSuper)
             : this()
         {
             Name = name;
 
             IsIdentity = isIdentity;
-            IsReversed = isReversed;
+            IsSuper = isSuper;
 
             LesserSet = lesserSet;
             GreaterSet = greaterSet;
-
-            // Parameterize depending on the reserved names: super
-            // Parameterize depending on the greater and lesser set type. For example, dimension type must correspond to its greater set type (SetInteger <- DimInteger etc.)
         }
 
         #endregion
@@ -411,12 +322,6 @@ namespace Com.Model
         ENTITY, // 
 
         EXPORT,
-    }
-
-    public enum DimensionDirection
-    {
-        GREATER, // Up
-        LESSER, // Down, reverse
     }
 
 }

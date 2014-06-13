@@ -67,11 +67,11 @@ namespace Com.Model
         private void CreateDataTypes() // Create all primitive data types from some specification like Enum, List or XML
         {
 
-            foreach (DataType dataType in (DataType[])Enum.GetValues(typeof(DataType)))
+            foreach (CsDataType dataType in (CsDataType[])Enum.GetValues(typeof(CsDataType)))
             {
-                if (dataType == DataType.Root) // Root has a special class
+                if (dataType == CsDataType.Root) // Root has a special class
                 {
-                    SetRoot setRoot = new SetRoot(DataType.Root);
+                    SetRoot setRoot = new SetRoot(CsDataType.Root);
                     AddSubset(setRoot);
                     setRoot.DimType = typeof(DimTop);
                 }
@@ -82,29 +82,29 @@ namespace Com.Model
 
                     switch (dataType) // Set properties explicitly for each data type
                     {
-                        case DataType.Void:
-                        case DataType.Top:
-                        case DataType.Bottom:
+                        case CsDataType.Void:
+                        case CsDataType.Top:
+                        case CsDataType.Bottom:
                             break;
-                        case DataType.Root:
+                        case CsDataType.Root:
                             setPrimitive.DimType = typeof(DimTop);
                             break;
-                        case DataType.Integer:
+                        case CsDataType.Integer:
                             setPrimitive.DimType = typeof(DimPrimitive<int>);
                             break;
-                        case DataType.Double:
+                        case CsDataType.Double:
                             setPrimitive.DimType = typeof(DimPrimitive<double>);
                             break;
-                        case DataType.Decimal:
+                        case CsDataType.Decimal:
                             setPrimitive.DimType = typeof(DimPrimitive<decimal>);
                             break;
-                        case DataType.String:
+                        case CsDataType.String:
                             setPrimitive.DimType = typeof(DimPrimitive<string>);
                             break;
-                        case DataType.Boolean:
+                        case CsDataType.Boolean:
                             setPrimitive.DimType = typeof(DimPrimitive<bool>);
                             break;
-                        case DataType.DateTime:
+                        case CsDataType.DateTime:
                             setPrimitive.DimType = typeof(DimPrimitive<DateTime>);
                             break;
                         default:
@@ -139,25 +139,6 @@ namespace Com.Model
             CreateDataTypes(); // Generate all predefined primitive sets as subsets
         }
 
-    }
-
-    /// <summary>
-    /// Primitive data types used in our local database system. 
-    /// We need to enumerate data types for each kind of database along with the primitive mappings to other databases.
-    /// </summary>
-    public enum DataType
-    {
-        // Built-in types in C#: http://msdn.microsoft.com/en-us/library/vstudio/ya5y69ds.aspx
-        Void, // Nothing, no value. Can be equivalent to Top or Null.
-        Top,
-        Bottom,
-        Root, // It is surrogate or reference
-        Integer,
-        Double,
-        Decimal,
-        String,
-        Boolean,
-        DateTime,
     }
 
 }

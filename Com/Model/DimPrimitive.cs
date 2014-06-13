@@ -560,10 +560,7 @@ namespace Com.Model
 
             _nullCount = Length;
 
-            if (IsInstantiable)
-            {
-                Length = lesserSet.Length;
-            }
+            Length = lesserSet.Length;
 
             // Initialize what representative value will be used instead of nulls
             _nullValue = default(T); // Check if type is nullable: http://stackoverflow.com/questions/374651/how-to-check-if-an-object-is-nullable
