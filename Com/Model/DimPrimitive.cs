@@ -510,42 +510,6 @@ namespace Com.Model
 
         public override void Eval() // Compute the output values of this function according to the definition and store them for direct access
         {
-            // TODO: Turn off indexing (sorting) and index after populating all values
-
-            bool isAggregated = false;
-            if (LoopSet != null && LoopSet != LesserSet)
-            {
-                Debug.Assert(LoopSet.IsLesser(LesserSet), "Wrong use: the fact set must be less than this set for aggregation.");
-                isAggregated = true;
-            }
-
-            if (isAggregated)
-            {
-                for (Offset offset = 0; offset < LoopSet.Length; offset++) // Generate all input elements (surrogates)
-                {
-                    // TODO: Set 'this' parameter in the context (should be resolved in advance)
-                    MeasureCode.Eval(); // Evaluate the expression (what if it has multiple statements and where is its context?)
-
-                    // TODO: Set 'this' parameter in the context (should be resolved in advance)
-                    GroupCode.Eval(); // Evalute the group
-
-                    Offset group = (Offset)GroupCode.Value;
-                    UpdateValue(group, MeasureCode.Value, AccuCode); // Update the final result
-
-                    // TODO: Increment group counts function
-                }
-            }
-            else
-            {
-                for (Offset offset = 0; offset < LesserSet.Length; offset++) // Generate all input elements (surrogates)
-                {
-                    // TODO: Set 'this' parameter in the context (should be resolved in advance)
-                    MeasureCode.Eval(); // Evaluate the expression (what if it has multiple statements and where is its context?)
-                    SetValue(offset, MeasureCode.Value); // Store the final result
-                }
-            }
-
-            // TODO: Turn on indexing (sorting) and index the whole function
         }
 
         public override void ComputeValues()
@@ -572,21 +536,12 @@ namespace Com.Model
                 Debug.Assert(SelectExpression.Input.Operation == Operation.PARAMETER, "Wrong use: derived function Input has to be of PARAMETER type.");
                 Debug.Assert(SelectExpression.Input.Dimension != null, "Wrong use: derived function Input has to reference a valid variable.");
 
-                for (Offset offset = 0; offset < LesserSet.Length; offset++) // Compute the output function value for each input value (offset)
+                for (Offset input = 0; input < LesserSet.Length; input++) // Compute the output function value for each input value (offset)
                 {
-                    //                    SelectExpression.SetOutput(Operation.PARAMETER, offset);
-                    SelectExpression.Input.Dimension.Value = offset; // Initialize 'this'
+                    // SelectExpression.SetOutput(Operation.PARAMETER, offset);
+                    SelectExpression.Input.Dimension.Value = input; // Initialize 'this'
                     SelectExpression.Evaluate(); // Compute
-                    SetValue(offset, SelectExpression.Output); // Store the final result
-                    /*
-                                        object val = null;
-                                        if (SelectExpression.Operation == Operation.TUPLE)
-                                        {
-                                            SelectExpression.OutputSet.Find(SelectExpression);
-                                        }
-                                        val = SelectExpression.Output;
-                                        SetValue(offset, val); // Store the final result
-                    */
+                    SetValue(input, SelectExpression.Output); // Store the final result
                 }
             }
         }

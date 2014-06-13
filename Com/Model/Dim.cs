@@ -298,6 +298,9 @@ namespace Com.Model
         public bool IsKey { get { return IsIdentity; } }
         public bool IsParent { get { return IsSuper; } }
 
+        public CsColumnData ColumnData { get { return null; } }
+        public CsColumnDefinition ColumnDefinition { get { return null; } }
+
         #endregion
 
         #region Overriding System.Object and interfaces

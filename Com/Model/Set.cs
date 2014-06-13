@@ -43,7 +43,7 @@ namespace Com.Model
         /// How many _instances this set has. Cardinality. Set power. Length (height) of instance set.
         /// If instances are identified by integer offsets, then size also represents offset range.
         /// </summary>
-        public virtual int Length { get; protected set; }
+        public virtual int Length { get; protected set; } 
 
         public virtual Type SystemType
         {

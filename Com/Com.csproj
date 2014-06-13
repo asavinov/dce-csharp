@@ -56,9 +56,6 @@
     <Compile Include="Model\DimSuper.cs" />
     <Compile Include="Model\DimTree.cs" />
     <Compile Include="Model\Expression.cs" />
-    <Compile Include="Model\Instance.cs">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="Model\Mapper.cs" />
     <Compile Include="Model\Recommender.cs" />
     <Compile Include="Model\Set.cs" />

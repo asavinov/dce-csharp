@@ -98,27 +98,11 @@ namespace Com.Model
         void Include(); // Add to schema
         void Exclude(); // Remove from schema
 
-
-
-
-        //
-        // Dependencies and evaluation
-        //
-        //string Formula { get; set; } 
-        // TODO: It can string, ast, Java delegate etc. Maybe create a class Formula.
-        // TODO: Three different kinds of definitions: arithmetic or pimitive (return direct primitive value including composition and return of offsets), mapping or complex (return tuple, search for finding offset), filter (null specification, good as a component in where), aggregation (accumulation, update)
-        //void AddDependency(CsColumn column);
-        //void RemoveDependency(CsColumn column);
-        //void Eval();
-
-        //
-        // Function value manipulation: read, write
-        // Here we manipulate primitive data types: Reference, Void (empty, null), String, Double etc.
-        //
-
+        CsColumnData ColumnData { get; }
+        CsColumnDefinition ColumnDefinition { get; }
     }
 
-    public interface CsDataColumn // It is interface for managing function data as a mapping to output values (implemented by some kind of storage manager). Input always offset. Output type is a parameter.
+    public interface CsColumnData // It is interface for managing function data as a mapping to output values (implemented by some kind of storage manager). Input always offset. Output type is a parameter.
     {
         DataType CsType { get; } // Check the output value type. Can be needed to choose appropriate typed methods.
         Offset Size { get; set; }
@@ -144,30 +128,26 @@ namespace Com.Model
         // void Index(Offset start, Offset end); // The specified interval has been changed (or inserted?)
     }
 
-    // Let us assume that the user wants to write a custom evaluation/calcuation procedure in native language rather than as expression. 
-    // What interface it has to implement and how to integrate this class into the CsColumn object. 
-    // If the user provides an expression then this expression is then used to generate this same interface via interpreter or even source code translation.
-    // This interface is used only by the evaluation procedure which retrieves and then calls methods like Compute(this), Compute(input, output) in a loop. 
-    // Thus the evaluation procedure uses storage object to store results and evaluation object to compute values. 
-    // Note however that the (user) evaluation object needs direct access to storage objects of other columns (so may be it can also access its own storage object), for reading data and computing its own data.
-    // It can get storage objects from the set, from its own column, by resovling names or directly from outside. These storage objects are stored in fields of the class and used for access in the formula. 
-    // This evaluation procedure retrieves this instance and uses it. 
-    // But the class (or instance) can be provided from diffent sources: generated from expression, provided in source form, provided in a library. 
-    // { expression, source code, library, ...} -> Instance of evaluator (uses storage references to other columns)) -> Is used by the evaluator in its loops
+    public interface CsColumnDefinition // How a function is represented and evaluated. It uses API of the column storage like read, write (typed or untyped).
+    {
+        void Initialize();
+        void Evaluate(); 
+        void Finish();
+    }
 
     // This class is used only by the column evaluation procedure. 
-    // An instance is requested each time for evaluation and is somehow produced from the column formula representation format: expression, source code, user class, library
-    public interface CsFormula // How a function is represented and evaluated. It uses API of the column storage like read, write (typed or untyped).
+    public interface CsRecordEvaluator // Compute output for one input based on some column definition and other already computed columns
     {
-        void Initialize(); // Initialize the value. Is called one time before the function evaluation. Important for aggregation.
-        void Evaluate(object input); // Called for each iteration over this set. Compute the output and write it to the functino storage. The implementatino can be typed or untyped. 
-        bool Evaluate(object input, object output); // Called for all pairs of input and output *if* the definition is a join prodicate.
-        void Finish(); // Is called one time after the function evaluation. Can be important for aggregation, say, devide the accumulated measure on the accumulated count. 
+        object EvaluateSet(Offset input); // Compute output for the specified intput and write it
+        object EvaluateUpdate(Offset input); // Read group and measure for the specified input and compute update according to the aggregation formula. It may also increment another function if necessary.
+        bool EvaluateJoin(Offset input, object output); // Called for all pairs of input and output *if* the definition is a join predicate.
     }
 
     
     public interface CsTableData // It is interface for manipulating data in a table.
     {
+        Offset Size { get; }
+
         Offset FindTuple(CsRecord record); // If many records can satisfy then another method has to be used. What is many found? Maybe return negative number with the number of records (-1 or Length means not found, positive means found 1)? 
 
         void InsertTuple(Offset input, CsRecord record); // All keys are required? Are non-keys allowed?
