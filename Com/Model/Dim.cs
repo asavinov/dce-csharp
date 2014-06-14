@@ -43,6 +43,11 @@ namespace Com.Model
         public bool IsSuper { get; protected set; }
 
         /// <summary>
+        /// Whether this function is has a primitive range (greater set). 
+        /// </summary>
+        public bool IsPrimitive { get { return GreaterSet == null ? false : GreaterSet.IsPrimitive; } }
+
+        /// <summary>
         /// Lesser (input) set. 
         /// </summary>
         public CsTable LesserSet { get; protected set; }
@@ -81,41 +86,6 @@ namespace Com.Model
 
         public CsColumnData ColumnData { get { return null; } }
         public CsColumnDefinition ColumnDefinition { get { return null; } }
-
-        #endregion
-
-        #region Auxiliary (old) schema methods - Simplify, clean, reduce to CsColumn, remove
-
-        /// <summary>
-        /// Whether this function is has a primitive range (greater set). 
-        /// </summary>
-        public bool IsPrimitive { get { return GreaterSet == null ? false : GreaterSet.IsPrimitive; } }
-
-        /// <summary>
-        /// false if this dimension references the greaer set but is not included into it (not part of the schema).
-        /// </summary>
-        public virtual bool IsInGreaterSet 
-        {
-            get
-            {
-                if (GreaterSet == null) return false;
-                var dimList = GreaterSet.LesserDims; // Only this line will be changed in this class extensions for other dimension types
-                return dimList.Contains(this);
-            }
-        }
-
-        /// <summary>
-        /// false if this dimension references the lesser set but is not included into it (not part of the schema).
-        /// </summary>
-        public virtual bool IsInLesserSet 
-        {
-            get
-            {
-                if (LesserSet == null) return false;
-                var dimList = LesserSet.GreaterDims; // Only this line will be changed in this class extensions for other dimension types
-                return dimList.Contains(this);
-            }
-        }
 
         #endregion
 
@@ -238,7 +208,7 @@ namespace Com.Model
 
         #endregion
 
-        #region Relational attribute (TODO: should be moved to a subclass along with related methods)
+        #region Relational attribute (TODO: move to a subclass along with related methods. The same for Set class.)
 
         /// <summary>
         /// Additional names specific to the relational model and maybe other PK-FK-based models.
@@ -303,25 +273,6 @@ namespace Com.Model
 
         #endregion
 
-    }
-
-    // TODO: We probably should introduce a bit mask instead of the enumerator
-    // Bits: isIdentity, isPoset, isInclusion, isInterschema, isInverse, 
-    public enum DimensionType
-    {
-        INCLUSION, // Both super and sub
-        SUPER, // 
-        SUB, // 
-
-        POSET, // Both greater and lesser
-        GREATER, // 
-        LESSER, // 
-
-        IDENTITY_ENTITY, // Both identity and entity
-        IDENTITY, //
-        ENTITY, // 
-
-        EXPORT,
     }
 
 }

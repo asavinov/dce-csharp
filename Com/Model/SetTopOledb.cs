@@ -573,14 +573,14 @@ namespace Com.Model
 
         private void CreateDataTypes() // Create all primitive data types from some specification like Enum, List or XML
         {
-            SetRoot setRoot = new SetRoot(CsDataType.Root);
-            AddSubset(setRoot);
+            Set setRoot = new Set("Root");
             setRoot.DimType = typeof(DimTop);
+            AddTable(setRoot, this);
 
             foreach (OleDbType dataType in (OleDbType[])Enum.GetValues(typeof(OleDbType)))
             {
-                SetPrimitive setPrimitive = new SetPrimitive(dataType);
-                AddSubset(setPrimitive);
+                Set setPrimitive = new Set("", dataType);
+                AddTable(setPrimitive, this);
 
                 setPrimitive.DimType = typeof(Dim); // Dimension without instances
 

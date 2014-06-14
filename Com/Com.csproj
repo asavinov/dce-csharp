@@ -47,7 +47,6 @@
     <Compile Include="Model\ConceptScript.cs" />
     <Compile Include="Model\Dim.cs" />
     <Compile Include="Model\DimBool.cs" />
-    <Compile Include="Model\DimImport.cs" />
     <Compile Include="Model\DimPath.cs" />
     <Compile Include="Model\DimPrimitive.cs" />
     <Compile Include="Model\DimTop.cs" />
@@ -59,8 +58,6 @@
     <Compile Include="Model\Mapper.cs" />
     <Compile Include="Model\Recommender.cs" />
     <Compile Include="Model\Set.cs" />
-    <Compile Include="Model\SetPrimitive.cs" />
-    <Compile Include="Model\SetRoot.cs" />
     <Compile Include="Model\SetTopOdata.cs" />
     <Compile Include="Model\SetTopOledb.cs" />
     <Compile Include="Model\SetTop.cs" />

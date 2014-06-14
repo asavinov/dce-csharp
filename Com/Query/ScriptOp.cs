@@ -181,7 +181,7 @@ namespace Com.Query
 
                         // TOD: Really add a new function with this definition
                         Set typeSet = top.FindSubset(type);
-                        Dim dim = typeSet.CreateDefaultLesserDimension(name, set);
+                        Dim dim = top.CreateColumn(name, set, typeSet, true);
                         dim.FormulaAst = formula;
                         dim.Add();
 

@@ -205,8 +205,8 @@ namespace Test
             // Test schema. "Set A" -> b/c -> "Set B" -> d/i -> "Double"/"Integer"
             //
             SetTop top = new SetTop("Top");
-            Set setInteger = top.GetPrimitiveSubset("Integer");
-            Set setDouble = top.GetPrimitiveSubset("Double");
+            Set setInteger = top.GetPrimitive("Integer");
+            Set setDouble = top.GetPrimitive("Double");
 
             Set setA = new Set("Set A");
             top.Root.AddSubset(setA);
@@ -214,16 +214,16 @@ namespace Test
             Set setB = new Set("Set B");
             top.Root.AddSubset(setB);
 
-            Dim dimB = setB.CreateDefaultLesserDimension("b", setA);
+            Dim dimB = top.CreateColumn("b", setA, setB, true);
             dimB.Add();
 
-            Dim dimC = setB.CreateDefaultLesserDimension("Function c", setA);
+            Dim dimC = top.CreateColumn("Function c", setA, setB, true);
             dimC.Add();
 
-            Dim dimD = setDouble.CreateDefaultLesserDimension("d", setB);
+            Dim dimD = top.CreateColumn("d", setB, setDouble, true);
             dimD.Add();
 
-            Dim dimI = setInteger.CreateDefaultLesserDimension("i", setB);
+            Dim dimI = top.CreateColumn("i", setB, setInteger, true);
             dimI.Add();
 
             //

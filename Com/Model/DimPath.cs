@@ -534,7 +534,7 @@ namespace Com.Model
             : base(set)
         {
             lesserSets = new List<Set>(new Set[] { set }); // One source set
-            greaterSets = new List<Set>(new Set[] { set.Root }); // All destination sets from this schema
+            greaterSets = new List<Set>(new Set[] { set.Top.Root }); // All destination sets from this schema
 
             isInverse = false;
         }
@@ -788,5 +788,24 @@ namespace Com.Model
             }
         }
     */
+
+    // TODO: We probably should introduce a bit mask instead of the enumerator
+    // Bits: isIdentity, isPoset, isInclusion, isInterschema, isInverse, 
+    public enum DimensionType
+    {
+        INCLUSION, // Both super and sub
+        SUPER, // 
+        SUB, // 
+
+        POSET, // Both greater and lesser
+        GREATER, // 
+        LESSER, // 
+
+        IDENTITY_ENTITY, // Both identity and entity
+        IDENTITY, //
+        ENTITY, // 
+
+        EXPORT,
+    }
 
 }

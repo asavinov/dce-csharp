@@ -736,7 +736,7 @@ namespace Com.Model
                             {
                                 if (Name != null)
                                 {
-                                    List<Dim> lesserDims = Input.OutputSet.GetLesserDims(Name);
+                                    List<Dim> lesserDims = Input.OutputSet.LesserDims.Where(d => d.Name.Equals(Name, StringComparison.InvariantCultureIgnoreCase)).ToList();
                                     Dimension = lesserDims[0];
                                 }
 

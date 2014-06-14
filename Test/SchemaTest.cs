@@ -21,20 +21,20 @@ namespace Test
             SetTop top = new SetTop("Top");
 
             // Test top structure
-            Assert.IsTrue("Double" == top.GetPrimitiveSubset("Double").Name);
-            Assert.IsTrue("String" == top.GetPrimitiveSubset("String").Name);
+            Assert.IsTrue("Double" == top.GetPrimitive("Double").Name);
+            Assert.IsTrue("String" == top.GetPrimitive("String").Name);
 
             Set c1 = new Set("c1");
-            top.Root.AddSubset(c1);
+            top.AddTable(c1);
 
             Set c2 = new Set("c2");
-            top.Root.AddSubset(c2);
+            top.AddTable(c2);
 
             Set c11 = new Set("c11");
-            c1.AddSubset(c11);
+            top.AddTable(c11, c1);
 
             Set c12 = new Set("c12");
-            c1.AddSubset(c12);
+            top.AddTable(c12, c1);
 
             // Test quantities
             Assert.AreEqual(2, top.Root.SubSets.Count);
@@ -54,13 +54,13 @@ namespace Test
         public void TableSchemaTest()
         {
             SetTop top = new SetTop("Top");
-            Set setInteger = top.GetPrimitiveSubset("Integer");
-            Set setDouble = top.GetPrimitiveSubset("Double");
-            Set setString = top.GetPrimitiveSubset("String");
+            Set setInteger = top.GetPrimitive("Integer");
+            Set setDouble = top.GetPrimitive("Double");
+            Set setString = top.GetPrimitive("String");
 
             // Insert table
             Set t1 = new Set("t1");
-            top.Root.AddSubset(t1);
+            top.AddTable(t1);
 
             // Insert attributes
             Dim orders = new DimPrimitive<int>("orders", t1, setInteger);
@@ -111,7 +111,8 @@ namespace Test
 
             // Test enumerators
             int pathCount = 0;
-            foreach (DimPath p in empSet.GetGreaterPrimitiveDims(DimensionType.IDENTITY_ENTITY))
+            PathEnumerator primPaths = new PathEnumerator(empSet, DimensionType.IDENTITY_ENTITY);
+            foreach (DimPath p in primPaths)
             {
                 Assert.AreEqual(1, p.Length);
                 pathCount++;
@@ -119,7 +120,8 @@ namespace Test
             Assert.AreEqual(18, pathCount);
 
             pathCount = 0;
-            foreach (DimPath p in epSet.GetGreaterPrimitiveDims(DimensionType.IDENTITY_ENTITY))
+            primPaths = new PathEnumerator(epSet, DimensionType.IDENTITY_ENTITY);
+            foreach (DimPath p in primPaths)
             {
                 pathCount++;
             }
@@ -139,14 +141,14 @@ namespace Test
 
             // Check schema notifications and tree updates
             Set t1 = new Set("New Set");
-            dbTop.Root.AddSubset(t1);
+            dbTop.AddTable(t1);
             Assert.AreEqual(21, treeRoot.Count); // Now we have 1 more table in the root
 
             Set t2 = new Set("New Subset");
-            dbTop.Root.FindSubset("Orders").AddSubset(t2);
+            dbTop.AddTable(t2, dbTop.Root.FindSubset("Orders"));
             Assert.AreEqual(21, treeRoot[8].Count); // In addition to 20 attributes, it has one new subset
 
-            Dim d1 = new DimPrimitive<double>("d1", t1, dbTop.GetPrimitiveSubset("Double"));
+            Dim d1 = new DimPrimitive<double>("d1", t1, dbTop.GetPrimitive("Double"));
             d1.Add();
             Assert.AreEqual(1, treeRoot[20].Count); // 1 dimension in the new table
         }
@@ -314,7 +316,7 @@ namespace Test
             Dim sourceDim = mainSet.GetGreaterDim("Employee ID");
             Set sourceSet = sourceDim.GreaterSet;
             Set targetSet = wsTop.FindSubset("Customers");
-            Dim targetDim = targetSet.CreateDefaultLesserDimension(sourceDim.Name, mainSet); // TODO: set also other properties so that new projDim is identical to the old one
+            Dim targetDim = wsTop.CreateColumn(sourceDim.Name, mainSet, targetSet, true); // TODO: set also other properties so that new projDim is identical to the old one
 
             //
             // Initialize a mapping model 
@@ -345,7 +347,7 @@ namespace Test
             sourceDim = mainSet.GetGreaterDim("ID");
             sourceSet = sourceDim.GreaterSet;
             targetSet = wsTop.FindSubset("Customers");
-            targetDim = targetSet.CreateDefaultLesserDimension(sourceDim.Name, mainSet); // TODO: set also other properties so that new projDim is identical to the old one
+            targetDim = wsTop.CreateColumn(sourceDim.Name, mainSet, targetSet, true); // TODO: set also other properties so that new projDim is identical to the old one
 
             mapper.MapDim(new DimPath(sourceDim), new DimPath(targetDim));
             string sourceName = "ID";

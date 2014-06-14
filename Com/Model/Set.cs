@@ -25,51 +25,6 @@ namespace Com.Model
         /// </summary>
         public Guid Id { get; private set; }
 
-        #region Properties - simplify, clean, remove, reduce to standard interface
-
-        /// <summary>
-        /// Additional names specific to the relational model and maybe other PK-FK-based models.
-        /// We assume that there is only one PK (identity). Otherwise, we need a collection. 
-        /// </summary>
-        public string RelationalPkName { get; set; } // The same field exists also in Dim (do not confuse them)
-        public string RelationalTableName { get; set; }
-
-        /// <summary>
-        /// How many _instances this set has. Cardinality. Set power. Length (height) of instance set.
-        /// If instances are identified by integer offsets, then size also represents offset range.
-        /// </summary>
-        public virtual int Length { get; protected set; } 
-
-        public virtual Type SystemType
-        {
-            get { return typeof(Offset); }
-        }
-
-        public Type DimType { get; set; } // Default lesser dimension class
-
-        /// <summary>
-        /// Size of values or cells (physical identities) in bytes.
-        /// </summary>
-        public virtual int Width
-        {
-            get { return sizeof(Offset); }
-        }
-
-        /// <summary>
-        /// Whether this set is supposed (able) to have instances. Some sets are used for conceptual purposes. 
-        /// It is not about having zero instances - it is about the ability to have instances (essentially supporting the corresponding interface for working with instances).
-        /// This flag is true for extensions which implement data-related methods (and in this sense it is reduntant because duplicates 'instance of').
-        /// </summary>
-        public bool IsInstantiable { get; set; }
-
-        /// <summary>
-        /// Whether it is a primitive set. Primitive sets do not have greater dimensions.
-        /// It can depend on other propoerties (it should be clarified) like instantiable, autopopulated, virtual etc.
-        /// </summary>
-        public bool IsPrimitive { get; set; }
-
-        #endregion
-
         #region CsTable interface
 
         /// <summary>
@@ -77,39 +32,30 @@ namespace Com.Model
         /// </summary>
         public string Name { get; set; }
 
-        public CsDataType DataType { get; protected set; }
+        /// <summary>
+        /// Whether it is a primitive set. Primitive sets do not have greater dimensions.
+        /// It can depend on other propoerties (it should be clarified) like instantiable, autopopulated, virtual etc.
+        /// </summary>
+        public bool IsPrimitive { get { return SuperDim.GreaterSet is CsSchema; } }
 
         //
         // Outputs
         //
-
         public List<CsColumn> GreaterDims { get; private set; } // Outgoing up arrows. Outputs
-        public CsColumn SuperDim
-        {
-            get
-            {
-                return GreaterDims.FirstOrDefault(x => x.IsSuper);
-            }
-        }
-
+        public CsColumn SuperDim { get { return GreaterDims.FirstOrDefault(x => x.IsSuper); } }
+        public List<CsColumn> KeyColumns { get { return GreaterDims.Where(x => x.IsIdentity).ToList(); } }
+        public List<CsColumn> NonkeyColumns { get { return GreaterDims.Where(x => !x.IsIdentity).ToList(); } }
         public CsSchema Top
         {
             get
             {
-                Set set = this;
+                CsTable set = this;
                 while (set.SuperSet != null) set = set.SuperSet;
                 return set is SetTop ? (SetTop)set : null; // A set which is not integrated in the schema does not have top
             }
         }
-
-        public List<CsColumn> KeyColumns { get { return GreaterDims.Where(x => x.IsIdentity).ToList(); } }
-
-        public List<CsColumn> NonkeyColumns { get { return GreaterDims.Where(x => !x.IsIdentity).ToList(); } }
-
-        public CsColumn GetGreaterDim(string name)
-        {
-            return GreaterDims.FirstOrDefault(d => d.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
-        }
+        public List<CsTable> GetGreaterSets() { return GreaterDims.Select(x => x.GreaterSet).ToList(); }
+        public CsTable SuperSet { get { return SuperDim != null ? SuperDim.GreaterSet : null; } }
 
         //
         // Inputs
@@ -117,6 +63,65 @@ namespace Com.Model
 
         public List<CsColumn> LesserDims { get; private set; } // Incoming arrows. Inputs
         public List<CsColumn> SubDims { get { return LesserDims.Where(x => x.IsSuper).ToList(); } }
+        public List<CsTable> SubSets { get { return SubDims.Select(x => x.LesserSet).ToList(); } }
+        public List<CsTable> GetAllSubsets() // Should be solved using general enumerator? Other: get all lesser, get all greater
+        {
+            int count = SubSets.Count;
+            List<CsTable> result = new List<CsTable>(SubSets);
+            for (int i = 0; i < count; i++)
+            {
+                List<CsTable> subsets = ((Set)result[i]).GetAllSubsets();
+                if (subsets == null || subsets.Count == 0)
+                {
+                    continue;
+                }
+                result.AddRange(subsets);
+            }
+
+            return result;
+        }
+
+        //
+        // Poset relation
+        //
+
+        // TODO: Maybe rewrite as one method IsLess with parameter as bit mask {Super, Key, Nonkey}
+        // And then define shortcut methods via this general methods. In fact, IsLess *is* already defined via enumeator
+
+        // Return true if this set is included in the specified set, that is, the specified set is a direct or indirect super-set of this set
+        public bool IsIn(CsTable parent) // IsSub
+        {
+            for (CsTable set = this; set != null; set = set.SuperDim.GreaterSet)
+            {
+                if (set == parent) return true;
+            }
+            return false;
+        }
+
+        public bool IsLesser(CsTable set) // IsLess
+        {
+            var paths = new PathEnumerator(this, set, DimensionType.IDENTITY_ENTITY);
+            return paths.Count() > 0;
+        }
+
+        public bool IsLeast { get { return LesserDims.Count(x => x.LesserSet.Top == x.GreaterSet.Top) == 0; } } // Direct to bottom
+
+        public bool IsGreatest // TODO: Direct to top
+        {
+            get
+            {
+                return IsPrimitive || GreaterDims.Count(x => x.LesserSet.Top == x.GreaterSet.Top) == 0; // All primitive sets are greatest by definition
+            }
+        }
+
+        //
+        // Name methods
+        //
+
+        public CsColumn GetGreaterDim(string name)
+        {
+            return GreaterDims.FirstOrDefault(d => d.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+        }
 
         public CsTable getTable(string name) { return LesserDims.FirstOrDefault(d => d.LesserSet.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase)).LesserSet; }
 
@@ -139,351 +144,30 @@ namespace Com.Model
 
         #endregion
 
-        #region Auxiliary (old) schema methods - simplify, clean, remove by reducing to CsTable methods
-
-        #region Inclusion. Super.
-
-        public CsTable SuperSet { get { return SuperDim != null ? SuperDim.GreaterSet : null; } }
-
-        public SetRoot Root // TODO: move to the methods for getting primitive sets of the schema
-        {
-            get
-            {
-                if (this is SetTop) return (SetRoot) ((SetTop)this).GetPrimitiveSubset("Root");
-                Set set = this;
-                while (!(set is SetRoot)) set = (Set)set.SuperSet;
-                return (SetRoot)set;
-            }
-        }
-
-        public bool IsIn(Set parent) // Return true if this set is included in the specified set, that is, the specified set is a direct or indirect super-set of this set
-        {
-            for (CsTable set = this; set != null; set = set.SuperDim.GreaterSet)
-            {
-                if (set == parent) return true;
-            }
-            return false;
-        }
-
-        #endregion
-
-        #region Inclusion. Sub.
-
-        public Set AddSubset(Set subset)
-        {
-            Debug.Assert(subset != null, "Wrong use of method parameter. Subset must be non-null.");
-            DimSuper dim;
-            if (subset.IsPrimitive)
-            {
-                dim = new DimTop("Top", subset, this);
-            }
-            else
-            {
-                dim = new DimSuper("Super", subset, this);
-            }
-
-            dim.Add();
-
-            return subset;
-        }
-
-        public Set RemoveSubset(Set subset)
-        {
-            Debug.Assert(subset != null, "Wrong use of method parameter. Subset must be non-null.");
-
-            if(!SubDims.Exists(x => x.LesserSet == subset))
-            {
-                return null; // Nothing to remove
-            }
-
-            subset.SuperDim.Remove();
-
-            return subset;
-        }
-
-        public List<CsTable> SubSets
-        {
-            get { return SubDims.Select(x => x.LesserSet).ToList(); }
-        }
-
-        public List<CsTable> GetAllSubsets()
-        {
-            int count = SubSets.Count;
-            List<CsTable> result = new List<CsTable>(SubSets);
-            for (int i = 0; i < count; i++)
-            {
-                List<CsTable> subsets = ((Set)result[i]).GetAllSubsets();
-                if (subsets == null || subsets.Count == 0)
-                {
-                    continue;
-                }
-                result.AddRange(subsets);
-            }
-
-            return result;
-        }
-
-        #endregion
-
-        #region Poset. Greater. 
-
-        public bool IsGreatest
-        {
-            get
-            {
-                return IsPrimitive || GreaterDims.Count(x => x.LesserSet.Top == x.GreaterSet.Top) == 0; // All primitive sets are greatest by definition
-            }
-        }
-
-        public bool IsGreater(Set set)
-        {
-            var paths = new PathEnumerator(set, this, DimensionType.IDENTITY_ENTITY);
-            return paths.Count() > 0;
-        }
-
-        public bool IsLesser(Set set)
-        {
-            var paths = new PathEnumerator(this, set, DimensionType.IDENTITY_ENTITY);
-            return paths.Count() > 0;
-        }
-
-        public int IdentityArity
-        {
-            get
-            {
-                return GreaterDims.Count(x => x.IsIdentity);
-            }
-        }
-
-        public int MaxRank // Number of segments in the longest primitive path (0 for primitive sets or with no greater dimensions)
-        {
-            get
-            {
-                int maxRank = 0;
-                var paths = new PathEnumerator(this, DimensionType.IDENTITY_ENTITY);
-                foreach (DimPath path in paths)
-                {
-                    if (path.Length > maxRank) maxRank = path.Length;
-                }
-                return maxRank;
-            }
-        }
-
-        public int MinRank // Number of segments in the shortest primitive path (0 for primitive sets or with no greater dimensions)
-        {
-            get
-            {
-                int minRank = Int16.MaxValue;
-                var paths = new PathEnumerator(this, DimensionType.IDENTITY_ENTITY);
-                foreach (DimPath path in paths)
-                {
-                    if (path.Length < minRank) minRank = path.Length;
-                }
-                if (minRank == Int16.MaxValue) return 0;
-                return minRank;
-            }
-        }
-
-        public int IdentityPrimitiveArity
-        {
-            get // It is computed recursively - we sum up greater set arities of all our identity dimensions up to the prmitive sets with arity 1
-            {
-                if (IsPrimitive) return 1;
-                return GreaterDims.Where(x => x.IsIdentity).Sum(x => ((Set)x.GreaterSet).IdentityPrimitiveArity);
-            }
-        }
-
-        public PathEnumerator GetGreaterPrimitiveDims(DimensionType dimType)
-        {
-            return new PathEnumerator(this, dimType);
-        }
-/*
-        IEnumerable<List<Dim>> GetAllPrimitiveDims()
-        {
-            Dim p = new Dim("");
-            p.Path = new List<Dim>();
-            p.LesserSet = this;
-            p.GreaterSet = this;
-
-            while (roots.Count > 0)
-            {
-                var node = roots.Pop();
-                foreach (var child in node.GreaterSet.GreaterDims)
-                    roots.Push(child);
-
-                yield return node; // Compose a new list and return it
-            }
-        }
-*/
-        public CsColumn GetGreaterDimByFkName(string name)
-        {
-            return GreaterDims.FirstOrDefault(d => ((Dim)d).RelationalFkName.Equals(name, StringComparison.InvariantCultureIgnoreCase));
-        }
-        public List<CsTable> GetGreaterSets()
-        {
-            return GreaterDims.Select(x => x.GreaterSet).ToList();
-        }
-        public List<CsTable> GetPossibleGreaterSets() // All sets that can be used as greater sets in a new dimension
-        {
-            List<CsTable> all = Root.GetAllSubsets();
-            List<CsTable> result = new List<CsTable>();
-            foreach (CsTable set in all)
-            {
-                if (set == this) continue; // We cannot point to itself
-                if (((Set)set).IsLesser(this)) continue; // We cannot point to a lesser set (cycle)
-
-                result.Add(set);
-            }
-
-            return result;
-        }
-
-        #endregion
-
-        #region Poset. Lesser.
-
-        public bool IsLeast
-        {
-            get
-            {
-                return LesserDims.Count(x => x.LesserSet.Top == x.GreaterSet.Top) == 0;
-            }
-        }
-
-        public List<CsTable> GetLesserSets()
-        {
-            return LesserDims.Select(x => x.LesserSet).ToList();
-        }
-        public List<CsColumn> GetLesserDims(string name)
-        {
-            return LesserDims.Where(d => d.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase)).ToList();
-        }
-
-        #endregion
-
-        #endregion
-
-        #region Complex dimensions (paths)
-
-        public List<DimPath> SuperPaths { get; private set; }
-        public List<DimPath> SubPaths { get; private set; }
-        public List<DimPath> GreaterPaths { get; private set; }
-        public List<DimPath> LesserPaths { get; private set; }
-
-        public void AddGreaterPath(DimPath path)
-        {
-            Debug.Assert(path.GreaterSet != null && path.LesserSet != null, "Wrong use: path must specify a lesser and greater sets before it can be added to a set.");
-            RemoveGreaterPath(path);
-            ((Set)path.GreaterSet).LesserPaths.Add(path);
-            ((Set)path.LesserSet).GreaterPaths.Add(path);
-        }
-        public void RemoveGreaterPath(DimPath path)
-        {
-            if (path.GreaterSet != null) ((Set)path.GreaterSet).LesserPaths.Remove(path);
-            if (path.LesserSet != null) ((Set)path.LesserSet).GreaterPaths.Remove(path);
-        }
-        public void RemoveGreaterPath(string name)
-        {
-            DimPath path = GetGreaterPath(name);
-            if (path != null)
-            {
-                RemoveGreaterPath(path);
-            }
-        }
-        public DimPath GetGreaterPath(string name)
-        {
-            return GreaterPaths.FirstOrDefault(d => d.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
-        }
-        public DimPath GetGreaterPathByColumnName(string name)
-        {
-            return GreaterPaths.FirstOrDefault(d => d.RelationalColumnName.Equals(name, StringComparison.InvariantCultureIgnoreCase));
-        }
-        public List<DimPath> GetGreaterPaths(Set greaterSet) // Differences between this set and the specified set
-        {
-            if (greaterSet == null) return null;
-            var paths = new PathEnumerator(this, greaterSet, DimensionType.IDENTITY_ENTITY);
-            var ret = new List<DimPath>();
-            foreach (var p in paths)
-            {
-                ret.Add(new DimPath(p)); // Create a path for each list of dimensions
-            }
-
-            return ret;
-        }
-        public DimPath GetGreaterPath(DimPath path)
-        {
-            if (path == null || path.Path == null) return null;
-            return GetGreaterPath(path.Path);
-        }
-        public DimPath GetGreaterPath(List<Dim> path)
-        {
-            if (path == null ) return null;
-            foreach (DimPath p in GreaterPaths)
-            {
-                if (p.Path == null) continue;
-                if (p.Path.Count != path.Count) continue; // Different lengths => not equal
-
-                bool equal = true;
-                for (int seg=0; seg<p.Path.Count && equal; seg++)
-                {
-                    if (!p.Path[seg].Name.Equals(path[seg].Name, StringComparison.InvariantCultureIgnoreCase)) equal = false;
-                    // if (p.Path[seg] != path[seg]) equal = false; // Compare strings as objects
-                }
-                if(equal) return p;
-            }
-            return null;
-        }
-        public List<DimPath> GetGreaterPathsStartingWith(DimPath path)
-        {
-            if (path == null || path.Path == null) return new List<DimPath>();
-            return GetGreaterPathsStartingWith(path.Path);
-        }
-        public List<DimPath> GetGreaterPathsStartingWith(List<Dim> path)
-        {
-            var result = new List<DimPath>();
-            foreach (DimPath p in GreaterPaths)
-            {
-                if (p.Path == null) continue;
-                if (p.Path.Count < path.Count) continue; // Too short path (cannot include the input path)
-                if (p.StartsWith(path))
-                {
-                    result.Add(p);
-                }
-            }
-            return result;
-        }
-        
-        public void AddAllNonStoredPaths()
-        {
-            int pathCounter = 0;
-
-            DimPath path = new DimPath("");
-            foreach (DimPath p in GetGreaterPrimitiveDims(DimensionType.IDENTITY_ENTITY))
-            {
-                if (p.Length < 2) continue; // All primitive paths are stored in this set. We need at least 2 segments.
-
-                // Check if this path already exists
-                path.Path = p.Path;
-                if (GetGreaterPath(path) != null) continue; // Already exists
-
-                string pathName = "__inherited__" + ++pathCounter;
-
-                DimPath newPath = new DimPath(pathName);
-                newPath.Path = new List<Dim>(p.Path);
-                newPath.Name = newPath.ComplexName; // Overwrite previous pathName (so previous is not needed actually)
-                newPath.RelationalColumnName = newPath.Name; // It actually will be used for relational queries
-                newPath.RelationalFkName = path.RelationalFkName; // Belongs to the same FK
-                newPath.RelationalPkName = null;
-                newPath.LesserSet = this;
-                newPath.GreaterSet = p.Path[p.Length - 1].GreaterSet;
-
-                AddGreaterPath(newPath);
-            }
-        }
-
-        #endregion
-
         #region Instance manipulation (function, data) methods
+
+        /// <summary>
+        /// How many _instances this set has. Cardinality. Set power. Length (height) of instance set.
+        /// If instances are identified by integer offsets, then size also represents offset range.
+        /// </summary>
+        public virtual int Length { get; protected set; }
+
+        public Type DimType { get; set; } // Default lesser dimension class
+
+        /// <summary>
+        /// Size of values or cells (physical identities) in bytes.
+        /// </summary>
+        public virtual int Width
+        {
+            get { return sizeof(Offset); }
+        }
+
+        /// <summary>
+        /// Whether this set is supposed (able) to have instances. Some sets are used for conceptual purposes. 
+        /// It is not about having zero instances - it is about the ability to have instances (essentially supporting the corresponding interface for working with instances).
+        /// This flag is true for extensions which implement data-related methods (and in this sense it is reduntant because duplicates 'instance of').
+        /// </summary>
+        public bool IsInstantiable { get; set; }
 
         // TODO: Here we need an interface like ResultSet in JDBC with all possible types
 		// Alternative: maybe define these methos in the SetRemote class where we will have one class for manually entering elements
@@ -497,7 +181,7 @@ namespace Com.Model
             }
             else
             {
-                Dim dim = GetGreaterDim(name);
+                CsColumn dim = GetGreaterDim(name);
                 return dim.GetValue(offset);
             }
         }
@@ -511,7 +195,7 @@ namespace Com.Model
             }
             else
             {
-                Dim dim = GetGreaterDim(name);
+                CsColumn dim = GetGreaterDim(name);
                 dim.SetValue(offset, value);
             }
         }
@@ -632,7 +316,8 @@ namespace Com.Model
             //
             // Check that real (non-null) values are available for all identity dimensions
             //
-            foreach (DimPath path in GetGreaterPrimitiveDims(DimensionType.IDENTITY)) // Find all primitive identity paths
+            PathEnumerator primPaths = new PathEnumerator(this, DimensionType.IDENTITY);
+            foreach (DimPath path in primPaths) // Find all primitive identity paths
             {
                 // Try to find at least one node with non-null value on the path
                 bool valueFound = false;
@@ -782,14 +467,14 @@ namespace Com.Model
                 //
                 // Find local greater generation sets including the super-set. Create a tuple corresponding to these dimensions
                 //
-                var dims = new List<Dim>();
+                var dims = new List<CsColumn>();
                 dims.Add(SuperDim);
                 dims.AddRange(KeyColumns);
 
                 Expression tupleExpr = new Expression(this.Name, Operation.TUPLE, this); // Represents a record to be appended to the set
                 for(int i=0; i<dims.Count; i++) 
                 {
-                    Dim d = dims[i];
+                    CsColumn d = dims[i];
                     Expression childExpr = new Expression(d.Name, Operation.PRIMITIVE, d.GreaterSet);
 
                     if (i == 0) // Super-dimension is stored in expression Input
@@ -827,7 +512,7 @@ namespace Com.Model
                             // Initialize the where-expression before evaluation by using current offsets
                             for (int i = 0; i < dimCount; i++)
                             {
-                                Dim d = dims[i];
+                                CsColumn d = dims[i];
                                 // Find all uses of the dimension in the expression and initialize it before evaluation
                                 List<Expression> dimExpressions = WhereExpression.GetOperands(Operation.DOT, d.Name);
                                 foreach (Expression e in dimExpressions)
@@ -854,7 +539,7 @@ namespace Com.Model
                             // Initialize an instance for appending
                             for (int i = 0; i < dimCount; i++)
                             {
-                                Dim d = dims[i];
+                                CsColumn d = dims[i];
 
                                 Expression dimExpression = tupleExpr.GetOperand(d);
                                 if (dimExpression != null) dimExpression.Output = offsets[i];
@@ -896,8 +581,8 @@ namespace Com.Model
 
                 if (mapping == null) return;
 
-                Set sourceSet = projectDim.LesserSet;
-                Set targetSet = projectDim.GreaterSet; // this set
+                CsTable sourceSet = projectDim.LesserSet;
+                CsTable targetSet = projectDim.GreaterSet; // this set
 
                 Debug.Assert(mapping.TargetSet == this && targetSet == this, "Wrong use: Mapping target and source dimension lesser set must be equal to this set.");
                 Debug.Assert(mapping.TargetSet == targetSet && mapping.SourceSet == sourceSet, "Wrong use: source set of mapping must be lesser set of the dimension, and target set must be greater set.");
@@ -975,33 +660,7 @@ namespace Com.Model
 
         #endregion
 
-        #region Overriding System.Object
-
-        public override string ToString()
-        {
-            return String.Format("{0} gDims: {1}, IdArity: {2}", Name, GreaterDims.Count, IdentityArity);
-        }
-
-        public override bool Equals(object obj)
-        {
-            if (obj == null) return false;
-            if (Object.ReferenceEquals(this, obj)) return true;
-            if (this.GetType() != obj.GetType()) return false;
-
-            Set set = (Set)obj;
-            if (Id.Equals(set.Id)) return true;
-
-            return false;
-        }
-
-        public override int GetHashCode()
-        {
-            return Id.GetHashCode();
-        }
-
-        #endregion
-
-        #region Interfaces
+        #region System interfaces
 
         public event NotifyCollectionChangedEventHandler CollectionChanged; // Operations with dimensions (of any kind)
         protected virtual void OnCollectionChanged(NotifyCollectionChangedEventArgs e)
@@ -1034,28 +693,174 @@ namespace Com.Model
             }
         }
 
+        public override string ToString()
+        {
+            return String.Format("{0} gDims: {1}, IdArity: {2}", Name, GreaterDims.Count, KeyColumns.Count);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (obj == null) return false;
+            if (Object.ReferenceEquals(this, obj)) return true;
+            if (this.GetType() != obj.GetType()) return false;
+
+            Set set = (Set)obj;
+            if (Id.Equals(set.Id)) return true;
+
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return Id.GetHashCode();
+        }
+
+        #endregion
+
+        #region Relational properties and methods
+
+        /// <summary>
+        /// Additional names specific to the relational model and maybe other PK-FK-based models.
+        /// We assume that there is only one PK (identity). Otherwise, we need a collection. 
+        /// </summary>
+        public string RelationalTableName { get; set; }
+        public string RelationalPkName { get; set; } // The same field exists also in Dim (do not confuse them)
+
+        public CsColumn GetGreaterDimByFkName(string name)
+        {
+            return GreaterDims.FirstOrDefault(d => ((Dim)d).RelationalFkName.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+        }
+
+        #endregion
+
+        #region Complex dimensions (paths) - move to a subclass (relational?)
+
+        public List<DimPath> SuperPaths { get; private set; }
+        public List<DimPath> SubPaths { get; private set; }
+        public List<DimPath> GreaterPaths { get; private set; }
+        public List<DimPath> LesserPaths { get; private set; }
+
+        public void AddGreaterPath(DimPath path)
+        {
+            Debug.Assert(path.GreaterSet != null && path.LesserSet != null, "Wrong use: path must specify a lesser and greater sets before it can be added to a set.");
+            RemoveGreaterPath(path);
+            ((Set)path.GreaterSet).LesserPaths.Add(path);
+            ((Set)path.LesserSet).GreaterPaths.Add(path);
+        }
+        public void RemoveGreaterPath(DimPath path)
+        {
+            if (path.GreaterSet != null) ((Set)path.GreaterSet).LesserPaths.Remove(path);
+            if (path.LesserSet != null) ((Set)path.LesserSet).GreaterPaths.Remove(path);
+        }
+        public void RemoveGreaterPath(string name)
+        {
+            DimPath path = GetGreaterPath(name);
+            if (path != null)
+            {
+                RemoveGreaterPath(path);
+            }
+        }
+        public DimPath GetGreaterPath(string name)
+        {
+            return GreaterPaths.FirstOrDefault(d => d.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+        }
+        public DimPath GetGreaterPathByColumnName(string name)
+        {
+            return GreaterPaths.FirstOrDefault(d => d.RelationalColumnName.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+        }
+        public List<DimPath> GetGreaterPaths(Set greaterSet) // Differences between this set and the specified set
+        {
+            if (greaterSet == null) return null;
+            var paths = new PathEnumerator(this, greaterSet, DimensionType.IDENTITY_ENTITY);
+            var ret = new List<DimPath>();
+            foreach (var p in paths)
+            {
+                ret.Add(new DimPath(p)); // Create a path for each list of dimensions
+            }
+
+            return ret;
+        }
+        public DimPath GetGreaterPath(DimPath path)
+        {
+            if (path == null || path.Path == null) return null;
+            return GetGreaterPath(path.Path);
+        }
+        public DimPath GetGreaterPath(List<Dim> path)
+        {
+            if (path == null) return null;
+            foreach (DimPath p in GreaterPaths)
+            {
+                if (p.Path == null) continue;
+                if (p.Path.Count != path.Count) continue; // Different lengths => not equal
+
+                bool equal = true;
+                for (int seg = 0; seg < p.Path.Count && equal; seg++)
+                {
+                    if (!p.Path[seg].Name.Equals(path[seg].Name, StringComparison.InvariantCultureIgnoreCase)) equal = false;
+                    // if (p.Path[seg] != path[seg]) equal = false; // Compare strings as objects
+                }
+                if (equal) return p;
+            }
+            return null;
+        }
+        public List<DimPath> GetGreaterPathsStartingWith(DimPath path)
+        {
+            if (path == null || path.Path == null) return new List<DimPath>();
+            return GetGreaterPathsStartingWith(path.Path);
+        }
+        public List<DimPath> GetGreaterPathsStartingWith(List<Dim> path)
+        {
+            var result = new List<DimPath>();
+            foreach (DimPath p in GreaterPaths)
+            {
+                if (p.Path == null) continue;
+                if (p.Path.Count < path.Count) continue; // Too short path (cannot include the input path)
+                if (p.StartsWith(path))
+                {
+                    result.Add(p);
+                }
+            }
+            return result;
+        }
+
+        public void AddAllNonStoredPaths()
+        {
+            int pathCounter = 0;
+
+            DimPath path = new DimPath("");
+            PathEnumerator primPaths = new PathEnumerator(this, DimensionType.IDENTITY_ENTITY);
+            foreach (DimPath p in primPaths)
+            {
+                if (p.Length < 2) continue; // All primitive paths are stored in this set. We need at least 2 segments.
+
+                // Check if this path already exists
+                path.Path = p.Path;
+                if (GetGreaterPath(path) != null) continue; // Already exists
+
+                string pathName = "__inherited__" + ++pathCounter;
+
+                DimPath newPath = new DimPath(pathName);
+                newPath.Path = new List<Dim>(p.Path);
+                newPath.Name = newPath.ComplexName; // Overwrite previous pathName (so previous is not needed actually)
+                newPath.RelationalColumnName = newPath.Name; // It actually will be used for relational queries
+                newPath.RelationalFkName = path.RelationalFkName; // Belongs to the same FK
+                newPath.RelationalPkName = null;
+                newPath.LesserSet = this;
+                newPath.GreaterSet = p.Path[p.Length - 1].GreaterSet;
+
+                AddGreaterPath(newPath);
+            }
+        }
+
         #endregion
 
         #region Constructors and initializers.
 
-        public virtual Dim CreateDefaultLesserDimension(string name, Set lesserSet)
-        {
-            Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
-            if (name.Equals("Super", StringComparison.InvariantCultureIgnoreCase))
-            {
-                return new DimSuper(name, lesserSet, this);
-            }
-            else
-            {
-                return new DimSet(name, lesserSet, this);
-            }
-        }
-
-        public Set()
+        public Set(string name)
         {
             Id = Guid.NewGuid();
 
-            DimType = typeof(DimSet);
+            Name = name;
 
             GreaterDims = new List<CsColumn>(); // Up arrows
             LesserDims = new List<CsColumn>();
@@ -1068,29 +873,12 @@ namespace Com.Model
             ProjectDimensions = new List<Dim>();
 
             IsInstantiable = true;
-            IsPrimitive = false;
             IsAutoPopulated = true;
-        }
-
-        public Set(string name)
-            : this()
-        {
-            Name = name;
+            DimType = typeof(DimSet);
         }
 
         #endregion
 
-    }
-
-    public enum DataSourceType
-    {
-        LOCAL, // This database
-        ACCESS,
-        OLEDB,
-        SQL, // Generic (standard) SQL
-        CSV,
-        ODATA,
-        EXCEL
     }
 
 }

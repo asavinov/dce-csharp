@@ -549,7 +549,12 @@ namespace Com.Model
         #endregion
 
         public DimPrimitive(string name, Set lesserSet, Set greaterSet)
-            : base(name, lesserSet, greaterSet)
+            : this(name, lesserSet, greaterSet, true, true)
+        {
+        }
+
+        public DimPrimitive(string name, Set lesserSet, Set greaterSet, bool isIdentity, bool isSuper)
+            : base(name, lesserSet, greaterSet, isIdentity, isSuper)
         {
             // TODO: Check if output (greater) set is of correct type
 
@@ -589,6 +594,5 @@ namespace Com.Model
                 _nullValue = default(T);
             }
         }
-
     }
 }

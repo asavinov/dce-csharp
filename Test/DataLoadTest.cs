@@ -60,9 +60,9 @@ namespace Test
             // Prepare table schema
             //
             SetTop top = new SetTop("Top");
-            Set setInteger = top.GetPrimitiveSubset("Integer");
-            Set setDouble = top.GetPrimitiveSubset("Double");
-            Set setString = top.GetPrimitiveSubset("String");
+            Set setInteger = top.GetPrimitive("Integer");
+            Set setDouble = top.GetPrimitive("Double");
+            Set setString = top.GetPrimitive("String");
 
             // Insert table
             Set t1 = new Set("t1");
@@ -204,9 +204,9 @@ namespace Test
             Set odet = wsTop.FindSubset("Order Details");
             Set orders = wsTop.FindSubset("Orders");
             Set cust = wsTop.FindSubset("Customers");
-            Set doubleSet = wsTop.GetPrimitiveSubset("Double");
-            Set intSet = wsTop.GetPrimitiveSubset("Integer");
-            Set strSet = wsTop.GetPrimitiveSubset("String");
+            Set doubleSet = wsTop.GetPrimitive("Double");
+            Set intSet = wsTop.GetPrimitive("Integer");
+            Set strSet = wsTop.GetPrimitive("String");
 
             Expression childExpr;
 
@@ -261,12 +261,10 @@ namespace Test
 
             Set newSet = new Set("New Set");
 
-            Dim d1 = ods.CreateDefaultLesserDimension("Order Details Status", newSet);
-            d1.IsIdentity = true;
+            Dim d1 = wsTop.CreateColumn("Order Details Status", newSet, ods, true);
             d1.Add();
 
-            Dim d2 = os.CreateDefaultLesserDimension("Orders Status", newSet);
-            d2.IsIdentity = true;
+            Dim d2 = wsTop.CreateColumn("Orders Status", newSet, os, true);
             d2.Add();
 
             wsTop.Root.AddSubset(newSet);
@@ -297,11 +295,9 @@ namespace Test
             // Subsetting operation (product with super-dimension)
             //
             Set subset_ods = new Set("Subset of ODS");
+            wsTop.AddTable(subset_ods); // TODO: Check that super-projDim is identity
 
-            d2 = os.CreateDefaultLesserDimension("Orders Status", subset_ods);
-            d2.IsIdentity = true;
-
-            ods.AddSubset(subset_ods); // TODO: Check that super-projDim is identity
+            d2 = wsTop.CreateColumn("Orders Status", subset_ods, os, true);
             d2.Add();
 
             // Define filter
@@ -452,7 +448,7 @@ namespace Test
 
             Set cust = wsTop.FindSubset("Customers");
             Set prod = wsTop.FindSubset("Products");
-            Set doubleSet = wsTop.GetPrimitiveSubset("Double");
+            Set doubleSet = wsTop.GetPrimitive("Double");
 
             //
             // Test aggregation recommendations. From Customers to Product
@@ -473,7 +469,7 @@ namespace Test
             recoms.MeasureDimensions.SelectedFragment = recoms.MeasureDimensions.Alternatives.First(f => ((Dim)f.Fragment).Name == "List Price");
             recoms.AggregationFunctions.SelectedFragment = recoms.AggregationFunctions.Alternatives.First(f => f.Fragment == "SUM");
 
-            Dim derived1 = doubleSet.CreateDefaultLesserDimension("Average List Price", cust);
+            Dim derived1 = wsTop.CreateColumn("Average List Price", cust, doubleSet, true);
             derived1.Add();
 
             Expression aggreExpr = recoms.GetExpression();
@@ -509,7 +505,7 @@ namespace Test
             targetSet.Populate();
 
             Set products = wsTop.FindSubset("Products");
-            Set doubleSet = wsTop.GetPrimitiveSubset("Double");
+            Set doubleSet = wsTop.GetPrimitive("Double");
 
             //
             // Create derived dimensions
@@ -530,7 +526,7 @@ namespace Test
             Expression d3_Expr = Expression.CreateProjectExpression(new List<Dim> { d3 }, Operation.DOT);
 
             // Add derived dimension
-            Dim derived1 = doubleSet.CreateDefaultLesserDimension("Derived Column", products);
+            Dim derived1 = wsTop.CreateColumn("Derived Column", products, doubleSet, true);
             derived1.Add();
 
             Expression arithmExpr = new Expression("MINUS", Operation.SUB);
@@ -557,7 +553,7 @@ namespace Test
             // Another (simpler) test
             //
             // Add derived dimension
-            Dim derived2 = doubleSet.CreateDefaultLesserDimension("Derived Column 2", products);
+            Dim derived2 = wsTop.CreateColumn("Derived Column 2", products, doubleSet, true);
             derived2.Add();
 
             plusExpr = new Expression("PLUS", Operation.ADD);
@@ -600,7 +596,7 @@ namespace Test
 
             // Add subset
             Set subProducts = new Set("SubProducts");
-            products.AddSubset(subProducts);
+            wsTop.AddTable(subProducts, products);
 
             // Create simple (one-segment) function expressions
             Dim d1 = products.GetGreaterDim("List Price");
@@ -656,7 +652,7 @@ namespace Test
             // Thus we essentially implement "Change Type" pattern
             //
             Set mappedDimType = wsTop.FindSubset("Orders Status");
-            Dim mappedDim = mappedDimType.CreateDefaultLesserDimension(sourceDim.Name + " (1)", mainSet); // TODO: set also other properties so that new projDim is identical to the old one
+            Dim mappedDim = wsTop.CreateColumn(sourceDim.Name + " (1)", mainSet, mappedDimType, true); // TODO: set also other properties so that new projDim is identical to the old one
             mappedDim.Add();
 
             // Manually define a mapping: Source: (Orders Details) -> Status ID -> Status ID. Target: (Orders Status) -> Status ID.
@@ -690,7 +686,7 @@ namespace Test
             mappedDimType = Mapper.ImportSet(dbTop.FindSubset("Suppliers"), wsTop);
             mappedDimType.Populate();
 
-            mappedDim = mappedDimType.CreateDefaultLesserDimension(sourceDim.Name + " (1)", mainSet); // TODO: set also other properties so that new projDim is identical to the old one
+            mappedDim = wsTop.CreateColumn(sourceDim.Name + " (1)", mainSet, mappedDimType, true); // TODO: set also other properties so that new projDim is identical to the old one
             mappedDim.Add();
 
             // Manually define a mapping
@@ -738,8 +734,7 @@ namespace Test
             wsTop.Root.AddSubset(extractedSet);
 
             Set idSet = projDim.GreaterSet;
-            Dim idDim = idSet.CreateDefaultLesserDimension(projDim.Name, extractedSet);
-            idDim.IsIdentity = true;
+            Dim idDim = wsTop.CreateColumn(projDim.Name, extractedSet, idSet, true);
             idDim.Add();
 
             //
@@ -748,7 +743,7 @@ namespace Test
             Mapping mapping = new Mapping(products, extractedSet);
             mapping.AddMatch(new PathMatch(new DimPath(projDim), new DimPath(idDim))); 
 
-            Dim extractedDim = extractedSet.CreateDefaultLesserDimension(extractedSet.Name, products);
+            Dim extractedDim = wsTop.CreateColumn(extractedSet.Name, products, extractedSet, true);
             extractedDim.Mapping = mapping;
             extractedDim.Add();
             extractedDim.GreaterSet.ProjectDimensions.Add(extractedDim);

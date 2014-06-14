@@ -12,12 +12,15 @@ namespace Com.Model
     public class DimSuper : DimPrimitive<int>
     {
         public DimSuper(string name, Set lesserSet, Set greaterSet) 
-            : base(name, lesserSet, greaterSet)
+            : this(name, lesserSet, greaterSet, true, true)
         {
-            IsIdentity = true;
-            IsSuper = true;
             // TODO: Check if sets are of correct type.
             // TODO: Parameterize the dimension accordingly. It is super dimension.
 	    }
+
+        public DimSuper(string name, Set lesserSet, Set greaterSet, bool isIdentity, bool isSuper)
+            : base(name, lesserSet, greaterSet, isIdentity, isSuper)
+        {
+        }
     }
 }

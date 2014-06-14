@@ -15,34 +15,6 @@ namespace Com.Model
 
         public CsSchema schema { get; set; }
 
-        public CsTable CreateTable(string name, CsTable super=null)
-        {
-            // Create instance of Set (must implement CsTable)
-            Set table = new Set(name);
-
-            // Create a super-dimension
-            if (super == null)
-            {
-                super = schema.T("Root");
-            }
-
-            // Add super-dimension
-            CsColumn superCol = this.CreateColumn("Super", table, super, true, true);
-            superCol.Add();
-
-            return table;
-        }
-
-        public CsColumn CreateColumn(string name, CsTable input, CsTable output, bool isKey, bool isSuper)
-        {
-            // Create instance of the subclass of Dim (must implement CsColumn) corresponding to the output table
-            Dim column = ((Set)output).CreateDefaultLesserDimension(name, (Set)input);
-            column.IsIdentity = isKey;
-            column.IsSuper = isSuper;
-
-            return column;
-        }
-
         public ConceptScript(string name)
         {
             N = name;
@@ -53,17 +25,18 @@ namespace Com.Model
     {
         string Name { get; set; }
 
-        CsDataType DataType { get; protected set; }
+        bool IsPrimitive { get; }
 
         //
         // Outputs
         //
         List<CsColumn> GreaterDims { get; protected set; }
         CsColumn SuperDim { get; }
-        CsSchema Top { get; }
         List<CsColumn> KeyColumns { get; }
         List<CsColumn> NonkeyColumns { get; }
-        CsColumn GetGreaterDim(string name);
+        CsSchema Top { get; }
+        List<CsTable> GetGreaterSets();
+        CsTable SuperSet { get; }
 
         //
         // Inputs
@@ -71,6 +44,22 @@ namespace Com.Model
 
         List<CsColumn> LesserDims { get; protected set; }
         List<CsColumn> SubDims { get; }
+        List<CsTable> SubSets { get; }
+        List<CsTable> GetAllSubsets();
+
+        //
+        // Poset relation
+        //
+
+        bool IsIn(CsTable parent);
+        bool IsLesser(CsTable set);
+        bool IsLeast { get; }
+        bool IsGreatest { get; }
+
+        //
+        // Names
+        //
+        CsColumn GetGreaterDim(string name);
         CsTable getTable(string name);
         CsTable FindSubset(string name);
 
@@ -78,7 +67,18 @@ namespace Com.Model
 
     public interface CsSchema : CsTable
     {
-        CsTable T(string name); // Name resolution
+        CsTable GetPrimitive(string dataType);
+        CsTable Root { get; } // Convenience
+
+        //
+        // Factories for tables and columns
+        //
+        
+        CsTable CreateTable(string name);
+        CsTable AddTable(CsTable table, CsTable parent);
+        CsTable RemoveTable(CsTable table);
+
+        CsTable CreateColumn(string name, CsTable input, CsTable output, bool isKey);
     }
 
     public interface CsConnection : CsSchema
@@ -92,6 +92,7 @@ namespace Com.Model
         bool IsIdentity { get; }
         bool IsSuper { get; } // Changing this property may influence storage type
         // Other properties: isNullable, isPrimitive, IsInstantiable (is supposed/able to have instances = lesser set instantiable), isTemporary
+        bool IsPrimitive { get; }
 
         CsTable LesserSet { get; }
         CsTable GreaterSet { get; }
@@ -105,7 +106,6 @@ namespace Com.Model
 
     public interface CsColumnData // It is interface for managing function data as a mapping to output values (implemented by some kind of storage manager). Input always offset. Output type is a parameter.
     {
-        CsDataType CsType { get; } // Check the output value type. Can be needed to choose appropriate typed methods.
         Offset Size { get; set; }
 
         //
@@ -182,23 +182,14 @@ namespace Com.Model
         CsRecord Parent { get; } // Parent
     }
 
-    /// <summary>
-    /// Primitive data types used in our local database system. 
-    /// We need to enumerate data types for each kind of database along with the primitive mappings to other databases.
-    /// </summary>
-    public enum CsDataType
+    public enum DataSourceType // Essentially, it a marker for a subclass of SetTop (Schema)
     {
-        // Built-in types in C#: http://msdn.microsoft.com/en-us/library/vstudio/ya5y69ds.aspx
-        Void, // Nothing, no value. Can be equivalent to Top or Null.
-        Top,
-        Bottom,
-        Root, // It is surrogate or reference
-        Integer,
-        Double,
-        Decimal,
-        String,
-        Boolean,
-        DateTime,
+        LOCAL, // This database
+        ACCESS,
+        OLEDB,
+        SQL, // Generic (standard) SQL
+        CSV,
+        ODATA,
+        EXCEL
     }
-
 }

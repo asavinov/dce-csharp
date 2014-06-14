@@ -61,17 +61,17 @@ namespace Com.Model
             return bestMapping;
         }
 
-        public List<Mapping> MapPrimitiveSet(SetPrimitive sourceSet, SetTop targetSchema)
+        public List<Mapping> MapPrimitiveSet(Set sourceSet, SetTop targetSchema)
         {
             SetTop sourceSchema = sourceSet.Top;
             List<Mapping> maps = new List<Mapping>();
-            SetPrimitive targetSet;
+            Set targetSet;
 
             if (sourceSchema.GetType() == typeof(SetTop)) // SetTop -> *
             {
                 if (targetSchema.GetType() == typeof(SetTop)) // SetTop -> SetTop
                 {
-                    targetSet = targetSchema.GetPrimitiveSubset(sourceSet.Name);
+                    targetSet = targetSchema.GetPrimitive(sourceSet.Name);
                     Mapping map = new Mapping(sourceSet, targetSet);
                     map.Similarity = 1.0;
                     maps.Add(map);
@@ -86,7 +86,7 @@ namespace Com.Model
                 if (targetSchema.GetType() == typeof(SetTop)) // SetTopOledb -> SetTop
                 {
                     OleDbType sourceType = (OleDbType)sourceSet.DataType;
-                    CsDataType? targetType;
+                    string targetType;
 
                     // Mappings: 
                     // http://msdn.microsoft.com/en-us/library/system.data.oledb.oledbtype(v=vs.110).aspx
@@ -101,13 +101,13 @@ namespace Com.Model
                         case OleDbType.UnsignedInt: // DBTYPE_UI4 -> UInt32
                         case OleDbType.UnsignedSmallInt: // DBTYPE_UI2 -> UInt16
                         case OleDbType.UnsignedTinyInt: // DBTYPE_UI1 -> Byte
-                            targetType = CsDataType.Integer;
+                            targetType = "Integer";
                             break;
 
                         // Double
                         case OleDbType.Double: // DBTYPE_R8
                         case OleDbType.Single: // DBTYPE_R4 -> Single
-                            targetType = CsDataType.Double;
+                            targetType = "Double";
                             break;
 
                         // Decimal
@@ -115,12 +115,12 @@ namespace Com.Model
                         case OleDbType.Decimal: // DBTYPE_DECIMAL
                         case OleDbType.Numeric: // DBTYPE_NUMERIC
                         case OleDbType.VarNumeric:
-                            targetType = CsDataType.Decimal;
+                            targetType = "Decimal";
                             break;
 
                         // Boolean
                         case OleDbType.Boolean: // DBTYPE_BOOL
-                            targetType = CsDataType.Boolean;
+                            targetType = "Boolean";
                             break;
 
                         // DateTime
@@ -129,7 +129,7 @@ namespace Com.Model
                         case OleDbType.DBTime: // DBTYPE_DBTIME ->  TimeSpan
                         case OleDbType.DBTimeStamp: // DBTYPE_DBTIMESTAMP
                         case OleDbType.Filetime: // DBTYPE_FILETIME
-                            targetType = CsDataType.DateTime;
+                            targetType = "DateTime";
                             break;
 
                         // Strings
@@ -140,7 +140,7 @@ namespace Com.Model
                         case OleDbType.VarChar: //
                         case OleDbType.VarWChar: //
                         case OleDbType.WChar: // DBTYPE_WSTR
-                            targetType = CsDataType.String;
+                            targetType = "String";
                             break;
 
                         // Binary
@@ -166,7 +166,7 @@ namespace Com.Model
                             break;
                     }
 
-                    targetSet = targetSchema.GetPrimitiveSubset(targetType.ToString());
+                    targetSet = targetSchema.GetPrimitive(targetType);
 
                     Mapping map = new Mapping(sourceSet, targetSet);
                     map.Similarity = 1.0;
@@ -174,7 +174,7 @@ namespace Com.Model
                 }
                 else if (targetSchema.GetType() == typeof(SetTopOledb)) // SetTopOledb -> SetTopOledb
                 {
-                    targetSet = targetSchema.GetPrimitiveSubset(sourceSet.Name);
+                    targetSet = targetSchema.GetPrimitive(sourceSet.Name);
                     Mapping map = new Mapping(sourceSet, targetSet);
                     map.Similarity = 1.0;
                     maps.Add(map);
@@ -184,7 +184,7 @@ namespace Com.Model
             Mappings.AddRange(maps);
             return maps;
         }
-        public List<Mapping> MapPrimitiveSet(SetTop sourceSchema, SetPrimitive targetSet)
+        public List<Mapping> MapPrimitiveSet(SetTop sourceSchema, Set targetSet)
         {
             List<Mapping> maps = MapPrimitiveSet(targetSet, sourceSchema);
             maps.ForEach(m => Mappings.Remove(m));
@@ -200,7 +200,7 @@ namespace Com.Model
         /// </summary>
         public List<Mapping> MapSet(Set sourceSet, SetTop targetSchema)
         {
-            if (sourceSet.IsPrimitive) return MapPrimitiveSet((SetPrimitive)sourceSet, targetSchema);
+            if (sourceSet.IsPrimitive) return MapPrimitiveSet((Set)sourceSet, targetSchema);
             SetTop sourceSchema = sourceSet.Top;
             List<Mapping> maps = new List<Mapping>();
 
@@ -276,8 +276,7 @@ namespace Com.Model
                     Mapping gMapping = greaterMappings[sd];
                     Set gts = gMapping.TargetSet;
 
-                    Dim td = gts.CreateDefaultLesserDimension(sd.Name, ts); // Create a clone for the source dimension
-                    td.IsIdentity = sd.IsIdentity;
+                    Dim td = targetSchema.CreateColumn(sd.Name, ts, gts, sd.IsIdentity); // Create a clone for the source dimension
 
                     newMapping.AddPaths(sd, td, gMapping); // Add a pair of dimensions as a match (with expansion using the specified greater mapping)
                 }
@@ -324,7 +323,7 @@ namespace Com.Model
         }
         public List<Mapping> MapSet(SetTop sourceSchema, Set targetSet)
         {
-            if (targetSet.IsPrimitive) return MapPrimitiveSet(sourceSchema, (SetPrimitive)targetSet);
+            if (targetSet.IsPrimitive) return MapPrimitiveSet(sourceSchema, (Set)targetSet);
 
             List<Mapping> maps = MapSet(targetSet, sourceSchema);
             maps.ForEach(m => Mappings.Remove(m));

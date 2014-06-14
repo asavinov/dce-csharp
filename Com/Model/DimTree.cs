@@ -278,7 +278,8 @@ namespace Com.Model
         /// </summary>
         public bool IsInSchema()
         {
-            return !IsEmpty ? !(Dim.IsInLesserSet && Dim.IsInGreaterSet) : true;
+            bool isAdded = GreaterSet.LesserDims.Contains(this) && LesserSet.GreaterDims.Contains(this);
+            return !IsEmpty ? !isAdded : true;
         }
 
         /// <summary>
