@@ -310,7 +310,7 @@ namespace Test
             // Load test data
             //
             Set mainSet = Mapper.ImportSet(dbTop.FindSubset("Orders"), wsTop);
-            mainSet.Populate(); // Actually, we do not need it for mapping (yet, some mappings algorithms might use instances for better mapping)
+            mainSet.TableDefinition.Populate(); // Actually, we do not need it for mapping (yet, some mappings algorithms might use instances for better mapping)
 
             // Dimension "Employee ID" will change its type from "Employees" to "Customers"
             Dim sourceDim = mainSet.GetGreaterDim("Employee ID");

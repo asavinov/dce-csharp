@@ -18,7 +18,7 @@ namespace Com.Model
             {
                 if (Length == 0) return "";
                 string complexName = "";
-                foreach (Dim seg in Path) complexName += "_" + seg.Name;
+                foreach (CsColumn seg in Path) complexName += "_" + seg.Name;
                 return complexName;
             }
         }
@@ -28,7 +28,7 @@ namespace Com.Model
             {
                 if (Length == 0) return "0";
                 int hash = 0;
-                foreach (Dim seg in Path) hash += seg.Id.GetHashCode();
+                foreach (CsColumn seg in Path) hash += ((Dim)seg).Id.GetHashCode();
 
                 hash = Math.Abs(hash);
                 string hashName = hash.ToString("X"); // unique hash representing this path
@@ -39,7 +39,7 @@ namespace Com.Model
         /// <summary>
         /// A dimension can be defined as a sequence of other dimensions. For simple dimensions the path is empty.
         /// </summary>
-        public List<Dim> Path { get; set; }
+        public List<CsColumn> Path { get; set; }
 
         public override int Length
         {
@@ -49,7 +49,7 @@ namespace Com.Model
             }
         }
 
-        public Dim FirstSegment
+        public CsColumn FirstSegment
         {
             get
             {
@@ -57,7 +57,7 @@ namespace Com.Model
             }
         }
 
-        public Dim LastSegment
+        public CsColumn LastSegment
         {
             get
             {
@@ -71,7 +71,7 @@ namespace Com.Model
             {
                 if (Length == 0) return 1; // Simple dimension
                 int r = 0;
-                foreach (Dim dim in Path)
+                foreach (CsColumn dim in Path)
                 {
                     r += 1; // dim.Rank;
                 }
@@ -87,7 +87,7 @@ namespace Com.Model
             }
         }
 
-        public int IndexOfGreater(Set set) // Return index of the dimension with this greater set
+        public int IndexOfGreater(CsTable set) // Return index of the dimension with this greater set
         {
             for (int i = 0; i < Path.Count; i++)
             {
@@ -95,7 +95,7 @@ namespace Com.Model
             }
             return -1;
         }
-        public int IndexOfLesser(Set set) // Return index of the dimension with this lesser set
+        public int IndexOfLesser(CsTable set) // Return index of the dimension with this lesser set
         {
             for (int i = 0; i < Path.Count; i++)
             {
@@ -103,7 +103,7 @@ namespace Com.Model
             }
             return -1;
         }
-        public int IndexOf(Dim dim) // Return index of the specified dimension in this path
+        public int IndexOf(CsColumn dim) // Return index of the specified dimension in this path
         {
             return Path.IndexOf(dim);
         }
@@ -112,7 +112,7 @@ namespace Com.Model
             throw new NotImplementedException();
         }
 
-        public bool StartsWith(Dim dim)
+        public bool StartsWith(CsColumn dim)
         {
             if(Length == 0) return false;
             return Path[0] == dim;
@@ -121,7 +121,7 @@ namespace Com.Model
         {
             return StartsWith(path.Path);
         }
-        public bool StartsWith(List<Dim> path)
+        public bool StartsWith(List<CsColumn> path)
         {
             if (Path.Count < path.Count) return false;
             for (int i = 0; i < path.Count; i++)
@@ -135,7 +135,7 @@ namespace Com.Model
         {
             return SamePath(path.Path);
         }
-        public bool SamePath(List<Dim> path) // Equals (the same segments)
+        public bool SamePath(List<CsColumn> path) // Equals (the same segments)
         {
             if (path == null) return false;
 
@@ -167,7 +167,7 @@ namespace Com.Model
 
         #region Add segments
 
-        public void InsertAt(Dim dim) // Insert a new segment at the specified position
+        public void InsertAt(CsColumn dim) // Insert a new segment at the specified position
         {
             throw new NotImplementedException();
         }
@@ -176,7 +176,7 @@ namespace Com.Model
             throw new NotImplementedException();
         }
 
-        public void InsertFirst(Dim dim) // Insert a new segment at the beginning of the path
+        public void InsertFirst(CsColumn dim) // Insert a new segment at the beginning of the path
         {
             Debug.Assert(Length == 0 || dim.GreaterSet == LesserSet, "A path must continue the first segment inserted in the beginning.");
 
@@ -193,7 +193,7 @@ namespace Com.Model
             if (GreaterSet == null) GreaterSet = path.GreaterSet;
         }
 
-        public void InsertLast(Dim dim) // Append a new segment to the end of the path
+        public void InsertLast(CsColumn dim) // Append a new segment to the end of the path
         {
             Debug.Assert(Length == 0 || dim.LesserSet == GreaterSet, "A new segment appended to a path must continue the previous segments");
 
@@ -220,12 +220,12 @@ namespace Com.Model
 
         #region Remove segments
 
-        private Dim RemoveAt(int index)
+        private CsColumn RemoveAt(int index)
         {
             if (Length == 0) return null; // Nothing to remove
             if (index < 0 || index >= Path.Count) return null; // Bad index
 
-            Dim result = Path[index];
+            CsColumn result = Path[index];
             Path.RemoveAt(index);
 
             if (Path.Count != 0)
@@ -241,13 +241,13 @@ namespace Com.Model
             return result;
         }
 
-        public Dim RemoveFirst()
+        public CsColumn RemoveFirst()
         {
             return RemoveFirstAt(0);
         }
-        public Dim RemoveFirstAt(int index) // TODO: Implement an additional argument with the number of segments to remove
+        public CsColumn RemoveFirstAt(int index) // TODO: Implement an additional argument with the number of segments to remove
         {
-            Dim result = RemoveAt(index);
+            CsColumn result = RemoveAt(index);
             if (result == null) return result;
 
             if (Path.Count == 0) // This where removal of the first and the last segments is different
@@ -268,7 +268,7 @@ namespace Com.Model
             if (Path.Count > 0) LesserSet = Path[0].LesserSet;
             else LesserSet = GreaterSet;
         }
-        public void RemoveFirst(Set set) // Remove first segments till this set (the new path will start from the specified set if trimmed)
+        public void RemoveFirst(CsTable set) // Remove first segments till this set (the new path will start from the specified set if trimmed)
         {
             if (LesserSet == set) return; // Already here
 
@@ -282,13 +282,13 @@ namespace Com.Model
             else LesserSet = GreaterSet;
         }
 
-        public Dim RemoveLast() // Remove last segment
+        public CsColumn RemoveLast() // Remove last segment
         {
             return RemoveLastAt(Path.Count - 1);
         }
-        public Dim RemoveLastAt(int index) // TODO: Implement an additional argument with the number of segments to remove
+        public CsColumn RemoveLastAt(int index) // TODO: Implement an additional argument with the number of segments to remove
         {
-            Dim result = RemoveAt(index);
+            CsColumn result = RemoveAt(index);
             if (result == null) return result;
 
             if (Path.Count == 0) // This where removal of the first and the last segments is different
@@ -303,7 +303,7 @@ namespace Com.Model
         {
             throw new NotImplementedException();
         }
-        public void RemoveLast(Set set) // Remove last segments starting from this set (the new path will end with the specified set if trimmed)
+        public void RemoveLast(CsTable set) // Remove last segments starting from this set (the new path will end with the specified set if trimmed)
         {
             throw new NotImplementedException();
         }
@@ -320,7 +320,7 @@ namespace Com.Model
             //
             // Flatten all paths by converting <dim, greater-path> pairs by sequences of dimensions <dim, dim2, dim3,...>
             //
-            List<Dim> allSegments = GetAllSegments();
+            List<CsColumn> allSegments = GetAllSegments();
             Path.Clear();
             if (allSegments != null && allSegments.Count != 0)
             {
@@ -348,9 +348,9 @@ namespace Com.Model
             }
         }
 
-        private List<Dim> GetAllSegments()
+        private List<CsColumn> GetAllSegments()
         {
-            List<Dim> result = new List<Dim>();
+            List<CsColumn> result = new List<CsColumn>();
             for (int i = 0; i < Path.Count; i++)
             {
                 if (Path[i] is DimPath && ((DimPath)Path[i]).IsComplex)
@@ -375,7 +375,7 @@ namespace Com.Model
             return Rank; // TODO
         }
 
-        public Dim GetSegment(int rank)
+        public CsColumn GetSegment(int rank)
         {
             Debug.Assert(rank >= 0, "Wrong use of method parameter. Rank cannot be negative.");
             return rank < Path.Count ? Path[rank] : null; // TODO: take into account the nested structure of complex dimensions
@@ -393,10 +393,10 @@ namespace Com.Model
 
         public DimPath()
         {
-            Path = new List<Dim>();
+            Path = new List<CsColumn>();
         }
 
-        public DimPath(Set set)
+        public DimPath(CsTable set)
             : this()
         {
             LesserSet = set;
@@ -406,10 +406,10 @@ namespace Com.Model
         public DimPath(string name)
             : base(name)
         {
-            Path = new List<Dim>();
+            Path = new List<CsColumn>();
         }
 
-        public DimPath(Dim segment)
+        public DimPath(CsColumn segment)
             : this()
         {
             if (segment == null) return;
@@ -419,7 +419,7 @@ namespace Com.Model
             GreaterSet = Path[Path.Count - 1].GreaterSet;
         }
 
-        public DimPath(List<Dim> segments)
+        public DimPath(List<CsColumn> segments)
             : this()
         {
             if(segments == null && segments.Count == 0) return;
@@ -432,7 +432,7 @@ namespace Com.Model
         public DimPath(DimPath path)
             : base(path)
         {
-            Path = new List<Dim>();
+            Path = new List<CsColumn>();
             Path.AddRange(path.Path);
         }
     }
@@ -451,10 +451,10 @@ namespace Com.Model
     public abstract class DimEnumerator : DimPath, IEnumerator<DimPath>, IEnumerable<DimPath>
     {
 
-        public DimEnumerator(Set set)
+        public DimEnumerator(CsTable set)
             : base(set)
         {
-            Path = new List<Dim>();
+            Path = new List<CsColumn>();
         }
 
         // Get the explicit current node.
@@ -503,13 +503,13 @@ namespace Com.Model
     /// </summary>
     public abstract class DimComplexEnumerator : DimEnumerator
     {
-        protected List<Set> lesserSets;
-        protected List<Set> greaterSets;
+        protected List<CsTable> lesserSets;
+        protected List<CsTable> greaterSets;
         protected bool isInverse;
         protected DimensionType dimType; // The path will be composed of only these types of segments
         protected bool allowIntermediateSets = false; // Not implemented. lesser and greater sets only as source and destination - not in the middle of the path (default). Otherwise, they can appear in the middle of the path (say, one greater set and then the final greater set).
 
-        public DimComplexEnumerator(List<Set> _lesserSets, List<Set> _greaterSets, bool _isInverse, DimensionType _dimType)
+        public DimComplexEnumerator(List<CsTable> _lesserSets, List<CsTable> _greaterSets, bool _isInverse, DimensionType _dimType)
             : base(null)
         {
             lesserSets = _lesserSets;
@@ -530,11 +530,11 @@ namespace Com.Model
             }
         }
 
-        public DimComplexEnumerator(Set set)
+        public DimComplexEnumerator(CsTable set)
             : base(set)
         {
-            lesserSets = new List<Set>(new Set[] { set }); // One source set
-            greaterSets = new List<Set>(new Set[] { set.Top.Root }); // All destination sets from this schema
+            lesserSets = new List<CsTable>(new CsTable[] { set }); // One source set
+            greaterSets = new List<CsTable>(new CsTable[] { set.Top.Root }); // All destination sets from this schema
 
             isInverse = false;
         }
@@ -545,17 +545,17 @@ namespace Com.Model
     /// </summary>
     public class PathEnumerator : DimComplexEnumerator
     {
-        public PathEnumerator(Set set, DimensionType _dimType) // All primitive paths
-            : this(new List<Set>(new Set[] { set }), null, false, _dimType)
+        public PathEnumerator(CsTable set, DimensionType _dimType) // All primitive paths
+            : this(new List<CsTable>(new CsTable[] { set }), null, false, _dimType)
         {
         }
 
-        public PathEnumerator(Set lesserSet, Set greaterSet, DimensionType _dimType) // Between two sets
-            : this(new List<Set>(new Set[] { lesserSet }), new List<Set>(new Set[] { greaterSet }), false, _dimType)
+        public PathEnumerator(CsTable lesserSet, CsTable greaterSet, DimensionType _dimType) // Between two sets
+            : this(new List<CsTable>(new CsTable[] { lesserSet }), new List<CsTable>(new CsTable[] { greaterSet }), false, _dimType)
         {
         }
 
-        public PathEnumerator(List<Set> _lesserSets, List<Set> _greaterSets, bool _isInverse, DimensionType _dimType)
+        public PathEnumerator(List<CsTable> _lesserSets, List<CsTable> _greaterSets, bool _isInverse, DimensionType _dimType)
             : base(_lesserSets, _greaterSets, _isInverse, _dimType)
         {
         }
@@ -582,7 +582,7 @@ namespace Com.Model
         {
             while (!AtDestination()) // Not a destination - move one more step forward
             {
-                List<Dim> dims = GetContinuations();
+                List<CsColumn> dims = GetContinuations();
 
                 if (dims.Count != 0) // Continue depth-first by adding the very first dimension
                 {
@@ -597,7 +597,7 @@ namespace Com.Model
         }
         private bool MoveBackward() // return true - found a set with a possibility to continued (with unvisited continuation), false - not found a set with possibility to continue(end, go to next source set)
         {
-            Dim segment = null;
+            CsColumn segment = null;
             do // A loop for removing last segment and moving backward
             {
                 if (Length == 0) // Nothing to remove. End.
@@ -607,7 +607,7 @@ namespace Com.Model
 
                 segment = RemoveLastSegment(); // Remove last segment
 
-                List<Dim> nextSegs = GetContinuations();
+                List<CsColumn> nextSegs = GetContinuations();
 
                 int segIndex = nextSegs.IndexOf(segment);
                 if (segIndex + 1 < nextSegs.Count) // Continuation found. Use it
@@ -625,7 +625,7 @@ namespace Com.Model
             return false; // All segments removed but no continuation found in any of the previous sets including the source one
         }
 
-        private List<Dim> GetContinuations()
+        private List<CsColumn> GetContinuations()
         {
             if (!isInverse) // Move up from lesser to greater
             {
@@ -648,11 +648,11 @@ namespace Com.Model
 
             return null;
         }
-        private Dim RemoveLastSegment()
+        private CsColumn RemoveLastSegment()
         {
             if (Length == 0) return null; // Nothing to remove
 
-            Dim segment = null;
+            CsColumn segment = null;
             if (!isInverse)
             {
                 segment = RemoveLast();
@@ -663,7 +663,7 @@ namespace Com.Model
             }
             return segment;
         }
-        private void AddLastSegment(Dim segment)
+        private void AddLastSegment(CsColumn segment)
         {
             if (!isInverse)
             {
@@ -676,8 +676,8 @@ namespace Com.Model
         }
         private bool AtDestination()
         {
-            List<Set> destinations = !isInverse ? greaterSets : lesserSets;
-            Set dest = !isInverse ? GreaterSet : LesserSet;
+            List<CsTable> destinations = !isInverse ? greaterSets : lesserSets;
+            CsTable dest = !isInverse ? GreaterSet : LesserSet;
 
             if (destinations == null) // 
             {
@@ -693,7 +693,7 @@ namespace Com.Model
             }
             else // Concrete destinations are specified
             {
-                foreach (Set set in destinations) if (dest.IsIn(set)) return true;
+                foreach (CsTable set in destinations) if (dest.IsIn(set)) return true;
                 return false;
             }
         }

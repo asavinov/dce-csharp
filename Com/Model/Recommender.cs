@@ -49,13 +49,13 @@ namespace Com.Model
     /// </summary>
     public class RecommendedRelationships : Recommender
     {
-        public Set SourceSet { get; set; }
-        public Set TargetSet { get; set; }
-        public Set FactSet { get; set; }
+        public CsTable SourceSet { get; set; }
+        public CsTable TargetSet { get; set; }
+        public CsTable FactSet { get; set; }
 
-        public Fragments<List<Dim>> GroupingPaths { get; set; }
-        public Fragments<Set> FactSets { get; set; }
-        public Fragments<List<Dim>> MeasurePaths { get; set; }
+        public Fragments<List<CsColumn>> GroupingPaths { get; set; }
+        public Fragments<CsTable> FactSets { get; set; }
+        public Fragments<List<CsColumn>> MeasurePaths { get; set; }
 
         public override void UpdateSelection(string selected)
         {
@@ -76,7 +76,7 @@ namespace Com.Model
                         if (!GroupingPaths.IsSelected) break;
 
                         // Update FactSets
-                        Set factSet = GroupingPaths.SelectedObject[0].LesserSet; // Find the fact set for this path
+                        CsTable factSet = GroupingPaths.SelectedObject[0].LesserSet; // Find the fact set for this path
                         foreach (var f in FactSets.Alternatives)
                         {
                             f.IsRelevant = f.Fragment == factSet ? true : false; // Only one fact set is enabled
@@ -87,7 +87,7 @@ namespace Com.Model
                         int relevantCount = 0;
                         foreach (var f in MeasurePaths.Alternatives)
                         {
-                            f.IsRelevant = ((List<Dim>)f.Fragment)[0].LesserSet == factSet ? true : false;
+                            f.IsRelevant = ((List<CsColumn>)f.Fragment)[0].LesserSet == factSet ? true : false;
                             if (f.IsRelevant) relevantCount++;
                         }
                         if (MeasurePaths.SelectedFragment != null && !MeasurePaths.SelectedFragment.IsRelevant) MeasurePaths.SelectedFragment = null;
@@ -100,13 +100,13 @@ namespace Com.Model
                     {
                         if (!FactSets.IsSelected) break;
 
-                        Set factSet = FactSets.SelectedObject;
+                        CsTable factSet = FactSets.SelectedObject;
 
                         // Update GroupingPaths
                         int relevantCount = 0;
                         foreach (var f in GroupingPaths.Alternatives)
                         {
-                            f.IsRelevant = ((List<Dim>)f.Fragment)[0].LesserSet == factSet ? true : false;
+                            f.IsRelevant = ((List<CsColumn>)f.Fragment)[0].LesserSet == factSet ? true : false;
                             if (f.IsRelevant) relevantCount++;
                         }
                         if (GroupingPaths.SelectedFragment != null && !GroupingPaths.SelectedFragment.IsRelevant) GroupingPaths.SelectedFragment = null;
@@ -116,7 +116,7 @@ namespace Com.Model
                         relevantCount = 0;
                         foreach (var f in MeasurePaths.Alternatives)
                         {
-                            f.IsRelevant = ((List<Dim>)f.Fragment)[0].LesserSet == factSet ? true : false;
+                            f.IsRelevant = ((List<CsColumn>)f.Fragment)[0].LesserSet == factSet ? true : false;
                             if (f.IsRelevant) relevantCount++;
                         }
                         if (MeasurePaths.SelectedFragment != null && !MeasurePaths.SelectedFragment.IsRelevant) MeasurePaths.SelectedFragment = null;
@@ -130,7 +130,7 @@ namespace Com.Model
                         if (!MeasurePaths.IsSelected) break;
 
                         // Update FactSets
-                        Set factSet = MeasurePaths.SelectedObject[0].LesserSet; // Find the fact set for this path
+                        CsTable factSet = MeasurePaths.SelectedObject[0].LesserSet; // Find the fact set for this path
                         foreach (var f in FactSets.Alternatives)
                         {
                             f.IsRelevant = f.Fragment == factSet ? true : false; // Only one fact set is enabled
@@ -141,7 +141,7 @@ namespace Com.Model
                         int relevantCount = 0;
                         foreach (var f in GroupingPaths.Alternatives)
                         {
-                            f.IsRelevant = ((List<Dim>)f.Fragment)[0].LesserSet == factSet ? true : false;
+                            f.IsRelevant = ((List<CsColumn>)f.Fragment)[0].LesserSet == factSet ? true : false;
                             if (f.IsRelevant) relevantCount++;
                         }
                         if (GroupingPaths.SelectedFragment != null && !GroupingPaths.SelectedFragment.IsRelevant) GroupingPaths.SelectedFragment = null;
@@ -184,7 +184,7 @@ namespace Com.Model
             //
             // 1. Find all possible lesser sets (relationship or fact sets)
             //
-            var lesserSets = new List<Set>();
+            var lesserSets = new List<CsTable>();
             if (this.FactSet != null) // Lesser set is provided
             {
                 lesserSets.Add(this.FactSet);
@@ -192,11 +192,11 @@ namespace Com.Model
             else // Generate all possible lesser sets
             {
                 // All least sets of the source set(s)
-                var allPaths = new PathEnumerator(null, new List<Set> { this.SourceSet }, true, DimensionType.IDENTITY_ENTITY).ToList();
+                var allPaths = new PathEnumerator(null, new List<CsTable> { this.SourceSet }, true, DimensionType.IDENTITY_ENTITY).ToList();
                 // All lesser sets of the source set(s)
                 foreach (var path in allPaths)
                 {
-                    foreach (Dim seg in path.Path)
+                    foreach (CsColumn seg in path.Path)
                     {
                         if (!lesserSets.Contains(seg.LesserSet)) lesserSets.Add(seg.LesserSet);
                     }
@@ -206,27 +206,27 @@ namespace Com.Model
             //
             // 2. Given a lesser set, find all relationship paths as pairs of <grouping path, measure path>
             //
-            foreach (Set set in lesserSets)
+            foreach (CsTable set in lesserSets)
             {
-                var gPaths = new PathEnumerator(new List<Set> { set }, new List<Set> { this.SourceSet }, false, DimensionType.IDENTITY_ENTITY).ToList();
-                var mPaths = new PathEnumerator(new List<Set> { set }, new List<Set> { this.TargetSet }, false, DimensionType.IDENTITY_ENTITY).ToList();
+                var gPaths = new PathEnumerator(new List<CsTable> { set }, new List<CsTable> { this.SourceSet }, false, DimensionType.IDENTITY_ENTITY).ToList();
+                var mPaths = new PathEnumerator(new List<CsTable> { set }, new List<CsTable> { this.TargetSet }, false, DimensionType.IDENTITY_ENTITY).ToList();
 
                 if (gPaths.Count == 0) continue; // In fact, there must be at least one path - because the set is known to be a lesser set
 
                 if (set == this.TargetSet) // Target (measure) set is the same as fact set
                 {
-                    List<Dim> loop = new List<Dim>();
+                    List<CsColumn> loop = new List<CsColumn>();
                     loop.Add(new Dim(set));
                     mPaths.Add(new DimPath(loop));
                 }
 
                 if (mPaths.Count == 0) continue;
 
-                RecommendedFragment<Set> frag = new RecommendedFragment<Set>(set, 1.0);
+                RecommendedFragment<CsTable> frag = new RecommendedFragment<CsTable>(set, 1.0);
                 this.FactSets.Alternatives.Add(frag);
 
-                gPaths.ForEach(gp => this.GroupingPaths.Alternatives.Add(new RecommendedFragment<List<Dim>>(gp.Path, 1.0)));
-                mPaths.ForEach(mp => this.MeasurePaths.Alternatives.Add(new RecommendedFragment<List<Dim>>(mp.Path, 1.0)));
+                gPaths.ForEach(gp => this.GroupingPaths.Alternatives.Add(new RecommendedFragment<List<CsColumn>>(gp.Path, 1.0)));
+                mPaths.ForEach(mp => this.MeasurePaths.Alternatives.Add(new RecommendedFragment<List<CsColumn>>(mp.Path, 1.0)));
 
                 // For each pair of grouping paths build a complete relationship path
                 foreach (var gp in gPaths)
@@ -252,15 +252,15 @@ namespace Com.Model
         public RecommendedRelationships()
             : base()
         {
-            GroupingPaths = new Fragments<List<Dim>>();
-            FactSets = new Fragments<Set>();
-            MeasurePaths = new Fragments<List<Dim>>();
+            GroupingPaths = new Fragments<List<CsColumn>>();
+            FactSets = new Fragments<CsTable>();
+            MeasurePaths = new Fragments<List<CsColumn>>();
         }
     }
 
     public class RecommendedAggregations : RecommendedRelationships
     {
-        public Fragments<Dim> MeasureDimensions { get; set; }
+        public Fragments<CsColumn> MeasureDimensions { get; set; }
         public Fragments<string> AggregationFunctions { get; set; }
 
         public override Expression GetExpression()
@@ -304,9 +304,9 @@ namespace Com.Model
             MeasureDimensions.Alternatives.Clear();
             if (this.TargetSet != null)
             {
-                foreach (Dim dim in this.TargetSet.GreaterDims)
+                foreach (CsColumn dim in this.TargetSet.GreaterDims)
                 {
-                    var frag = new RecommendedFragment<Dim>(dim, 1.0);
+                    var frag = new RecommendedFragment<CsColumn>(dim, 1.0);
                     MeasureDimensions.Alternatives.Add(frag);
                 }
             }
@@ -327,7 +327,7 @@ namespace Com.Model
         public RecommendedAggregations()
             : base()
         {
-            MeasureDimensions = new Fragments<Dim>();
+            MeasureDimensions = new Fragments<CsColumn>();
             AggregationFunctions = new Fragments<string>();
         }
     }
@@ -357,14 +357,14 @@ namespace Com.Model
                 else if (typeof(T) == typeof(Dim)) return ((Dim)(object)Fragment).Name;
                 else if (typeof(T) == typeof(List<Dim>))
                 {
-                    List<Dim> path = (List<Dim>)(object)Fragment;
+                    List<CsColumn> path = (List<CsColumn>)(object)Fragment;
                     string name = "";
                     path.ForEach(seg => name += "." + seg.Name); // One version
 
                     if (path == null || path.Count == 0) return "<EMPTY PATH>";
 
                     name = "(" + path[0].LesserSet.Name + ") -> ";
-                    foreach (Dim seg in path)
+                    foreach (CsColumn seg in path)
                     {
                         name += seg.Name + " -> ";
                     }
@@ -378,7 +378,7 @@ namespace Com.Model
                     string name = path.ComplexName; // One version
 
                     name = "(" + path.LesserSet.Name + ") -> ";
-                    foreach (Dim seg in path.Path)
+                    foreach (CsColumn seg in path.Path)
                     {
                         name += seg.Name + " -> ";
                     }

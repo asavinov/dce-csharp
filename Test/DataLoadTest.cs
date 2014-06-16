@@ -28,29 +28,29 @@ namespace Test
             //
             // Insert new data
             //
-            dim.Append(10);
-            dim.Append(30);
-            dim.Append(20);
-            Assert.AreEqual(3, dim.Length);
-            Assert.AreEqual(30, dim.GetValue(1));
+            dim.ColumnData.Append(10);
+            dim.ColumnData.Append(30);
+            dim.ColumnData.Append(20);
+            Assert.AreEqual(3, dim.ColumnData.Length);
+            Assert.AreEqual(30, dim.ColumnData.GetValue(1));
 
-            dim.SetValue(2, 50);
-            dim.SetValue(1, 50);
-            dim.SetValue(0, 50);
-            Assert.AreEqual(50, dim.GetValue(1));
+            dim.ColumnData.SetValue(2, 50);
+            dim.ColumnData.SetValue(1, 50);
+            dim.ColumnData.SetValue(0, 50);
+            Assert.AreEqual(50, dim.ColumnData.GetValue(1));
 
-            dim.SetValue(1, 10);
-            Assert.AreEqual(10, dim.GetValue(1));
-            Assert.AreEqual(false, dim.IsNull(2));
+            dim.ColumnData.SetValue(1, 10);
+            Assert.AreEqual(10, dim.ColumnData.GetValue(1));
+            Assert.AreEqual(false, dim.ColumnData.IsNull(2));
 
-            dim.SetValue(2, null);
-            Assert.AreEqual(true, dim.IsNull(2));
-            dim.SetValue(1, null);
-            dim.SetValue(0, null);
-            Assert.AreEqual(true, dim.IsNull(0));
+            dim.ColumnData.SetValue(2, null);
+            Assert.AreEqual(true, dim.ColumnData.IsNull(2));
+            dim.ColumnData.SetValue(1, null);
+            dim.ColumnData.SetValue(0, null);
+            Assert.AreEqual(true, dim.ColumnData.IsNull(0));
 
-            dim.SetValue(1, 100);
-            Assert.AreEqual(100, dim.GetValue(1));
+            dim.ColumnData.SetValue(1, 100);
+            Assert.AreEqual(100, dim.ColumnData.GetValue(1));
         }
 
         [TestMethod]
@@ -119,7 +119,7 @@ namespace Test
             dimImport.GreaterSet.ProjectDimensions.Add(dimImport);
 
             Set targetSet = mapping.TargetSet;
-            targetSet.Populate();
+            targetSet.TableDefinition.Populate();
 
             Assert.AreEqual(9, targetSet.Length);
             Assert.AreEqual(6, targetSet.GetValue("ID", 5));
@@ -139,7 +139,7 @@ namespace Test
             dimImport2.GreaterSet.ProjectDimensions.Add(dimImport2);
 
             Set targetSet2 = mapping2.TargetSet;
-            targetSet2.Populate();
+            targetSet2.TableDefinition.Populate();
 
             Assert.AreEqual(102, targetSet2.Length);
             Assert.AreEqual(1, targetSet2.GetValue("Transaction Type", 99)); // 1 is offset which should correspond to second record "Sold"
@@ -176,7 +176,7 @@ namespace Test
             dimImport.GreaterSet.ProjectDimensions.Add(dimImport);
 
             Set targetSet = mapping.TargetSet;
-            targetSet.Populate();
+            targetSet.TableDefinition.Populate();
 
             Assert.AreEqual(45, targetSet.Length);
             Assert.AreEqual(7, targetSet.GetValue("ID", 5));
@@ -199,7 +199,7 @@ namespace Test
             // Load test data
             //
             Set targetSet = Mapper.ImportSet(dbTop.FindSubset("Order Details"), wsTop);
-            targetSet.Populate();
+            targetSet.TableDefinition.Populate();
 
             Set odet = wsTop.FindSubset("Order Details");
             Set orders = wsTop.FindSubset("Orders");
@@ -281,10 +281,10 @@ namespace Test
             whereExpr.Input = d1_Expr;
             whereExpr.AddOperand(d2_Expr);
 
-            newSet.WhereExpression = whereExpr;
+            newSet.TableDefinition.WhereExpression = whereExpr;
 
             // Populate and test
-            newSet.Populate();
+            newSet.TableDefinition.Populate();
             Assert.AreEqual(2, newSet.Length);
             Assert.AreEqual(0, newSet.GetValue("Order Details Status", 0));
             Assert.AreEqual(2, newSet.GetValue("Orders Status", 0));
@@ -303,7 +303,7 @@ namespace Test
             // Define filter
 
             // Populate and test
-            subset_ods.Populate();
+            subset_ods.TableDefinition.Populate();
             Assert.AreEqual(12, subset_ods.Length);
 
             // Define filter
@@ -318,10 +318,10 @@ namespace Test
             whereExpr.Input = d1_Expr;
             whereExpr.AddOperand(d2_Expr);
 
-            subset_ods.WhereExpression = whereExpr;
+            subset_ods.TableDefinition.WhereExpression = whereExpr;
 
-            subset_ods.Unpopulate();
-            subset_ods.Populate();
+            subset_ods.TableDefinition.Unpopulate();
+            subset_ods.TableDefinition.Populate();
             Assert.AreEqual(2, subset_ods.Length);
         }
 
@@ -340,7 +340,7 @@ namespace Test
             // Load test data
             //
             Set targetSet = Mapper.ImportSet(dbTop.FindSubset("Order Details"), wsTop);
-            targetSet.Populate();
+            targetSet.TableDefinition.Populate();
             
             //
             // Create derived dimensions
@@ -367,7 +367,7 @@ namespace Test
             derived1.SelectExpression = funcExpr;
 
             // Update
-            derived1.ComputeValues();
+            derived1.Evaluate();
 
             Assert.AreEqual("Axen", od.GetValue("Customer Last Name", 10));
         }
@@ -387,7 +387,7 @@ namespace Test
             // Load test data
             //
             Set targetSet = Mapper.ImportSet(dbTop.FindSubset("Order Details"), wsTop);
-            targetSet.Populate();
+            targetSet.TableDefinition.Populate();
 
             //
             // Create derived dimensions
@@ -424,7 +424,7 @@ namespace Test
             derived1.SelectExpression = funcExpr1;
 
             // Update
-            derived1.ComputeValues();
+            derived1.Evaluate();
 
             Assert.AreEqual(64.0m, cust.GetValue("Average List Price", 2));
         }
@@ -444,7 +444,7 @@ namespace Test
             // Load test data
             //
             Set targetSet = Mapper.ImportSet(dbTop.FindSubset("Order Details"), wsTop);
-            targetSet.Populate();
+            targetSet.TableDefinition.Populate();
 
             Set cust = wsTop.FindSubset("Customers");
             Set prod = wsTop.FindSubset("Products");
@@ -482,7 +482,7 @@ namespace Test
             derived1.SelectExpression = funcExpr;
 
             // Update
-            derived1.ComputeValues();
+            derived1.Evaluate();
 
             Assert.AreEqual(64.0, cust.GetValue("Average List Price", 2));
         }
@@ -502,7 +502,7 @@ namespace Test
             // Load test data
             //
             Set targetSet = Mapper.ImportSet(dbTop.FindSubset("Order Details"), wsTop);
-            targetSet.Populate();
+            targetSet.TableDefinition.Populate();
 
             Set products = wsTop.FindSubset("Products");
             Set doubleSet = wsTop.GetPrimitive("Double");
@@ -546,7 +546,7 @@ namespace Test
             derived1.SelectExpression = funcExpr1;
 
             // Update
-            derived1.ComputeValues();
+            derived1.Evaluate();
             Assert.AreEqual(-32.5, products.GetValue("Derived Column", 2));
 
             // 
@@ -568,7 +568,7 @@ namespace Test
             derived2.SelectExpression = funcExpr2; // plusExpr;
 
             // Update
-            derived2.ComputeValues();
+            derived2.Evaluate();
             Assert.AreEqual(60.0, products.GetValue("Derived Column 2", 2));
         }
 
@@ -587,7 +587,7 @@ namespace Test
             // Load test data
             //
             Set targetSet = Mapper.ImportSet(dbTop.FindSubset("Order Details"), wsTop);
-            targetSet.Populate();
+            targetSet.TableDefinition.Populate();
             
             //
             // Create logical expression
@@ -618,8 +618,8 @@ namespace Test
             logicalExpr.AddOperand(d3_Expr);
 
             // Update
-            subProducts.WhereExpression = logicalExpr;
-            subProducts.Populate();
+            subProducts.TableDefinition.WhereExpression = logicalExpr;
+            subProducts.TableDefinition.Populate();
             Assert.AreEqual(2, subProducts.Length);
         }
 
@@ -638,10 +638,10 @@ namespace Test
             // Load test data. 
             //
             Set orderStatus = Mapper.ImportSet(dbTop.FindSubset("Orders Status"), wsTop); // We load it separately to get more (target) data
-            orderStatus.Populate();
+            orderStatus.TableDefinition.Populate();
 
             Set mainSet = Mapper.ImportSet(dbTop.FindSubset("Order Details"), wsTop);
-            mainSet.Populate();
+            mainSet.TableDefinition.Populate();
 
             Dim sourceDim = mainSet.GetGreaterDim("Status ID");
             Set sourceDimType = wsTop.FindSubset("Order Details Status");
@@ -665,7 +665,7 @@ namespace Test
             mappedDim.Mapping = mapping;
 
             // Populate new dimension
-            mappedDim.ComputeValues(); // Evaluate tuple expression on the same set (not remove set), that is, move data from one dimension to the new dimension
+            mappedDim.Evaluate(); // Evaluate tuple expression on the same set (not remove set), that is, move data from one dimension to the new dimension
 
             Assert.AreEqual(2, mappedDim.GetValue(14));
             Assert.AreEqual(1, mappedDim.GetValue(15));
@@ -684,7 +684,7 @@ namespace Test
             // Define a new derived (mapped) dimensions
             //
             mappedDimType = Mapper.ImportSet(dbTop.FindSubset("Suppliers"), wsTop);
-            mappedDimType.Populate();
+            mappedDimType.TableDefinition.Populate();
 
             mappedDim = wsTop.CreateColumn(sourceDim.Name + " (1)", mainSet, mappedDimType, true); // TODO: set also other properties so that new projDim is identical to the old one
             mappedDim.Add();
@@ -699,7 +699,7 @@ namespace Test
             mappedDim.Mapping = mapping;
 
             // Populate new dimension
-            mappedDim.ComputeValues(); // Evaluate tuple expression on the same set (not remove set), that is, move data from one dimension to the new dimension
+            mappedDim.Evaluate(); // Evaluate tuple expression on the same set (not remove set), that is, move data from one dimension to the new dimension
 
             Assert.AreEqual(8, mappedDim.GetValue(0));
             Assert.AreEqual(2, mappedDim.GetValue(1));
@@ -722,7 +722,7 @@ namespace Test
             // Load test data
             //
             Set targetSet = Mapper.ImportSet(dbTop.FindSubset("Order Details"), wsTop);
-            targetSet.Populate();
+            targetSet.TableDefinition.Populate();
 
             Set products = wsTop.FindSubset("Products");
             Dim projDim = products.GetGreaterDim("Category"); // This is a parameter for the whole operation
@@ -751,7 +751,7 @@ namespace Test
             //
             // Populate the extracted set
             //
-            extractedSet.Populate();
+            extractedSet.TableDefinition.Populate();
 
             Assert.AreEqual("Dried Fruit & Nuts", extractedSet.GetValue("Category", 1));
             Assert.AreEqual("Pasta", extractedSet.GetValue("Category", 9));
@@ -759,7 +759,7 @@ namespace Test
             //
             // Populate the new dimension. It is equivalent to evaluating a normal (mapped) dimension because its greater set has been extracted.
             //
-            extractedDim.ComputeValues();
+            extractedDim.Evaluate();
 
             Assert.AreEqual(1, extractedDim.GetValue(1));
             Assert.AreEqual(1, extractedDim.GetValue(19));

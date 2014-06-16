@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text;
 using System.Diagnostics;
 
+using Com.Query;
+
 using Offset = System.Int32;
 
 namespace Com.Model
@@ -63,6 +65,56 @@ namespace Com.Model
         CsTable getTable(string name);
         CsTable FindSubset(string name);
 
+        CsTableData TableData { get; }
+        CsTableDefinition TableDefinition { get; }
+    }
+
+    public interface CsTableData // It is interface for manipulating data in a table.
+    {
+        Offset Length { get; protected set; }
+
+        //
+        // Value methods (convenience, probably should be removed and replaced by manual access to dimensions)
+        //
+
+        object GetValue(string name, int offset);
+        void SetValue(string name, int offset, object value);
+
+        //
+        // Tuple methods: append, insert, remove, read, write.
+        //
+        // Here we use TUPLE and its constituents as primitive types: Reference etc.
+        // Column names or references are important. Types (table references or names) are necessary and important. Maybe also flags like Super, Key would be useful. 
+        // TUPLE could be used as a set structure specification (e.g., param for set creation).
+        //
+
+        Offset Find(Dictionary<Dim, object> values);
+        bool Find(Expression expr);
+        bool CanAppend(Expression expr);
+        object Append(Expression expr);
+        void Remove(int offset);
+        
+        //Offset FindTuple(CsRecord record); // If many records can satisfy then another method has to be used. What is many found? Maybe return negative number with the number of records (-1 or Length means not found, positive means found 1)? 
+        //void InsertTuple(Offset input, CsRecord record); // All keys are required? Are non-keys allowed?
+        //void RemoveTuple(Offset input); // We use it to remove a tuple that does not satisfy filter constraints. Note that filter constraints can use only data that is loaded (some columns will be computed later). So the filter predicate has to be validated for sets which are projected/loaded or all other functions have to be evaluated during set population. 
+
+        //
+        // Typed data manipulation methods (do we need this especially taking into account that we will mapping of data types with conversion)
+        // Here we need an interface like ResultSet in JDBC with all possible types
+        // Alternative: maybe define these methos in the SetRemote class where we will have one class for manually entering elements
+        //
+    }
+
+    public interface CsTableDefinition
+    {
+        Expression WhereExpression { get; set; } // May store CsColumn which stores a boolean function definition
+
+        List<Dim> ProjectDimensions { get; set; }
+
+        Expression OrderbyExpression { get; set; } // Here we should store something like Comparator
+
+        void Populate();
+        void Unpopulate(); // Is not it Length=0?
     }
 
     public interface CsSchema : CsTable
@@ -78,7 +130,7 @@ namespace Com.Model
         CsTable AddTable(CsTable table, CsTable parent);
         CsTable RemoveTable(CsTable table);
 
-        CsTable CreateColumn(string name, CsTable input, CsTable output, bool isKey);
+        CsColumn CreateColumn(string name, CsTable input, CsTable output, bool isKey);
     }
 
     public interface CsConnection : CsSchema
@@ -106,17 +158,28 @@ namespace Com.Model
 
     public interface CsColumnData // It is interface for managing function data as a mapping to output values (implemented by some kind of storage manager). Input always offset. Output type is a parameter.
     {
-        Offset Size { get; set; }
+        Offset Length { get; set; }
 
         //
         // Untyped methods. Default conversion will be done according to the function type.
         //
-        bool IsNullValue(Offset input);
-        object ReadValue(Offset input);
-        void WriteValue(Offset input, object value);
+        bool IsNull(Offset input);
+        object GetValue(Offset input);
+        void SetValue(Offset input, object value);
+        void NullifyValues();
+        void Append(object value);
+        void Insert(Offset input, object value);
+
         //void WriteValue(object value); // Convenience, performance method: set all outputs to the specified value
         //void InsertValue(Offset input, object value); // Changle length. Do we need this?
 
+        //
+        // Project/de-project
+        //
+
+        object ProjectValues(Offset[] offsets);
+        Offset[] DeprojectValue(object value);
+        
         //
         // Typed methods for each primitive type like GetInteger(). No NULL management since we use real values including NULL.
         //
@@ -131,6 +194,20 @@ namespace Com.Model
 
     public interface CsColumnDefinition // How a function is represented and evaluated. It uses API of the column storage like read, write (typed or untyped).
     {
+        //
+        // Represent formula
+        //
+
+        public Expression SelectExpression { get; set; }
+        public AstNode FormulaAst { get; set; } // Analogous to SelectExpression
+        public Mapping Mapping { get; set; }
+
+        public Expression WhereExpression { get; set; }
+
+        //
+        // Compuate
+        //
+
         void Initialize();
         void Evaluate(); 
         void Finish();
@@ -142,31 +219,6 @@ namespace Com.Model
         object EvaluateSet(Offset input); // Compute output for the specified intput and write it
         object EvaluateUpdate(Offset input); // Read group and measure for the specified input and compute update according to the aggregation formula. It may also increment another function if necessary.
         bool EvaluateJoin(Offset input, object output); // Called for all pairs of input and output *if* the definition is a join predicate.
-    }
-
-    
-    public interface CsTableData // It is interface for manipulating data in a table.
-    {
-        Offset Size { get; }
-
-        Offset FindTuple(CsRecord record); // If many records can satisfy then another method has to be used. What is many found? Maybe return negative number with the number of records (-1 or Length means not found, positive means found 1)? 
-
-        void InsertTuple(Offset input, CsRecord record); // All keys are required? Are non-keys allowed?
-
-        void RemoveTuple(Offset input); // We use it to remove a tuple that does not satisfy filter constraints. Note that filter constraints can use only data that is loaded (some columns will be computed later). So the filter predicate has to be validated for sets which are projected/loaded or all other functions have to be evaluated during set population. 
-
-        //CsColumn Where { get; set; } // Boolean function definition must be true for all elements
-        // OrderBy - what should be here - comparator?
-
-        //void Eval();
-        // TODO: Type of population: manual (external API), projection (from external), projection (from internal), all
-
-        //
-        // Tuple manipulation: append, insert, remove, read, write.
-        // Here we use TUPLE and its constituents as primitive types: Reference etc.
-        // Column names or references are important. Types (table references or names) are necessary and important. Maybe also flags like Super, Key would be useful. 
-        // TUPLE could be used as a set structure specification (e.g., param for set creation).
-        //
     }
 
     public interface CsRecord // It is a complex data type generalizing primitive values and with leaves as primitive values (possibly surrogates). The main manipulation object for table data methods.

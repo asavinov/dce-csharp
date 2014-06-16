@@ -84,95 +84,11 @@ namespace Com.Model
             if (GreaterSet != null) ((Set)GreaterSet).NotifyRemove(this);
         }
 
-        public CsColumnData ColumnData { get { return null; } }
-        public CsColumnDefinition ColumnDefinition { get { return null; } }
 
-        #endregion
-
-        #region Data methods (abstract)
-
-        public virtual Type SystemType
-        {
-            get { return GreaterSet != null ? GreaterSet.SystemType : null; }
-        }
-
-        public virtual int Width // Width of instances. It depends on the implementation (and might not be the same for all dimensions of the greater set). 
-        {
-            get { return GreaterSet != null ? GreaterSet.Width : 0; }
-        }
-
-        public virtual Offset Length // How many instances. 
-        {
-            get // Dimensions to not have their own instandes and this number if the number of elements in the lesser set (the same for all dimensions of the set).
-            {
-                return LesserSet != null ? LesserSet.Length : 0;
-            }
-            protected set // Setter is not for public API - only a whole set length can be changed. This setter is used to reallocate.
-            {
-                // Do nothing because this implementation does not manage elements but it can be overriden in sub-classes
-            }
-        } 
-
-
-        public object Value { get; set; } // Static value (of the variable) which does not depend on the instance
-
-        public virtual bool IsNull(Offset offset) { return false; } // Check if it is null
-
-        public virtual object GetValue(Offset offset) { return null; } // Returned what is really stored without checking if it is null (it should return _nullValue if it is really null). Use IsNull to check if the value is null.
-
-        public virtual void SetValue(Offset offset, object value) { }
-
-        public virtual void NullifyValues() { } // Note that import dimension implement it by removing instances.
-
-        public virtual void Append(object value) { } // Increment length and set the value (or insert last)
-
-        public virtual void Insert(Offset offset, object value) { }
-
-        public virtual void UpdateValue(Offset offset, object value, ValueOp updater) { }
-
-        public virtual object Aggregate(object values, string function) { return null; } // It is actually static but we cannot use static virtual methods in C#
-
-        public virtual object ProjectValues(Offset[] offsets) { return null; }
-
-        public virtual Offset[] DeprojectValue(object value) { return null; } // Accepts both a single object or an array. Do we need it as public?
-
-        #endregion
-
-        #region Formula and evaluation
-
-        /// <summary>
-        /// It is a formula (expression) defining a function for this dimension. 
-        /// When evaluated, it computes a value of the greater set for the identity value of the lesser set.
-        /// </summary>
-        public Expression SelectExpression { get; set; }
-
-        /// <summary>
-        /// One particular type of function specification used for defining mapped dimensions, import specification, copy specification etc.
-        /// It defines greater set (nested) tuple in terms of the lesser set (nested) tuple. 
-        /// The function computation procedure can transoform this mapping to a normal expression for evaluation in a loop or it can translate it to a join or other target engine formats.
-        /// </summary>
-        public Mapping Mapping { get; set; }
-
-        public Expression WhereExpression { get; set; } // It describes the domain of the function or where the function returns null independent of other definitions
-
-        // Source (user, non-executable) formula for computing this function consisting of value-operations
-        public AstNode FormulaAst { get; set; } // Analogous to SelectExpression
-        // Fact set is a set for looping through and providing input for measure and group functions. By default, it is this (lesser) set.
-
-        public Set LoopSet { get; set; } // Dependency on a lesser set and lesser functions
-        // It is a translated, optimized and directly executable code (value operatinos) for computing output values given an input value (input is fact set which by default is this set)
-        public ValueOp MeasureCode { get; set; } // Input=FactSet. Output as declared by this function output (generaly, as consumed by the accumulator operator). By default, it is an expression for computing this function output given this set input (so normal evaluation). In the simplest case, it is a single call of an existing function.
-        public ValueOp GroupCode { get; set; } // Input=FactSet. Output as declared by this function input (this set)
-        public ValueOp AccuCode { get; set; } // Accumulator expression which computes a new value by taking into account the current value and a new output. For built-in functions it has a single system procedure call like SUM, AVG etc.
-        // Principle: LoopSet.GroupCode + ThisSet.ThisFunc = LoopSet.MeasureCode
-        // Principle: if LoopSet == ThisSet then GroupCode = null, ThisFunc = MeasureCode
-        public Dim CountDim { get; set; } // Input=ThisSet. This dimension will store group counts
-
-        public List<Dim> Dependencies { get; set; } // Other functions this function directly depends upon. Computed from the definition of this function.
-        // Find and store all outputs of this function by evaluating (executing) its definition in a loop for all input elements of the fact set (not necessarily this set)
-        public virtual void Eval() { return; }
-
-        public virtual void ComputeValues() { return; } // Set output values of the function by evaluating an expression (or using other means)
+        protected CsColumnData columnData;
+        public virtual CsColumnData ColumnData { get { return columnData; } }
+        protected CsColumnDefinition columnDefinition;
+        public virtual CsColumnDefinition ColumnDefinition { get { return columnDefinition; } }
 
         #endregion
 
@@ -227,7 +143,7 @@ namespace Com.Model
             Id = Guid.NewGuid();
         }
 
-        public Dim(Set set) // Empty dimension
+        public Dim(CsTable set) // Empty dimension
             : this("", set, set)
         {
         }
@@ -254,12 +170,12 @@ namespace Com.Model
             Mapping = mapping;
         }
 
-        public Dim(string name, Set lesserSet, Set greaterSet)
+        public Dim(string name, CsTable lesserSet, CsTable greaterSet)
             : this(name, lesserSet, greaterSet, false, false)
         {
         }
 
-        public Dim(string name, Set lesserSet, Set greaterSet, bool isIdentity, bool isSuper)
+        public Dim(string name, CsTable lesserSet, CsTable greaterSet, bool isIdentity, bool isSuper)
             : this()
         {
             Name = name;
@@ -269,6 +185,57 @@ namespace Com.Model
 
             LesserSet = lesserSet;
             GreaterSet = greaterSet;
+
+            //
+            // Creae storage for the function and its definition depending on the output set type
+            //
+            columnData = null;
+            CsTable output = greaterSet;
+            if (output.Name.Equals("Void", StringComparison.InvariantCultureIgnoreCase))
+            {
+            }
+            else if (output.Name.Equals("Top", StringComparison.InvariantCultureIgnoreCase))
+            {
+            }
+            else if (output.Name.Equals("Bottom", StringComparison.InvariantCultureIgnoreCase)) // Not possible by definition
+            {
+            }
+            else if (output.Name.Equals("Root", StringComparison.InvariantCultureIgnoreCase))
+            {
+            }
+            else if (output.Name.Equals("Integer", StringComparison.InvariantCultureIgnoreCase))
+            {
+                columnData = new DimPrimitive<int>(this);
+            }
+            else if (output.Name.Equals("Double", StringComparison.InvariantCultureIgnoreCase))
+            {
+                columnData = new DimPrimitive<double>(this);
+            }
+            else if (output.Name.Equals("Decimal", StringComparison.InvariantCultureIgnoreCase))
+            {
+                columnData = new DimPrimitive<decimal>(this);
+            }
+            else if (output.Name.Equals("String", StringComparison.InvariantCultureIgnoreCase))
+            {
+                columnData = new DimPrimitive<string>(this);
+            }
+            else if (output.Name.Equals("Boolean", StringComparison.InvariantCultureIgnoreCase))
+            {
+                columnData = new DimPrimitive<bool>(this);
+            }
+            else if (output.Name.Equals("DateTime", StringComparison.InvariantCultureIgnoreCase))
+            {
+                columnData = new DimPrimitive<DateTime>(this);
+            }
+            else if (output.Name.Equals("Set", StringComparison.InvariantCultureIgnoreCase))
+            {
+            }
+            else // User (non-primitive) set
+            {
+                columnData = new DimPrimitive<int>(this);
+            }
+
+            columnDefinition = columnData;
         }
 
         #endregion

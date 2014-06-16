@@ -46,13 +46,8 @@
     <Compile Include="Model\Aggregator.cs" />
     <Compile Include="Model\ConceptScript.cs" />
     <Compile Include="Model\Dim.cs" />
-    <Compile Include="Model\DimBool.cs" />
     <Compile Include="Model\DimPath.cs" />
     <Compile Include="Model\DimPrimitive.cs" />
-    <Compile Include="Model\DimTop.cs" />
-    <Compile Include="Model\DimSet.cs" />
-    <Compile Include="Model\DimSubset.cs" />
-    <Compile Include="Model\DimSuper.cs" />
     <Compile Include="Model\DimTree.cs" />
     <Compile Include="Model\Expression.cs" />
     <Compile Include="Model\Mapper.cs" />

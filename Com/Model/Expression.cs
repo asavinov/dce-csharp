@@ -294,10 +294,10 @@ namespace Com.Model
             Expression node = this;
             for (int i = 0; i < path.Path.Count; i++) // We search the path segments sequentially
             {
-                Dim seg = path.Path[i];
+                CsColumn seg = path.Path[i];
 
                 Expression child = null;
-                if (seg is DimSuper)
+                if (seg.IsSuper)
                 {
                     if (node.Input == null || node.Input.Dimension != seg)
                     {
@@ -327,7 +327,7 @@ namespace Com.Model
 
             Expression e = GetLastNode(path);
             if (e == null) return null;
-            Dim dim = path.LastSegment;
+            CsColumn dim = path.LastSegment;
 
             // We use this comparison in GetOperand (but in future we should probably change the comparison criterion)
             if (e.Name != null && dim.Name != null && e.Name.Equals(dim.Name, StringComparison.InvariantCultureIgnoreCase))
@@ -346,9 +346,9 @@ namespace Com.Model
             for (int i = 0; i < path.Path.Count; i++) // We add all segments sequentially
             {
                 Expression child = null;
-                Dim seg = path.Path[i];
+                CsColumn seg = path.Path[i];
 
-                if (seg is DimSuper)
+                if (seg.IsSuper)
                 {
                     if (node.Input == null || node.Input.Dimension != seg)
                     {
@@ -736,7 +736,7 @@ namespace Com.Model
                             {
                                 if (Name != null)
                                 {
-                                    List<Dim> lesserDims = Input.OutputSet.LesserDims.Where(d => d.Name.Equals(Name, StringComparison.InvariantCultureIgnoreCase)).ToList();
+                                    List<CsColumn> lesserDims = Input.OutputSet.LesserDims.Where(d => d.Name.Equals(Name, StringComparison.InvariantCultureIgnoreCase)).ToList();
                                     Dimension = lesserDims[0];
                                 }
 
@@ -835,9 +835,9 @@ namespace Com.Model
             return type;
         }
 
-        public static Expression CreateProjectExpression(List<Dim> greaterDims, Operation op, Expression leafExpr = null)
+        public static Expression CreateProjectExpression(List<CsColumn> greaterDims, Operation op, Expression leafExpr = null)
         {
-            Set lesserSet = greaterDims[0].LesserSet;
+            CsTable lesserSet = greaterDims[0].LesserSet;
 
             Debug.Assert(op == Operation.PROJECTION || op == Operation.DOT, "Wrong use: only PROJECTION or DOT operations are allowed.");
             Debug.Assert(lesserSet != null && greaterDims != null, "Wrong use: parameters cannot be null.");
@@ -850,7 +850,7 @@ namespace Com.Model
             Expression previousExpr = null;
             for (int i = 0; i < greaterDims.Count; i++)
             {
-                Dim dim = greaterDims[i];
+                CsColumn dim = greaterDims[i];
 
                 Expression expr = new Expression();
 
@@ -882,9 +882,9 @@ namespace Com.Model
         }
 
         // TODO: Do we actually need lesserSet? If not then delete it and use the first segment of the path. 
-        public static Expression CreateDeprojectExpression(List<Dim> greaterDims)
+        public static Expression CreateDeprojectExpression(List<CsColumn> greaterDims)
         {
-            Set lesserSet = greaterDims[0].LesserSet;
+            CsTable lesserSet = greaterDims[0].LesserSet;
 
             Debug.Assert(lesserSet != null && greaterDims != null, "Wrong use: parameters cannot be null.");
             Debug.Assert(greaterDims.Count != 0, "Wrong use: at least one dimension has to be provided for projection.");
@@ -896,7 +896,7 @@ namespace Com.Model
             Expression previousExpr = null;
             for (int i = greaterDims.Count-1; i >= 0; i--)
             {
-                Dim dim = greaterDims[i];
+                CsColumn dim = greaterDims[i];
 
                 Expression expr = new Expression();
 

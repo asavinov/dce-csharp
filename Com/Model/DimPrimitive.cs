@@ -15,8 +15,10 @@ namespace Com.Model
     /// One array of type T stores elements in their original order without sorting. 
     /// Second array stores indexes (offsets) of elements in the first array in sorted order.
     /// </summary>
-    public class DimPrimitive<T> : Dim
+    public class DimPrimitive<T> : CsColumnData, CsColumnDefinition
     {
+        protected CsColumn Dim { get; protected set; }
+
         private T[] _cells; // Each cell contains a T value in arbitrary original order
         private int[] _offsets; // Each cell contains an offset to an element in cells in ascending or descending order
 
@@ -42,39 +44,10 @@ namespace Com.Model
             }
         }
 
-        #region Data methods. Untyped.
-
-        public override Type SystemType
-        {
-            get { return typeof(T); }
-        }
-
-        public override int Width // sizeof(T) does not work for generic classes (even if constrained by value types)
-        {
-            get 
-            { 
-                Type tt = typeof(T);
-                int size;
-                if (tt.IsValueType)
-                    if (tt.IsGenericType)
-                    {
-                        var t = default(T);
-                        size = System.Runtime.InteropServices.Marshal.SizeOf(t);
-                    }
-                    else
-                    {
-                        size = System.Runtime.InteropServices.Marshal.SizeOf(tt);
-                    }
-                else
-                {
-                    size = IntPtr.Size;
-                }
-                return size;
-            }
-        }
+        #region CsColumnData interface
 
         protected Offset _length; // It is only used if lesser set is not set, that is, for hanging dimension (theoretically, we should not use hanging dimensions and do not need then this field)
-        public override Offset Length
+        public Offset Length
         {
             get
             {
@@ -104,7 +77,7 @@ namespace Com.Model
             }
         }
 
-        public override bool IsNull(Offset input)
+        public bool IsNull(Offset input)
         {
             // For non-nullable storage, use the index to find if this cell is in the null interval of the index (beginning)
             int pos = FindIndex(input);
@@ -113,12 +86,12 @@ namespace Com.Model
             // return EqualityComparer<T>.Default.Equals(_nullValue, _cells[offset]);
         }
 
-        public override object GetValue(Offset input)
+        public object GetValue(Offset input)
         {
             return _cells[input]; // We do not check the range of offset - the caller must guarantee its validity
         }
 
-        public override void SetValue(Offset input, object value) // Replace an existing value with the new value and update the index. 
+        public void SetValue(Offset input, object value) // Replace an existing value with the new value and update the index. 
         {
             T val = default(T);
             int oldPos = FindIndex(input); // Old sorted position of the cell we are going to change
@@ -158,12 +131,12 @@ namespace Com.Model
             _cells[input] = val;
         }
 
-        public override void NullifyValues() // Reset values and index to initial state (all nulls)
+        public void NullifyValues() // Reset values and index to initial state (all nulls)
         {
             throw new NotImplementedException();
         }
 
-        public override void Append(object value)
+        public void Append(object value)
         {
             // Ensure that there is enough memory
             if (_length == allocatedSize) // Not enough storage for the new element (we need _length+1)
@@ -198,44 +171,12 @@ namespace Com.Model
             _length = _length + 1;
         }
 
-        public override void Insert(Offset input, object value)
+        public void Insert(Offset input, object value)
         {
             throw new NotImplementedException();
         }
 
-        public override void UpdateValue(Offset input, object value, ValueOp updater) // Change the existing value by applying the specified operation. 
-        {
-            if (updater == null)
-            {
-                SetValue(input, value);
-                return;
-            }
-
-            if (updater.OpType == ValueOpType.CALL_PROC)
-            {
-                double currentValue = Convert.ToDouble(GetValue(input));
-                double doubleValue = Convert.ToDouble(value);
-                switch (updater.Name)
-                {
-                    case "+": { currentValue += doubleValue; break; }
-                    // TODO: Other operations.
-                    // OPTIMIZATION: It is very inefficient. We have to think about direct implementations for each primitive type resolved before the main loop
-                    // It can a special procedure for each primitive type which makes takes as a parameter group-measure-count-this functions but is implemented for one primitive type.
-                    // In this case, we always assume that group-measure functions are already pre-computed and then aggregation is reduced to such a procedure where the loop is implemented for each type directly on the array (cell) using arithmetic operatinos
-                }
-                SetValue(input, currentValue);
-            }
-        }
-
-        public override object Aggregate(object values, string function) // It is actually static but we cannot use static virtual methods in C#
-        {
-            if (values == null) return default(T);
-
-            T[] array = ObjectToGenericArray(values);
-            return Aggregate(array, function, Aggregator);
-        }
-
-        public override object ProjectValues(Offset[] offsets)
+        public object ProjectValues(Offset[] offsets)
         {
             return project(offsets);
             // Returns an array but we delcare it as object (rather than array of objects) because we cannot case between array types (that is, int[] is not object[]) and therefore we return object.
@@ -245,7 +186,7 @@ namespace Com.Model
             // return project(offsets).Cast<object>().ToArray();
         }
 
-        public override Offset[] DeprojectValue(object value)
+        public Offset[] DeprojectValue(object value)
         {
             if (value == null || !value.GetType().IsArray)
             {
@@ -255,6 +196,18 @@ namespace Com.Model
             {
                 return deproject(ObjectToGenericArray(value));
             }
+        }
+
+        #endregion
+
+        #region Protected data methods (index, sorting, projecting etc.)
+
+        public object Aggregate(object values, string function) // It is actually static but we cannot use static virtual methods in C#
+        {
+            if (values == null) return default(T);
+
+            T[] array = ObjectToGenericArray(values);
+            return Aggregate(array, function, Aggregator);
         }
 
         private int FindIndex(int input) // Find an index for an offset of a cell (rather than a value in this cell)
@@ -349,7 +302,7 @@ namespace Com.Model
             Array.Sort(_offsets, /* 0, _count, */ (a, b) => comparer.Compare(_cells[a], _cells[b]));
         }
 
-        public T[] project(int[] offsets)
+        protected T[] project(int[] offsets)
         {
             // Question: possible sorting of output: ascending, according to input offsets specified, preserve the original order of offsets or do not guarantee anything
             // Question: will it be easier to compute if input offsets are somehow sorted?
@@ -386,7 +339,7 @@ namespace Com.Model
             return result;
         }
 
-        public int[] deproject(T value)
+        protected int[] deproject(T value)
         {
             Tuple<int, int> indexes;
 
@@ -415,7 +368,7 @@ namespace Com.Model
             return result;
         }
 
-        public int[] deproject(T[] values)
+        protected int[] deproject(T[] values)
         {
             // Assumption: values are unique
 
@@ -506,24 +459,69 @@ namespace Com.Model
 
         #endregion
 
-        #region Formula methods
+        #region CsColumnDefinition interface
 
-        public override void Eval() // Compute the output values of this function according to the definition and store them for direct access
-        {
-        }
+        //
+        // Represent formula
+        //
 
-        public override void ComputeValues()
+        /// <summary>
+        /// It is a formula (expression) defining a function for this dimension. 
+        /// When evaluated, it computes a value of the greater set for the identity value of the lesser set.
+        /// </summary>
+        public Expression SelectExpression { get; set; }
+
+        // Source (user, non-executable) formula for computing this function consisting of value-operations
+        public AstNode FormulaAst { get; set; } // Analogous to SelectExpression
+
+        /// <summary>
+        /// One particular type of function specification used for defining mapped dimensions, import specification, copy specification etc.
+        /// It defines greater set (nested) tuple in terms of the lesser set (nested) tuple. 
+        /// The function computation procedure can transoform this mapping to a normal expression for evaluation in a loop or it can translate it to a join or other target engine formats.
+        /// </summary>
+        public Mapping Mapping { get; set; }
+
+        public Expression WhereExpression { get; set; } // It describes the domain of the function or where the function returns null independent of other definitions
+
+        //
+        // Aggregation
+        //
+
+        // Fact set is a set for looping through and providing input for measure and group functions. By default, it is this (lesser) set.
+        public CsTable LoopSet { get; set; } // Dependency on a lesser set and lesser functions
+        // It is a translated, optimized and directly executable code (value operatinos) for computing output values given an input value (input is fact set which by default is this set)
+        public ValueOp MeasureCode { get; set; } // Input=FactSet. Output as declared by this function output (generaly, as consumed by the accumulator operator). By default, it is an expression for computing this function output given this set input (so normal evaluation). In the simplest case, it is a single call of an existing function.
+        public ValueOp GroupCode { get; set; } // Input=FactSet. Output as declared by this function input (this set)
+        public ValueOp AccuCode { get; set; } // Accumulator expression which computes a new value by taking into account the current value and a new output. For built-in functions it has a single system procedure call like SUM, AVG etc.
+        // Principle: LoopSet.GroupCode + ThisSet.ThisFunc = LoopSet.MeasureCode
+        // Principle: if LoopSet == ThisSet then GroupCode = null, ThisFunc = MeasureCode
+        public Dim CountDim { get; set; } // Input=ThisSet. This dimension will store group counts
+
+        //
+        // Dependencies
+        //
+
+        public List<Dim> Dependencies { get; set; } // Other functions this function directly depends upon. Computed from the definition of this function.
+        // Find and store all outputs of this function by evaluating (executing) its definition in a loop for all input elements of the fact set (not necessarily this set)
+
+        //
+        // Compute
+        //
+
+        public void Initialize() { }
+        
+        public void Evaluate()
         {
             if (Mapping != null)
             {
-                Debug.Assert(Mapping.SourceSet == LesserSet && Mapping.TargetSet == GreaterSet, "Wrong use: the mapping source and target sets have to corresond to the dimension sets.");
+                Debug.Assert(Mapping.SourceSet == Dim.LesserSet && Mapping.TargetSet == Dim.GreaterSet, "Wrong use: the mapping source and target sets have to corresond to the dimension sets.");
 
                 // Build a function from the mapping for populating a mapped dimension (type change or new mapped dimension)
                 Expression tupleExpr = Mapping.GetTargetExpression(this);
 
-                var funcExpr = ExpressionScope.CreateFunctionDeclaration(Name, LesserSet.Name, GreaterSet.Name);
+                var funcExpr = ExpressionScope.CreateFunctionDeclaration(Dim.Name, Dim.LesserSet.Name, Dim.GreaterSet.Name);
                 funcExpr.Statements[0].Input = tupleExpr; // Return statement
-                funcExpr.ResolveFunction(LesserSet.Top);
+                funcExpr.ResolveFunction(Dim.LesserSet.Top);
                 funcExpr.Resolve();
 
                 SelectExpression = funcExpr;
@@ -536,7 +534,7 @@ namespace Com.Model
                 Debug.Assert(SelectExpression.Input.Operation == Operation.PARAMETER, "Wrong use: derived function Input has to be of PARAMETER type.");
                 Debug.Assert(SelectExpression.Input.Dimension != null, "Wrong use: derived function Input has to reference a valid variable.");
 
-                for (Offset input = 0; input < LesserSet.Length; input++) // Compute the output function value for each input value (offset)
+                for (Offset input = 0; input < Dim.LesserSet.Length; input++) // Compute the output function value for each input value (offset)
                 {
                     // SelectExpression.SetOutput(Operation.PARAMETER, offset);
                     SelectExpression.Input.Dimension.Value = input; // Initialize 'this'
@@ -546,17 +544,17 @@ namespace Com.Model
             }
         }
 
+        public void Finish() { }
+
         #endregion
 
-        public DimPrimitive(string name, Set lesserSet, Set greaterSet)
-            : this(name, lesserSet, greaterSet, true, true)
-        {
-        }
+        #region Constructors
 
-        public DimPrimitive(string name, Set lesserSet, Set greaterSet, bool isIdentity, bool isSuper)
-            : base(name, lesserSet, greaterSet, isIdentity, isSuper)
+        public DimPrimitive(CsColumn dim)
         {
             // TODO: Check if output (greater) set is of correct type
+
+            Dim = dim;
 
             _length = 0;
             allocatedSize = initialSize;
@@ -565,7 +563,7 @@ namespace Com.Model
 
             _nullCount = Length;
 
-            Length = lesserSet.Length;
+            Length = dim.LesserSet.TableData.Length;
 
             // Initialize what representative value will be used instead of nulls
             _nullValue = default(T); // Check if type is nullable: http://stackoverflow.com/questions/374651/how-to-check-if-an-object-is-nullable
@@ -594,5 +592,8 @@ namespace Com.Model
                 _nullValue = default(T);
             }
         }
+
+        #endregion
     }
+
 }

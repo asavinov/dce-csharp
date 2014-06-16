@@ -47,7 +47,7 @@ namespace Com.Model
                 parent = Root;
             }
 
-            Dim dim = new DimSuper("Super", (Set)table, this, true, true);
+            Dim dim = new Dim("Super", table, this, true, true);
 
             dim.Add();
 
@@ -73,69 +73,12 @@ namespace Com.Model
         {
             Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
 
-            CsColumn dim = null;
-
-            if (output.Name.Equals("Void", StringComparison.InvariantCultureIgnoreCase)) 
-            {
-                dim = new Dim(name, (Set)input, (Set)output, isKey, true);
-            }
-            else if (output.Name.Equals("Top", StringComparison.InvariantCultureIgnoreCase)) 
-            {
-                dim = new Dim(name, (Set)input, (Set)output, isKey, true);
-            }
-            else if (output.Name.Equals("Bottom", StringComparison.InvariantCultureIgnoreCase)) // Not possible by definition
-            {
-            }
-            else if (output.Name.Equals("Root", StringComparison.InvariantCultureIgnoreCase)) 
-            {
-                dim = new DimSuper(name, (Set)input, (Set)output, isKey, true);
-            }
-            else if (output.Name.Equals("Integer", StringComparison.InvariantCultureIgnoreCase)) 
-            {
-                dim = new DimPrimitive<int>(name, (Set)input, (Set)output, isKey, false);
-            }
-            else if (output.Name.Equals("Double", StringComparison.InvariantCultureIgnoreCase)) 
-            {
-                dim = new DimPrimitive<double>(name, (Set)input, (Set)output, isKey, false);
-            }
-            else if (output.Name.Equals("Decimal", StringComparison.InvariantCultureIgnoreCase)) 
-            {
-                dim = new DimPrimitive<decimal>(name, (Set)input, (Set)output, isKey, false);
-            }
-            else if (output.Name.Equals("String", StringComparison.InvariantCultureIgnoreCase)) 
-            {
-                dim = new DimPrimitive<string>(name, (Set)input, (Set)output, isKey, false);
-            }
-            else if (output.Name.Equals("Boolean", StringComparison.InvariantCultureIgnoreCase)) 
-            {
-                dim = new DimPrimitive<bool>(name, (Set)input, (Set)output, isKey, false);
-            }
-            else if (output.Name.Equals("DateTime", StringComparison.InvariantCultureIgnoreCase)) 
-            {
-                dim = new DimPrimitive<DateTime>(name, (Set)input, (Set)output, isKey, false);
-            }
-            else if (output.Name.Equals("Set", StringComparison.InvariantCultureIgnoreCase))
-            {
-            }
-            else // User (non-primitive) set
-            {
-                dim = new DimSuper(name, (Set)input, (Set)output, isKey, false);
-            }
+            CsColumn dim = new Dim(name, input, output, isKey, false);
 
             return dim;
         }
 
         #endregion
-
-        public override int Width
-        {
-            get { return 0; }
-        }
-
-        public override int Length
-        {
-            get { return 0; }
-        }
 
         public DataSourceType DataSourceType { get; protected set; } // Where data is stored and processed (engine). Replace class name
 
@@ -158,49 +101,40 @@ namespace Com.Model
         private void CreateDataTypes() // Create all primitive data types from some specification like Enum, List or XML
         {
             Set set;
-            DimTop dim;
+            Dim dim;
 
             set = new Set("Root");
-            set.DimType = typeof(DimTop);
-            dim = new DimTop("Top", set, this, true, true);
+            dim = new Dim("Top", set, this, true, true);
             dim.Add();
 
             set = new Set("Integer");
-            set.DimType = typeof(DimPrimitive<int>);
-            dim = new DimTop("Top", set, this, true, true);
+            dim = new Dim("Top", set, this, true, true);
             dim.Add();
 
             set = new Set("Double");
-            set.DimType = typeof(DimPrimitive<double>);
-            dim = new DimTop("Top", set, this, true, true);
+            dim = new Dim("Top", set, this, true, true);
             dim.Add();
 
             set = new Set("Decimal");
-            set.DimType = typeof(DimPrimitive<decimal>);
-            dim = new DimTop("Top", set, this, true, true);
+            dim = new Dim("Top", set, this, true, true);
             dim.Add();
 
             set = new Set("String");
-            set.DimType = typeof(DimPrimitive<string>);
-            dim = new DimTop("Top", set, this, true, true);
+            dim = new Dim("Top", set, this, true, true);
             dim.Add();
 
             set = new Set("Boolean");
-            set.DimType = typeof(DimPrimitive<bool>);
-            dim = new DimTop("Top", set, this, true, true);
+            dim = new Dim("Top", set, this, true, true);
             dim.Add();
 
             set = new Set("DateTime");
-            set.DimType = typeof(DimPrimitive<DateTime>);
-            dim = new DimTop("Top", set, this, true, true);
+            dim = new Dim("Top", set, this, true, true);
             dim.Add();
         }
 
         public SetTop(string name)
             : base(name)
         {
-            IsInstantiable = false;
-
             CreateDataTypes(); // Generate all predefined primitive sets as subsets
         }
 

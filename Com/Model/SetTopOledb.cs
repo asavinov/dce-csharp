@@ -121,7 +121,7 @@ namespace Com.Model
             {
                 Set set = new Set(tableName); // Create a set 
                 set.RelationalTableName = tableName;
-                Root.AddSubset(set);
+                this.AddTable(set, null);
             }
 
             // Load columns and FKs as (complex) paths and (simple) FK-dimensions
@@ -130,8 +130,8 @@ namespace Com.Model
                 ImportPaths(tableName);
             }
 
-            List<Set> sets = Root.GetAllSubsets();
-            foreach (Set set in sets)
+            List<CsTable> sets = Root.GetAllSubsets();
+            foreach (CsTable set in sets)
             {
                 foreach (DimPath path in set.GreaterPaths)
                 {
@@ -157,7 +157,7 @@ namespace Com.Model
         private void ImportPaths(string tableName)
         {
             // Find set corresonding to this table
-            Set tableSet = Root.FindSubset(tableName);
+            CsTable tableSet = Root.FindSubset(tableName);
 
             Debug.Assert(!tableSet.IsPrimitive, "Wrong use: cannot load paths into a primitive set.");
 
@@ -574,19 +574,12 @@ namespace Com.Model
         private void CreateDataTypes() // Create all primitive data types from some specification like Enum, List or XML
         {
             Set setRoot = new Set("Root");
-            setRoot.DimType = typeof(DimTop);
             AddTable(setRoot, this);
 
             foreach (OleDbType dataType in (OleDbType[])Enum.GetValues(typeof(OleDbType)))
             {
-                Set setPrimitive = new Set("", dataType);
+                Set setPrimitive = new Set(dataType.ToString());
                 AddTable(setPrimitive, this);
-
-                setPrimitive.DimType = typeof(Dim); // Dimension without instances
-
-                switch (dataType) // Set properties explicitly for each data type
-                {
-                }
             }
         }
 
@@ -600,7 +593,6 @@ namespace Com.Model
             // Type names should correspond to what we see in SQL queries (or other syntactic expressions expected by OleDb driver)
 
             Name = name;
-            IsInstantiable = false;
 
             CreateDataTypes(); // Generate all predefined primitive sets as subsets
         }
