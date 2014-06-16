@@ -109,7 +109,7 @@ namespace Com.Model
     {
         Expression WhereExpression { get; set; } // May store CsColumn which stores a boolean function definition
 
-        List<Dim> ProjectDimensions { get; set; }
+        List<CsColumn> ProjectDimensions { get; set; }
 
         Expression OrderbyExpression { get; set; } // Here we should store something like Comparator
 
@@ -198,11 +198,13 @@ namespace Com.Model
         // Represent formula
         //
 
-        public Expression SelectExpression { get; set; }
-        public AstNode FormulaAst { get; set; } // Analogous to SelectExpression
-        public Mapping Mapping { get; set; }
+        Expression SelectExpression { get; set; }
+        AstNode FormulaAst { get; set; } // Analogous to SelectExpression
+        Mapping Mapping { get; set; }
 
-        public Expression WhereExpression { get; set; }
+        Expression WhereExpression { get; set; }
+
+        CsColumnEvaluator GetColumnEvaluator(); // Get an object which is used to compute the function values according to the formula
 
         //
         // Compuate
@@ -214,7 +216,7 @@ namespace Com.Model
     }
 
     // This class is used only by the column evaluation procedure. 
-    public interface CsRecordEvaluator // Compute output for one input based on some column definition and other already computed columns
+    public interface CsColumnEvaluator // Compute output for one input based on some column definition and other already computed columns
     {
         object EvaluateSet(Offset input); // Compute output for the specified intput and write it
         object EvaluateUpdate(Offset input); // Read group and measure for the specified input and compute update according to the aggregation formula. It may also increment another function if necessary.

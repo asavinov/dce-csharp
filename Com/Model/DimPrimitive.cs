@@ -462,8 +462,9 @@ namespace Com.Model
         #region CsColumnDefinition interface
 
         //
-        // Represent formula
+        // Represents a function definition in terms of other functions.
         //
+        public Expr Formula { get; set; }
 
         /// <summary>
         /// It is a formula (expression) defining a function for this dimension. 
@@ -503,6 +504,22 @@ namespace Com.Model
 
         public List<Dim> Dependencies { get; set; } // Other functions this function directly depends upon. Computed from the definition of this function.
         // Find and store all outputs of this function by evaluating (executing) its definition in a loop for all input elements of the fact set (not necessarily this set)
+
+        public CsColumnEvaluator GetColumnEvaluator()
+        {
+            // Principle: population methods are unaware of Definition type (expressions etc.) - they use only evaluator (no dependency on the definition details)
+
+            // Here we return different types of objects that implement this interface depending on the definition type (and reflecting/based on the definition)
+            // Based on Mapping - can be transformed an (tuple) expression
+            // Based on tuple expression - object that can evaluate tuple tree (find, append etc.), say, an extension of a passive tuple or simply implement the Evaluator interface by the expression object
+            // Based on expression - as above
+            // Based on aggregation - it is update function so initially we can return a standard updater like SUM (untyped), in future, return typed updaters, and in future also custom updaters based on v-expr or other code
+            // Based on library - load lib, instantiate via factory, initialize (say, resolve names), return object
+            // Based on source code - compile class, instantiate, initialize (say, resolve), return instance
+
+
+            return null;
+        }
 
         //
         // Compute

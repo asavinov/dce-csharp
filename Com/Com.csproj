@@ -51,6 +51,7 @@
     <Compile Include="Model\DimTree.cs" />
     <Compile Include="Model\Expression.cs" />
     <Compile Include="Model\Mapper.cs" />
+    <Compile Include="Model\Mapping.cs" />
     <Compile Include="Model\Recommender.cs" />
     <Compile Include="Model\Set.cs" />
     <Compile Include="Model\SetTopOdata.cs" />

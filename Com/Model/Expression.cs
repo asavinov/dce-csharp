@@ -9,6 +9,52 @@ using Offset = System.Int32;
 
 namespace Com.Model
 {
+    // Represents a function definition in terms of other functions.
+    // Should define output type (set) either by name and/or by reference. 
+    // If implements evaluator interface then has to include run-time state and run-time references to other function objects (for fast access)
+    // Function names used in the expression should be resolved during initialization so that only direct run-time references are used during evaluation. 
+    public class Expr : CsColumnEvaluator
+    {
+        // 1. Define tree methods maybe inheriting from generic tree class
+        // - Adding, removing, 
+        // - Mapping convenience methods (for tuple nodes)
+        // - DimPath convenience methods (for projection, function composition and tuple nodes)
+        // 2. Define how to access variables from nodes including 'this' (similar to accessing functions - from source code cannot be distinguished-only during name resolution)
+        // 3. See how operations kinds are solved in v-expr/s-expr enumerators including variable access
+        // 4. Define principles/rules of type representation/resolution and work with types: conversion etc. (for arithmetics we must determine right type and then use it for conversion like val.ToDouble() using switches or ideally direct dispatching (e.g., if we generate source code).
+        // - can we introduce a run-time field with a conversion operator resolved from type names, e.g., if argument is int but we need double then it stores Int.ToDouble reference?
+        // - !!! can we (automatically generate) introduce nodes for type conversion which simply call a system method (like for any other system method), say, ToDouble which has one integer argument. Theoretically, we could use legal functions of primitive sets which exist as columns, say, DimPrimitive<double> has a function ToInteger. The idea is that we are able to make conversion of the whole column by producing a whole column in new format. Conceptually, it is cleaner and we can use optimization in future by extracting this operations by transforming them into column-wise array scans with transformations. 
+
+        // Maybe we will need a field with 'this'
+        // Maybe we need a reference to this set (and output sets) so that we can resolve other function names
+        // Maybe we need a method for retrieving dependency information, that is, a list of other functions (with their sets) used in the formula, including maybe system functions, variables and other context objects
+        // Such expressions could be generated from our own source code, and they could be translated in the native source code (or even directly to byte-code without source code)
+
+        // Should every node implement CsColumnEvaluator? Or we can introduce ExprNode class with all low-level protected methods including tree methods (getChild etc.) - maybe inherit from some generic tree.
+
+        // Operations:
+        // How to represent function access operator: - function name, function (resolved) reference, function set (or another context), ...
+        // How to represent tuple operatinos: find, append etc.
+        // How to represent system/library functions: - by type/set/input name?
+        // How to represent 'this' access: - should be generalizable on any local or non-local variable. Ideally, a node should be able to reference a value (like it is done for functions), particularly, a local variable object.
+        //  - can we introduce a variable object which will represent local state including arguments like 'this' and then Evaluator methods do not accept parameters - parameters are set using interface methods like SetThis(input) (which can be typed or untyped as usual).
+        // How to represent constants/literals (valus of certain type)? Speical operation like CONSTANT/LITERAL? Or having no children?
+        // Is it important to have a special Input/Super child/argument? Where is it important?
+
+        // How to represent input type? where it is important/used - conversion and check for validity
+        // How to represent input value as a local variable and associated with input type?
+        // How to represent output/result type? where it is used
+
+        // Run-time
+        // How to represent result: untyped object or several typed fields?
+        // How to represent data type and its run-time references. Uses of data type: - conversion to target (primitive) type, - control of validity (during resolution/initialization), 
+        // How to represent function run-time references
+
+
+        // FINALLY: remove Expression from everywhere including evaluation methods (Expression will be obsolete and deleted)
+    }
+
+
     /// <summary>
     /// One node of a complex expression representing one operation on a single or sets of values.
 	/// The main task of an expression is to define a function: a mapping from inputs to outputs.
