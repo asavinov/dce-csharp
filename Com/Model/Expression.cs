@@ -9,19 +9,57 @@ using Offset = System.Int32;
 
 namespace Com.Model
 {
-    // Represents a function definition in terms of other functions.
-    // Should define output type (set) either by name and/or by reference. 
-    // If implements evaluator interface then has to include run-time state and run-time references to other function objects (for fast access)
-    // Function names used in the expression should be resolved during initialization so that only direct run-time references are used during evaluation. 
+
+    // Normal evaluator (not update/aggregate, not join)
     public class Expr : CsColumnEvaluator
     {
-        // General
-        // It is a triple: (Type) Name = Value.
+        CsTable LoopTable { get; protected set; }
+
+        bool IsUpdate { get; protected set; }
+
+        ExprNode exprNode;
+
+        CsColumnData columnData;
+
+        object Evaluate(Offset input) 
+        {
+            // Use input value to evaluate the expression
+            exprNode.SetThis(input);
+
+            // evaluate the expression
+            exprNode.Evaluate();
+
+            // Write the result value to the function
+            columnData.SetValue(input, exprNode.Value);
+
+            return null;
+        }
+
+        object EvaluateUpdate(Offset input) { return null; }
+
+        bool EvaluateJoin(Offset input, object output) { return false; }
+
+        public Expr(CsColumn column)
+        {
+            LoopTable = column.LesserSet;
+            IsUpdate = false;
+            exprNode = column.ColumnDefinition.Formula;
+            columnData = column.ColumnData;
+        }
+    }
+
+    // Represents a function definition in terms of other functions and provides its run-time interface.
+    // Main unit of the representation is a triple: (Type) Name = Value. 
+    public class ExprNode
+    {
         // Type can be resolved into run-time object like Set (at compile-time)
         // Name can be resolved into a run-time object like Dim or CsColumnEvaluator (at compile-time)
         // Value could be stored in typed fields for each primitive type
 
-        // How to process this node
+        //
+        // Node role. How to process this node and interpret the child nodes
+        //
+
         // CALL: apply 'method' child to 'this' and other children
         // TUPLE: combination of de-projections of all child node results with names identifying dimensions (of this node type)
         // VALUE: stores a value directly. no computations are needed (maybe compile-time resolution of the name)
@@ -29,9 +67,17 @@ namespace Com.Model
         // NOP: just skip
         public object Operation { get; set; }
 
+        //
+        // Type of the result value
+        //
+
         // Type name of the result
         public string Type { get; set; }
         public Set TypeSet { get; set; }
+
+        //
+        // Attribute of the result value relative to the parent
+        //
 
         // An relative offset of the result in the parent which is interpreted by the parent node.
         // 'method' - the node represents a method, procedure (SUM, MUL), function, variable or another action to be performed by the parent
@@ -52,12 +98,14 @@ namespace Com.Model
         //ALLOC/FREE // For variables and functions as a whole storage object in the context. Is not it APPEND/INSERT?
         public object ActionType { get; set; }
 
+        //
+        // Result value computed at run-time
+        //
+
         // Result run-time value after processing this node to be used by the parent. It must have the specified type.
         public object Value { get; set; }
         // Typed results for each primitive type
         //public int ValueInteger { get; set; }
-
-
 
 
 

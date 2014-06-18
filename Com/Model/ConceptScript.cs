@@ -197,6 +197,7 @@ namespace Com.Model
         //
         // Represent formula
         //
+        ExprNode Formula { get; set; }
 
         Expression SelectExpression { get; set; }
         AstNode FormulaAst { get; set; } // Analogous to SelectExpression
@@ -218,7 +219,11 @@ namespace Com.Model
     // This class is used only by the column evaluation procedure. 
     public interface CsColumnEvaluator // Compute output for one input based on some column definition and other already computed columns
     {
-        object EvaluateSet(Offset input); // Compute output for the specified intput and write it
+        CsTable LoopTable { get; protected set; }
+
+        bool IsUpdate { get; protected set; }
+
+        object Evaluate(Offset input); // Compute output for the specified intput and write it
         object EvaluateUpdate(Offset input); // Read group and measure for the specified input and compute update according to the aggregation formula. It may also increment another function if necessary.
         bool EvaluateJoin(Offset input, object output); // Called for all pairs of input and output *if* the definition is a join predicate.
     }

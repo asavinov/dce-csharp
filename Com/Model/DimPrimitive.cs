@@ -517,8 +517,7 @@ namespace Com.Model
             // Based on library - load lib, instantiate via factory, initialize (say, resolve names), return object
             // Based on source code - compile class, instantiate, initialize (say, resolve), return instance
 
-
-            return null;
+            return Formula;
         }
 
         //
@@ -526,8 +525,29 @@ namespace Com.Model
         //
 
         public void Initialize() { }
-        
+
         public void Evaluate()
+        {
+            CsColumnEvaluator evaluator = GetColumnEvaluator();
+            CsTable loopTable = evaluator.LoopTable;
+
+            if (evaluator.IsUpdate)
+            {
+                for (Offset input = 0; input < loopTable.TableData.Length; input++)
+                {
+                    evaluator.EvaluateUpdate(input);
+                }
+            }
+            else
+            {
+                for (Offset input = 0; input < loopTable.TableData.Length; input++)
+                {
+                    evaluator.Evaluate(input);
+                }
+            }
+        }
+
+        public void Evaluate_OLD()
         {
             if (Mapping != null)
             {
