@@ -15,6 +15,64 @@ namespace Com.Model
     // Function names used in the expression should be resolved during initialization so that only direct run-time references are used during evaluation. 
     public class Expr : CsColumnEvaluator
     {
+        // General
+        // It is a triple: (Type) Name = Value.
+        // Type can be resolved into run-time object like Set (at compile-time)
+        // Name can be resolved into a run-time object like Dim or CsColumnEvaluator (at compile-time)
+        // Value could be stored in typed fields for each primitive type
+
+        // How to process this node
+        // CALL: apply 'method' child to 'this' and other children
+        // TUPLE: combination of de-projections of all child node results with names identifying dimensions (of this node type)
+        // VALUE: stores a value directly. no computations are needed (maybe compile-time resolution of the name)
+        // CONTEXT/SCOPE: it is a sequence of operations. return values either the last operation or special variable like 'output' or 'return'
+        // NOP: just skip
+        public object Operation { get; set; }
+
+        // Type name of the result
+        public string Type { get; set; }
+        public Set TypeSet { get; set; }
+
+        // An relative offset of the result in the parent which is interpreted by the parent node.
+        // 'method' - the node represents a method, procedure (SUM, MUL), function, variable or another action to be performed by the parent
+        // 'this' - the node represents a special this argument for the processing parent node
+        public string Name { get; set; }
+        // It is a reference to a dimension, variable or another kind of callable storage run-time object
+        // Is resolved from name at compile-time if the name represents a method (dimension, function etc.)
+        // It could be CsColumnEvaluator (at least for Dim storage) so that we directly access values at run-time. 
+        // Alternatively, the whole node implements this interface
+        public object Action { get; set; }
+        // Action type. A modifier that helps to choose the function variation
+        //CALL, // Generic procedure call including system calls, arithmetic operations etc. Probably, it is equivalent to READ
+        //READ, // Read accossor or getter. Read value from a variable/function or find a surrogate for a tuple. Normally used in method parameters.
+        //WRITE, // Assignment, write accessor or setter. Write value to an existing variable/function (do nothing if it does not exist). Normally is used for assignment. 
+        //UPDATE, // Update value by applying some operation. Normally is used for affecting directly a target rather than loading it, changing and then storing.
+        //APPEND, // Append a value if it does not exist and write it if does exist. The same as write except that a new element can be added
+        //INSERT, // The same as append except that a position is specified
+        //ALLOC/FREE // For variables and functions as a whole storage object in the context. Is not it APPEND/INSERT?
+        public object ActionType { get; set; }
+
+        // Result run-time value after processing this node to be used by the parent. It must have the specified type.
+        public object Value { get; set; }
+        // Typed results for each primitive type
+        //public int ValueInteger { get; set; }
+
+
+
+
+
+        // Operation type. What is in this node and how to interpret the name
+        // - ACCESS/UP: access to named function (variable, arithmetic, system procedure) output given intput(s) in children
+        //   - name is a function from several children (inputs) to this node set (output) - computed when processing this node
+        //   - node type = output type (surrogate), child type(s) = input(s) type
+        //   - it means moving up in the poset from lesser values to greater values
+        // - TUPLE/DOWN: access to the named function input given a combination of outputs.
+        //   - name is a function from a (single) parent node set (input) to this node set (output) - but computed in inverse direction from this node to the parent when processing the parent (this node processes children's functions)
+        //   - node type = input type of any child function (surrogate), child type(s) = output(s) type of the child function
+        //   - TUPLE always means moving down in poset by propagating greater surrogates to lesser surrogates
+        // - (VALUE): do we need this? could be modeled by tuples with no children or by type. A primitive value (literal) represented here by-value
+
+
         // 1. Define tree methods maybe inheriting from generic tree class
         // - Adding, removing, 
         // - Mapping convenience methods (for tuple nodes)
@@ -25,33 +83,9 @@ namespace Com.Model
         // - can we introduce a run-time field with a conversion operator resolved from type names, e.g., if argument is int but we need double then it stores Int.ToDouble reference?
         // - !!! can we (automatically generate) introduce nodes for type conversion which simply call a system method (like for any other system method), say, ToDouble which has one integer argument. Theoretically, we could use legal functions of primitive sets which exist as columns, say, DimPrimitive<double> has a function ToInteger. The idea is that we are able to make conversion of the whole column by producing a whole column in new format. Conceptually, it is cleaner and we can use optimization in future by extracting this operations by transforming them into column-wise array scans with transformations. 
 
-        // Maybe we will need a field with 'this'
-        // Maybe we need a reference to this set (and output sets) so that we can resolve other function names
         // Maybe we need a method for retrieving dependency information, that is, a list of other functions (with their sets) used in the formula, including maybe system functions, variables and other context objects
         // Such expressions could be generated from our own source code, and they could be translated in the native source code (or even directly to byte-code without source code)
 
-        // Should every node implement CsColumnEvaluator? Or we can introduce ExprNode class with all low-level protected methods including tree methods (getChild etc.) - maybe inherit from some generic tree.
-
-        // Operations:
-        // How to represent function access operator: - function name, function (resolved) reference, function set (or another context), ...
-        // How to represent tuple operatinos: find, append etc.
-        // How to represent system/library functions: - by type/set/input name?
-        // How to represent 'this' access: - should be generalizable on any local or non-local variable. Ideally, a node should be able to reference a value (like it is done for functions), particularly, a local variable object.
-        //  - can we introduce a variable object which will represent local state including arguments like 'this' and then Evaluator methods do not accept parameters - parameters are set using interface methods like SetThis(input) (which can be typed or untyped as usual).
-        // How to represent constants/literals (valus of certain type)? Speical operation like CONSTANT/LITERAL? Or having no children?
-        // Is it important to have a special Input/Super child/argument? Where is it important?
-
-        // How to represent input type? where it is important/used - conversion and check for validity
-        // How to represent input value as a local variable and associated with input type?
-        // How to represent output/result type? where it is used
-
-        // Run-time
-        // How to represent result: untyped object or several typed fields?
-        // How to represent data type and its run-time references. Uses of data type: - conversion to target (primitive) type, - control of validity (during resolution/initialization), 
-        // How to represent function run-time references
-
-
-        // FINALLY: remove Expression from everywhere including evaluation methods (Expression will be obsolete and deleted)
     }
 
 
