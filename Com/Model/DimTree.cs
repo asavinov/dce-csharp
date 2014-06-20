@@ -296,7 +296,7 @@ namespace Com.Model
             {
                 if (!Set.IsIn(top.Root))
                 {
-                    top.AddTable(Set, null);
+                    top.AddTable(Set, null, null);
                 }
             }
 

@@ -15,7 +15,7 @@ namespace Com.Query
     /// </summary>
     class ExprBuilder : ExprBaseVisitor<ExprNode>
     {
-        public virtual ExprNode VisitExpr(ExprParser.ExprContext context) 
+        public override ExprNode VisitExpr(ExprParser.ExprContext context) 
         {
             ExprNode n = new ExprNode();
 
@@ -120,7 +120,7 @@ namespace Com.Query
             return n; 
         }
 
-        public virtual ExprNode VisitName(ExprParser.NameContext context) 
+        public override ExprNode VisitName(ExprParser.NameContext context) 
         {
             ExprNode n = new ExprNode();
             n.Operation = OperationType.VALUE;

@@ -8,8 +8,6 @@ using System.Text;
 using System.Data;
 using System.Diagnostics;
 
-using Com.Query;
-
 using Offset = System.Int32;
 
 namespace Com.Model
@@ -43,7 +41,8 @@ namespace Com.Model
         //
         // Outputs
         //
-        public List<CsColumn> GreaterDims { get; private set; } // Outgoing up arrows. Outputs
+        protected List<CsColumn> greaterDims;
+        public List<CsColumn> GreaterDims { get { return greaterDims; } } // Outgoing up arrows. Outputs
         public CsColumn SuperDim { get { return GreaterDims.FirstOrDefault(x => x.IsSuper); } }
         public List<CsColumn> KeyColumns { get { return GreaterDims.Where(x => x.IsIdentity).ToList(); } }
         public List<CsColumn> NonkeyColumns { get { return GreaterDims.Where(x => !x.IsIdentity).ToList(); } }
@@ -63,7 +62,8 @@ namespace Com.Model
         // Inputs
         //
 
-        public List<CsColumn> LesserDims { get; private set; } // Incoming arrows. Inputs
+        protected List<CsColumn> lesserDims;
+        public List<CsColumn> LesserDims { get { return lesserDims; } } // Incoming arrows. Inputs
         public List<CsColumn> SubDims { get { return LesserDims.Where(x => x.IsSuper).ToList(); } }
         public List<CsTable> SubSets { get { return SubDims.Select(x => x.LesserSet).ToList(); } }
         public List<CsTable> GetAllSubsets() // Should be solved using general enumerator? Other: get all lesser, get all greater
@@ -125,9 +125,9 @@ namespace Com.Model
             return GreaterDims.FirstOrDefault(d => d.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
         }
 
-        public CsTable getTable(string name) { return LesserDims.FirstOrDefault(d => d.LesserSet.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase)).LesserSet; }
+        public CsTable GetTable(string name) { return LesserDims.FirstOrDefault(d => d.LesserSet.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase)).LesserSet; }
 
-        public CsTable FindSubset(string name)
+        public CsTable FindTable(string name)
         {
             CsTable set = null;
             if (Name.Equals(name, StringComparison.InvariantCultureIgnoreCase))
@@ -138,7 +138,7 @@ namespace Com.Model
             foreach (Dim d in SubDims)
             {
                 if (set != null) break;
-                set = d.LesserSet.FindSubset(name);
+                set = d.LesserSet.FindTable(name);
             }
 
             return set;
@@ -153,10 +153,22 @@ namespace Com.Model
         #region CsTableData interface
 
         /// <summary>
-        /// How many _instances this set has. Cardinality. Set power. Length (height) of instance set.
+        /// How many instances this set has. Cardinality. Set power. Length (height) of instance set.
         /// If instances are identified by integer offsets, then size also represents offset range.
         /// </summary>
-        public Offset Length { get; protected set; }
+        protected Offset length;
+        public Offset Length 
+        { 
+            get { return length; }
+            set
+            {
+                foreach (CsColumn col in GreaterDims)
+                {
+                    length = value;
+                    col.ColumnData.Length = value;
+                }
+            }
+        }
 
         public object GetValue(string name, int offset)
         {
@@ -735,7 +747,7 @@ namespace Com.Model
             PathEnumerator primPaths = new PathEnumerator(this, DimensionType.IDENTITY_ENTITY);
             foreach (DimPath p in primPaths)
             {
-                if (p.Length < 2) continue; // All primitive paths are stored in this set. We need at least 2 segments.
+                if (p.Size < 2) continue; // All primitive paths are stored in this set. We need at least 2 segments.
 
                 // Check if this path already exists
                 path.Path = p.Path;
@@ -766,8 +778,8 @@ namespace Com.Model
 
             Name = name;
 
-            GreaterDims = new List<CsColumn>(); // Up arrows
-            LesserDims = new List<CsColumn>();
+            greaterDims = new List<CsColumn>(); // Up arrows
+            lesserDims = new List<CsColumn>();
 
             SuperPaths = new List<DimPath>();
             SubPaths = new List<DimPath>();

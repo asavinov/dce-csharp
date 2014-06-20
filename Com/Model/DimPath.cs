@@ -16,7 +16,7 @@ namespace Com.Model
         {
             get
             {
-                if (Length == 0) return "";
+                if (Size == 0) return "";
                 string complexName = "";
                 foreach (CsColumn seg in Path) complexName += "_" + seg.Name;
                 return complexName;
@@ -26,7 +26,7 @@ namespace Com.Model
         {
             get
             {
-                if (Length == 0) return "0";
+                if (Size == 0) return "0";
                 int hash = 0;
                 foreach (CsColumn seg in Path) hash += ((Dim)seg).Id.GetHashCode();
 
@@ -41,7 +41,7 @@ namespace Com.Model
         /// </summary>
         public List<CsColumn> Path { get; set; }
 
-        public override int Length
+        public int Size
         {
             get
             {
@@ -53,7 +53,7 @@ namespace Com.Model
         {
             get
             {
-                return Length == 0 ? null : Path[0];
+                return Size == 0 ? null : Path[0];
             }
         }
 
@@ -61,7 +61,7 @@ namespace Com.Model
         {
             get
             {
-                return Length == 0 ? null : Path[Path.Count - 1];
+                return Size == 0 ? null : Path[Path.Count - 1];
             }
         }
 
@@ -69,7 +69,7 @@ namespace Com.Model
         {
             get
             {
-                if (Length == 0) return 1; // Simple dimension
+                if (Size == 0) return 1; // Simple dimension
                 int r = 0;
                 foreach (CsColumn dim in Path)
                 {
@@ -114,7 +114,7 @@ namespace Com.Model
 
         public bool StartsWith(CsColumn dim)
         {
-            if(Length == 0) return false;
+            if(Size == 0) return false;
             return Path[0] == dim;
         }
         public bool StartsWith(DimPath path)
@@ -178,7 +178,7 @@ namespace Com.Model
 
         public void InsertFirst(CsColumn dim) // Insert a new segment at the beginning of the path
         {
-            Debug.Assert(Length == 0 || dim.GreaterSet == LesserSet, "A path must continue the first segment inserted in the beginning.");
+            Debug.Assert(Size == 0 || dim.GreaterSet == LesserSet, "A path must continue the first segment inserted in the beginning.");
 
             Path.Insert(0, dim);
             LesserSet = dim.LesserSet;
@@ -186,7 +186,7 @@ namespace Com.Model
         }
         public void InsertFirst(DimPath path) // Insert new segments from the specified path at the beginning of the path
         {
-            Debug.Assert(Length == 0 || path.GreaterSet == LesserSet, "A path must continue the first segment inserted in the beginning.");
+            Debug.Assert(Size == 0 || path.GreaterSet == LesserSet, "A path must continue the first segment inserted in the beginning.");
 
             Path.InsertRange(0, path.Path);
             LesserSet = path.LesserSet;
@@ -195,7 +195,7 @@ namespace Com.Model
 
         public void InsertLast(CsColumn dim) // Append a new segment to the end of the path
         {
-            Debug.Assert(Length == 0 || dim.LesserSet == GreaterSet, "A new segment appended to a path must continue the previous segments");
+            Debug.Assert(Size == 0 || dim.LesserSet == GreaterSet, "A new segment appended to a path must continue the previous segments");
 
             Path.Add(dim);
             GreaterSet = dim.GreaterSet;
@@ -203,9 +203,9 @@ namespace Com.Model
         }
         public void InsertLast(DimPath path) // Append all segments of the specified path to the end of this path
         {
-            Debug.Assert(Length == 0 || path.LesserSet == GreaterSet, "A an appended path must continue this path.");
+            Debug.Assert(Size == 0 || path.LesserSet == GreaterSet, "A an appended path must continue this path.");
 
-            if (path == null || path.Length == 0) return;
+            if (path == null || path.Size == 0) return;
 
             for (int i = 0; i < path.Path.Count; i++)
             {
@@ -222,7 +222,7 @@ namespace Com.Model
 
         private CsColumn RemoveAt(int index)
         {
-            if (Length == 0) return null; // Nothing to remove
+            if (Size == 0) return null; // Nothing to remove
             if (index < 0 || index >= Path.Count) return null; // Bad index
 
             CsColumn result = Path[index];
@@ -387,7 +387,7 @@ namespace Com.Model
         /// <returns></returns>
         public string IsValid()
         {
-            if (Length == 0) return null;
+            if (Size == 0) return null;
             return null;
         }
 
@@ -600,7 +600,7 @@ namespace Com.Model
             CsColumn segment = null;
             do // A loop for removing last segment and moving backward
             {
-                if (Length == 0) // Nothing to remove. End.
+                if (Size == 0) // Nothing to remove. End.
                 {
                     return false;
                 }
@@ -650,7 +650,7 @@ namespace Com.Model
         }
         private CsColumn RemoveLastSegment()
         {
-            if (Length == 0) return null; // Nothing to remove
+            if (Size == 0) return null; // Nothing to remove
 
             CsColumn segment = null;
             if (!isInverse)

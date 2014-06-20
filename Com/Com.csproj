@@ -53,13 +53,13 @@
     <Compile Include="Model\DimPrimitive.cs" />
     <Compile Include="Model\DimTree.cs" />
     <Compile Include="Model\Evaluator.cs" />
+    <Compile Include="Model\Expr.cs" />
     <Compile Include="Model\Mapping.cs" />
     <Compile Include="Model\Set.cs" />
     <Compile Include="Model\SetTop.cs" />
     <Compile Include="Model\Utils.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Query\AstNode.cs" />
-    <Compile Include="Query\Expr.cs" />
     <Compile Include="Query\ExprBuilder.cs" />
     <Compile Include="Query\ValueOp.cs" />
     <Compile Include="Query\ScriptOp.cs" />

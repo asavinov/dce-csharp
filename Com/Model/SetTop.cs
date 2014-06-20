@@ -38,16 +38,18 @@ namespace Com.Model
             return table;
         }
 
-        public CsTable AddTable(CsTable table, CsTable parent)
+        public CsTable AddTable(CsTable table, CsTable parent, string superName)
         {
-            Debug.Assert(!table.IsPrimitive, "Wrong use: users do not create/delete primitive sets - they are part of the schema.");
-
             if (parent == null)
             {
                 parent = Root;
             }
+            if (string.IsNullOrEmpty(superName))
+            {
+                superName = "Super";
+            }
 
-            Dim dim = new Dim("Super", table, this, true, true);
+            Dim dim = new Dim(superName, table, parent, true, true);
 
             dim.Add();
 

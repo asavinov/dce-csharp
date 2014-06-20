@@ -17,7 +17,7 @@ namespace Com.Model
     /// </summary>
     public class DimPrimitive<T> : CsColumnData, CsColumnDefinition
     {
-        protected CsColumn Dim { get; protected set; }
+        protected CsColumn Dim { get; set; }
 
         private T[] _cells; // Each cell contains a T value in arbitrary original order
         private int[] _offsets; // Each cell contains an offset to an element in cells in ascending or descending order
@@ -53,7 +53,7 @@ namespace Com.Model
             {
                 return _length;
             }
-            protected set
+            set
             {
                 if (value == _length) return;
 
@@ -464,7 +464,7 @@ namespace Com.Model
         //
         // Represents a function definition in terms of other functions.
         //
-        public ExprEvaluator Formula { get; set; }
+        public ExprNode Formula { get; set; }
 
         /// <summary>
         /// It is a formula (expression) defining a function for this dimension. 
@@ -517,7 +517,9 @@ namespace Com.Model
             // Based on library - load lib, instantiate via factory, initialize (say, resolve names), return object
             // Based on source code - compile class, instantiate, initialize (say, resolve), return instance
 
-            return Formula;
+            CsColumnEvaluator e = new ExprEvaluator(Dim);
+
+            return e;
         }
 
         //

@@ -15,10 +15,6 @@ namespace Com.Model
 
     public class ExprEvaluator : CsColumnEvaluator
     {
-        CsTable LoopTable { get; protected set; }
-
-        bool IsUpdate { get; protected set; }
-
         ExprNode exprNode;
         CsVariable thisVariable;
 
@@ -28,7 +24,13 @@ namespace Com.Model
         // CsColumnEvaluator interface
         //
 
-        object Evaluate(Offset input)
+        protected CsTable loopTable;
+        public CsTable LoopTable { get { return loopTable; } }
+
+        protected bool isUpdate;
+        public bool IsUpdate { get { return isUpdate; } }
+
+        public object Evaluate(Offset input)
         {
             // Use input value to evaluate the expression
             thisVariable.SetValue(input);
@@ -42,14 +44,14 @@ namespace Com.Model
             return null;
         }
 
-        object EvaluateUpdate(Offset input) { return null; }
+        public object EvaluateUpdate(Offset input) { return null; }
 
-        bool EvaluateJoin(Offset input, object output) { return false; }
+        public bool EvaluateJoin(Offset input, object output) { return false; }
 
         public ExprEvaluator(CsColumn column)
         {
-            LoopTable = column.LesserSet;
-            IsUpdate = false;
+            loopTable = column.LesserSet;
+            isUpdate = false;
             exprNode = column.ColumnDefinition.Formula;
             thisVariable = new Variable("this", LoopTable.Name);
             columnData = column.ColumnData;

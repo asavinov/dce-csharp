@@ -114,11 +114,11 @@ namespace Com.Query
                         }
                         else { break; } // ERROR: parameter wrong or not found
 
-                        SetTopOledb dbTop = new SetTopOledb("");
-                        dbTop.ConnectionString = connection;
-                        dbTop.Open();
-                        dbTop.ImportSchema();
-                        Result.Value = dbTop;
+                        //SetTopOledb dbTop = new SetTopOledb("");
+                        //dbTop.ConnectionString = connection;
+                        //dbTop.Open();
+                        //dbTop.ImportSchema();
+                        //Result.Value = dbTop;
                     }
                     else if (Name == "Load")
                     {
@@ -180,7 +180,7 @@ namespace Com.Query
                         else { break; } // ERROR: parameter wrong or not found
 
                         // TOD: Really add a new function with this definition
-                        Set typeSet = (Set) top.FindSubset(type);
+                        Set typeSet = (Set) top.FindTable(type);
                         Dim dim = (Dim)((CsSchema)top).CreateColumn(name, set, typeSet, true);
                         //dim.FormulaAst = formula;
                         dim.Add();

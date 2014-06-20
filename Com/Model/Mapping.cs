@@ -5,8 +5,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
-using Com.Query;
-
 namespace Com.Model
 {
     /// <summary>

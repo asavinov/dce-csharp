@@ -4,8 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Diagnostics;
 
-using Com.Query;
-
 using Offset = System.Int32;
 
 namespace Com.Model

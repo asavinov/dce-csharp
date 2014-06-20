@@ -78,7 +78,7 @@ namespace Com.Model
 
         public static double ComputePathSimilarity(DimPath source, DimPath target)
         {
-            if (source == null || target == null || source.Length == 0 || target.Length == 0) return 0;
+            if (source == null || target == null || source.Size == 0 || target.Size == 0) return 0;
 
             double rankFactor1 = 0.5;
             double rankFactor2 = 0.5;

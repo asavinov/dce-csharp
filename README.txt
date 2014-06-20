@@ -4,7 +4,7 @@ Configure:
   - Choose Manage NuGet Packages
   - Type antlr4 in Search field
   - Ensure that Include Prerelease is chosen
-  - Install "ANTLR 4 Runtime" or "ANTLR 4"
+  - Install "ANTLR 4 Runtime" or "ANTLR 4" (ANTLR 4 depends on Runtime)
   - Choose projects where a reference to the DLL has to be added (it will be visible as a project Item in References)
   - the files will be installed in "packages" directory
 - Support for ANTLR in Visual Studio (for syntax highlighting, creating new VS grammar project items etc.)
@@ -12,7 +12,7 @@ Configure:
   - Click Online
   - Type antlr in Search field
   - Install "ANTLR Language Support"
-  - the files will be installed in "packages" directory
+  - Restart of VS is required
 - Git Extensions is installed by downloading (not necessary - only for Git)
 
 Git for Visual Studio:

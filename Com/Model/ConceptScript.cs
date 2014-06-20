@@ -32,7 +32,7 @@ namespace Com.Model
         //
         // Outputs
         //
-        List<CsColumn> GreaterDims { get; protected set; }
+        List<CsColumn> GreaterDims { get; }
         CsColumn SuperDim { get; }
         List<CsColumn> KeyColumns { get; }
         List<CsColumn> NonkeyColumns { get; }
@@ -44,7 +44,7 @@ namespace Com.Model
         // Inputs
         //
 
-        List<CsColumn> LesserDims { get; protected set; }
+        List<CsColumn> LesserDims { get; }
         List<CsColumn> SubDims { get; }
         List<CsTable> SubSets { get; }
         List<CsTable> GetAllSubsets();
@@ -62,8 +62,8 @@ namespace Com.Model
         // Names
         //
         CsColumn GetGreaterDim(string name);
-        CsTable getTable(string name);
-        CsTable FindSubset(string name);
+        CsTable GetTable(string name);
+        CsTable FindTable(string name);
 
         CsTableData TableData { get; }
         CsTableDefinition TableDefinition { get; }
@@ -71,7 +71,7 @@ namespace Com.Model
 
     public interface CsTableData // It is interface for manipulating data in a table.
     {
-        Offset Length { get; protected set; }
+        Offset Length { get; set; }
 
         //
         // Value methods (convenience, probably should be removed and replaced by manual access to dimensions)
@@ -127,7 +127,7 @@ namespace Com.Model
         //
         
         CsTable CreateTable(string name);
-        CsTable AddTable(CsTable table, CsTable parent);
+        CsTable AddTable(CsTable table, CsTable parent, string superName);
         CsTable RemoveTable(CsTable table);
 
         CsColumn CreateColumn(string name, CsTable input, CsTable output, bool isKey);
@@ -219,9 +219,9 @@ namespace Com.Model
     // This class is used only by the column evaluation procedure. 
     public interface CsColumnEvaluator // Compute output for one input based on some column definition and other already computed columns
     {
-        CsTable LoopTable { get; protected set; }
+        CsTable LoopTable { get; }
 
-        bool IsUpdate { get; protected set; }
+        bool IsUpdate { get; }
 
         object Evaluate(Offset input); // Compute output for the specified intput and write it
         object EvaluateUpdate(Offset input); // Read group and measure for the specified input and compute update according to the aggregation formula. It may also increment another function if necessary.
