@@ -8,6 +8,8 @@ using System.Text;
 using System.Data;
 using System.Diagnostics;
 
+using Com.Query;
+
 using Offset = System.Int32;
 
 namespace Com.Model
@@ -199,11 +201,12 @@ namespace Com.Model
             }
         }
 
-        public bool Find(Expression expr) // Use only identity dims (for general case use Search which returns a subset of elements)
+        public bool Find(ExprNode expr) // Use only identity dims (for general case use Search which returns a subset of elements)
         {
             // Find: Find the tuple and all nested tuples. Is applied only if the value is null - otherwise it assumed existing and no recursion is made. 
             // Value: Output is set to offset for found tuples and (remains) null if not found.
 
+            /*
             Debug.Assert(expr.OutputSet == this, "Wrong use: expression OutputSet must be equal to the set its value is appended/found.");
 
             if (IsPrimitive)
@@ -274,14 +277,16 @@ namespace Com.Model
                 expr.Output = result;
                 return true;
             }
+            */
+            return true;
         }
 
-        public bool CanAppend(Expression expr) // Determine if this expression (it has to be evaluated) can be added into this set as a new instance
+        public bool CanAppend(ExprNode expr) // Determine if this expression (it has to be evaluated) can be added into this set as a new instance
         {
             // CanAppend: Check if the whole tuple can be added without errors
             // We do not check existence (it is done before). If tuple exists then no check is done and return false. If null then we check general criterial for adding (presence of all necessary data).
 
-            Debug.Assert(expr.OutputSet == this, "Wrong use: expression OutputSet must be equal to the set its value is appended/found.");
+            //Debug.Assert(expr.OutputSet == this, "Wrong use: expression OutputSet must be equal to the set its value is appended/found.");
 
             //
             // Check that real (non-null) values are available for all identity dimensions
@@ -291,10 +296,12 @@ namespace Com.Model
             {
                 // Try to find at least one node with non-null value on the path
                 bool valueFound = false;
+                /*
                 for (Expression node = expr.GetLastNode(path); node != null; node = node.ParentExpression)
                 {
                     if (node.Output != null) { valueFound = true; break; }
                 }
+                */
 
                 if (!valueFound) return false; // This primitive path does not provide a value so the whole instance cannot be created
             }
@@ -310,13 +317,14 @@ namespace Com.Model
             return true;
         }
 
-        public object Append(Expression expr) // Identity dims must be set (for uniqueness). Entity dims are also used when appending.
+        public object Append(ExprNode expr) // Identity dims must be set (for uniqueness). Entity dims are also used when appending.
         {
             // Append: append *this* tuple to the set and, if necessary, all greater tuples. If necessary means "if no value for dimension is provided"  which means does not exist. 
             // In particular, if all child expressions have values then only this set will be appended. 
             // In particular, if this set has a value then it will not be appended (because it exists).
             // Value: offset of new appended instance. 
 
+            /*
             Debug.Assert(expr.OutputSet == this, "Wrong use: expression OutputSet must be equal to the set its value is appended/found.");
 
             if (IsPrimitive)
@@ -369,6 +377,9 @@ namespace Com.Model
             expr.Output = Length;
             Length++;
             return expr.Output;
+            */
+
+            return null;
         }
 
         public void Remove(int offset)
@@ -387,14 +398,14 @@ namespace Com.Model
         /// Currently, it is written in terms of and is applied to source (already existing) instances - not instances of this set. Only instances satisfying these constraints are used for populating this set. 
         /// In future, we should probabyl apply these constraints to this set elements while the source set has its own constraints.
         /// </summary>
-        public Expression WhereExpression { get; set; }
+        public ExprNode WhereExpression { get; set; }
         public List<CsColumn> ProjectDimensions { get; set; } // Output tuples of these dimensions are appended to this set (other tuples are excluded). Alternatively, this element must be referenced by at one lesser element COUNT(this<-proj_dim<-(Set)) > 0
 
         /// <summary>
         /// Ordering of the instances. 
         /// Here again we have a choice: it is how source elements are sorted or it is how elements of this set have to be sorted. 
         /// </summary>
-        public Expression OrderbyExpression { get; set; }
+        public ExprNode OrderbyExpression { get; set; }
 
         /// <summary>
         /// Create all instances of this set. 
@@ -410,21 +421,8 @@ namespace Com.Model
                 dims.Add(SuperDim);
                 dims.AddRange(KeyColumns);
 
-                Expression tupleExpr = new Expression(this.Name, Operation.TUPLE, this); // Represents a record to be appended to the set
-                for(int i=0; i<dims.Count; i++) 
-                {
-                    CsColumn d = dims[i];
-                    Expression childExpr = new Expression(d.Name, Operation.PRIMITIVE, d.GreaterSet);
-
-                    if (i == 0) // Super-dimension is stored in expression Input
-                    {
-                        tupleExpr.Input = childExpr;
-                    }
-                    else // All other (non-super) dimensions are in operands
-                    {
-                        tupleExpr.AddOperand(childExpr);
-                    }
-                }
+                ExprNode tupleExpr = new ExprNode(); // Represents a record to be appended to the set (argument for Append method)
+                // TODO: Configure it as a one-level tuple with values in leaves
 
                 int dimCount = dims.Count();
 
@@ -440,15 +438,22 @@ namespace Com.Model
                 // Alternative recursive iteration: http://stackoverflow.com/questions/13655299/c-sharp-most-efficient-way-to-iterate-through-multiple-arrays-list
                 while (top >= 0) 
                 {
-                    if (top == dimCount) // Element is ready. Process new element.
+                    if (top == dimCount) // New element is ready. Process it.
                     {
                         bool satisfies = true;
 
-                        tupleExpr.SetOutput(Operation.ALL, null);
+                        // TODO: Reset the tuple to be appended
+                        // tupleExpr.SetOutput(Operation.ALL, null);
 
                         if (TableDefinition.WhereExpression != null)
                         {
+                            // REWORK:
+                            // Probably, we should first append an instance (without indexing), and then the Where predicate will be either checked automatically (with exception), or we have to check it manually by applying to the newly appended element (then the automatic check has to be turned off).
+                            // In other words, we do not apply Where expression (boolean function) to a tuple or another object - we apply it to a normal element with some offset.
+                            // Alternatively, we could provide a tuple to Append method, and the tuple has Action=Append (not Find). So it is the Append method that knows how to add records and that knows how to check the predicate. This Populate method simply organizes a loop with tuple generation.
+                            // Prepare Where expression for evaluation. Check if it uses our columns and bind these nodes to our columns
                             // Initialize the where-expression before evaluation by using current offsets
+                            /*
                             for (int i = 0; i < dimCount; i++)
                             {
                                 CsColumn d = dims[i];
@@ -468,24 +473,29 @@ namespace Com.Model
                                 if (dimExpression != null) dimExpression.Output = offsets[i];
                             }
 
+                            //
                             // Check if it satisfies the constraints by evaluating WhereExpression and append
+                            //
                             TableDefinition.WhereExpression.Evaluate();
                             satisfies = (bool)TableDefinition.WhereExpression.Output;
+                            */
                         }
 
+                        // REWORK
+                        /*
                         if (satisfies)
                         {
                             // Initialize an instance for appending
                             for (int i = 0; i < dimCount; i++)
                             {
                                 CsColumn d = dims[i];
-
                                 Expression dimExpression = tupleExpr.GetOperand(d);
                                 if (dimExpression != null) dimExpression.Output = offsets[i];
                             }
 
                             Append(tupleExpr);
                         }
+                        */
 
                         top--;
                         while (top >= 0 && lengths[top] == 0) // Go up by skipping empty dimensions and reseting 
@@ -510,74 +520,29 @@ namespace Com.Model
                 }
 
             }
-            else if(true) // There are import dimensions so copy data from another set (projection of another set)
+            else if (true) // There are import dimensions so copy data from another set (projection of another set)
             {
-                //
-                // Build source space specification (product). Currently we work with only one-dimensional source space. 
-                //
-                Dim projectDim = TableDefinition.ProjectDimensions[0];
-                Mapping mapping = projectDim.Mapping;
-
-                if (mapping == null) return;
-
+                CsColumn projectDim = TableDefinition.ProjectDimensions[0];
                 CsTable sourceSet = projectDim.LesserSet;
                 CsTable targetSet = projectDim.GreaterSet; // this set
-
-                Debug.Assert(mapping.TargetSet == this && targetSet == this, "Wrong use: Mapping target and source dimension lesser set must be equal to this set.");
-                Debug.Assert(mapping.TargetSet == targetSet && mapping.SourceSet == sourceSet, "Wrong use: source set of mapping must be lesser set of the dimension, and target set must be greater set.");
 
                 //
                 // Prepare the expression from the mapping
                 //
-                Expression tupleExpression = mapping.GetTargetExpression(); // Build a tuple tree with paths in leaves
-
-                var funcExpr = ExpressionScope.CreateFunctionDeclaration(Name, sourceSet.Name, targetSet.Name);
-                funcExpr.Statements[0].Input = tupleExpression; // Return statement
-                funcExpr.ResolveFunction(sourceSet.Top);
-                funcExpr.Resolve();
+                CsColumnEvaluator evaluator = projectDim.ColumnDefinition.GetColumnEvaluator();
 
                 //
-                // Evaluate the expression depending on the source set type
+                // Loop over all function inputs with evaluation and using the output tuple for appending
                 //
-                if (sourceSet.Top is SetTopOledb)
+                for (Offset input = 0; input < sourceSet.TableData.Length; input++)
                 {
-                    // Request a (flat) result set from the remote set (data table)
-                    DataTable dataTable = ((SetTopOledb)sourceSet.Top).ExportAll(sourceSet);
-
-                    // For each row, evaluate the expression and append the new element
-                    foreach (DataRow row in dataTable.Rows) // A row is <colName, primValue> collection
-                    {
-                        funcExpr.Input.Dimension.Value = row; // Initialize 'this'
-                        funcExpr.Evaluate(); // Evaluate the expression tree by computing primtive tuple values
-                        targetSet.TableData.Append(tupleExpression); // Append an element using the tuple composed of primitive values
-                    }
+                    evaluator.Evaluate(input);
+                    //targetSet.TableData.Append(tupleExpression);
+                    // TODO: append also an instance to the function (the function has to be nullifed before the procedure)
+                    //SetValue(offset, SelectExpression.Output); // Store the final result
                 }
-                else if (sourceSet.Top is SetTopOdata)
-                {
-                }
-                else if (sourceSet.Top == targetSet.Top) // Intra-schema: direct access using offsets
-                {
-                    for (Offset offset = 0; offset < sourceSet.Length; offset++)
-                    {
-                        funcExpr.Input.Dimension.Value = offset; // Initialize 'this'
-                        funcExpr.Evaluate(); // Compute
-                        targetSet.TableData.Append(tupleExpression);
-
-                        // TODO: append also an instance to the function (the function has to be nullifed before the procedure)
-                        //SetValue(offset, SelectExpression.Output); // Store the final result
-                    }
-                }
-
             }
-            else
-            {
-                // Here we might need a direct procedure by building the instances satisfying the condition as opposed to building all possible instances and then checking if they satisfy the condition. 
-                // This direct procedure is used when building subsets of primitive sets or their combinations (it is not possible to generate all possible primitive values). 
-                // The direct procedure can be also used as optimization technique for normal sets where we can directly produce the necessary instances.
-                // We could even mix these two approaches by organizing a loop but skipping some large intervals if they are known to not to satisfy our conditions. Say, if age<30 then we could directly iterate only in this interval (in the presence of indexes). 
 
-                // Also we might use import/export dims for user input with manual specification of records
-            }
         }
 
         /// <summary>
@@ -784,8 +749,8 @@ namespace Com.Model
                 newPath.RelationalColumnName = newPath.Name; // It actually will be used for relational queries
                 newPath.RelationalFkName = path.RelationalFkName; // Belongs to the same FK
                 newPath.RelationalPkName = null;
-                newPath.LesserSet = this;
-                newPath.GreaterSet = p.Path[p.Length - 1].GreaterSet;
+                //newPath.LesserSet = this;
+                //newPath.GreaterSet = p.Path[p.Length - 1].GreaterSet;
 
                 AddGreaterPath(newPath);
             }
@@ -809,7 +774,7 @@ namespace Com.Model
             GreaterPaths = new List<DimPath>();
             LesserPaths = new List<DimPath>();
 
-            ProjectDimensions = new List<Dim>();
+            ProjectDimensions = new List<CsColumn>();
         }
 
         #endregion

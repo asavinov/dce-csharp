@@ -334,7 +334,7 @@ namespace Com.Model
             //
             // Adding missing paths. Particularly, non-stored paths (paths returning values which are stored only in the greater sets but not in this set).
             //
-            if (!String.IsNullOrEmpty(RelationalFkName) && GreaterSet.IdentityPrimitiveArity == 1)
+            if (!String.IsNullOrEmpty(RelationalFkName) /*&& GreaterSet.IdentityPrimitiveArity == 1*/)
             {
                 Path[0].Name = Name; // FK-name is overwritten and lost - attribute name is used instead
             }
@@ -342,7 +342,7 @@ namespace Com.Model
             //
             // Dim name adjustment: for 1-column FK dimensions, we prefer to use its only column name instead of the FK-name (fkName is not used)
             //
-            if (!String.IsNullOrEmpty(RelationalFkName) && GreaterSet.IdentityPrimitiveArity == 1)
+            if (!String.IsNullOrEmpty(RelationalFkName) /*&& GreaterSet.IdentityPrimitiveArity == 1*/)
             {
                 Path[0].Name = Name; // FK-name is overwritten and lost - attribute name is used instead
             }

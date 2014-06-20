@@ -464,13 +464,13 @@ namespace Com.Model
         //
         // Represents a function definition in terms of other functions.
         //
-        public Expr Formula { get; set; }
+        public ExprEvaluator Formula { get; set; }
 
         /// <summary>
         /// It is a formula (expression) defining a function for this dimension. 
         /// When evaluated, it computes a value of the greater set for the identity value of the lesser set.
         /// </summary>
-        public Expression SelectExpression { get; set; }
+        public ExprNode SelectExpression { get; set; }
 
         // Source (user, non-executable) formula for computing this function consisting of value-operations
         public AstNode FormulaAst { get; set; } // Analogous to SelectExpression
@@ -482,7 +482,7 @@ namespace Com.Model
         /// </summary>
         public Mapping Mapping { get; set; }
 
-        public Expression WhereExpression { get; set; } // It describes the domain of the function or where the function returns null independent of other definitions
+        public ExprNode WhereExpression { get; set; } // It describes the domain of the function or where the function returns null independent of other definitions
 
         //
         // Aggregation
@@ -549,6 +549,7 @@ namespace Com.Model
 
         public void Evaluate_OLD()
         {
+            /*
             if (Mapping != null)
             {
                 Debug.Assert(Mapping.SourceSet == Dim.LesserSet && Mapping.TargetSet == Dim.GreaterSet, "Wrong use: the mapping source and target sets have to corresond to the dimension sets.");
@@ -579,6 +580,7 @@ namespace Com.Model
                     SetValue(input, SelectExpression.Output); // Store the final result
                 }
             }
+            */
         }
 
         public void Finish() { }

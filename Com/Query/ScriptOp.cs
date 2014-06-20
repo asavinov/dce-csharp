@@ -15,6 +15,19 @@ namespace Com.Query
     /// </summary>
     public class ScriptOp : TreeNode<ScriptOp>
     {
+        public ScriptOp GetChild(int child) { return (ScriptOp)Children[child]; }
+        public ScriptOp GetChild(string name)
+        {
+            return (ScriptOp)Children.FirstOrDefault(x => ((ScriptOp)x).Name == name);
+        }
+
+        public ScriptContext GetContext()
+        {
+            ScriptOp node = this;
+            while (!(node is ScriptContext) && node != null) node = (ScriptOp)node.Parent;
+            return (ScriptContext)node;
+        }
+
         /**
          * Type of operation/action. What kind of operation has to be executed. It determines the meaning of operands and their processing.  
          */
@@ -30,19 +43,6 @@ namespace Com.Query
          * Run-time result of the action which is returned by the node and consumed by the parent node or next node.
          */
         public ContextVariable Result { get; set; }
-
-        public ScriptOp GetChild(int child) { return (ScriptOp)Children[child]; }
-        public ScriptOp GetChild(string name) 
-        {
-            return (ScriptOp)Children.FirstOrDefault(x => ((ScriptOp)x).Name == name);
-        }
-
-        public ScriptContext GetContext() 
-        {
-            ScriptOp node = this;
-            while ( !(node is ScriptContext) && node != null ) node = (ScriptOp)node.Parent;
-            return (ScriptContext)node; 
-        }
 
         /// <summary>
         /// Evaluate one instruction. Change the state in the (parent) context depending on its current state.
@@ -139,7 +139,7 @@ namespace Com.Query
                         }
                         else { break; } // ERROR: parameter wrong or not found
 
-                        Set set = Mapper.ImportSet(db.FindSubset(table), top);
+                        Set set = null; // Mapper.ImportSet(db.FindSubset(table), top);
                         Result.Value = set;
                     }
                     else if (Name == "AddFunction")
@@ -180,9 +180,9 @@ namespace Com.Query
                         else { break; } // ERROR: parameter wrong or not found
 
                         // TOD: Really add a new function with this definition
-                        Set typeSet = top.FindSubset(type);
-                        Dim dim = top.CreateColumn(name, set, typeSet, true);
-                        dim.FormulaAst = formula;
+                        Set typeSet = (Set) top.FindSubset(type);
+                        Dim dim = (Dim)((CsSchema)top).CreateColumn(name, set, typeSet, true);
+                        //dim.FormulaAst = formula;
                         dim.Add();
 
                         Result.Value = dim;

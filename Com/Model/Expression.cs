@@ -9,134 +9,6 @@ using Offset = System.Int32;
 
 namespace Com.Model
 {
-
-    // Normal evaluator (not update/aggregate, not join)
-    public class Expr : CsColumnEvaluator
-    {
-        CsTable LoopTable { get; protected set; }
-
-        bool IsUpdate { get; protected set; }
-
-        ExprNode exprNode;
-
-        CsColumnData columnData;
-
-        object Evaluate(Offset input) 
-        {
-            // Use input value to evaluate the expression
-            exprNode.SetThis(input);
-
-            // evaluate the expression
-            exprNode.Evaluate();
-
-            // Write the result value to the function
-            columnData.SetValue(input, exprNode.Value);
-
-            return null;
-        }
-
-        object EvaluateUpdate(Offset input) { return null; }
-
-        bool EvaluateJoin(Offset input, object output) { return false; }
-
-        public Expr(CsColumn column)
-        {
-            LoopTable = column.LesserSet;
-            IsUpdate = false;
-            exprNode = column.ColumnDefinition.Formula;
-            columnData = column.ColumnData;
-        }
-    }
-
-    // Represents a function definition in terms of other functions and provides its run-time interface.
-    // Main unit of the representation is a triple: (Type) Name = Value. 
-    public class ExprNode
-    {
-        // Type can be resolved into run-time object like Set (at compile-time)
-        // Name can be resolved into a run-time object like Dim or CsColumnEvaluator (at compile-time)
-        // Value could be stored in typed fields for each primitive type
-
-        //
-        // Node role. How to process this node and interpret the child nodes
-        //
-
-        // CALL: apply 'method' child to 'this' and other children
-        // TUPLE: combination of de-projections of all child node results with names identifying dimensions (of this node type)
-        // VALUE: stores a value directly. no computations are needed (maybe compile-time resolution of the name)
-        // CONTEXT/SCOPE: it is a sequence of operations. return values either the last operation or special variable like 'output' or 'return'
-        // NOP: just skip
-        public object Operation { get; set; }
-
-        //
-        // Type of the result value
-        //
-
-        // Type name of the result
-        public string Type { get; set; }
-        public Set TypeSet { get; set; }
-
-        //
-        // Attribute of the result value relative to the parent
-        //
-
-        // An relative offset of the result in the parent which is interpreted by the parent node.
-        // 'method' - the node represents a method, procedure (SUM, MUL), function, variable or another action to be performed by the parent
-        // 'this' - the node represents a special this argument for the processing parent node
-        public string Name { get; set; }
-        // It is a reference to a dimension, variable or another kind of callable storage run-time object
-        // Is resolved from name at compile-time if the name represents a method (dimension, function etc.)
-        // It could be CsColumnEvaluator (at least for Dim storage) so that we directly access values at run-time. 
-        // Alternatively, the whole node implements this interface
-        public object Action { get; set; }
-        // Action type. A modifier that helps to choose the function variation
-        //CALL, // Generic procedure call including system calls, arithmetic operations etc. Probably, it is equivalent to READ
-        //READ, // Read accossor or getter. Read value from a variable/function or find a surrogate for a tuple. Normally used in method parameters.
-        //WRITE, // Assignment, write accessor or setter. Write value to an existing variable/function (do nothing if it does not exist). Normally is used for assignment. 
-        //UPDATE, // Update value by applying some operation. Normally is used for affecting directly a target rather than loading it, changing and then storing.
-        //APPEND, // Append a value if it does not exist and write it if does exist. The same as write except that a new element can be added
-        //INSERT, // The same as append except that a position is specified
-        //ALLOC/FREE // For variables and functions as a whole storage object in the context. Is not it APPEND/INSERT?
-        public object ActionType { get; set; }
-
-        //
-        // Result value computed at run-time
-        //
-
-        // Result run-time value after processing this node to be used by the parent. It must have the specified type.
-        public object Value { get; set; }
-        // Typed results for each primitive type
-        //public int ValueInteger { get; set; }
-
-
-
-        // Operation type. What is in this node and how to interpret the name
-        // - ACCESS/UP: access to named function (variable, arithmetic, system procedure) output given intput(s) in children
-        //   - name is a function from several children (inputs) to this node set (output) - computed when processing this node
-        //   - node type = output type (surrogate), child type(s) = input(s) type
-        //   - it means moving up in the poset from lesser values to greater values
-        // - TUPLE/DOWN: access to the named function input given a combination of outputs.
-        //   - name is a function from a (single) parent node set (input) to this node set (output) - but computed in inverse direction from this node to the parent when processing the parent (this node processes children's functions)
-        //   - node type = input type of any child function (surrogate), child type(s) = output(s) type of the child function
-        //   - TUPLE always means moving down in poset by propagating greater surrogates to lesser surrogates
-        // - (VALUE): do we need this? could be modeled by tuples with no children or by type. A primitive value (literal) represented here by-value
-
-
-        // 1. Define tree methods maybe inheriting from generic tree class
-        // - Adding, removing, 
-        // - Mapping convenience methods (for tuple nodes)
-        // - DimPath convenience methods (for projection, function composition and tuple nodes)
-        // 2. Define how to access variables from nodes including 'this' (similar to accessing functions - from source code cannot be distinguished-only during name resolution)
-        // 3. See how operations kinds are solved in v-expr/s-expr enumerators including variable access
-        // 4. Define principles/rules of type representation/resolution and work with types: conversion etc. (for arithmetics we must determine right type and then use it for conversion like val.ToDouble() using switches or ideally direct dispatching (e.g., if we generate source code).
-        // - can we introduce a run-time field with a conversion operator resolved from type names, e.g., if argument is int but we need double then it stores Int.ToDouble reference?
-        // - !!! can we (automatically generate) introduce nodes for type conversion which simply call a system method (like for any other system method), say, ToDouble which has one integer argument. Theoretically, we could use legal functions of primitive sets which exist as columns, say, DimPrimitive<double> has a function ToInteger. The idea is that we are able to make conversion of the whole column by producing a whole column in new format. Conceptually, it is cleaner and we can use optimization in future by extracting this operations by transforming them into column-wise array scans with transformations. 
-
-        // Maybe we need a method for retrieving dependency information, that is, a list of other functions (with their sets) used in the formula, including maybe system functions, variables and other context objects
-        // Such expressions could be generated from our own source code, and they could be translated in the native source code (or even directly to byte-code without source code)
-
-    }
-
-
     /// <summary>
     /// One node of a complex expression representing one operation on a single or sets of values.
 	/// The main task of an expression is to define a function: a mapping from inputs to outputs.
@@ -1111,6 +983,7 @@ namespace Com.Model
 
     }
 
+
     public class ExpressionScope : Expression
     {
         public List<Expression> Statements { get; set; }
@@ -1316,11 +1189,4 @@ namespace Com.Model
         OR,
     }
 	
-    public enum OperationType
-    {
-        ARITHMETIC, // sum, product etc. 
-        SET, // intersect/union/negate input sets
-        LOGICAL
-    }
-
 }

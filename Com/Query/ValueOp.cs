@@ -114,24 +114,6 @@ namespace Com.Query
         // ??? How to represent computed values (rather than constants) in tuples and arguments, say, inputs of function calls? Are leaves VALUES, TUPLES, or directly some operation like PLUS
     }
 
-    public enum ActionType
-    {
-        NOP, // No action
-        CONTEXT, // Context/scope. Operands are instructions to be executed sequentially. The class is overloaded to include context.
-
-        ALLOC, // Create a new variable
-        FREE, // Delete an existing variable
-
-        VALUE, // Stores directly the result, e.g., parameter by-value in source code including tuples. No action is performed (but the value has to be transformed into the run-time representation).
-
-        CALL, // Generic procedure call including system calls, arithmetic operations etc.
-        READ, // Read accossor or getter. Read value from a variable/function or find a surrogate for a tuple. Normally used in method parameters.
-        WRITE, // Assignment, write accessor or setter. Write value to an existing variable/function (do nothing if it does not exist). Normally is used for assignment. 
-        UPDATE, // Update value by applying some operation. Normally is used for affecting directly a target rather than loading it, changing and then storing.
-        APPEND, // Append a value if it does not exist and write it if does exist. The same as write except that a new element can be added
-        INSERT, // The same as append except that a position is specified
-    }
-
     /// <summary>
     /// It combines code (child operations) with state (variables).
     /// A context can be used as a (nested) scope. 

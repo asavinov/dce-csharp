@@ -89,9 +89,9 @@ namespace Com.Model
         //
 
         Offset Find(Dictionary<Dim, object> values);
-        bool Find(Expression expr);
-        bool CanAppend(Expression expr);
-        object Append(Expression expr);
+        bool Find(ExprNode expr);
+        bool CanAppend(ExprNode expr);
+        object Append(ExprNode expr);
         void Remove(int offset);
         
         //Offset FindTuple(CsRecord record); // If many records can satisfy then another method has to be used. What is many found? Maybe return negative number with the number of records (-1 or Length means not found, positive means found 1)? 
@@ -107,11 +107,11 @@ namespace Com.Model
 
     public interface CsTableDefinition
     {
-        Expression WhereExpression { get; set; } // May store CsColumn which stores a boolean function definition
+        ExprNode WhereExpression { get; set; } // May store CsColumn which stores a boolean function definition
 
         List<CsColumn> ProjectDimensions { get; set; }
 
-        Expression OrderbyExpression { get; set; } // Here we should store something like Comparator
+        ExprNode OrderbyExpression { get; set; } // Here we should store something like Comparator
 
         void Populate();
         void Unpopulate(); // Is not it Length=0?
@@ -199,11 +199,11 @@ namespace Com.Model
         //
         ExprNode Formula { get; set; }
 
-        Expression SelectExpression { get; set; }
+        ExprNode SelectExpression { get; set; }
         AstNode FormulaAst { get; set; } // Analogous to SelectExpression
         Mapping Mapping { get; set; }
 
-        Expression WhereExpression { get; set; }
+        ExprNode WhereExpression { get; set; }
 
         CsColumnEvaluator GetColumnEvaluator(); // Get an object which is used to compute the function values according to the formula
 
@@ -226,6 +226,36 @@ namespace Com.Model
         object Evaluate(Offset input); // Compute output for the specified intput and write it
         object EvaluateUpdate(Offset input); // Read group and measure for the specified input and compute update according to the aggregation formula. It may also increment another function if necessary.
         bool EvaluateJoin(Offset input, object output); // Called for all pairs of input and output *if* the definition is a join predicate.
+    }
+
+    public interface CsVariable // It is a storage element like function or table
+    {
+        //
+        // Type infor
+        //
+
+        string TypeName { get; set; }
+        CsTable TypeTable { get; set; } // Resolved table name
+
+        //
+        // Variable name (strictly speaking, it should belong to a different interface)
+        //
+        
+        string Name { get; set; }
+
+        //
+        // Variable data. Analogous to the column data interface but without input argument
+        //
+        
+        bool IsNull();
+        object GetValue();
+        void SetValue(object value);
+        void NullifyValue();
+
+        //
+        // Typed methods
+        //
+
     }
 
     public interface CsRecord // It is a complex data type generalizing primitive values and with leaves as primitive values (possibly surrogates). The main manipulation object for table data methods.

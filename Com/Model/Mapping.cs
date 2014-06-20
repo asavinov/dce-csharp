@@ -5,6 +5,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
+using Com.Query;
+
 namespace Com.Model
 {
     /// <summary>
@@ -25,8 +27,8 @@ namespace Com.Model
                 if (_sourceSet == null) { _sourceSet = value; return; }
                 if (_sourceSet == value) return;
 
-                List<DimPath> lesserSegs = value.GetGreaterPaths(_sourceSet);
-                List<DimPath> greaterSegs = _sourceSet.GetGreaterPaths(value);
+                List<DimPath> lesserSegs = ((Set)value).GetGreaterPaths((Set)_sourceSet);
+                List<DimPath> greaterSegs = ((Set)_sourceSet).GetGreaterPaths((Set)value);
 
                 if (lesserSegs != null && lesserSegs.Count > 0) // New set is a lesser set for the current
                 {
@@ -60,8 +62,8 @@ namespace Com.Model
                 if (_targetSet == null) { _targetSet = value; return; }
                 if (_targetSet == value) return;
 
-                List<DimPath> lesserSegs = value.GetGreaterPaths(_targetSet);
-                List<DimPath> greaterSegs = _targetSet.GetGreaterPaths(value);
+                List<DimPath> lesserSegs = ((Set)value).GetGreaterPaths((Set)_targetSet);
+                List<DimPath> greaterSegs = ((Set)_targetSet).GetGreaterPaths((Set)value);
 
                 if (lesserSegs != null && lesserSegs.Count > 0) // New set is a lesser set for the current
                 {
@@ -312,21 +314,22 @@ namespace Com.Model
             return tree;
         }
 
-        public Expression GetSourceExpression()
+        public ExprNode GetSourceExpression()
         {
             throw new NotImplementedException();
         }
 
-        public Expression GetTargetExpression() // Build tuple expression where target paths define a tuple and source paths are used leaf expressions in this tuple applied to the source set
+        public ExprNode GetTargetExpression() // Build tuple expression where target paths define a tuple and source paths are used leaf expressions in this tuple applied to the source set
         {
             return GetTargetExpression(null);
         }
-        public Expression GetTargetExpression(CsColumn dim) // Build tuple expression for the specified mapped dimension
+        public ExprNode GetTargetExpression(CsColumn dim) // Build tuple expression for the specified mapped dimension
         {
             // It is mapping from LesserSet to GreaterSet of the dimension
             Debug.Assert(dim == null || dim.LesserSet == SourceSet, "Wrong use: lesser set of the mapped dimension corresponds to the source set of the mapping.");
             Debug.Assert(dim == null || dim.GreaterSet == TargetSet, "Wrong use: greater set of the mapped dimension corresponds to the target set of the mapping.");
 
+            /*
             Expression tupleExpr = new Expression(null, Operation.TUPLE, TargetSet);
             if (dim != null)
             {
@@ -356,6 +359,9 @@ namespace Com.Model
             }
 
             return tupleExpr;
+            */
+
+            return null;
         }
 
         public void AddSourceToSchema(CsSchema schema = null)

@@ -167,7 +167,10 @@ namespace Com.Model
         public Dim(Mapping mapping)
             : this(mapping.SourceSet.Name, mapping.SourceSet, mapping.TargetSet)
         {
-            Mapping = mapping;
+            if (ColumnDefinition != null)
+            {
+                ColumnDefinition.Mapping = mapping;
+            }
         }
 
         public Dim(string name, CsTable lesserSet, CsTable greaterSet)
@@ -235,7 +238,7 @@ namespace Com.Model
                 columnData = new DimPrimitive<int>(this);
             }
 
-            columnDefinition = columnData;
+            columnDefinition = (CsColumnDefinition)columnData;
         }
 
         #endregion
