@@ -13,7 +13,7 @@ namespace Com.Query
     /// A visitor which build an abstract syntax tree from a parse tree.
     /// Its methods are called for the nodes of a parse tree and return a node of AST.
     /// </summary>
-    class ExprBuilder : ExprBaseVisitor<ExprNode>
+    public class ExprBuilder : ExprBaseVisitor<ExprNode>
     {
         public override ExprNode VisitExpr(ExprParser.ExprContext context) 
         {

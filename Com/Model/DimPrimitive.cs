@@ -176,6 +176,11 @@ namespace Com.Model
             throw new NotImplementedException();
         }
 
+        public void Remove(Offset input) 
+        { 
+            throw new NotImplementedException();
+        }
+
         public object ProjectValues(Offset[] offsets)
         {
             return project(offsets);
@@ -633,6 +638,49 @@ namespace Com.Model
                 _nullValue = default(T);
             }
         }
+
+        #endregion
+    }
+
+    /// <summary>
+    /// Empty data.
+    /// 
+    /// </summary>
+    public class DimEmpty : CsColumnData
+    {
+
+        #region CsColumnData interface
+
+        protected Offset _length;
+        public Offset Length
+        {
+            get
+            {
+                return _length;
+            }
+            set
+            {
+                _length = value;
+            }
+        }
+
+        public bool IsNull(Offset input) { return true; }
+
+        public object GetValue(Offset input) { return null; }
+
+        public void SetValue(Offset input, object value) { }
+
+        public void NullifyValues() { }
+
+        public void Append(object value) { }
+
+        public void Insert(Offset input, object value) { }
+
+        public void Remove(Offset input) { }
+
+        public object ProjectValues(Offset[] offsets) { return null; }
+
+        public Offset[] DeprojectValue(object value) { return null; } // Or empty array 
 
         #endregion
     }

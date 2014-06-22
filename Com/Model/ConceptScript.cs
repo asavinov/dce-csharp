@@ -88,11 +88,14 @@ namespace Com.Model
         // TUPLE could be used as a set structure specification (e.g., param for set creation).
         //
 
-        Offset Find(Dictionary<Dim, object> values);
+        Offset Find(CsColumn[] dims, object[] values);
+        Offset Append(CsColumn[] dims, object[] values);
+        void Remove(int input);
+
+
         bool Find(ExprNode expr);
         bool CanAppend(ExprNode expr);
         object Append(ExprNode expr);
-        void Remove(int offset);
         
         //Offset FindTuple(CsRecord record); // If many records can satisfy then another method has to be used. What is many found? Maybe return negative number with the number of records (-1 or Length means not found, positive means found 1)? 
         //void InsertTuple(Offset input, CsRecord record); // All keys are required? Are non-keys allowed?
@@ -169,6 +172,7 @@ namespace Com.Model
         void NullifyValues();
         void Append(object value);
         void Insert(Offset input, object value);
+        void Remove(Offset input);
 
         //void WriteValue(object value); // Convenience, performance method: set all outputs to the specified value
         //void InsertValue(Offset input, object value); // Changle length. Do we need this?

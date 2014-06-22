@@ -154,13 +154,12 @@ namespace Com.Model
 
         /// <summary>
         /// How many instances this set has. Cardinality. Set power. Length (height) of instance set.
-        /// If instances are identified by integer offsets, then size also represents offset range.
         /// </summary>
         protected Offset length;
         public Offset Length 
         { 
             get { return length; }
-            set
+            set // Uniqueness of keys is not (and cannot be) checked and can be broken
             {
                 foreach (CsColumn col in GreaterDims)
                 {
@@ -184,17 +183,18 @@ namespace Com.Model
             dim.ColumnData.SetValue(offset, value);
         }
 
-        public Offset Find(Dictionary<Dim, object> values)
+        public Offset Find(CsColumn[] dims, object[] values) // Type of dimensions (super, id, non-id) is not important and is not used
         {
-            Offset[] result = Enumerable.Range(0, Length).ToArray(); // All elements of this set (can be quite long)
-            foreach (var pair in values)
-            {
-                Dim dim = pair.Key;
-                object val = pair.Value;
+            Debug.Assert(dims != null && values != null && dims.Length == values.Length, "Wrong use: for each dimension, there has to be a value specified.");
 
-                Offset[] range = dim.ColumnData.DeprojectValue(val); // Deproject one value
-                result = result.Intersect(range).ToArray(); // OPTIMIZE: Write our own implementation for various operations. Assume that they are ordered.
-                // OPTIMIZE: Remember the position for the case this value will have to be inserted so we do not have again search for this positin during insertion (optimization). Maybe store it back to the dictionary.
+            Offset[] result = Enumerable.Range(0, Length).ToArray(); // All elements of this set (can be quite long)
+            for (int i = 0; i < dims.Length; i++)
+            {
+                Offset[] range = dims[i].ColumnData.DeprojectValue(values[i]); // Deproject one value
+                result = result.Intersect(range).ToArray(); 
+                // OPTIMIZE: Write our own implementation for various operations (intersection etc.). Use the fact that they are ordered.
+                // OPTIMIZE: Use statistics for column distribution to choose best order of de-projections. Alternatively, the order of dimensions can be set by the external procedure taking into account statistics. Say, there could be a special utility method like SortDimensionsAccordingDiscriminationFactor or SortDimsForFinding tuples.
+                // OPTIMIZE: Remember the position for the case this value will have to be inserted so we do not have again search for this positin during insertion. Maybe store it in a static field as part of last operation.
 
                 if (result.Length == 0) break; // Not found
             }
@@ -207,10 +207,34 @@ namespace Com.Model
             {
                 return result[0];
             }
-            else // Many elements satisfy these properties (non-unique identities)
+            else // Many elements satisfy these properties (non-unique identities). Use other methods for getting these records (like de-projection)
             {
                 return -result.Length;
             }
+        }
+
+        public Offset Append(CsColumn[] dims, object[] values) // Identity dims must be set (for uniqueness). Entity dims are also used when appending. Possibility to append (CanAppend) is not checked. 
+        {
+            Debug.Assert(dims != null && values != null && dims.Length == values.Length, "Wrong use: for each dimension, there has to be a value specified.");
+            Debug.Assert(!IsPrimitive, "Wrong use: cannot append to a primitive set. ");
+
+            for (int i = 0; i < dims.Length; i++)
+            {
+                dims[i].ColumnData.Append(values[i]);
+            }
+
+            length++;
+            return Length-1;
+        }
+
+        public void Remove(Offset input) // Propagation to lesser (referencing) sets is not checked - it is done by removal/nullifying by de-projection (all records that store some value in some function are removed)
+        {
+            for (int i = 0; i < GreaterDims.Count; i++)
+            {
+                GreaterDims[i].ColumnData.Remove(input);
+            }
+
+            length--;
         }
 
         public bool Find(ExprNode expr) // Use only identity dims (for general case use Search which returns a subset of elements)
@@ -392,13 +416,6 @@ namespace Com.Model
             */
 
             return null;
-        }
-
-        public void Remove(int offset)
-        {
-            Length--;
-            // TODO: Remove it from all dimensions in loop including super-dim and special dims
-            // PROBLEM: should we propagate this removal to all lesser dimensions? We need a flag for this property. 
         }
 
         #endregion

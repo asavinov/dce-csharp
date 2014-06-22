@@ -190,7 +190,7 @@ namespace Com.Model
             //
             // Creae storage for the function and its definition depending on the output set type
             //
-            columnData = null;
+            columnData = new DimEmpty();
             CsTable output = greaterSet;
             if (output.Name.Equals("Void", StringComparison.InvariantCultureIgnoreCase))
             {
@@ -236,7 +236,10 @@ namespace Com.Model
                 columnData = new DimPrimitive<int>(this);
             }
 
-            columnDefinition = (CsColumnDefinition)columnData;
+            if (columnData is CsColumnDefinition)
+            {
+                columnDefinition = (CsColumnDefinition)columnData;
+            }
         }
 
         #endregion

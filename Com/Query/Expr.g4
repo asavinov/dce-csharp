@@ -35,8 +35,8 @@ expr
 // Global/system/external function call
   | '(' expr ')' // Priority
 // Tuple (combination)
-  | 'TUPLE' '(' member (',' member)* ')'
-// Aggregation. Generally, it is not a value op (it cannot be executed) but in source code we can use aggregation-like expressions which have to be compiled into separate (aggregation) functions.
+  | '((' member (',' member)* '))'
+// Aggregation. Generally, it is not a value op (it cannot be executed) but in source code we can use aggregation-like expressions which have to be compiled out into separate specialized (aggregation) formula of a separate function.
   ;
 
 //
@@ -54,10 +54,14 @@ param
 // A member/field of a (complex) value (tuple) or set.
 //
 member
-// Free variable (greater sets, identity dimensions, keys). Special case: Super/Parent, Key (unique, used for varying)
+// Uses:
+// Free variable in SET
 // Bound variable (function). Special cases: Name, Where, Data (non-key and not a function, data loaded explicitly)
+// Tuple member with assigned value (can be another tuple)
+// Argument 
+// Property, for example, is a key-value pair
+// Annotations: Super/Parent, Id/Key (by-value, unique), Free (used for varying, normally determined from the presence of assignment)
   : type name ('=' (scope | expr))?
-// Property. We can attach various options and properties as key-value pairs
   ;
 
 name : (ID | DELIMITED_ID) ;
