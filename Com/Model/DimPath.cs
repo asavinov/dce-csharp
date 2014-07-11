@@ -310,45 +310,7 @@ namespace Com.Model
 
         #endregion // Remove segments
 
-        /// <summary>
-        /// Convert nested path to a flat canonical representation as a sequence of simple dimensions which do not contain other dimensions.
-        /// Initially, paths are pairs <this set dim, greater set path>. We recursively replace all nested paths by dimensions.
-        /// Also, adjust path names in special cases like empty name or simple structure. 
-        /// </summary>
-        public void ExpandPath()
-        {
-            //
-            // Flatten all paths by converting <dim, greater-path> pairs by sequences of dimensions <dim, dim2, dim3,...>
-            //
-            List<CsColumn> allSegments = GetAllSegments();
-            Path.Clear();
-            if (allSegments != null && allSegments.Count != 0)
-            {
-                Path.AddRange(allSegments);
-            }
-            else
-            {
-                // ERROR: Wrong use: The path does not have the corresponding dimension
-            }
-
-            //
-            // Adding missing paths. Particularly, non-stored paths (paths returning values which are stored only in the greater sets but not in this set).
-            //
-            if (!String.IsNullOrEmpty(RelationalFkName) /*&& GreaterSet.IdentityPrimitiveArity == 1*/)
-            {
-                Path[0].Name = Name; // FK-name is overwritten and lost - attribute name is used instead
-            }
-
-            //
-            // Dim name adjustment: for 1-column FK dimensions, we prefer to use its only column name instead of the FK-name (fkName is not used)
-            //
-            if (!String.IsNullOrEmpty(RelationalFkName) /*&& GreaterSet.IdentityPrimitiveArity == 1*/)
-            {
-                Path[0].Name = Name; // FK-name is overwritten and lost - attribute name is used instead
-            }
-        }
-
-        private List<CsColumn> GetAllSegments()
+        protected List<CsColumn> GetAllSegments()
         {
             List<CsColumn> result = new List<CsColumn>();
             for (int i = 0; i < Path.Count; i++)
@@ -434,6 +396,67 @@ namespace Com.Model
         {
             Path = new List<CsColumn>();
             Path.AddRange(path.Path);
+        }
+    }
+
+    /// <summary>
+    /// Relational attribute to be used in relational schemas (relational table and column classes). It is a primitive path - a sequence of normal dimensions leading to a primitive type. 
+    /// </summary>
+    public class DimAttribute : DimPath
+    {
+        /// <summary>
+        /// Additional names specific to the relational model and imported from a relational schema. 
+        /// </summary>
+        public string RelationalColumnName { get; set; } // For paths, it is the original column name used in the database (can be moved to a child class if such will be introduced for relational dimensions or for path dimensions). 
+        public string RelationalFkName { get; set; } // For dimensions, which were created from FK, it stores the original FK name
+        public string RelationalPkName { get; set; } // PK this column belongs to according to the schema
+
+        /// <summary>
+        /// Convert nested path to a flat canonical representation as a sequence of simple dimensions which do not contain other dimensions.
+        /// Initially, paths are pairs <this set dim, greater set path>. We recursively replace all nested paths by dimensions.
+        /// Also, adjust path names in special cases like empty name or simple structure. 
+        /// </summary>
+        public void ExpandPath()
+        {
+            //
+            // Flatten all paths by converting <dim, greater-path> pairs by sequences of dimensions <dim, dim2, dim3,...>
+            //
+            List<CsColumn> allSegments = GetAllSegments();
+            Path.Clear();
+            if (allSegments != null && allSegments.Count != 0)
+            {
+                Path.AddRange(allSegments);
+            }
+            else
+            {
+                // ERROR: Wrong use: The path does not have the corresponding dimension
+            }
+
+            //
+            // Adding missing paths. Particularly, non-stored paths (paths returning values which are stored only in the greater sets but not in this set).
+            //
+            if (!String.IsNullOrEmpty(RelationalFkName) /*&& GreaterSet.IdentityPrimitiveArity == 1*/)
+            {
+                Path[0].Name = Name; // FK-name is overwritten and lost - attribute name is used instead
+            }
+
+            //
+            // Dim name adjustment: for 1-column FK dimensions, we prefer to use its only column name instead of the FK-name (fkName is not used)
+            //
+            if (!String.IsNullOrEmpty(RelationalFkName) /*&& GreaterSet.IdentityPrimitiveArity == 1*/)
+            {
+                Path[0].Name = Name; // FK-name is overwritten and lost - attribute name is used instead
+            }
+        }
+
+        public DimAttribute(string name)
+            : base(name)
+        {
+        }
+
+    public DimAttribute(DimPath path)
+            : base(path)
+        {
         }
     }
 

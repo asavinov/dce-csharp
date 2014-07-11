@@ -650,57 +650,6 @@ namespace Com.Model
 
         #endregion
 
-        #region Relational properties and methods
-
-        /// <summary>
-        /// Additional names specific to the relational model and maybe other PK-FK-based models.
-        /// We assume that there is only one PK (identity). Otherwise, we need a collection. 
-        /// </summary>
-        public string RelationalTableName { get; set; }
-        public string RelationalPkName { get; set; } // The same field exists also in Dim (do not confuse them)
-
-        public CsColumn GetGreaterDimByFkName(string name)
-        {
-            return GreaterDims.FirstOrDefault(d => ((Dim)d).RelationalFkName.Equals(name, StringComparison.InvariantCultureIgnoreCase));
-        }
-
-        #endregion
-
-        #region Complex dimensions (paths) - move to a subclass (relational?)
-
-        public List<DimPath> SuperPaths { get; private set; }
-        public List<DimPath> SubPaths { get; private set; }
-        public List<DimPath> GreaterPaths { get; private set; }
-        public List<DimPath> LesserPaths { get; private set; }
-
-        public void AddGreaterPath(DimPath path)
-        {
-            Debug.Assert(path.GreaterSet != null && path.LesserSet != null, "Wrong use: path must specify a lesser and greater sets before it can be added to a set.");
-            RemoveGreaterPath(path);
-            ((Set)path.GreaterSet).LesserPaths.Add(path);
-            ((Set)path.LesserSet).GreaterPaths.Add(path);
-        }
-        public void RemoveGreaterPath(DimPath path)
-        {
-            if (path.GreaterSet != null) ((Set)path.GreaterSet).LesserPaths.Remove(path);
-            if (path.LesserSet != null) ((Set)path.LesserSet).GreaterPaths.Remove(path);
-        }
-        public void RemoveGreaterPath(string name)
-        {
-            DimPath path = GetGreaterPath(name);
-            if (path != null)
-            {
-                RemoveGreaterPath(path);
-            }
-        }
-        public DimPath GetGreaterPath(string name)
-        {
-            return GreaterPaths.FirstOrDefault(d => d.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
-        }
-        public DimPath GetGreaterPathByColumnName(string name)
-        {
-            return GreaterPaths.FirstOrDefault(d => d.RelationalColumnName.Equals(name, StringComparison.InvariantCultureIgnoreCase));
-        }
         public List<DimPath> GetGreaterPaths(Set greaterSet) // Differences between this set and the specified set
         {
             if (greaterSet == null) return null;
@@ -713,15 +662,85 @@ namespace Com.Model
 
             return ret;
         }
-        public DimPath GetGreaterPath(DimPath path)
+
+        #region Constructors and initializers.
+
+        public Set(string name)
+        {
+            Id = Guid.NewGuid();
+
+            Name = name;
+
+            greaterDims = new List<CsColumn>(); // Up arrows
+            lesserDims = new List<CsColumn>();
+
+            ProjectDimensions = new List<CsColumn>();
+        }
+
+        #endregion
+    }
+
+    /// <summary>
+    /// A relational table.
+    /// </summary>
+    public class SetRel : Set
+    {
+        /// <summary>
+        /// Additional names specific to the relational model and maybe other PK-FK-based models.
+        /// We assume that there is only one PK (identity). Otherwise, we need a collection. 
+        /// </summary>
+        public string RelationalTableName { get; set; }
+        public string RelationalPkName { get; set; } // The same field exists also in Dim (do not confuse them)
+
+        public CsColumn GetGreaterDimByFkName(string name)
+        {
+            return GreaterDims.FirstOrDefault(d => ((DimRel)d).RelationalFkName.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+        }
+
+        #region Paths = relational attributes
+
+        public List<DimAttribute> SuperPaths { get; private set; }
+        public List<DimAttribute> SubPaths { get; private set; }
+        public List<DimAttribute> GreaterPaths { get; private set; }
+        public List<DimAttribute> LesserPaths { get; private set; }
+
+        public void AddGreaterPath(DimAttribute path)
+        {
+            Debug.Assert(path.GreaterSet != null && path.LesserSet != null, "Wrong use: path must specify a lesser and greater sets before it can be added to a set.");
+            RemoveGreaterPath(path);
+            ((SetRel)path.GreaterSet).LesserPaths.Add(path);
+            ((SetRel)path.LesserSet).GreaterPaths.Add(path);
+        }
+        public void RemoveGreaterPath(DimAttribute path)
+        {
+            if (path.GreaterSet != null) ((SetRel)path.GreaterSet).LesserPaths.Remove(path);
+            if (path.LesserSet != null) ((SetRel)path.LesserSet).GreaterPaths.Remove(path);
+        }
+        public void RemoveGreaterPath(string name)
+        {
+            DimAttribute path = GetGreaterPath(name);
+            if (path != null)
+            {
+                RemoveGreaterPath(path);
+            }
+        }
+        public DimAttribute GetGreaterPath(string name)
+        {
+            return GreaterPaths.FirstOrDefault(d => d.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+        }
+        public DimAttribute GetGreaterPathByColumnName(string name)
+        {
+            return GreaterPaths.FirstOrDefault(d => d.RelationalColumnName.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+        }
+        public DimAttribute GetGreaterPath(DimAttribute path)
         {
             if (path == null || path.Path == null) return null;
             return GetGreaterPath(path.Path);
         }
-        public DimPath GetGreaterPath(List<CsColumn> path)
+        public DimAttribute GetGreaterPath(List<CsColumn> path)
         {
             if (path == null) return null;
-            foreach (DimPath p in GreaterPaths)
+            foreach (DimAttribute p in GreaterPaths)
             {
                 if (p.Path == null) continue;
                 if (p.Path.Count != path.Count) continue; // Different lengths => not equal
@@ -736,15 +755,15 @@ namespace Com.Model
             }
             return null;
         }
-        public List<DimPath> GetGreaterPathsStartingWith(DimPath path)
+        public List<DimAttribute> GetGreaterPathsStartingWith(DimAttribute path)
         {
-            if (path == null || path.Path == null) return new List<DimPath>();
+            if (path == null || path.Path == null) return new List<DimAttribute>();
             return GetGreaterPathsStartingWith(path.Path);
         }
-        public List<DimPath> GetGreaterPathsStartingWith(List<CsColumn> path)
+        public List<DimAttribute> GetGreaterPathsStartingWith(List<CsColumn> path)
         {
-            var result = new List<DimPath>();
-            foreach (DimPath p in GreaterPaths)
+            var result = new List<DimAttribute>();
+            foreach (DimAttribute p in GreaterPaths)
             {
                 if (p.Path == null) continue;
                 if (p.Path.Count < path.Count) continue; // Too short path (cannot include the input path)
@@ -760,9 +779,9 @@ namespace Com.Model
         {
             int pathCounter = 0;
 
-            DimPath path = new DimPath("");
+            DimAttribute path = new DimAttribute("");
             PathEnumerator primPaths = new PathEnumerator(this, DimensionType.IDENTITY_ENTITY);
-            foreach (DimPath p in primPaths)
+            foreach (DimAttribute p in primPaths)
             {
                 if (p.Size < 2) continue; // All primitive paths are stored in this set. We need at least 2 segments.
 
@@ -772,7 +791,7 @@ namespace Com.Model
 
                 string pathName = "__inherited__" + ++pathCounter;
 
-                DimPath newPath = new DimPath(pathName);
+                DimAttribute newPath = new DimAttribute(pathName);
                 newPath.Path = new List<CsColumn>(p.Path);
                 newPath.Name = newPath.ComplexName; // Overwrite previous pathName (so previous is not needed actually)
                 newPath.RelationalColumnName = newPath.Name; // It actually will be used for relational queries
@@ -789,25 +808,15 @@ namespace Com.Model
 
         #region Constructors and initializers.
 
-        public Set(string name)
+        public SetRel(string name) 
+            : base(name)
         {
-            Id = Guid.NewGuid();
-
-            Name = name;
-
-            greaterDims = new List<CsColumn>(); // Up arrows
-            lesserDims = new List<CsColumn>();
-
-            SuperPaths = new List<DimPath>();
-            SubPaths = new List<DimPath>();
-            GreaterPaths = new List<DimPath>();
-            LesserPaths = new List<DimPath>();
-
-            ProjectDimensions = new List<CsColumn>();
+            SuperPaths = new List<DimAttribute>();
+            SubPaths = new List<DimAttribute>();
+            GreaterPaths = new List<DimAttribute>();
+            LesserPaths = new List<DimAttribute>();
         }
 
         #endregion
-
     }
-
 }

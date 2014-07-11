@@ -122,18 +122,6 @@ namespace Com.Model
 
         #endregion
 
-        #region Relational attribute (TODO: move to a subclass along with related methods. The same for Set class.)
-
-        /// <summary>
-        /// Additional names specific to the relational model and maybe other PK-FK-based models.
-        /// These fields can be extracted into some child class if it will be created like relational dimension, path dimension etc.
-        /// </summary>
-        public string RelationalColumnName { get; set; } // For paths, it is the original column name used in the database (can be moved to a child class if such will be introduced for relational dimensions or for path dimensions). 
-        public string RelationalFkName { get; set; } // For dimensions, which were created from FK, it stores the original FK name
-        public string RelationalPkName { get; set; } // PK this column belongs to according to the schema
-
-        #endregion
-
         #region Constructors and initializers.
 
         public Dim()
@@ -244,6 +232,19 @@ namespace Com.Model
 
         #endregion
 
+    }
+
+    /// <summary>
+    /// Relational dimension representing a foreign key as a whole (without its attributes) or a primitive non-FK attribute. 
+    /// </summary>
+    public class DimRel : Dim
+    {
+        /// <summary>
+        /// Additional names specific to the relational model and imported from a relational schema. 
+        /// </summary>
+        public string RelationalColumnName { get; set; } // For paths, it is the original column name used in the database (can be moved to a child class if such will be introduced for relational dimensions or for path dimensions). 
+        public string RelationalFkName { get; set; } // For dimensions, which were created from FK, it stores the original FK name
+        public string RelationalPkName { get; set; } // PK this column belongs to according to the schema
     }
 
 }
