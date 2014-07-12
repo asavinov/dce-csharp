@@ -12,6 +12,7 @@ namespace Com.Model
     /// </summary>
     public class DimPath : Dim
     {
+
         public string ComplexName
         {
             get
@@ -397,6 +398,12 @@ namespace Com.Model
             Path = new List<CsColumn>();
             Path.AddRange(path.Path);
         }
+
+        public DimPath(string name, CsTable lesserSet, CsTable greaterSet)
+            : base(name, lesserSet, greaterSet)
+        {
+            Path = new List<CsColumn>();
+        }
     }
 
     /// <summary>
@@ -404,18 +411,106 @@ namespace Com.Model
     /// </summary>
     public class DimAttribute : DimPath
     {
+        #region CsColumn interface
+
+        public override void Add()
+        {
+            //if (GreaterSet != null) ((SetRel)GreaterSet).AddLesserPath(this);
+            if (LesserSet != null) ((SetRel)LesserSet).AddGreaterPath(this);
+
+            // Notify that a new child has been added
+            //if (LesserSet != null) ((Set)LesserSet).NotifyAdd(this);
+            //if (GreaterSet != null) ((Set)GreaterSet).NotifyAdd(this);
+        }
+
+        public override void Remove()
+        {
+            //if (GreaterSet != null) ((SetRel)GreaterSet).RemoveLesserPath(this);
+            if (LesserSet != null) ((SetRel)LesserSet).RemoveGreaterPath(this);
+
+            // Notify that a new child has been removed
+            //if (LesserSet != null) ((Set)LesserSet).NotifyRemove(this);
+            //if (GreaterSet != null) ((Set)GreaterSet).NotifyRemove(this);
+        }
+
+        #endregion
+
         /// <summary>
         /// Additional names specific to the relational model and imported from a relational schema. 
         /// </summary>
-        public string RelationalColumnName { get; set; } // For paths, it is the original column name used in the database (can be moved to a child class if such will be introduced for relational dimensions or for path dimensions). 
-        public string RelationalFkName { get; set; } // For dimensions, which were created from FK, it stores the original FK name
-        public string RelationalPkName { get; set; } // PK this column belongs to according to the schema
+        public string RelationalColumnName { get; set; } // Original column name used in the database
+        public string RelationalPkName { get; set; } // PK this column belongs to according to the relational schema
+        public string RelationalFkName { get; set; } // Original FK name this column belongs to
+        public string RelationalTargetTableName { get; set; }
+        public string RelationalTargetColumnName { get; set; }
+
+        /// <summary>
+        /// Expand one attribute by building its path segments as dimension objects. 
+        /// Use the provided list of attributes for expansion recursively. This list essentially represents a schema.
+        /// Also, adjust path names in special cases like empty name or simple structure. 
+        /// </summary>
+        public void ExpandAttribute(List<DimAttribute> attributes, List<CsColumn> columns) // Add and resolve attributes by creating dimension structure from FKs
+        {
+            DimAttribute att = this;
+
+            if(att.Path.Count > 0) return; // Already expanded (because of recursion)
+
+            bool isKey = !string.IsNullOrEmpty(att.RelationalPkName) || att.IsIdentity;
+
+            // PROBLEM: We must check whether a dimension already exists because the same dims are inclued in many attribute as a segment
+            // These dimensions can be either stored in a list (like attributes) or withint schema
+
+            if (string.IsNullOrEmpty(att.RelationalFkName)) // No FK - primitive column - end of recursion
+            {
+                // Find or create a primitive dim segment
+                CsColumn seg = columns.FirstOrDefault(c => c.LesserSet == att.LesserSet && StringSimilarity.SameColumnName(((DimRel)c).RelationalFkName, att.RelationalFkName));
+                if (seg == null)
+                {
+                    seg = new DimRel(att.RelationalColumnName, att.LesserSet, att.GreaterSet, isKey, false); // Maybe copy constructor?
+                    ((DimRel)seg).RelationalFkName = att.RelationalFkName;
+                    columns.Add(seg);
+                }
+
+                att.InsertLast(seg); // add it to this attribute as a single segment
+            }
+            else { // There is FK - non-primitive column
+                // Find target set and target attribute (name resolution)
+                DimAttribute tailAtt = attributes.FirstOrDefault(a => StringSimilarity.SameTableName(a.LesserSet.Name, att.RelationalTargetTableName) && StringSimilarity.SameColumnName(a.Name, att.RelationalTargetColumnName));
+                CsTable gSet = tailAtt.LesserSet;
+
+                // Find or create a dim segment
+                CsColumn seg = columns.FirstOrDefault(c => c.LesserSet == att.LesserSet && StringSimilarity.SameColumnName(((DimRel)c).RelationalFkName, att.RelationalFkName));
+                if (seg == null)
+                {
+                    seg = new DimRel(att.RelationalFkName, att.LesserSet, gSet, isKey, false);
+                    ((DimRel)seg).RelationalFkName = att.RelationalFkName;
+                    columns.Add(seg);
+                }
+
+                att.InsertLast(seg); // add it to this attribute as first segment
+
+                //
+                // Recursion. Expand tail attribute and add all segments from the tail attribute (continuation)
+                //
+                tailAtt.ExpandAttribute(attributes, columns);
+                att.InsertLast(tailAtt);
+
+                // Adjust name. How many attributes belong to the same FK as this attribute (FK composition)
+                List<DimAttribute> fkAtts = attributes.Where(a => a.LesserSet == att.LesserSet && StringSimilarity.SameColumnName(att.RelationalFkName, a.RelationalFkName)).ToList();
+                if(fkAtts.Count == 1) 
+                {
+                    seg.Name = att.RelationalColumnName; // Adjust name. For 1-column FK, name of the FK-dim is the column name (not the FK name)
+                }
+            }
+        }
+
 
         /// <summary>
         /// Convert nested path to a flat canonical representation as a sequence of simple dimensions which do not contain other dimensions.
         /// Initially, paths are pairs <this set dim, greater set path>. We recursively replace all nested paths by dimensions.
         /// Also, adjust path names in special cases like empty name or simple structure. 
         /// </summary>
+        [System.Obsolete("Use ExpandAttribute(s)", true)]
         public void ExpandPath()
         {
             //
@@ -454,8 +549,13 @@ namespace Com.Model
         {
         }
 
-    public DimAttribute(DimPath path)
+        public DimAttribute(DimPath path)
             : base(path)
+        {
+        }
+
+        public DimAttribute(string name, CsTable lesserSet, CsTable greaterSet)
+            : base(name, lesserSet, greaterSet)
         {
         }
     }

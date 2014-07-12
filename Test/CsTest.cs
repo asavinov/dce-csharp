@@ -22,6 +22,9 @@ namespace Test
     [TestClass]
     public class CsTest
     {
+        public static string Northwind = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\\Users\\savinov\\git\\comcsharp\\Test\\Northwind.accdb";
+        public static string TextDbConnection = "Provider=Microsoft.ACE.OLEDB.12.0; Data Source=C:\\Users\\savinov\\git\\comcsharp\\Test; Extended Properties='Text;Excel 12.0;HDR=Yes;FMT=CSVDelimited;'";
+
         protected ExprNode BuildExpr(string str)
         {
             ExprLexer lexer;
@@ -307,6 +310,35 @@ namespace Test
         [TestMethod]
         public void ProjectionTest() // Defining new tables via function projection and populate them
         {
+        }
+
+        [TestMethod]
+        public void OledbTest() // Load Oledb schema and import data
+        {
+            // Connection object
+            ConnectionOledb conn = new ConnectionOledb();
+            conn.ConnectionString = Northwind;
+            conn.Open();
+            List<string> tables = conn.ReadTables();
+            conn.Close();
+
+            Assert.AreEqual(20, tables.Count);
+
+            // Db
+            SetTopOledb top = new SetTopOledb("");
+            top.connection = conn;
+
+            // Load schema
+            conn.Open();
+            top.LoadSchema();
+            conn.Close();
+
+            Assert.AreEqual(20, top.Root.SubSets.Count);
+            Assert.AreEqual(11, top.FindTable("Order Details").GreaterDims.Count);
+
+            Assert.AreEqual("Orders", top.FindTable("Order Details").GetGreaterDim("Order ID").GreaterSet.Name);
+
+            // Load data
         }
 
     }

@@ -12,108 +12,79 @@ namespace Com.Model
 {
     /// <summary>
     /// Set with data loaded using OleDb API.
-    /// Data is loaded from any format using the corresponding OleDb provider. 
-    /// A provider exposes a specific format using standard OleDb API.
-    /// OleDb tutorial: http://msdn.microsoft.com/en-us/library/aa288452(v=vs.71).aspx
-    /// Read schema: http://support.microsoft.com/kb/309681
-    /// Connection string example: "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\\Test\\Northwind.accdb"
-    /// Provider example: "Provider=Microsoft.Jet.OLEDB.4.0;"
     /// </summary>
     public class SetTopOledb : SetTop
     {
-        /// <summary>
-        /// Connection string.
-        /// </summary>
-        public string ConnectionString { get; set; }
+        #region Connection methods
+        public ConnectionOledb connection; // Connection object for access to the native engine functions
 
-        private OleDbConnection _connection;
+        // Use name of the connection for setting schema name
+        #endregion
 
-        public void Open()
+        #region Schema methods
+
+        public List<CsTable> LoadTables(List<string> tableNames = null)
         {
-            if (String.IsNullOrEmpty(ConnectionString))
+            List<CsTable> tables = new List<CsTable>();
+
+            if (tableNames == null)
             {
-                return; 
+                tableNames = connection.ReadTables();
             }
 
-            if (_connection != null && _connection.State == System.Data.ConnectionState.Open)
+            //
+            // Create all sets
+            //
+            foreach (string tableName in tableNames)
             {
-                return;
+                SetRel set = new SetRel(tableName); // Create a set 
+                set.RelationalTableName = tableName;
+                // Relational PK name will be set during column loading
+
+                tables.Add(set);
             }
 
-            try
+            //
+            // Add them to the schema
+            //
+            foreach (CsTable table in tables)
             {
-                _connection = new OleDbConnection(ConnectionString);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error: Failed to create a database connection. \n{0}", ex.Message);
+                AddTable(table, null, null);
             }
 
-            try
-            {
-                _connection.Open();
-
-                //
-                // Set top name as soon as we open a database
-                //
-                if (!string.IsNullOrEmpty(_connection.Database))
-                    Name = _connection.Database;
-                else if (!string.IsNullOrEmpty(_connection.DataSource))
-                    Name = System.IO.Path.GetFileNameWithoutExtension(_connection.DataSource);
-                else
-                    Name = "Data Source";
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error: Failed to open the DataBase.\n{0}", ex.Message);
-            }
+            return tables;
         }
 
-        public void Close()
+        public void LoadSchema()
         {
-            if (_connection == null)
+            List<CsTable> tables = LoadTables();
+
+            List<DimAttribute> attributes = new List<DimAttribute>();
+
+            foreach (SetRel table in tables)
             {
-                return;
+                List<DimAttribute> atts = LoadAttributes(table);
+                attributes.AddRange(atts);
             }
 
-            try
-            {
-                _connection.Close();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error: Failed to close the DataBase.\n{0}", ex.Message);
-            }
-            finally
-            {
-                _connection = null;
-            }
+            List<CsColumn> columns = new List<CsColumn>();
+            attributes.ForEach(a => a.ExpandAttribute(attributes, columns));
+
+            // Add dims and paths to the sets
+            attributes.ForEach(a => a.Add());
+            columns.ForEach(c => c.Add());
         }
 
-        private List<string> ReadTables()
-        {
-            // Assumption: connection is open
-            List<string> tableNames = new List<string>();
+//
+// What is Set::AddAllNonStoredPaths() ???
+//
 
-            // Read a table with schema information
-            // For oledb: http://www.c-sharpcorner.com/UploadFile/Suprotim/OledbSchema09032005054630AM/OledbSchema.aspx
-            DataTable tables = _connection.GetOleDbSchemaTable(OleDbSchemaGuid.Tables, new object[] { null, null, null, "TABLE" });
-
-            // Read table info
-            foreach (DataRow row in tables.Rows)
-            {
-                string tableName = row["TABLE_NAME"].ToString();
-                tableNames.Add(tableName);
-            }
-
-            return tableNames;
-        }
-
+/*
         public void ImportSchema(List<string> tableNames = null)
         {
             if (tableNames == null)
             {
-                tableNames = ReadTables();
+                tableNames = connection.ReadTables();
             }
 
             // Create all sets
@@ -144,6 +115,74 @@ namespace Com.Model
                 set.AddAllNonStoredPaths();
             }
         }
+*/
+
+        protected List<DimAttribute> LoadAttributes(SetRel tableSet) 
+        {
+            // The created paths will be not be added to the schema (should be added manually)
+            // The created paths are empty and do not store any dimensions (should be done/expanded separately by using the meta-data about PKs, FKs etc.)
+            Debug.Assert(!tableSet.IsPrimitive, "Wrong use: cannot load structure for primitive set.");
+
+            List<DimAttribute> attributes = new List<DimAttribute>();
+
+            string tableName = tableSet.RelationalTableName;
+
+            DataTable pks = connection.GetPks(tableName);
+            DataTable fks = connection.GetFks(tableName);
+            DataTable columns = connection.GetColumns(tableName);
+
+            foreach (DataRow col in columns.Rows) // Process all columns of the table (correspond to primitive paths of the set)
+            {
+                string columnName = col["COLUMN_NAME"].ToString();
+                string columnType = ((OleDbType)col["DATA_TYPE"]).ToString();
+                CsTable typeTable = Top.GetPrimitive(columnType);
+
+                //
+                // Create an attribute object representing this column
+                //
+                DimAttribute path = tableSet.GetGreaterPathByColumnName(columnName); // It might have been already created (when processing other tables)
+                if (path != null) continue;
+
+                path = new DimAttribute(columnName, tableSet, typeTable);
+
+                //
+                // Set relational attribute of the object
+                //
+
+                path.RelationalColumnName = columnName;
+
+                // Find PKs this attribute belongs to (among all PKs of this table)
+                foreach (DataRow pk in pks.Rows)
+                {
+                    if (!StringSimilarity.SameColumnName(columnName, (string)pk["COLUMN_NAME"])) continue;
+
+                    // Found PK this column belongs to
+                    path.RelationalPkName = (string)pk["PK_NAME"];
+                    tableSet.RelationalPkName = path.RelationalPkName; // OPTIMIZE: try to do it only once rather than for each attribute and try to identify and exclude multiple PKs (error)
+
+                    //path.IsIdentity = true; // We simply have to override this property as "RelationalPkName != null" or "RelationalPkName == table.RelationalPkName"
+                    break; // Assume that a column can belong to only one PK 
+                }
+
+                // Find FKs this attribute belongs to (among all FKs of this table)
+                foreach (DataRow fk in fks.Rows)
+                {
+                    if (!StringSimilarity.SameColumnName(columnName,(string)fk["FK_COLUMN_NAME"])) continue;
+
+                    // Target PK name fk["PK_NAME"] is not stored and is not used because we assume that there is only one PK
+
+                    path.RelationalFkName = (string)fk["FK_NAME"];
+                    path.RelationalTargetTableName = (string)fk["PK_TABLE_NAME"]; // Name of the target set of the simple dimension (first segment of this complex path)
+                    path.RelationalTargetColumnName = (string)fk["PK_COLUMN_NAME"]; // Next path/attribute name belonging to the target set
+
+                    break; // We assume that a column can belong to only one FK and do not continue with the rest of the FK-loop
+                }
+
+                attributes.Add(path);
+            }
+
+            return attributes;
+        }
 
         /// <summary>
         /// The method loads structure of the specified table and stores it as a set in this schema.
@@ -154,6 +193,7 @@ namespace Com.Model
         /// contain only two segments and this path definition has to be corrected later. 
         /// </summary>
         /// <param name="tableName"></param>
+/*
         private void ImportPaths(string tableName)
         {
             // Find set corresonding to this table
@@ -161,28 +201,27 @@ namespace Com.Model
 
             Debug.Assert(!tableSet.IsPrimitive, "Wrong use: cannot load paths into a primitive set.");
 
-            DataTable pks = _connection.GetOleDbSchemaTable(OleDbSchemaGuid.Primary_Keys, new object[] { null, null, tableName });
+            DataTable pks = connection.conn.GetOleDbSchemaTable(OleDbSchemaGuid.Primary_Keys, new object[] { null, null, tableName });
             DataTable fks = null;
             try
             {
-                fks = _connection.GetOleDbSchemaTable(OleDbSchemaGuid.Foreign_Keys, new object[] { null, null, null, null, null, tableName });
+                fks = connection.conn.GetOleDbSchemaTable(OleDbSchemaGuid.Foreign_Keys, new object[] { null, null, null, null, null, tableName });
             }
             catch (Exception e) // For csv, foreign keys are not supported exception is raised
             {
                 fks = new DataTable();
             }
-            DataTable columns = _connection.GetOleDbSchemaTable(OleDbSchemaGuid.Columns, new object[] { null, null, tableName, null });
 
+            DataTable columns = connection.conn.GetOleDbSchemaTable(OleDbSchemaGuid.Columns, new object[] { null, null, tableName, null });
             foreach (DataRow col in columns.Rows) // Process all columns of the table (correspond to primitive paths of the set)
             {
                 string columnName = col["COLUMN_NAME"].ToString();
-
                 string columnType = ((OleDbType)col["DATA_TYPE"]).ToString();
 
-                DimPath path = tableSet.GetGreaterPathByColumnName(columnName); // It might have been already created (when processing other tables)
+                DimAttribute path = tableSet.GetGreaterPathByColumnName(columnName); // It might have been already created (when processing other tables)
                 if (path == null)
                 {
-                    path = new DimPath(columnName);
+                    path = new DimAttribute(columnName);
                     path.RelationalColumnName = columnName;
                     path.LesserSet = tableSet; // Assign domain set give the table name
                     path.GreaterSet = Top.GetPrimitiveSubset(columnType);
@@ -289,13 +328,18 @@ namespace Com.Model
             }
 
         }
+*/
 
+        #endregion
+
+        #region Data methods
+/*
         /// <summary>
         /// Load data corresponding to the specified set from the underlying database. 
         /// </summary>
         /// <param name="set"></param>
         /// <returns></returns>
-        public override DataTable Export(Set set) // Load primitive data from the database for only this table
+        public override DataTable LoadTable(Set set) // Load data for only this table (without greater tables connected via FKs)
         {
             // Check if this set is our child
 
@@ -347,7 +391,7 @@ namespace Com.Model
             return dataTable;
         }
 
-        public override DataTable ExportAll(Set set) // Load primitive data from the persistent database
+        public override DataTable LoadTableTree(Set set) // Load data for the specified and all greater tables connected via FKs
         {
             string query = BuildSql(set);
 
@@ -380,6 +424,7 @@ namespace Com.Model
 
             return dataTable;
         }
+
         public string BuildSql(Set set)
         {
             // Nested joins (Employee references Deparatment which references Company):
@@ -476,6 +521,7 @@ namespace Com.Model
 
             return res;
         }
+
         private string BuildFromNested(List<Dim> lesserPath, Set set)
         {
             // Sequentially join all direct child tables.
@@ -509,6 +555,7 @@ namespace Com.Model
 
             return res;
         }
+
         private string BuildJoin(List<Dim> lesserPath, Set set, Dim gDim)
         {
             // Join criteria are specified using original table attributes which can be equal and therefore have to use table names as prefix.
@@ -554,6 +601,9 @@ namespace Com.Model
 
             return res;
         }
+*/
+        #endregion
+
         private static string GetPathHash(List<Dim> path, int count)
         {
             int pathToTableHash = 0;
@@ -566,35 +616,163 @@ namespace Com.Model
             string hash = pathToTableHash.ToString("X"); // unique hash representing this path
             return hash.Length > 6 ? hash.Substring(0, 6) : hash;
         }
+
         private static string GetTableAlias(string tableName, string pathName)
         {
             return tableName + "_" + pathName;
         }
 
-        private void CreateDataTypes() // Create all primitive data types from some specification like Enum, List or XML
+        protected override void CreateDataTypes() // Create all primitive data types from some specification like Enum, List or XML
         {
-            Set setRoot = new Set("Root");
-            AddTable(setRoot, this);
+            Set set;
+            Dim dim;
 
+            set = new Set("Root");
+            dim = new Dim("Top", set, this, true, true);
+            dim.Add();
+
+            // Either use Ole DB standard or System.Data.OleDb.OleDbType.* (or maybe they are the same). 
+            // Type names must correspond to what we see in SQL queries (or other syntactic expressions expected by OleDb driver)
             foreach (OleDbType dataType in (OleDbType[])Enum.GetValues(typeof(OleDbType)))
             {
-                Set setPrimitive = new Set(dataType.ToString());
-                AddTable(setPrimitive, this);
+                set = new Set(dataType.ToString());
+                dim = new Dim("Top", set, this, true, true);
+                dim.Add();
             }
         }
 
         public SetTopOledb(string name)
-            : base()
+            : base(name)
         {
             DataSourceType = DataSourceType.OLEDB;
 
-            // We need to bootstrap the database with primitive types corresponding to OleDb standard
-            // Either use Ole DB standard or System.Data.OleDb.OleDbType.* (or maybe they are the same). 
-            // Type names should correspond to what we see in SQL queries (or other syntactic expressions expected by OleDb driver)
+            //CreateDataTypes(); // Generate all predefined primitive sets as subsets
+        }
 
-            Name = name;
+    }
 
-            CreateDataTypes(); // Generate all predefined primitive sets as subsets
+    /// <summary>
+    /// Data is loaded from any format using the corresponding OleDb provider. 
+    /// A provider exposes a specific format using standard OleDb API.
+    /// OleDb tutorial: http://msdn.microsoft.com/en-us/library/aa288452(v=vs.71).aspx
+    /// Read schema: http://support.microsoft.com/kb/309681
+    /// Connection string example: "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\\Test\\Northwind.accdb"
+    /// Provider example: "Provider=Microsoft.Jet.OLEDB.4.0;"
+    /// </summary>
+    public class ConnectionOledb
+    {
+        /// <summary>
+        /// Connection string.
+        /// </summary>
+        public string ConnectionString { get; set; }
+
+        private OleDbConnection conn;
+
+        public void Open()
+        {
+            if (String.IsNullOrEmpty(ConnectionString))
+            {
+                return;
+            }
+
+            if (conn != null && conn.State == System.Data.ConnectionState.Open)
+            {
+                return;
+            }
+
+            try
+            {
+                conn = new OleDbConnection(ConnectionString);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error: Failed to create a database connection. \n{0}", ex.Message);
+            }
+
+            try
+            {
+                conn.Open();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error: Failed to open the DataBase.\n{0}", ex.Message);
+            }
+        }
+
+        public void Close()
+        {
+            if (conn == null)
+            {
+                return;
+            }
+
+            try
+            {
+                conn.Close();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error: Failed to close the DataBase.\n{0}", ex.Message);
+            }
+            finally
+            {
+                conn = null;
+            }
+        }
+
+        public string GetName()
+        {
+            if (!string.IsNullOrEmpty(conn.Database))
+                return conn.Database;
+            else if (!string.IsNullOrEmpty(conn.DataSource))
+                return System.IO.Path.GetFileNameWithoutExtension(conn.DataSource);
+            else
+                return null;
+        }
+
+        public DataTable GetPks(string tableName)
+        {
+            DataTable pks = conn.GetOleDbSchemaTable(OleDbSchemaGuid.Primary_Keys, new object[] { null, null, tableName });
+            return pks;
+        }
+
+        public DataTable GetFks(string tableName)
+        {
+            DataTable fks = null;
+            try
+            {
+                fks = conn.GetOleDbSchemaTable(OleDbSchemaGuid.Foreign_Keys, new object[] { null, null, null, null, null, tableName });
+            }
+            catch (Exception e) // For csv, foreign keys are not supported exception is raised
+            {
+                fks = new DataTable();
+            }
+            return fks;
+        }
+
+        public DataTable GetColumns(string tableName)
+        {
+            DataTable cols = conn.GetOleDbSchemaTable(OleDbSchemaGuid.Columns, new object[] { null, null, tableName, null });
+            return cols;
+        }
+
+        public List<string> ReadTables()
+        {
+            // Assumption: connection is open
+            List<string> tableNames = new List<string>();
+
+            // Read a table with schema information
+            // For oledb: http://www.c-sharpcorner.com/UploadFile/Suprotim/OledbSchema09032005054630AM/OledbSchema.aspx
+            DataTable tables = conn.GetOleDbSchemaTable(OleDbSchemaGuid.Tables, new object[] { null, null, null, "TABLE" });
+
+            // Read table info
+            foreach (DataRow row in tables.Rows)
+            {
+                string tableName = row["TABLE_NAME"].ToString();
+                tableNames.Add(tableName);
+            }
+
+            return tableNames;
         }
 
     }

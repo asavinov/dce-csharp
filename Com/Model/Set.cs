@@ -122,15 +122,15 @@ namespace Com.Model
 
         public CsColumn GetGreaterDim(string name)
         {
-            return GreaterDims.FirstOrDefault(d => d.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+            return GreaterDims.FirstOrDefault(d => StringSimilarity.SameColumnName(d.Name, name));
         }
 
-        public CsTable GetTable(string name) { return LesserDims.FirstOrDefault(d => d.LesserSet.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase)).LesserSet; }
+        public CsTable GetTable(string name) { return LesserDims.FirstOrDefault(d => StringSimilarity.SameColumnName(d.LesserSet.Name, name)).LesserSet; }
 
         public CsTable FindTable(string name)
         {
             CsTable set = null;
-            if (Name.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+            if (StringSimilarity.SameTableName(Name, name))
             {
                 set = this;
             }
@@ -690,11 +690,11 @@ namespace Com.Model
         /// We assume that there is only one PK (identity). Otherwise, we need a collection. 
         /// </summary>
         public string RelationalTableName { get; set; }
-        public string RelationalPkName { get; set; } // The same field exists also in Dim (do not confuse them)
+        public string RelationalPkName { get; set; } // Note that the same field exists also in Dim
 
         public CsColumn GetGreaterDimByFkName(string name)
         {
-            return GreaterDims.FirstOrDefault(d => ((DimRel)d).RelationalFkName.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+            return GreaterDims.FirstOrDefault(d => StringSimilarity.SameColumnName(((DimRel)d).RelationalFkName, name));
         }
 
         #region Paths = relational attributes
@@ -708,13 +708,14 @@ namespace Com.Model
         {
             Debug.Assert(path.GreaterSet != null && path.LesserSet != null, "Wrong use: path must specify a lesser and greater sets before it can be added to a set.");
             RemoveGreaterPath(path);
-            ((SetRel)path.GreaterSet).LesserPaths.Add(path);
-            ((SetRel)path.LesserSet).GreaterPaths.Add(path);
+            if (path.GreaterSet is SetRel) ((SetRel)path.GreaterSet).LesserPaths.Add(path);
+            if (path.LesserSet is SetRel) ((SetRel)path.LesserSet).GreaterPaths.Add(path);
         }
         public void RemoveGreaterPath(DimAttribute path)
         {
-            if (path.GreaterSet != null) ((SetRel)path.GreaterSet).LesserPaths.Remove(path);
-            if (path.LesserSet != null) ((SetRel)path.LesserSet).GreaterPaths.Remove(path);
+            Debug.Assert(path.GreaterSet != null && path.LesserSet != null, "Wrong use: path must specify a lesser and greater sets before it can be removed from a set.");
+            if (path.GreaterSet is SetRel) ((SetRel)path.GreaterSet).LesserPaths.Remove(path);
+            if (path.LesserSet is SetRel) ((SetRel)path.LesserSet).GreaterPaths.Remove(path);
         }
         public void RemoveGreaterPath(string name)
         {
@@ -726,11 +727,11 @@ namespace Com.Model
         }
         public DimAttribute GetGreaterPath(string name)
         {
-            return GreaterPaths.FirstOrDefault(d => d.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+            return GreaterPaths.FirstOrDefault(d => StringSimilarity.SameColumnName(d.Name, name));
         }
         public DimAttribute GetGreaterPathByColumnName(string name)
         {
-            return GreaterPaths.FirstOrDefault(d => d.RelationalColumnName.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+            return GreaterPaths.FirstOrDefault(d => StringSimilarity.SameColumnName(d.RelationalColumnName, name));
         }
         public DimAttribute GetGreaterPath(DimAttribute path)
         {
@@ -748,7 +749,7 @@ namespace Com.Model
                 bool equal = true;
                 for (int seg = 0; seg < p.Path.Count && equal; seg++)
                 {
-                    if (!p.Path[seg].Name.Equals(path[seg].Name, StringComparison.InvariantCultureIgnoreCase)) equal = false;
+                    if (!StringSimilarity.SameColumnName(p.Path[seg].Name, path[seg].Name)) equal = false;
                     // if (p.Path[seg] != path[seg]) equal = false; // Compare strings as objects
                 }
                 if (equal) return p;
@@ -775,6 +776,7 @@ namespace Com.Model
             return result;
         }
 
+        [System.Obsolete("What was the purpose of this method?", true)]
         public void AddAllNonStoredPaths()
         {
             int pathCounter = 0;

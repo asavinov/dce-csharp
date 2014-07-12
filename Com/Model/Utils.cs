@@ -13,6 +13,18 @@ namespace Com.Model
     // Welch's t-test for a pair of columns that contain numeric values. Given the columns' means and variances, the t-test gives the probability the columns were drawn from the same distribution.
     class StringSimilarity
     {
+        public static bool SameTableName(string n1, string n2)
+        {
+            if (n1 == null || n2 == null) return false;
+            if (string.IsNullOrEmpty(n1) || string.IsNullOrEmpty(n2)) return false;
+            return n1.Equals(n2, StringComparison.InvariantCultureIgnoreCase);
+        }
+
+        public static bool SameColumnName(string n1, string n2)
+        {
+            return SameTableName(n1, n2);
+        }
+
         public static double ComputeStringSimilarity(string source, string target, int gramlength)
         {
             if (source == null || target == null || source.Length == 0 || target.Length == 0) return 0;

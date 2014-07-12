@@ -21,7 +21,7 @@ namespace Com.Model
 
         public CsTable GetPrimitive(string name)
         {
-            CsColumn dim = SubDims.FirstOrDefault(x => x.LesserSet.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+            CsColumn dim = SubDims.FirstOrDefault(x => StringSimilarity.SameTableName(x.LesserSet.Name, name));
             return dim != null ? dim.LesserSet : null;
         }
 
@@ -84,7 +84,7 @@ namespace Com.Model
 
         public DataSourceType DataSourceType { get; protected set; } // Where data is stored and processed (engine). Replace class name
 
-        public virtual DataTable Export(Set set)
+        public virtual DataTable LoadTable(Set set)
         {
             // Check if this set is our child
             DataTable dataTable = new DataTable(set.Name);
@@ -92,7 +92,7 @@ namespace Com.Model
             return null;
         }
 
-        public virtual DataTable ExportAll(Set set)
+        public virtual DataTable LoadTableTree(Set set)
         {
             // Check if this set is our child
             DataTable dataTable = new DataTable(set.Name);
@@ -100,7 +100,7 @@ namespace Com.Model
             return null;
         }
 
-        private void CreateDataTypes() // Create all primitive data types from some specification like Enum, List or XML
+        protected virtual void CreateDataTypes() // Create all primitive data types from some specification like Enum, List or XML
         {
             Set set;
             Dim dim;

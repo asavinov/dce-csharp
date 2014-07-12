@@ -59,7 +59,7 @@ namespace Com.Model
         /// Add (attach) to its lesser and greater sets if not added yet. 
         /// Dimension type is important because different dimensions are stored in different collections.
         /// </summary>
-        public void Add()
+        public virtual void Add()
         {
             if (GreaterSet != null) GreaterSet.LesserDims.Add(this);
             if (LesserSet != null) LesserSet.GreaterDims.Add(this);
@@ -72,7 +72,7 @@ namespace Com.Model
         /// <summary>
         /// Remove (detach) from its lesser and greater sets if it is there. Depends on the dimension type.
         /// </summary>
-        public void Remove()
+        public virtual void Remove()
         {
             if (GreaterSet != null) GreaterSet.LesserDims.Remove(this);
             if (LesserSet != null) LesserSet.GreaterDims.Remove(this);
@@ -180,43 +180,46 @@ namespace Com.Model
             //
             columnData = new DimEmpty();
             CsTable output = greaterSet;
-            if (output.Name.Equals("Void", StringComparison.InvariantCultureIgnoreCase))
+            if (output == null || string.IsNullOrEmpty(output.Name))
             {
             }
-            else if (output.Name.Equals("Top", StringComparison.InvariantCultureIgnoreCase))
+            else if (StringSimilarity.SameTableName(output.Name, "Void"))
             {
             }
-            else if (output.Name.Equals("Bottom", StringComparison.InvariantCultureIgnoreCase)) // Not possible by definition
+            else if (StringSimilarity.SameTableName(output.Name, "Top"))
             {
             }
-            else if (output.Name.Equals("Root", StringComparison.InvariantCultureIgnoreCase))
+            else if (StringSimilarity.SameTableName(output.Name, "Bottom")) // Not possible by definition
             {
             }
-            else if (output.Name.Equals("Integer", StringComparison.InvariantCultureIgnoreCase))
+            else if (StringSimilarity.SameTableName(output.Name, "Root"))
+            {
+            }
+            else if (StringSimilarity.SameTableName(output.Name, "Integer"))
             {
                 columnData = new DimPrimitive<int>(this);
             }
-            else if (output.Name.Equals("Double", StringComparison.InvariantCultureIgnoreCase))
+            else if (StringSimilarity.SameTableName(output.Name, "Double"))
             {
                 columnData = new DimPrimitive<double>(this);
             }
-            else if (output.Name.Equals("Decimal", StringComparison.InvariantCultureIgnoreCase))
+            else if (StringSimilarity.SameTableName(output.Name, "Decimal"))
             {
                 columnData = new DimPrimitive<decimal>(this);
             }
-            else if (output.Name.Equals("String", StringComparison.InvariantCultureIgnoreCase))
+            else if (StringSimilarity.SameTableName(output.Name, "String"))
             {
                 columnData = new DimPrimitive<string>(this);
             }
-            else if (output.Name.Equals("Boolean", StringComparison.InvariantCultureIgnoreCase))
+            else if (StringSimilarity.SameTableName(output.Name, "Boolean"))
             {
                 columnData = new DimPrimitive<bool>(this);
             }
-            else if (output.Name.Equals("DateTime", StringComparison.InvariantCultureIgnoreCase))
+            else if (StringSimilarity.SameTableName(output.Name, "DateTime"))
             {
                 columnData = new DimPrimitive<DateTime>(this);
             }
-            else if (output.Name.Equals("Set", StringComparison.InvariantCultureIgnoreCase))
+            else if (StringSimilarity.SameTableName(output.Name, "Set"))
             {
             }
             else // User (non-primitive) set
@@ -242,9 +245,22 @@ namespace Com.Model
         /// <summary>
         /// Additional names specific to the relational model and imported from a relational schema. 
         /// </summary>
-        public string RelationalColumnName { get; set; } // For paths, it is the original column name used in the database (can be moved to a child class if such will be introduced for relational dimensions or for path dimensions). 
-        public string RelationalFkName { get; set; } // For dimensions, which were created from FK, it stores the original FK name
-        public string RelationalPkName { get; set; } // PK this column belongs to according to the schema
+        public string RelationalFkName { get; set; } // The original FK name this dimension was created from
+
+        public DimRel(string name)
+            : this(name, null, null)
+        {
+        }
+
+        public DimRel(string name, CsTable lesserSet, CsTable greaterSet)
+            : this(name, lesserSet, greaterSet, false, false)
+        {
+        }
+
+        public DimRel(string name, CsTable lesserSet, CsTable greaterSet, bool isIdentity, bool isSuper)
+            : base(name, lesserSet, greaterSet, isIdentity, isSuper)
+        {
+        }
     }
 
 }
