@@ -57,6 +57,8 @@ namespace Com.Model
 
         public void LoadSchema()
         {
+            connection.Open();
+
             List<CsTable> tables = LoadTables();
 
             List<DimAttribute> attributes = new List<DimAttribute>();
@@ -66,6 +68,8 @@ namespace Com.Model
                 List<DimAttribute> atts = LoadAttributes(table);
                 attributes.AddRange(atts);
             }
+
+            connection.Close();
 
             List<CsColumn> columns = new List<CsColumn>();
             attributes.ForEach(a => a.ExpandAttribute(attributes, columns));
@@ -333,26 +337,24 @@ namespace Com.Model
         #endregion
 
         #region Data methods
-/*
+
         /// <summary>
         /// Load data corresponding to the specified set from the underlying database. 
         /// </summary>
-        /// <param name="set"></param>
         /// <returns></returns>
-        public override DataTable LoadTable(Set set) // Load data for only this table (without greater tables connected via FKs)
+        public override DataTable LoadTable(CsTable table) // Load data for only this table (without greater tables connected via FKs)
         {
-            // Check if this set is our child
+            SetRel set = (SetRel)table;
 
-            // Generate query for our database engine by including at least all identity dimensions
-            string select = ""; // Attribute names or their definitions stored in the dimensions
-            List<DimPath> attributes = set.GreaterPaths; // We need our custom aliases with target platform definitions as db-specific column names
-            foreach (Dim dim in attributes)
+            string select = "";
+            List<DimAttribute> attributes = set.GreaterPaths;
+            foreach (DimAttribute att in attributes)
             {
-                select += "[" + dim.Name + "]" + ", ";
+                select += "[" + att.RelationalColumnName + "]" + ", ";
             }
             select = select.Substring(0, select.Length - 2);
 
-            string from = "[" + set.Name + "]";
+            string from = "[" + set.RelationalTableName + "]";
             string where = ""; // set.WhereExpression
             string orderby = ""; // set.OrderbyExpression
 
@@ -361,36 +363,14 @@ namespace Com.Model
             query += String.IsNullOrEmpty(where) ? "" : "WHERE " + where + " ";
             query += String.IsNullOrEmpty(orderby) ? "" : "ORDER BY " + orderby + " ";
 
-            // Read and return the result set
-            DataSet dataSet = new DataSet();
-            try
-            {
-                Open();
-                using (OleDbCommand cmd = new OleDbCommand(query, _connection))
-                {
-                    using (OleDbDataAdapter adapter = new OleDbDataAdapter(cmd))
-                    {
-                        adapter.Fill(dataSet);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error: Failed to retrieve the required data from the DataBase.\n{0}", ex.Message);
-                return null;
-            }
-            finally
-            {
-                Close();
-            }
-
-            Console.WriteLine("{0} tables in data set", dataSet.Tables.Count);
-            Console.WriteLine("{0} rows and {1} columns in table {2}", dataSet.Tables[0].Rows.Count, dataSet.Tables[0].Columns.Count, dataSet.Tables[0].TableName);
-            DataTable dataTable = dataSet.Tables[0]; // We expect only one table
+            connection.Open();
+            DataTable dataTable = connection.ExecuteSelect(query);
+            connection.Close();
 
             return dataTable;
         }
 
+/*
         public override DataTable LoadTableTree(Set set) // Load data for the specified and all greater tables connected via FKs
         {
             string query = BuildSql(set);
@@ -601,8 +581,6 @@ namespace Com.Model
 
             return res;
         }
-*/
-        #endregion
 
         private static string GetPathHash(List<Dim> path, int count)
         {
@@ -621,6 +599,9 @@ namespace Com.Model
         {
             return tableName + "_" + pathName;
         }
+
+*/
+        #endregion
 
         protected override void CreateDataTypes() // Create all primitive data types from some specification like Enum, List or XML
         {
@@ -773,6 +754,38 @@ namespace Com.Model
             }
 
             return tableNames;
+        }
+
+        public DataTable ExecuteSelect(string query)
+        {
+            // Read and return the result set
+            DataSet dataSet = new DataSet();
+            try
+            {
+                Open();
+                using (OleDbCommand cmd = new OleDbCommand(query, this.conn))
+                {
+                    using (OleDbDataAdapter adapter = new OleDbDataAdapter(cmd))
+                    {
+                        adapter.Fill(dataSet);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error: Failed to retrieve the required data from the DataBase.\n{0}", ex.Message);
+                return null;
+            }
+            finally
+            {
+                Close();
+            }
+
+            Console.WriteLine("{0} tables in data set", dataSet.Tables.Count);
+            Console.WriteLine("{0} rows and {1} columns in table {2}", dataSet.Tables[0].Rows.Count, dataSet.Tables[0].Columns.Count, dataSet.Tables[0].TableName);
+            DataTable dataTable = dataSet.Tables[0]; // We expect only one table
+
+            return dataTable;
         }
 
     }

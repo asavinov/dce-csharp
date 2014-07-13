@@ -84,7 +84,7 @@ namespace Com.Model
 
         public DataSourceType DataSourceType { get; protected set; } // Where data is stored and processed (engine). Replace class name
 
-        public virtual DataTable LoadTable(Set set)
+        public virtual DataTable LoadTable(CsTable set)
         {
             // Check if this set is our child
             DataTable dataTable = new DataTable(set.Name);
@@ -92,7 +92,7 @@ namespace Com.Model
             return null;
         }
 
-        public virtual DataTable LoadTableTree(Set set)
+        public virtual DataTable LoadTableTree(CsTable set)
         {
             // Check if this set is our child
             DataTable dataTable = new DataTable(set.Name);

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Data;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 using Antlr4.Runtime;
@@ -313,7 +314,7 @@ namespace Test
         }
 
         [TestMethod]
-        public void OledbTest() // Load Oledb schema and import data
+        public void OledbTest() // Load Oledb schema and data
         {
             // Connection object
             ConnectionOledb conn = new ConnectionOledb();
@@ -329,9 +330,7 @@ namespace Test
             top.connection = conn;
 
             // Load schema
-            conn.Open();
             top.LoadSchema();
-            conn.Close();
 
             Assert.AreEqual(20, top.Root.SubSets.Count);
             Assert.AreEqual(11, top.FindTable("Order Details").GreaterDims.Count);
@@ -339,6 +338,9 @@ namespace Test
             Assert.AreEqual("Orders", top.FindTable("Order Details").GetGreaterDim("Order ID").GreaterSet.Name);
 
             // Load data
+            DataTable dataTable = top.LoadTable((SetRel)top.FindTable("Order Details"));
+            Assert.AreEqual(58, dataTable.Rows.Count);
+            Assert.AreEqual("37", dataTable.Rows[10][2]);
         }
 
     }
