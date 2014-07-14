@@ -340,7 +340,16 @@ namespace Test
             // Load data
             DataTable dataTable = top.LoadTable((SetRel)top.FindTable("Order Details"));
             Assert.AreEqual(58, dataTable.Rows.Count);
-            Assert.AreEqual("37", dataTable.Rows[10][2]);
+            Assert.AreEqual(37, dataTable.Rows[10][2]);
+
+            // Configure import 
+            CsSchema schema = new SetTop("My Schema");
+            Set orderDetailsTable = new Set("Order Details");
+            schema.AddTable(orderDetailsTable, null, null);
+            
+            Mapper mapper = new Mapper();
+            Mapping map = mapper.CreatePrimitive(top.FindTable("Order Details"), orderDetailsTable);
+
         }
 
     }

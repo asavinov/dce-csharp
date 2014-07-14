@@ -85,7 +85,7 @@ namespace Com.Model
             {
                 if (targetSchema.GetType() == typeof(SetTop)) // SetTopOledb -> SetTop
                 {
-                    OleDbType sourceType = (OleDbType)sourceSet.DataType;
+                    OleDbType sourceType = (OleDbType)Enum.Parse(typeof(OleDbType), sourceSet.Name, false); // Convert type representation: from name to enum (equivalent)
                     string targetType;
 
                     // Mappings: 
@@ -309,7 +309,7 @@ namespace Com.Model
                         continue; // TODO: Maybe create a new target dimension rather than simply ingnoring it
                     }
 
-                    td.IsIdentity = sd.IsIdentity;
+                    //td.IsIdentity = sd.IsIdentity;
 
                     newMapping.AddPaths(sd, td, gMapping); // Add a pair of dimensions as a match (with expansion using the specified greater mapping)
                 }
@@ -334,12 +334,98 @@ namespace Com.Model
         }
 
         /// <summary>
+        /// Generate best mappings from the source set to the target set. 
+        /// </summary>
+        public List<Mapping> MapSet_NEW(CsTable sourceSet, CsTable targetSet)
+        {
+            // For the first simplest version, we generate only column mappings for relational source sets
+
+            CsSchema sourceSchema = sourceSet.Top;
+            CsSchema targetSchema = targetSet.Top;
+            List<Mapping> maps = new List<Mapping>();
+
+            if (sourceSet.IsPrimitive)
+            {
+                throw new NotImplementedException();
+            }
+
+            // Mapping usage scenarios:
+            // - type change (MapDim). Here we have old dim with its type and want to change this type. 
+            //   we list all formally possible new types and for each of them generate a mapping (old type -> new type) by taking into account their usage by the old/new dimensions
+            // - from concrete source set to target schema. new (greater) could be created if they are needed (if all existing are bad)
+            //   it is used for importing sets as a whole by finding the best position in the schema
+            // - from concrete set to concrete set (new dimensions could be created if it is allowed and all existing are bad, greater sets could be created if they are allowed and all existing are bad)
+            //    here the goal is to find best map to the concrete target but it assumes that all existing target sets could be used as targets for greater sets (types)
+
+            // Building a mapping always means finding a good target type (set as a whole, among all available) for each source type
+            // It can be viewed as finding type usage which means a pair <lesser dim, type set>. 
+            // A good type means a set with all its greater dimensions which means recursion
+
+            // One algorithm is that in order to find a good set mapping we have to find good mappings for its greater sets (recursively)
+            // Another algorithm is that build all source and target primitive paths and then evaluate all matches among them. First, we choose only good path matches to decrease the space. Then build one possible mapping and evaluate its quality.
+
+            // One formal and semantic way to think about a mapping is that target dim tree has to be fit into the source dim tree (or vice versa) by maximizing relevance factor
+            // Leaves of the paths must be primitive sets and these sets must be matched
+            // The root also must be matched (the question is whether it is a dim or set)
+            // It is a kind of semantically best tree coverage. 
+            // Note that intermediate nodes represent trees and hence are also matches that can be evaluated so we get recursion
+            // The main question here is how to generate all possible tree coverages (by satisfying some formal conditions like leaf matching)
+            // Second question is what are nodes of the tree: dims or sets? 
+            // What is being matched: nodes (sets or dims), edges, or a pair of <edge, node>
+            // How a whole node quality is evaluated as opposed to one edge evaluation?
+
+            // One algorithm to fit a graph into another graph is as follows: 
+            // Enumerate all possible path matches which satisfy formal constraints: 
+            // - Leaves are matched (that is, connects starts and ends of the paths - not in the middle)
+            // - Next path match must satisfy constraints of all the existing path matches (see CanMatch method)
+            //   - If source path has non-null prefix intersection with some existing source path, the target must continue the previous target. Set match inference: these intermediate sets are matched.
+            // - Set inference rules:
+            //   - common prefix of two source paths in different matches (target paths must also have the same set in the middle)
+            //   - (a single variant) The only possible matching set for another set. As a consequence, other sets of this paths might also get the only matching set.
+            //   - (no variants) Having no matching set rule. If this set is between an immediately connected sets which have been already matched (no free places, no options).
+
+            // This algorithm could be implemented on paths or on tuples (trees)
+            // In the case of trees, we match the tree leaf nodes and then choose other matches and derive set matches (so intermediate set nodes also could be matched).
+            // A tree can be then converted to a mapping (path matches) and vice versa
+            // The algorithm finds all possible leaf matches
+            // For each chosen next free (non-matched) source, it is necessary to choose (best) nest non-matched target leaf (taking into account formal constraints)
+            // After choosing next match, derive intermediate set matches. A set match can be represented as a list of formally possible set matches (including empty list, a single set and more)
+            // Choosing best options are based on evaluating primitive set (predefined or user-defined) matches. Then we can evaluate complex sets (tree) quality. Here we need to aggregate its dimension and set matches by taking into account coverage.
+
+
+            // How it will be used?
+            // We will give a relational set as a source (with dims and atts) 
+            // Some existing non-relational set will be used as a target
+            // Normally this call is made before opening an editor for mappings in a dialog box to initialize/recommend mappings
+            // The target can be empty or non-empty
+            // If it is empty (first call of the dialog for import) then we simply generate identical target dimensions (copy)
+            // If it is non-empty the we do not make any recommendations and can simply edit the existing mapping
+
+            // Dimensions or attributes?
+            // Mappings use dimension paths by definition
+            // One use of mappings is generating a tuple expression which is then used by the interpreter to access functions of the current record
+            // 1. For relational set (flat), a record is always a DataRow with attribute names as functions - dimensions are not used.
+            // 2. Relational expanded sets can however generate new attributes which correspond to fk-attribute-paths. Their names are generated and specified in the SQL-query (with joins to attach fk-tables). 
+            // Second usage of mappings is in editor where the user can choose manually which source attributes have to be chosen for import.
+            // Third use is in the mapper for recommendation and schema matching. Here the mapping stores important semantic data.
+
+            // Our first use is to simply store which source attributes have to imported and which target primitive types have to be used.
+            // Automatic mapping is not needed here. We list all source attributes - are they dimensions or attributes? Indeed, we use DimPath object. May be use DimAttribute?
+            // If it has to be imported then we add a target dimension as a match. If not, then either do not add the source or leave the matching target path empty.
+            // Parameterize the target path: its greater primtive set, its name. 
+            // We need an initializer (constructor) for this structure. 
+            // And we need a dialog to be able to edit this structure, say, by listing all source paths, and for each of them having a checkbox for inclusion as well as name, target primitive set in combo box.
+
+            return null;
+        }
+
+        /// <summary>
         /// Build mappings from the source set to the target set. The sets are greater sets of the specified dimensions. 
         /// The mapping should take into account (semantically) that these sets are used from these dimensions. 
         /// </summary>
         public List<Mapping> MapDim(DimPath sourcePath, DimPath targetPath)
         {
-            // We analize all continuations of the specified prefix paths
+            // We analyze all continuations of the specified prefix paths
             List<DimPath> sourcePaths = (new PathEnumerator(sourcePath.GreaterSet, DimensionType.IDENTITY_ENTITY)).ToList();
             sourcePaths.ForEach(p => p.InsertFirst(sourcePath));
             if (sourcePaths.Count == 0) sourcePaths.Add(sourcePath);
@@ -501,11 +587,51 @@ namespace Com.Model
             dimImport.Add();
             dimImport.GreaterSet.TableDefinition.ProjectDimensions.Add(dimImport); // Formula. Definition of the set
 
-            // TO DELETE
-            //DimImport dimImport = new DimImport(mapping);
-            //dimImport.Add();
-
             return mapping.TargetSet;
+        }
+
+        /// <summary>
+        /// Create and initialize a new mapping which produces a flat target set with all primitive dimensions for copying primitive data from the source set.
+        /// Only identity (PK) source dimensions are expanded. 
+        /// For relational source, this means that all primitive columns of the source table will be mapped with their relational names, no FK-referenced tables will be joined and no artifical column names will be used. 
+        /// If it is necessary to expand entity dimensions (non-PK columns of joined tables) then a different implementation is needed (which will require joins, artifical column/path names etc.)
+        /// </summary>
+        public Mapping CreatePrimitive(CsTable sourceSet, CsTable targetSet)
+        {
+            Debug.Assert(!sourceSet.IsPrimitive && !targetSet.IsPrimitive, "Wrong use: copy mapping can be created for only non-primitive sets.");
+
+            Mapping map = new Mapping(sourceSet, targetSet);
+
+            CsSchema sourceSchema = map.SourceSet.Top;
+            CsSchema targetSchema = map.TargetSet.Top;
+
+            DimPath sp;
+            DimPath tp;
+            Dim td;
+
+            PathMatch match;
+
+            if (sourceSchema is SetTopOledb)
+            {
+                SetRel set = (SetRel)map.SourceSet;
+                foreach (DimAttribute att in set.GreaterPaths)
+                {
+                    sp = new DimAttribute(att);
+
+                    // Recommend matching target type (mapping primitive types)
+                    this.MapPrimitiveSet(att.GreaterSet, targetSchema);
+                    CsTable targetType = this.GetBestTargetSet(att.GreaterSet, targetSchema);
+
+                    td = new Dim(att.RelationalColumnName, map.TargetSet, targetType, att.IsIdentity, false);
+                    tp = new DimPath(td);
+
+                    match = new PathMatch(sp, tp, 1.0);
+
+                    map.Matches.Add(match);
+                }
+            }
+
+            return map;
         }
 
         public Mapper()
@@ -521,329 +647,4 @@ namespace Com.Model
         }
     }
     
-    /// <summary>
-    /// It stores all necessary information for editing a mapping and the current state of mapping. 
-    /// </summary>
-    public class MappingModel
-    {
-        public MatchTree SourceTree { get; private set; }
-        public MatchTree TargetTree { get; private set; }
-
-        public Mapping Mapping { get; set; } // It is the current state of the mapping. And it is what is initialized and returned. 
-
-        private CsTable _sourceSet;
-        public CsTable SourceSet 
-        {
-            get { return _sourceSet; }
-            set 
-            {
-                Debug.Assert(value != null, "Wrong use: a set in mapping cannot be null (use root instead).");
-                if (_sourceSet == value) return;
-                _sourceSet = value;
-
-                Mapping.SourceSet = SourceSet; // Update mapper
-
-                // Update tree
-                SourceTree.Children.Clear();
-                MatchTreeNode node = new MatchTreeNode(SourceSet);
-                SourceTree.AddChild(node);
-                node.ExpandTree();
-                node.AddSourcePaths(Mapping);
-            }
-        }
-
-        private CsTable _targetSet;
-        public CsTable TargetSet
-        {
-            get { return _targetSet; }
-            set
-            {
-                Debug.Assert(value != null, "Wrong use: a set in mapping cannot be null (use root instead).");
-                if (_targetSet == value) return;
-                _targetSet = value;
-
-                Mapping.TargetSet = TargetSet; // Update mapper
-
-                // Update tree
-                TargetTree.Children.Clear();
-                MatchTreeNode node = new MatchTreeNode(TargetSet);
-                node.ExpandTree();
-                node.AddTargetPaths(Mapping);
-                TargetTree.AddChild(node);
-            }
-        }
-
-        /// <summary>
-        /// Primary: returns true if this node has any match and false otherwise (not assigned). 
-        /// Secondary: returns true if this node is matched against the currently selected primary node and false otherwise (so only one node in the whole secondary tree is true).
-        /// </summary>
-        /// <returns></returns>
-        public bool IsMatchedSource()
-        {
-            if (SourceTree.SelectedPath == null) return false;
-            return IsMatchedSource(SourceTree.SelectedPath);
-        }
-        public bool IsMatchedSource(DimPath path)
-        {
-            PathMatch match = Mapping.GetMatchForSource(path);
-
-            if (match == null) return false;
-
-            if (SourceTree.IsPrimary)
-            {
-                return true;
-            }
-            else
-            {
-                if (TargetTree.SelectedPath == null) return false;
-                return match.MatchesTarget(TargetTree.SelectedPath);
-            }
-        }
-
-        /// <summary>
-        /// Primary: returns true if this node has any match and false otherwise (not assigned). 
-        /// Secondary: returns true if this node is matched against the currently selected primary node and false otherwise (so only one node in the whole secondary tree is true).
-        /// </summary>
-        /// <returns></returns>
-        public bool IsMatchedTarget()
-        {
-            if (TargetTree.SelectedPath == null) return false;
-            return IsMatchedTarget(TargetTree.SelectedPath);
-        }
-        public bool IsMatchedTarget(DimPath path)
-        {
-            PathMatch match = Mapping.GetMatchForTarget(path);
-
-            if (match == null) return false;
-
-            if (TargetTree.IsPrimary)
-            {
-                return true;
-            }
-            else
-            {
-                if (SourceTree.SelectedPath == null) return false;
-                return match.MatchesSource(SourceTree.SelectedPath);
-            }
-        }
-
-        /// <summary>
-        /// Secondary: Enabled/disabled status of a secondary node. Whether the current paths can be added as a new match without contradiction to the existing matches.
-        /// Secondary: given a primary currently selected node, compute if a match with this secondary node does not contradict to existing matches (so it can be added). Alternatively, if relevances are precomputed then we find if relevance is higher than 0.
-        /// Primary: always true (if there is at least one possible secondary match). 
-        /// </summary>
-        public bool CanMatchTarget(DimPath path)
-        {
-            if (TargetTree.IsPrimary)
-            {
-                return true;
-            }
-            else
-            {
-                DimPath priPath = SourceTree.SelectedPath;
-                if (priPath == null) return false; // Primary node is not selected
-
-                if (!priPath.IsPrimitive || !path.IsPrimitive) return false; // Only primitive paths can be matchd
-
-                return true;
-            }
-        }
-
-        public bool CanMatchSource(DimPath path)
-        {
-            // TODO: Copy-paste when ready
-            return true;
-        }
-
-        /// <summary>
-        /// Primary: does not do anything (or calls the same method of the secondary tree). 
-        /// Secondary: takes the currently selected primary node and this secondary node and adds this match to the list. Previous match is deleted. Contradictory matches are removed. Match status of nodes needs to be redrawn.
-        /// </summary>
-        public PathMatch AddMatch()
-        {
-            if (SourceTree.SelectedPath == null || TargetTree.SelectedPath == null) return null;
-
-            PathMatch match = new PathMatch(SourceTree.SelectedPath, TargetTree.SelectedPath, 1.0);
-            Mapping.AddMatch(match); // Some existing matches (which contradict to the added one) will be removed
-
-            return match;
-        }
-
-        /// <summary>
-        /// Remove the mathc corresponding to the current selections. 
-        /// </summary>
-        public void RemoveMatch()
-        {
-            if (SourceTree.SelectedPath == null || TargetTree.SelectedPath == null) return;
-
-            Mapping.RemoveMatch(SourceTree.SelectedPath, TargetTree.SelectedPath); // Also other matches can be removed
-        }
-        public MappingModel(CsColumn sourceDim, CsColumn targetDim)
-            : this(sourceDim.GreaterSet, targetDim.GreaterSet)
-        {
-            SourceTree.Children[0].Dim = sourceDim;
-            TargetTree.Children[0].Dim = targetDim;
-        }
-
-        public MappingModel(CsTable sourceSet, CsTable targetSet)
-        {
-            Mapping = new Mapping(sourceSet, targetSet);
-
-            SourceTree = new MatchTree(this);
-            SourceTree.IsPrimary = true;
-            TargetTree = new MatchTree(this);
-            TargetTree.IsPrimary = false;
-
-            SourceSet = sourceSet; // Here also the tree will be constructed
-            TargetSet = targetSet;
-        }
-
-        public MappingModel(Mapping mapping)
-        {
-            Mapping = mapping;
-
-            SourceTree = new MatchTree(this);
-            SourceTree.IsPrimary = true;
-            TargetTree = new MatchTree(this);
-            TargetTree.IsPrimary = false;
-
-            SourceSet = mapping.SourceSet; // Here also the tree will be constructed
-            TargetSet = mapping.TargetSet;
-        }
-    }
-
-    /// <summary>
-    /// It displays the current state of mapping between two sets as properties of the tree nodes depending on the role of the tree. 
-    /// </summary>
-    public class MatchTree : MatchTreeNode
-    {
-        public MappingModel MappingModel { get; set; }
-
-        public bool IsSource { get { return MappingModel.SourceTree == this;  } } // Whether this tree corresponds to source paths in the mappings.
-        public bool IsTarget { get { return MappingModel.TargetTree == this; } } // Whether this tree corresponds to target paths in the mappings. 
-
-        public bool IsPrimary { get; set; } // Defines how the node properties are computed and displayed as well as the logic of the tree. 
-        public bool OnlyPrimitive { get; set; } // Only primitive dimensions/paths can be matched (not intermediate). So intermediate elemens are not matched (but might display information about matches derived from primitive elements).
-
-        // This is important for generation of the current status: disabled/enabled, relevance etc.
-        public MatchTreeNode SelectedNode { get; set; } // Selected in this tree. Bind tree view selected item to this field.
-        public DimPath SelectedPath // Transform selected node into valid selected path
-        {
-            get
-            {
-                if (SelectedNode == null) return null;
-                DimPath selectedPath = SelectedNode.DimPath;
-
-                // Trimm to source or target set of the mapping in the root
-                if(IsSource)
-                    selectedPath.RemoveFirst(MappingModel.SourceSet);
-                else
-                    selectedPath.RemoveFirst(MappingModel.TargetSet);
-
-                return selectedPath;
-            }
-        }
-
-        public MatchTree CounterTree { get { return IsSource ? MappingModel.TargetTree : MappingModel.SourceTree; } } // Another tree
-
-        public MatchTree(MappingModel model)
-            : base()
-        {
-            MappingModel = model;
-        }
-    }
-
-    /// <summary>
-    /// It provides methods and propoerties for a node which depend on the current mappings and role of the tree. 
-    /// The class assumes that the root of the tree is a special node storing mappings, tree roles and other necessary data. 
-    /// </summary>
-    public class MatchTreeNode : DimTree
-    {
-        public DimPath MappingPath // Trimmed to source or target set of the mapping in the root
-        {
-            get
-            {
-                MatchTree root = (MatchTree)Root;
-                DimPath path = DimPath;
-                if (root.IsSource)
-                    path.RemoveFirst(root.MappingModel.SourceSet);
-                else
-                    path.RemoveFirst(root.MappingModel.TargetSet);
-                return path;
-            }
-        }
-
-        /// <summary>
-        /// Primary: either not shown or 1.0 or relevance of the current (existing) match if it exists for this element retrieved from the mapper. 
-        /// Secondary: if it is already matched then relevance of existing match (the same as for primary) and if it is not chosen (not current) then the relevance computed by the recommender. 
-        /// </summary>
-        public double MatchRelevance
-        {
-            get
-            {
-                return 1.0;
-            }
-        }
-
-        public bool IsMatched
-        {
-            get
-            {
-                MatchTree root = (MatchTree)Root;
-                MappingModel model = root.MappingModel;
-
-                if (root.IsSource) return model.IsMatchedSource(MappingPath);
-                else return model.IsMatchedTarget(MappingPath);
-            }
-        }
-
-        public bool CanMatch
-        {
-            get
-            {
-                MatchTree root = (MatchTree)Root;
-                MappingModel model = root.MappingModel;
-
-                if (root.IsSource) return model.CanMatchSource(MappingPath);
-                else return model.CanMatchTarget(MappingPath);
-            }
-        }
-
-        public PathMatch AddMatch()
-        {
-            MatchTree root = (MatchTree)Root;
-            return root.MappingModel.AddMatch();
-        }
-
-        /// <summary>
-        /// Primary: does not do anything (or calls the same method of the secondary tree). 
-        /// Secondary: remove the current match so this secondary is node (and the corresponding primary node) are not matched anymore. Works only if the two nodes are currently matched. 
-        /// </summary>
-        public PathMatch RemoveMatch()
-        {
-            throw new NotImplementedException();
-        }
-
-        public MatchTreeNode(CsColumn dim, DimTree parent = null)
-            : base(dim, parent)
-        {
-        }
-
-        public MatchTreeNode(CsTable set, DimTree parent = null)
-            : base(set, parent)
-        {
-        }
-
-        public MatchTreeNode()
-            : base()
-        {
-        }
-    }
-
-    public enum MappingDirection
-    {
-        SOURCE, // Data flow in the direction FROM this set to a target set
-        TARGET, // Data flow in the direction TO this element from a source set
-    }
-
 }

@@ -54,6 +54,7 @@
     <Compile Include="Model\DimTree.cs" />
     <Compile Include="Model\Evaluator.cs" />
     <Compile Include="Model\Expr.cs" />
+    <Compile Include="Model\Mapper.cs" />
     <Compile Include="Model\Mapping.cs" />
     <Compile Include="Model\Set.cs" />
     <Compile Include="Model\SetTop.cs" />
