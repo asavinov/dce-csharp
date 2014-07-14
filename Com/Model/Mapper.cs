@@ -624,6 +624,7 @@ namespace Com.Model
 
                     td = new Dim(att.RelationalColumnName, map.TargetSet, targetType, att.IsIdentity, false);
                     tp = new DimPath(td);
+                    tp.Name = sp.Name;
 
                     match = new PathMatch(sp, tp, 1.0);
 

@@ -457,9 +457,6 @@ namespace Com.Model
 
             bool isKey = !string.IsNullOrEmpty(att.RelationalPkName) || att.IsIdentity;
 
-            // PROBLEM: We must check whether a dimension already exists because the same dims are inclued in many attribute as a segment
-            // These dimensions can be either stored in a list (like attributes) or withint schema
-
             if (string.IsNullOrEmpty(att.RelationalFkName)) // No FK - primitive column - end of recursion
             {
                 // Find or create a primitive dim segment
