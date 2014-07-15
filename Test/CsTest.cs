@@ -349,6 +349,11 @@ namespace Test
             
             Mapper mapper = new Mapper();
             Mapping map = mapper.CreatePrimitive(top.FindTable("Order Details"), orderDetailsTable);
+            CsColumn dim = new Dim(map);
+            dim.Add();
+
+            //dim.GreaterSet.TableDefinition.Populate();
+            // TODO next: generate correct evaluator for: various dim defs (arithm, mapping etc.), various source set/input types (local, oledb Row, etc.)
 
         }
 

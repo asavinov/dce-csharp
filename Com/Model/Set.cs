@@ -428,7 +428,12 @@ namespace Com.Model
         /// In future, we should probabyl apply these constraints to this set elements while the source set has its own constraints.
         /// </summary>
         public ExprNode WhereExpression { get; set; }
-        public List<CsColumn> ProjectDimensions { get; set; } // Output tuples of these dimensions are appended to this set (other tuples are excluded). Alternatively, this element must be referenced by at one lesser element COUNT(this<-proj_dim<-(Set)) > 0
+
+        public List<CsColumn> ProjectDimensions // Output tuples of these dimensions are appended to this set (other tuples are excluded). Alternatively, this element must be referenced by at one lesser element COUNT(this<-proj_dim<-(Set)) > 0
+        {
+            get { return LesserDims.Where(d => d.ColumnDefinition.IsGenerating).ToList(); }
+            set { ; } // Use a flag of some lesser dimension
+        }
 
         /// <summary>
         /// Ordering of the instances. 
@@ -441,7 +446,7 @@ namespace Com.Model
         /// </summary>
         public void Populate() 
         {
-            if (TableDefinition.ProjectDimensions == null || TableDefinition.ProjectDimensions.Count == 0) // Product of local sets (no project/de-project from another set)
+            if (TableDefinition.ProjectDimensions.Count == 0) // Product of local sets (no project/de-project from another set)
             {
                 //
                 // Find local greater generation sets including the super-set. Create a tuple corresponding to these dimensions
@@ -549,26 +554,43 @@ namespace Com.Model
                 }
 
             }
-            else if (true) // There are import dimensions so copy data from another set (projection of another set)
+            else // There are import dimensions so copy data from another set (projection of another set)
             {
                 CsColumn projectDim = TableDefinition.ProjectDimensions[0];
                 CsTable sourceSet = projectDim.LesserSet;
                 CsTable targetSet = projectDim.GreaterSet; // this set
 
-                //
                 // Prepare the expression from the mapping
-                //
                 CsColumnEvaluator evaluator = projectDim.ColumnDefinition.GetColumnEvaluator();
 
-                //
-                // Loop over all function inputs with evaluation and using the output tuple for appending
-                //
-                for (Offset input = 0; input < sourceSet.TableData.Length; input++)
+                if (sourceSet.Top is SetTopOledb) // Generating set data from a remote set in an external database
                 {
-                    evaluator.Evaluate(input);
-                    //targetSet.TableData.Append(tupleExpression);
-                    // TODO: append also an instance to the function (the function has to be nullifed before the procedure)
-                    //SetValue(offset, SelectExpression.Output); // Store the final result
+                    // Produce a result set from the remote database by executing a query on the source table
+                    DataTable dataTable = ((SetTopOledb)sourceSet.Top).LoadTable(sourceSet);
+
+                    // Loop over all remote result set records
+                    foreach (DataRow row in dataTable.Rows) // A row is <colName, primValue> collection
+                    {
+                        //evaluator.Evaluate(row); // Evaluate input
+
+                        //funcExpr.Input.Dimension.Value = row; // Initialize 'this'
+                        //funcExpr.Evaluate(); // Evaluate the expression tree by computing primtive tuple values
+                        //targetSet.Append(tupleExpression); // Append an element using the tuple composed of primitive values
+                    }
+                }
+                else if (sourceSet.Top is SetTop) // Generating set data from a local set in this mashup
+                {
+                    // Loop over all function inputs with evaluation and using the output tuple for appending
+                    for (Offset input = 0; input < sourceSet.TableData.Length; input++)
+                    {
+                        evaluator.Evaluate(input); // Evaluate input
+                        //targetSet.TableData.Append(tupleExpression); // Append output
+                        // TODO: append also an instance to the function (the function has to be nullifed before the procedure)
+                        //SetValue(offset, SelectExpression.Output); // Store the final result
+
+                        // TODO: append also an instance to the function (the function has to be nullifed before this procedure)
+                        //SetValue(offset, SelectExpression.Output); // Store the final result
+                    }
                 }
             }
 

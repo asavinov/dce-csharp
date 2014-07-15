@@ -151,11 +151,12 @@ namespace Com.Model
         }
 
         public Dim(Mapping mapping)
-            : this(mapping.SourceSet.Name, mapping.SourceSet, mapping.TargetSet)
+            : this(mapping.SourceSet.Name, mapping.SourceSet, mapping.TargetSet, false, false)
         {
             if (ColumnDefinition != null)
             {
                 ColumnDefinition.Mapping = mapping;
+                columnDefinition.IsGenerating = true;
             }
         }
 

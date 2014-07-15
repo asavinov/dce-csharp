@@ -489,6 +489,8 @@ namespace Com.Model
 
         public ExprNode WhereExpression { get; set; } // It describes the domain of the function or where the function returns null independent of other definitions
 
+        public bool IsGenerating { get; set; }
+
         //
         // Aggregation
         //

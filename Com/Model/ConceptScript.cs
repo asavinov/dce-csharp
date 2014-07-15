@@ -209,6 +209,8 @@ namespace Com.Model
 
         ExprNode WhereExpression { get; set; }
 
+        bool IsGenerating { get; set; }
+
         CsColumnEvaluator GetColumnEvaluator(); // Get an object which is used to compute the function values according to the formula
 
         //
