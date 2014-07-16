@@ -524,9 +524,18 @@ namespace Com.Model
             // Based on library - load lib, instantiate via factory, initialize (say, resolve names), return object
             // Based on source code - compile class, instantiate, initialize (say, resolve), return instance
 
-            CsColumnEvaluator e = new ExprEvaluator(Dim);
+            CsColumnEvaluator evaluator;
 
-            return e;
+            if (Dim.LesserSet.Top != Dim.GreaterSet.Top && Dim.LesserSet.Top is SetTopOledb) // Import data from a remote source
+            {
+                evaluator = null; // OledbEvaluator(Dim);
+            }
+            else // Local
+            {
+                evaluator = new ExprEvaluator(Dim);
+            }
+
+            return evaluator;
         }
 
         //
@@ -537,6 +546,8 @@ namespace Com.Model
 
         public void Evaluate()
         {
+            // Never changes any set - neither lesser nor greater
+
             CsColumnEvaluator evaluator = GetColumnEvaluator();
             CsTable loopTable = evaluator.LoopTable;
 

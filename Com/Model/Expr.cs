@@ -72,9 +72,37 @@ namespace Com.Model
         // The resolved object references are stored in the fields and will be used during evaluation without name resolution
         public void Resolve(CsSchema schema, List<CsVariable> variables)
         {
+            if (Result == null)
+            {
+                Result = new Variable("return", "Void");
+            }
+
             if (Operation == OperationType.VALUE)
             {
-
+                //
+                // Resolve string into object and store in the result. Derive the type from the format. 
+                //
+                int intValue;
+                // About conversion from string: http://stackoverflow.com/questions/3965871/c-sharp-generic-string-parse-to-any-object
+                if (int.TryParse(Name, out intValue))
+                {
+                    Type = "Integer";
+                    Result.SetValue(intValue);
+                }
+                double doubleValue;
+                if (double.TryParse(Name, out doubleValue))
+                {
+                    Type = "Double";
+                    Result.SetValue(doubleValue);
+                }
+                else // Cannot parse means string
+                {
+                    Type = "String";
+                    Result.SetValue(Name);
+                }
+                TypeSet = schema.GetPrimitive(Type);
+                Result.TypeName = Type;
+                Result.TypeTable = TypeSet;
             }
             else if (Operation == OperationType.TUPLE)
             {
@@ -108,20 +136,29 @@ namespace Com.Model
                     TypeSet = schema.FindTable(Type);
                 }
 
-
                 //
-                // Now resolve children
+                // Resolve children (important: after the tuple itself, because this node will be used)
                 //
-
+                foreach (ExprNode childNode in Children)
+                {
+                    childNode.Resolve(schema, variables);
+                }
             }
-            if (Operation == OperationType.CALL)
+            else if (Operation == OperationType.CALL)
             {
                 //
-                // Resolve children
+                // Resolve children (important: before this node because this node uses children)
                 //
-
-
-                // TODO: Set correct Action everywhere if not set
+                foreach (ExprNode childNode in Children)
+                {
+                    childNode.Resolve(schema, variables);
+                }
+                
+                // Resolve type name
+                if (!string.IsNullOrEmpty(Type))
+                {
+                    TypeSet = schema.FindTable(Type);
+                }
 
                 //
                 // Resolve this (assuming the children have been resolved)
@@ -129,51 +166,64 @@ namespace Com.Model
                 ExprNode methodChild = GetChild("method"); // Get column name
                 ExprNode thisChild = GetChild("this"); // Get column lesser set
                 int childCount = Children.Count;
-                if (!string.IsNullOrEmpty(Type))
+
+                if (childCount == 0) // Resolve variable (or add a child this variable assuming that it has been omitted)
                 {
-                    TypeSet = schema.FindTable(Type);
+                    // Try to resolve as a variable (including this variable). If success then finish.
+                    CsVariable var = variables.FirstOrDefault(v => StringSimilarity.SameColumnName(v.Name, Name));
+
+                    if (var != null)
+                    {
+                        variable = var;
+
+                        Type = var.TypeName;
+                        TypeSet = var.TypeTable;
+                        Result.TypeName = Type;
+                        Result.TypeTable = TypeSet;
+                    }
+                    else // Cannot resolve as a variable - try resolve as a column name of 'this'
+                    {
+                        // Add expression node representing 'this' variable (so we apply a function to this variable)
+                        thisChild = new ExprNode();
+                        thisChild.Name = "this";
+                        thisChild.Operation = OperationType.CALL;
+                        thisChild.Action = ActionType.READ;
+                        AddChild(thisChild);
+
+                        // Call this method again. It will resolve this same node as a column applied to this variabe (just added as a child) 
+                        this.Resolve(schema, variables);
+                    }
                 }
-                else if (methodChild != null && thisChild != null) // Function access
+                else if (thisChild != null) // Function access (resolve column)
                 {
-                    string methodName = methodChild.GetChild(0).Name;
+                    string methodName = this.Name;
                     CsColumn col = thisChild.TypeSet.GetGreaterDim(methodName);
                     column = col.ColumnData;
-                    TypeSet = col.GreaterSet;
+
                     Type = col.GreaterSet.Name;
-                }
-                else if (methodChild != null && childCount == 1) // Variable
-                {
-                    string methodName = methodChild.GetChild(0).Name;
-                    CsVariable var = variables.FirstOrDefault(v => v.Name.Equals(methodName));
-                    variable = var;
-                    Type = variable.TypeName;
-                    TypeSet = variable.TypeTable;
+                    TypeSet = col.GreaterSet;
+                    Result.TypeName = Type;
+                    Result.TypeTable = TypeSet;
                 }
                 else // System procedure or operator (arithmetic, logical etc.)
                 {
-                    string methodName = methodChild.GetChild(0).Name;
-                    // TODO: Type has to be derived from arguments by using type conversion rules
+                    string methodName = this.Name;
+
+                    // TODO: Derive return type. It is derived from arguments by using type conversion rules
                     Type = "Double";
                     TypeSet = schema.GetPrimitive(Type);
-                    if (methodName == "*")
-                    {
-                        Action = ActionType.MUL;
-                    }
-                    else if (methodName == "/")
-                    {
-                        Action = ActionType.DIV;
-                    }
-                    else if (methodName == "+")
-                    {
-                        Action = ActionType.ADD;
-                    }
-                    else if (methodName == "-")
-                    {
-                        Action = ActionType.SUB;
-                    }
-                    else // Some procedure. Find its API specification or retrieve via reflection
-                    {
+                    Result.TypeName = Type;
+                    Result.TypeTable = TypeSet;
 
+                    switch(Action) 
+                    {
+                        case ActionType.MUL:
+                        case ActionType.DIV:
+                        case ActionType.ADD:
+                        case ActionType.SUB:
+                            break;
+                        default: // Some procedure. Find its API specification or retrieve via reflection
+                            break;
                     }
                 }
             }

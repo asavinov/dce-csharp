@@ -56,20 +56,20 @@ namespace Test
             CsTable t1 = schema.CreateTable("Table 1");
             schema.AddTable(t1, schema.Root, null);
 
-            CsColumn c11 = schema.CreateColumn("Column 11", t1, schema.GetTable("Integer"), true);
+            CsColumn c11 = schema.CreateColumn("Column 11", t1, schema.GetPrimitive("Integer"), true);
             c11.Add();
-            CsColumn c12 = schema.CreateColumn("Column 12", t1, schema.GetTable("String"), true);
+            CsColumn c12 = schema.CreateColumn("Column 12", t1, schema.GetPrimitive("String"), true);
             c12.Add();
-            CsColumn c13 = schema.CreateColumn("Column 13", t1, schema.GetTable("Double"), false);
+            CsColumn c13 = schema.CreateColumn("Column 13", t1, schema.GetPrimitive("Double"), false);
             c13.Add();
 
             // Table 2
             CsTable t2 = schema.CreateTable("Table 2");
             schema.AddTable(t2, t1, null);
-            
-            CsColumn c21 = schema.CreateColumn("Column 21", t2, schema.GetTable("String"), true);
+
+            CsColumn c21 = schema.CreateColumn("Column 21", t2, schema.GetPrimitive("String"), true);
             c21.Add();
-            CsColumn c22 = schema.CreateColumn("Column 22", t2, schema.GetTable("Double"), false);
+            CsColumn c22 = schema.CreateColumn("Column 22", t2, schema.GetPrimitive("Double"), false);
             c22.Add();
 
 
@@ -98,11 +98,11 @@ namespace Test
             CsTable t1 = schema.CreateTable("Table 1");
             schema.AddTable(t1, schema.Root, null);
 
-            CsColumn c11 = schema.CreateColumn("Column 11", t1, schema.GetTable("Integer"), true);
+            CsColumn c11 = schema.CreateColumn("Column 11", t1, schema.GetPrimitive("Integer"), true);
             c11.Add();
-            CsColumn c12 = schema.CreateColumn("Column 12", t1, schema.GetTable("String"), true);
+            CsColumn c12 = schema.CreateColumn("Column 12", t1, schema.GetPrimitive("String"), true);
             c12.Add();
-            CsColumn c13 = schema.CreateColumn("Column 13", t1, schema.GetTable("Double"), false);
+            CsColumn c13 = schema.CreateColumn("Column 13", t1, schema.GetPrimitive("Double"), false);
             c13.Add();
 
             // Table 2
@@ -110,9 +110,9 @@ namespace Test
             CsTable t2 = schema.CreateTable("Table 2");
             schema.AddTable(t2, t1, null);
 
-            CsColumn c21 = schema.CreateColumn("Column 21", t2, schema.GetTable("String"), true);
+            CsColumn c21 = schema.CreateColumn("Column 21", t2, schema.GetPrimitive("String"), true);
             c21.Add();
-            CsColumn c22 = schema.CreateColumn("Column 22", t2, schema.GetTable("Double"), false);
+            CsColumn c22 = schema.CreateColumn("Column 22", t2, schema.GetPrimitive("Double"), false);
             c22.Add();
 
             //
@@ -164,11 +164,11 @@ namespace Test
             schema.AddTable(t1, schema.Root, null);
 
             // Columns
-            CsColumn c11 = schema.CreateColumn("Column 11", t1, schema.GetTable("Integer"), true);
+            CsColumn c11 = schema.CreateColumn("Column 11", t1, schema.GetPrimitive("Integer"), true);
             c11.Add();
-            CsColumn c12 = schema.CreateColumn("Column 12", t1, schema.GetTable("String"), true);
+            CsColumn c12 = schema.CreateColumn("Column 12", t1, schema.GetPrimitive("String"), true);
             c12.Add();
-            CsColumn c13 = schema.CreateColumn("Column 13", t1, schema.GetTable("Double"), false);
+            CsColumn c13 = schema.CreateColumn("Column 13", t1, schema.GetPrimitive("Double"), false);
             c13.Add();
 
             //
@@ -217,13 +217,13 @@ namespace Test
             schema.AddTable(t1, schema.Root, null);
 
             // Columns
-            CsColumn c11 = schema.CreateColumn("Column 11", t1, schema.GetTable("Integer"), true);
+            CsColumn c11 = schema.CreateColumn("Column 11", t1, schema.GetPrimitive("Integer"), true);
             c11.Add();
-            CsColumn c12 = schema.CreateColumn("Column 12", t1, schema.GetTable("String"), true);
+            CsColumn c12 = schema.CreateColumn("Column 12", t1, schema.GetPrimitive("String"), true);
             c12.Add();
-            CsColumn c13 = schema.CreateColumn("Column 13", t1, schema.GetTable("Double"), false);
+            CsColumn c13 = schema.CreateColumn("Column 13", t1, schema.GetPrimitive("Double"), false);
             c13.Add();
-            CsColumn c14 = schema.CreateColumn("Column 14", t1, schema.GetTable("Decimal"), false);
+            CsColumn c14 = schema.CreateColumn("Column 14", t1, schema.GetPrimitive("Decimal"), false);
             c14.Add();
 
             //
@@ -253,17 +253,20 @@ namespace Test
             //
             // Define a derived column with a definition
             //
-            CsColumn c15 = schema.CreateColumn("Column 15", t1, schema.GetTable("Decimal"), false);
+            CsColumn c15 = schema.CreateColumn("Column 15", t1, schema.GetPrimitive("Decimal"), false);
             c15.Add();
-            // TODO: Check that the length is set to the table length during adding
+            // TODO: Check that the length is set to the table length during adding (all output values are null) interface ColumnData
 
-            // Manually Expr to be used by Evaluator: new ExprNode()
-            // ConceptScript source code: [Decimal] [Column 14] ([Column 11]+[Column 13]) * 10.0
-            // Construct C# source code (to be compile to Evaluator)
-            ExprNode ast = BuildExpr("[Column 11]+[Column 13] * 10.0");
-            // Important to get a node with arithmetic operation, calls in leaves and constant value in a leaf.
-
+            // Simple expression: arithmetic operation, column access in leaves and constant value in a leaf.
+            ExprNode ast = BuildExpr("([Column 11]+10.0) * this.[Column 13]"); // ConceptScript source code: "[Decimal] [Column 15] <body of expression>"
             c15.ColumnDefinition.Formula = ast;
+            c15.ColumnDefinition.Evaluate(); // Evaluate the expression
+
+            // Tasks:
+            // Check correct expression:
+            // - Node for column access: *exists, resolved into column objects, and correctly used by interpreter
+            // - Nodes for 'this' access: *exists, !!!created if missed somewhere and resolved into variable object, and correctly used by interpreter
+            // - Nodes for constants (10.0): *exists (VALUE), converted from string to object result statically, and correctly used by interpreter
 
             // Type name = expr
             // Type name = aaa + bbb / 2
@@ -289,12 +292,6 @@ namespace Test
             // Tuples: (m1, m2), alternatively, T() or (())
 
 
-            //
-            // Evaluate the column
-            //
-
-            //c15.ColumnDefinition.Formula.Resolve();
-            //c15.ColumnDefinition.Evaluate();
 
         }
 
@@ -354,6 +351,30 @@ namespace Test
 
             //dim.GreaterSet.TableDefinition.Populate();
             // TODO next: generate correct evaluator for: various dim defs (arithm, mapping etc.), various source set/input types (local, oledb Row, etc.)
+            // - finish and test evaluator for arithmetic expressions by evaluating computed columns and generation of evaluator from expression
+            // - generate evaluator from mapping: either directly or first tuple expression tree and then (standard) evaluator
+            // - implement evaluator for remote (oledb) input where we have to iterate through another input type (Row object as input instead of Offset)
+
+            // Evaluator:
+            // - IsUpdate - type of change of the function output: accumulate or set. Essentially, whether it is aggregation evaluator.
+            // - LoopTable - what set to iterate (fact set for aggregation)
+            // - is supposed to be from Evaluate of Column to decide what to loop and how to update etc.
+
+            // Set population:
+            // - greater with filter (use key dims; de-projection of several greater dims by storing all combinations of their inputs)
+            //   - use only Key greater dims for looping. 
+            //   - user greater sets input values as constituents for new tuples
+            //   - greater dims are populated simultaniously without evaluation (they do not have defs.)
+            // - lesser with filter
+            //   - use only IsGenerating lesser dims for looping. 
+            //   - use thier lesser sets to loop through all their combinations
+            //   - !!! each lesser dim is evaluated using its formula that returns some constituent of the new set (or a new element in the case of 1 lesser dim)
+            //   - set elements store a combination of lesser dims outputs
+            //   - each lesser dim stores the new tuple in its output (alternatively, these dims could be evaluatd after set population - will it really work for multiple lesser dims?)
+
+            //   - so we should NOT use column Evaluator for populating a set 
+            //      --> column evaluator of generating dims is never used from the colum population procedure (but can be if called explicitly) 
+            //      --> all column evaluators NEVER change (influence) their sets (neither greater nor lesser) - it computes only this function
 
         }
 

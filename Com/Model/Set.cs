@@ -448,13 +448,12 @@ namespace Com.Model
         {
             if (TableDefinition.ProjectDimensions.Count == 0) // Product of local sets (no project/de-project from another set)
             {
-                //
-                // Find local greater generation sets including the super-set. Create a tuple corresponding to these dimensions
-                //
+                // Find local greater key dimensions including the super-dim.
                 var dims = new List<CsColumn>();
                 dims.Add(SuperDim);
                 dims.AddRange(KeyColumns);
 
+                // Create a tuple corresponding to these dimensions (an element of this set)
                 ExprNode tupleExpr = new ExprNode(); // Represents a record to be appended to the set (argument for Append method)
                 // TODO: Configure it as a one-level tuple with values in leaves
 
@@ -527,7 +526,7 @@ namespace Com.Model
                                 if (dimExpression != null) dimExpression.Output = offsets[i];
                             }
 
-                            Append(tupleExpr);
+                            Append(tupleExpr); // Set output for all key (also non-key) dimensions
                         }
                         */
 
@@ -556,6 +555,13 @@ namespace Com.Model
             }
             else // There are import dimensions so copy data from another set (projection of another set)
             {
+                // Use only generating lesser dimensions (IsGenerating)
+                // Organize a loop on combinations of their inputs
+                // For each combination, evaluate all the lesser generating dimensions by finding their outputs
+                // Use these outputs to create a new tuple and try to append it to this set
+                // If appended or found, then set values of the greater generating dimensions
+                // If cannot be added (does not satisfy constraints) then set values of the greater generating dimensions to null
+
                 CsColumn projectDim = TableDefinition.ProjectDimensions[0];
                 CsTable sourceSet = projectDim.LesserSet;
                 CsTable targetSet = projectDim.GreaterSet; // this set

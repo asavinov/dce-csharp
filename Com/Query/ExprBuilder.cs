@@ -15,6 +15,8 @@ namespace Com.Query
     /// </summary>
     public class ExprBuilder : ExprBaseVisitor<ExprNode>
     {
+        static bool accessAsThisNode = true; // Design alternative: access node can be represented either as a child or this node
+
         public override ExprNode VisitExpr(ExprParser.ExprContext context) 
         {
             ExprNode n = new ExprNode();
@@ -26,26 +28,39 @@ namespace Com.Query
                 n.Operation = OperationType.CALL;
                 n.Action = ActionType.READ;
 
-                ExprNode expr1 = Visit(context.GetChild(0));
-                if (expr1 != null)
+                ExprNode exprNode = Visit(context.expr(0));
+                if (exprNode != null)
                 {
-                    n.AddChild(expr1);
+                    n.AddChild(exprNode);
                 }
 
-                ExprNode expr2 = Visit(context.GetChild(2));
-                if (expr2 != null)
+                ExprNode accessNode = Visit(context.access());
+                if (accessAsThisNode) // Represent accessor (after dot) by this node
                 {
-                    n.AddChild(expr2);
+                    if (context.access().name() != null) // Name of the function
+                    {
+                        n.Name = accessNode.Name;
+                    }
+                    else // A definition of the function (lambda) is provided instead of name
+                    {
+                        context.access().scope();
+                        n.Name = "lambda"; // Automatically generated name for a unnamed lambda
+                    }
                 }
-
-                // TODO:
-                // This node as a method is applied to the only child
-                // OR: First child 'method' is applied to the second child 'this'
+                else // Access node as a child (it can be named either by real method name or as a special 'method' with the method described represented elsewhere)
+                {
+                    n.Name = ".";
+                    if (accessNode != null)
+                    {
+                        n.AddChild(accessNode);
+                    }
+                }
             }
             else if (context.op != null) // Arithmetic operations
             {
                 n.Operation = OperationType.CALL;
                 string op = context.op.Text; // Alternatively, context.GetChild(1).GetText()
+                n.Name = op;
 
                 if (op == "*") n.Action = ActionType.MUL;
                 else if (op == "/") n.Action = ActionType.DIV;
@@ -77,7 +92,11 @@ namespace Com.Query
                     n.AddChild(expr2);
                 }
             }
-            else if (context.GetChild(0).GetText() == "TUPLE") // Tuple
+            else if (context.expr() != null && context.GetChild(0).GetText() == "(") // Priority
+            {
+                n = Visit(context.expr(0)); // Skip
+            }
+            else if (context.GetChild(0).GetText() == "((" || context.GetChild(0).GetText() == "TUPLE") // Tuple
             {
                 n.Operation = OperationType.TUPLE;
                 n.Action = ActionType.READ; // Find
@@ -114,7 +133,32 @@ namespace Com.Query
             }
             else if (context.GetChild(0) is ExprParser.AccessContext) // Access/call
             {
-                n = Visit(context.GetChild(0));
+                n.Operation = OperationType.CALL;
+                n.Action = ActionType.READ;
+
+                ExprNode accessNode = Visit(context.access());
+                if (accessAsThisNode) // Represent accessor (after dot) by this node
+                {
+                    if (context.access().name() != null) // Name of the function
+                    {
+                        n.Name = accessNode.Name;
+                    }
+                    else // A definition of the function (lambda) is provided instead of name
+                    {
+                        context.access().scope();
+                        n.Name = "lambda"; // Automatically generated name for a unnamed lambda
+                    }
+                }
+                else // Access node as a child (it can be named either by real method name or as a special 'method' with the method described represented elsewhere)
+                {
+                    n.Name = ".";
+                    if (accessNode != null)
+                    {
+                        n.AddChild(accessNode);
+                    }
+                }
+
+                // TODO: Read parameters and create nodes for them: context.access().param();
             }
 
             return n; 

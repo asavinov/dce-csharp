@@ -54,6 +54,7 @@ namespace Com.Model
             isUpdate = false;
             exprNode = column.ColumnDefinition.Formula;
             thisVariable = new Variable("this", LoopTable.Name);
+            thisVariable.TypeTable = LoopTable;
             columnData = column.ColumnData;
 
             // Resolve names in the expresion by storing direct references to storage objects which will be used during valuation (names will not be used
