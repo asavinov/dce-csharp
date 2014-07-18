@@ -39,7 +39,7 @@ namespace Com.Model
             exprNode.Evaluate();
 
             // Write the result value to the function
-            columnData.SetValue(input, exprNode.Result);
+            columnData.SetValue(input, exprNode.Result.GetValue());
 
             return null;
         }

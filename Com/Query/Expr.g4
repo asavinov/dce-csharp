@@ -100,9 +100,25 @@ literal
 //    :   Identifier ('.' Identifier)*
 //    ;
 
+//
+// Tuple general syntax <Type Name = expr> for expressions
+//
+// Using tuples a a full syntax in expressions.
+// Tuple operator (either TUPLE(...), ((...)) or simply (...)) is a normal operator that can be met in expressions where we expect a value.
+// The difference is only in type: normal expressions return primitive values while a tuple returns a combination which belongs to some set, and this type (set) has to be somehow determined.
+// It is important to understand that two definitions are equivalent:
+// Short: "(c11+c13) * 10.0" Full: "Double f = (c11+c13) * 10.0"
+// Short: "(T1 n1=..., T2 n2=...)" Full: "MySet f = (T1 n1=..., T2 n2=...)"
+
+// One solution is to introduce syntax for primitive expressions, where each part (subexpression) may have Type and Name information
+// Example: 2.0 -> Double myName=2.0
+// Example: a*(c+f1.f2/2.0))
+
 // Sample antlr4 grammars: https://github.com/antlr/grammars-v4
 
+//
 // Visitor:
+//
 // - Visitor methods must walk their children with explicit visit calls
 // - Visitor supports situations where an application must control *how* a tree is walked
 // - Visitor must *explicitly* trigger visits to child nodes to keep the tree traversal going

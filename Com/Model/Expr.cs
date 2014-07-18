@@ -5,6 +5,7 @@ using System.Text;
 using System.Diagnostics;
 
 using Offset = System.Int32;
+using System.Globalization;
 
 namespace Com.Model
 {
@@ -84,13 +85,13 @@ namespace Com.Model
                 //
                 int intValue;
                 // About conversion from string: http://stackoverflow.com/questions/3965871/c-sharp-generic-string-parse-to-any-object
-                if (int.TryParse(Name, out intValue))
+                if (int.TryParse(Name, NumberStyles.Integer, CultureInfo.InvariantCulture, out intValue))
                 {
                     Type = "Integer";
                     Result.SetValue(intValue);
                 }
                 double doubleValue;
-                if (double.TryParse(Name, out doubleValue))
+                if (double.TryParse(Name, NumberStyles.Float, CultureInfo.InvariantCulture, out doubleValue))
                 {
                     Type = "Double";
                     Result.SetValue(doubleValue);
@@ -248,34 +249,70 @@ namespace Com.Model
             }
             else if (Operation == OperationType.CALL)
             {
-                if (column != null) // Read/write function
+                //
+                // Evaluate children
+                //
+                foreach (ExprNode childNode in Children)
                 {
-                    ExprNode thisNode = GetChild("this");
-                    Offset input = (Offset)thisNode.Result.GetValue();
-                    object output = column.GetValue(input);
-                    Result.SetValue(output);
+                    childNode.Evaluate();
                 }
-                else if (variable != null) // Read/write a variable
+
+                double doubleRes = 0;
+
+                if (Action == ActionType.READ)
                 {
-                    object result = variable.GetValue();
-                    Result.SetValue(result);
-                }
-                if (Action == ActionType.MUL) // Read all arguments (except for 'method'), reduce to our type, and add to the result
-                {
-                    double res = 0;
-                    for (int i = 0; i < Children.Count; i++)
+                    if (column != null) 
                     {
-                        res += (double)GetChild(i).Result.GetValue();
+                        ExprNode thisNode = GetChild("this");
+                        Offset input = (Offset)thisNode.Result.GetValue();
+                        object output = column.GetValue(input);
+                        Result.SetValue(output);
                     }
+                    else if (variable != null)
+                    {
+                        object result = variable.GetValue();
+                        Result.SetValue(result);
+                    }
+                }
+                else if (Action == ActionType.MUL)
+                {
+                    foreach (ExprNode childNode in Children)
+                    {
+                        double arg = Convert.ToDouble(childNode.Result.GetValue());
+                        if (double.IsNaN(arg)) continue;
+                        doubleRes += arg;
+                    }
+                    Result.SetValue(doubleRes);
                 }
                 else if (Action == ActionType.DIV)
                 {
+                    foreach (ExprNode childNode in Children)
+                    {
+                        double arg = Convert.ToDouble(childNode.Result.GetValue());
+                        if (double.IsNaN(arg)) continue;
+                        doubleRes /= arg;
+                    }
+                    Result.SetValue(doubleRes);
                 }
                 else if (Action == ActionType.ADD)
                 {
+                    foreach (ExprNode childNode in Children)
+                    {
+                        double arg = Convert.ToDouble(childNode.Result.GetValue());
+                        if (double.IsNaN(arg)) continue;
+                        doubleRes += arg;
+                    }
+                    Result.SetValue(doubleRes);
                 }
                 else if (Action == ActionType.SUB)
                 {
+                    foreach (ExprNode childNode in Children)
+                    {
+                        double arg = Convert.ToDouble(childNode.Result.GetValue());
+                        if (double.IsNaN(arg)) continue;
+                        doubleRes /= arg;
+                    }
+                    Result.SetValue(doubleRes);
                 }
                 else // Some procedure. Find its API specification or retrieve via reflection
                 {

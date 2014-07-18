@@ -253,46 +253,17 @@ namespace Test
             //
             // Define a derived column with a definition
             //
-            CsColumn c15 = schema.CreateColumn("Column 15", t1, schema.GetPrimitive("Decimal"), false);
+            CsColumn c15 = schema.CreateColumn("Column 15", t1, schema.GetPrimitive("Double"), false);
             c15.Add();
-            // TODO: Check that the length is set to the table length during adding (all output values are null) interface ColumnData
 
             // Simple expression: arithmetic operation, column access in leaves and constant value in a leaf.
             ExprNode ast = BuildExpr("([Column 11]+10.0) * this.[Column 13]"); // ConceptScript source code: "[Decimal] [Column 15] <body of expression>"
             c15.ColumnDefinition.Formula = ast;
             c15.ColumnDefinition.Evaluate(); // Evaluate the expression
 
-            // Tasks:
-            // Check correct expression:
-            // - Node for column access: *exists, resolved into column objects, and correctly used by interpreter
-            // - Nodes for 'this' access: *exists, !!!created if missed somewhere and resolved into variable object, and correctly used by interpreter
-            // - Nodes for constants (10.0): *exists (VALUE), converted from string to object result statically, and correctly used by interpreter
-
-            // Type name = expr
-            // Type name = aaa + bbb / 2
-            // Type name = (Type name = 25.0, Type name = aaa-bbb, Type name = (T1 n1=10, T2 n2=...) )
-            // Conclusion: tuple operator (either TUPLE() or simply ()) is a normal operator that can be met in expressions where we expect a value.
-            // The difference is only in type: normal expressions return primitive values while a tuple returns a combination which belongs to some set, and this type (set) has to be somehow determined.
-            // Exception: we can use tuple operator only in assignment to a member - not where primitive types are used. 
-            // The main reason is that use in the context of assignment within a tuple provides type-name prefix, which is needed for the tuple. 
-            // What is type-name prefixe is absent? For example, definition is: (T1 n1=..., T2 n2=...)
-            // 1. It could be restored from the context (say, the set where this expression has been defined)
-            //  Indeed, if we use primitive expression like "(c11+c13) * 10.0" then it also needs type with name like "Double f = (c11+c13) * 10.0" which is however absent but can be restored from context.
-            // 2. Maybe it is not needed, say, it is anonymous function (name) and the set does not exist but is rather defined by the tuple itself.
-            // It is important to understand that two definitions are equivalent:
-            // Short: "(c11+c13) * 10.0" Full: "Double f = (c11+c13) * 10.0"
-            // Short: "(T1 n1=..., T2 n2=...)" Full: "MySet f = (T1 n1=..., T2 n2=...)"
-
-            // One solution is to introduce syntax for primitive expressions, where each part (subexpression) may have Type and Name information
-            // Example: 2.0 -> Double myName=2.0
-            // Example: a*(c+f1.f2/2.0))
-
-            // Parentheses are used for:
-            // Priority in expressions: a*(c+d)
-            // Tuples: (m1, m2), alternatively, T() or (())
-
-
-
+            Assert.AreEqual(50.0, c15.ColumnData.GetValue(0));
+            Assert.AreEqual(30.0, c15.ColumnData.GetValue(1));
+            Assert.AreEqual(70.0, c15.ColumnData.GetValue(2));
         }
 
         [TestMethod]
