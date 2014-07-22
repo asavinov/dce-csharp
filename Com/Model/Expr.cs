@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Data;
 using System.Diagnostics;
 
 using Offset = System.Int32;
@@ -29,14 +30,6 @@ namespace Com.Model
         public OperationType Operation { get; set; }
 
         //
-        // Type of the result value
-        //
-
-        // Type name of the result
-        public string Type { get; set; }
-        public CsTable TypeSet { get; set; }
-
-        //
         // Attribute of the result value relative to the parent
         //
 
@@ -61,23 +54,24 @@ namespace Com.Model
         // Return run-time value after processing this node to be used by the parent. It must have the specified type.
         public CsVariable Result { get; set; }
 
-
         //
         // Maybe we need a method for retrieving dependency information, that is, a list of other functions (with their sets) used in the formula, including maybe system functions, variables and other context objects
         // Such expressions could be generated from our own source code, and they could be translated in the native source code (or even directly to byte-code without source code)
         //
 
-
-
-        // Resolve the name and type name against the storage elements (schema, variables) 
-        // The resolved object references are stored in the fields and will be used during evaluation without name resolution
-        public void Resolve(CsSchema schema, List<CsVariable> variables)
+        /// <summary>
+        /// Resolve the name and type name against the storage elements (schema, variables).
+        /// The resolved object references are stored in the fields and will be used during evaluation without name resolution.
+        /// Notes:
+        /// - Names that need to be resolved: type names, function (column) names, variable names, system procedure names, operator names (plus, minus etc.)
+        /// - An expression can be resolved against two schemas (not one) because it connects two sets (input and output) that can belong to different schemas. Particularly, it happens for import/export dimensions. 
+        /// - Types can be already resolved during expression creation. Particularly, in the case if it is created from a mapping object. 
+        /// - Resolution starts from some well-known point and then propagates along the structure.
+        /// - Types in tuples depend on the parent type. Columns (variables, procedures etc.) depend on the children. 
+        /// </summary>
+        /// <param name="variables"></param>
+        public virtual void Resolve(CsSchema schema, List<CsVariable> variables)
         {
-            if (Result == null)
-            {
-                Result = new Variable("return", "Void");
-            }
-
             if (Operation == OperationType.VALUE)
             {
                 //
@@ -87,54 +81,59 @@ namespace Com.Model
                 // About conversion from string: http://stackoverflow.com/questions/3965871/c-sharp-generic-string-parse-to-any-object
                 if (int.TryParse(Name, NumberStyles.Integer, CultureInfo.InvariantCulture, out intValue))
                 {
-                    Type = "Integer";
+                    Result.TypeName = "Integer";
                     Result.SetValue(intValue);
                 }
                 double doubleValue;
                 if (double.TryParse(Name, NumberStyles.Float, CultureInfo.InvariantCulture, out doubleValue))
                 {
-                    Type = "Double";
+                    Result.TypeName = "Double";
                     Result.SetValue(doubleValue);
                 }
                 else // Cannot parse means string
                 {
-                    Type = "String";
+                    Result.TypeName = "String";
                     Result.SetValue(Name);
                 }
-                TypeSet = schema.GetPrimitive(Type);
-                Result.TypeName = Type;
-                Result.TypeTable = TypeSet;
+                Result.TypeTable = schema.GetPrimitive(Result.TypeName);
             }
             else if (Operation == OperationType.TUPLE)
             {
                 //
                 // Resolve this (assuming the parents are resolved)
                 //
-                if (string.IsNullOrEmpty(Type))
+                if (string.IsNullOrEmpty(Result.TypeName))
                 {
                     ExprNode parent = (ExprNode)Parent;
-                    if (parent.Operation == OperationType.TUPLE) // Tuple in another tuple
+                    if (parent == null)
                     {
-                        if (parent.TypeSet != null && !string.IsNullOrEmpty(Name))
+                        ;
+                    }
+                    else if (parent.Operation == OperationType.TUPLE) // Tuple in another tuple
+                    {
+                        if (parent.Result.TypeTable != null && !string.IsNullOrEmpty(Name))
                         {
-                            CsColumn col = parent.TypeSet.GetGreaterDim(Name);
+                            CsColumn col = parent.Result.TypeTable.GetGreaterDim(Name);
                             column = col.ColumnData;
-                            TypeSet = col.GreaterSet;
+                            Result.TypeTable = col.GreaterSet;
+                            Result.TypeName = col.GreaterSet.Name;
                         }
                     }
                     else // Tuple in some other node, e.g, argument or value
                     {
-                        if (parent.TypeSet != null && !string.IsNullOrEmpty(Name))
+                        if (parent.Result.TypeTable != null && !string.IsNullOrEmpty(Name))
                         {
-                            CsColumn col = parent.TypeSet.GetGreaterDim(Name);
+                            CsColumn col = parent.Result.TypeTable.GetGreaterDim(Name);
                             column = col.ColumnData;
-                            TypeSet = col.GreaterSet;
+                            Result.TypeTable = col.GreaterSet;
+                            Result.TypeName = col.GreaterSet.Name;
                         }
                     }
                 }
-                else
+                else if (Result.TypeTable == null || !StringSimilarity.SameTableName(Result.TypeTable.Name, Result.TypeName))
                 {
-                    TypeSet = schema.FindTable(Type);
+                    // There is name without table, so we need to resolve this table name but against correct schema
+                    throw new NotImplementedException();
                 }
 
                 //
@@ -156,9 +155,9 @@ namespace Com.Model
                 }
                 
                 // Resolve type name
-                if (!string.IsNullOrEmpty(Type))
+                if (!string.IsNullOrEmpty(Result.TypeName))
                 {
-                    TypeSet = schema.FindTable(Type);
+                    Result.TypeTable = schema.FindTable(Result.TypeName);
                 }
 
                 //
@@ -177,10 +176,8 @@ namespace Com.Model
                     {
                         variable = var;
 
-                        Type = var.TypeName;
-                        TypeSet = var.TypeTable;
-                        Result.TypeName = Type;
-                        Result.TypeTable = TypeSet;
+                        Result.TypeName = var.TypeName;
+                        Result.TypeTable = var.TypeTable;
                     }
                     else // Cannot resolve as a variable - try resolve as a column name of 'this'
                     {
@@ -198,23 +195,19 @@ namespace Com.Model
                 else if (thisChild != null) // Function access (resolve column)
                 {
                     string methodName = this.Name;
-                    CsColumn col = thisChild.TypeSet.GetGreaterDim(methodName);
+                    CsColumn col = thisChild.Result.TypeTable.GetGreaterDim(methodName);
                     column = col.ColumnData;
 
-                    Type = col.GreaterSet.Name;
-                    TypeSet = col.GreaterSet;
-                    Result.TypeName = Type;
-                    Result.TypeTable = TypeSet;
+                    Result.TypeName = col.GreaterSet.Name;
+                    Result.TypeTable = col.GreaterSet;
                 }
                 else // System procedure or operator (arithmetic, logical etc.)
                 {
                     string methodName = this.Name;
 
                     // TODO: Derive return type. It is derived from arguments by using type conversion rules
-                    Type = "Double";
-                    TypeSet = schema.GetPrimitive(Type);
-                    Result.TypeName = Type;
-                    Result.TypeTable = TypeSet;
+                    Result.TypeName = "Double";
+                    Result.TypeTable = schema.GetPrimitive(Result.TypeName);
 
                     switch(Action) 
                     {
@@ -230,7 +223,10 @@ namespace Com.Model
             }
         }
 
-        public void Evaluate()
+        /// <summary>
+        /// 
+        /// </summary>
+        public virtual void Evaluate()
         {
             //
             // Evaluate children so that we have all their return values
@@ -242,10 +238,91 @@ namespace Com.Model
             }
             else if (Operation == OperationType.TUPLE)
             {
-                // Find, append or update an element in this set (depending on the action type)
-                TypeSet.TableData.Find(this);
-                Offset offset = (Offset)Result.GetValue();
-                if (offset >= 0 && offset < TypeSet.TableData.Length) Result.SetValue(offset);
+                //
+                // Evaluate children
+                //
+                foreach (ExprNode childNode in Children)
+                {
+                    childNode.Evaluate();
+                }
+
+                if (Result.TypeTable.IsPrimitive) // Primitive TUPLE nodes are processed differently
+                {
+                    Debug.Assert(Children.Count == 1, "Wrong use: a primitive TUPLE node must have one child expression providing its value.");
+                    ExprNode childNode = GetChild(0);
+                    object val = childNode.Result.GetValue();
+
+                    // Copy result from the child expression and convert it to this node type
+                    if (val is DBNull) 
+                    {
+                        Result.SetValue(null);
+                    }
+                    else if (StringSimilarity.SameTableName(Result.TypeTable.Name, "Integer"))
+                    {
+                        Result.SetValue(Convert.ToInt32(val));
+                    }
+                    else if (StringSimilarity.SameTableName(Result.TypeTable.Name, "Double"))
+                    {
+                        Result.SetValue(Convert.ToDouble(val));
+                    }
+                    else if(StringSimilarity.SameTableName(Result.TypeTable.Name, "Decimal"))
+                    {
+                        Result.SetValue(Convert.ToDecimal(val));
+                    }
+                    else if (StringSimilarity.SameTableName(Result.TypeTable.Name, "String"))
+                    {
+                        Result.SetValue(Convert.ToString(val));
+                    }
+                    else if (StringSimilarity.SameTableName(Result.TypeTable.Name, "Boolean"))
+                    {
+                        Result.SetValue(Convert.ToBoolean(val));
+                    }
+                    else if (StringSimilarity.SameTableName(Result.TypeTable.Name, "DateTime"))
+                    {
+                        Result.SetValue(Convert.ToDateTime(val));
+                    }
+                    else
+                    {
+                        throw new NotImplementedException();
+                    }
+
+                    // Do execute the action because it is a primitive set
+                }
+                else // Non-primitive/non-leaf TUPLE node is a complex value with a special operation
+                {
+                    // Find, append or update an element in this set (depending on the action type)
+                    if (Action == ActionType.READ) // Find the offset
+                    {
+                        Offset input = Result.TypeTable.TableData.Find(this);
+                        if (input >= 0 && input < Result.TypeTable.TableData.Length)
+                        {
+                            Result.SetValue(input);
+                        }
+                        else
+                        {
+                            Result.SetValue(null);
+                        }
+                    }
+                    else if (Action == ActionType.UPDATE) // Find and update the record
+                    {
+                    }
+                    else if (Action == ActionType.APPEND) // Find, try to update and append if cannot be found
+                    {
+                        Offset input = Result.TypeTable.TableData.Append(this);
+                        if (input >= 0 && input < Result.TypeTable.TableData.Length)
+                        {
+                            Result.SetValue(input);
+                        }
+                        else
+                        {
+                            Result.SetValue(null);
+                        }
+                    }
+                    else
+                    {
+                        throw new NotImplementedException("ERROR: Other actions with tuples are not possible.");
+                    }
+                }
             }
             else if (Operation == OperationType.CALL)
             {
@@ -261,7 +338,18 @@ namespace Com.Model
 
                 if (Action == ActionType.READ)
                 {
-                    if (column != null) 
+                    if(this is OledbExprNode) // It is easier to do it here rather than (correctly) in the extension
+                    {
+                        // Find current Row object
+                        ExprNode thisNode = GetChild("this");
+                        DataRow input = (DataRow)thisNode.Result.GetValue();
+
+                        // Use attribute name or number by applying it to the current Row object (offset is not used)
+                        string attributeName = Name;
+                        object output = input[attributeName];
+                        Result.SetValue(output);
+                    }
+                    else if (column != null) 
                     {
                         ExprNode thisNode = GetChild("this");
                         Offset input = (Offset)thisNode.Result.GetValue();
@@ -318,6 +406,172 @@ namespace Com.Model
                 {
 
                 }
+            }
+        }
+
+        /// <summary>
+        /// // Assuming that this expression is a tuple, add a new branch to the tuple tree based on the specified dimension path. 
+        /// Ensure that the specified path exists in the tuple expression tree by finding and creating if not found the nodes corresponding to path segments.
+        /// Return the leaf node of the tuple branch (this variable if it is requested) which correponds to the first segment in the path.
+        /// </summary>
+        /// <returns></returns>
+        public ExprNode AddToTuple(DimPath path, bool withThisVariable) 
+        {
+            // Question: what operation whould be in the leaf: TUPLE, VALUE or whatever
+
+            Debug.Assert(path != null && path.LesserSet == Result.TypeTable, "Wrong use: path must start from the node (output set) it is applied to.");
+
+            if (path.Path == null || path.Path.Count == 0) return this;
+
+            ExprNode node = this;
+            for (int i = 0; i < path.Path.Count; i++) // We add all segments sequentially
+            {
+                CsColumn seg = path.Path[i];
+                ExprNode child = node.GetChild(seg.Name); // Try to find a child corresponding to this segment
+
+                if (child == null) // Not found. Add a new child corresponding to this segment
+                {
+                    child = new ExprNode();
+                    child.Operation = OperationType.TUPLE;
+                    child.Action = this.Action; // We inherit the action from the tuple root
+                    child.Name = seg.Name;
+                    child.Result.TypeTable = seg.GreaterSet;
+                    child.Result.TypeName = seg.GreaterSet.Name;
+
+                    node.AddChild(child);
+                }
+
+                node = child;
+            }
+
+            //
+            // Create the last node corresponding to this variable and append it to the expression
+            //
+            if (withThisVariable)
+            {
+                ExprNode thisNode = null;
+
+                thisNode = new ExprNode();
+                thisNode.Name = "this";
+                thisNode.Operation = OperationType.CALL;
+                thisNode.Action = ActionType.READ;
+
+                thisNode.Result.TypeTable = path.LesserSet;
+                thisNode.Result.TypeName = path.LesserSet.Name;
+
+                node.AddChild(thisNode);
+                node = thisNode;
+            }
+
+            return node;
+        }
+
+        /// <summary>
+        /// If this variable is requested then the return expression will create at one node. 
+        /// Return the last node of the expression (this node if requested) which corresponds to the first segment of the path.
+        /// </summary>
+        /// <returns></returns>
+        public static ExprNode CreateCall(DimPath path, bool withThisVariable) 
+        {
+            ExprNode expr = null;
+
+            if (path.LesserSet.Top is SetTopOledb) // Access via relational attribute
+            {
+                expr = new OledbExprNode();
+                expr.Operation = OperationType.CALL;
+                expr.Action = ActionType.READ;
+                expr.Name = path.Name;
+                expr.Result.TypeTable = path.LesserSet;
+                expr.Result.TypeName = path.LesserSet.Name;
+            }
+            else // Access via function/column composition
+            {
+                for (int i = path.Path.Count() - 1; i >= 0; i--)
+                {
+                    CsColumn seg = path.Path[i];
+
+                    ExprNode node = new ExprNode();
+                    node.Operation = OperationType.CALL;
+                    node.Action = ActionType.READ;
+                    node.Name = seg.Name;
+                    node.Result.TypeTable = seg.LesserSet;
+                    node.Result.TypeName = seg.LesserSet.Name;
+
+                    if (expr != null)
+                    {
+                        expr.AddChild(node);
+                    }
+
+                    expr = node;
+                }
+            }
+
+            //
+            // Create the last node corresponding to this variable and append it to the expression
+            //
+            ExprNode thisNode = null;
+            if (withThisVariable)
+            {
+                thisNode = new ExprNode();
+                thisNode.Name = "this";
+                thisNode.Operation = OperationType.CALL;
+                thisNode.Action = ActionType.READ;
+
+                thisNode.Result.TypeTable = path.LesserSet;
+                thisNode.Result.TypeName = path.LesserSet.Name;
+            }
+
+            if (expr != null)
+            {
+                expr.AddChild(thisNode);
+                expr = thisNode;
+            }
+
+            return expr;
+        }
+
+        public ExprNode()
+        {
+            Result = new Variable("return", "Void");
+        }
+
+    }
+
+    /// <summary>
+    /// This class implements functions for accessing Oledb data source as input. 
+    /// </summary>
+    public class OledbExprNode : ExprNode
+    {
+        public override void Resolve(CsSchema schema, List<CsVariable> variables)
+        {
+            if (Operation == OperationType.VALUE)
+            {
+                base.Evaluate();
+            }
+            else if (Operation == OperationType.TUPLE)
+            {
+                base.Evaluate();
+            }
+            else if (Operation == OperationType.CALL)
+            {
+                base.Resolve(schema, variables);
+                // Resolve attribute names by preparing them for access - use directly the name for accessting the row object found in the this child
+            }
+        }
+
+        public override void Evaluate()
+        {
+            if (Operation == OperationType.VALUE)
+            {
+                base.Evaluate();
+            }
+            else if (Operation == OperationType.TUPLE)
+            {
+                throw new NotImplementedException("ERROR: Wrong use: tuple is never evaluated for relational table.");
+            }
+            else if (Operation == OperationType.CALL)
+            {
+                base.Evaluate();
             }
         }
 
@@ -443,6 +697,5 @@ namespace Com.Model
             Value = null;
         }
     }
-
 
 }

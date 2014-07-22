@@ -312,15 +312,80 @@ namespace Com.Model
             return tree;
         }
 
+        /// <summary>
+        /// Return an expression tree with the structure of the target paths and leaves corresponding to the source paths.
+        /// </summary>
+        public ExprNode BuildExpression()
+        {
+            // Two algorithms:
+            // - for all matches: add all target paths to the expression root and for each of them generate a continuation from the source path by attaching to the leaf
+            // - generate separately a target tree in a separate method. for each leaf, generate a continuation path and attach it to the leaf
+
+            // Methods: 
+            // - ExprNode = CreateCall(DimPath path). generate a sequential access expression from a path (optionally with 'this' formatted for the initial set in the leaf)
+            //   - take into account Oledb by instantiating correct epxr node type
+            //   - alternativey, add the path to a tree node
+            // - Expr::AddToTuple(DimPath path). add a path to an existing tree. here we have to know 
+            //   - criterion of equality of path segment and tree node, 
+            //   - a method for creating a node from a path segment
+            //   - the semantics of adding from the point of view of tree operation (expr node has to be parameterized accordingly)
+            // - Mapping::BuildTupleTree() Expr::CreateTuple(Mapping) build a source/target tree from a mapping (or from a list of paths)
+            //   - add all paths sequentially to the expression tree
+            //   - returning leaves of an expression tree (in order to attach continuation paths)
+
+
+            // Create root tuple expression corresponding to the set
+            ExprNode tupleExpr = new ExprNode();
+            tupleExpr.Operation = OperationType.TUPLE;
+            tupleExpr.Action = ActionType.APPEND;
+            tupleExpr.Name = ""; // This tuple is not a member in any other tuple
+            tupleExpr.Result.TypeTable = TargetSet; // This tuple is a member in the set
+            tupleExpr.Result.TypeName = TargetSet.Name;
+
+            // For each match, add a tuple branch and then an access call
+            foreach (PathMatch match in Matches)
+            {
+                // Add a branch into the tuple tree
+                ExprNode leafNode = tupleExpr.AddToTuple(match.TargetPath, false);
+
+                // Add an access expression to this branch
+                ExprNode accessNode = ExprNode.CreateCall(match.SourcePath, true);
+                leafNode.AddChild((ExprNode)accessNode.Root);
+                // TODO: Old question: what is in the tuple leaves: VALUE, CALL, or whatever
+
+/* OLD
+                DimPath srcPath = match.SourceSet.GetGreaterPath(match.SourcePath.Path); // First, we try to find a direct path/function 
+                if (srcPath == null) // No direct path. Use a sequence of simple dimensions
+                {
+                    srcExpr = Expression.CreateProjectExpression(match.SourcePath.Path, Operation.DOT);
+                }
+                else // There is a direct path (relation attribute in a relational data source). Use attribute name as function name
+                {
+                    srcExpr = new Expression(srcPath.Name, Operation.DOT, match.TargetPath.GreaterSet);
+                }
+                srcExpr.GetInputLeaf().Input = thisExpr;
+
+
+                Expression leafTuple = tupleExpr.AddPath(match.TargetPath);
+                leafTuple.Input = srcExpr;
+*/
+            }
+
+            return tupleExpr;
+        }
+
+        [System.Obsolete("Use BuildExpression()", true)]
         public ExprNode GetSourceExpression()
         {
             throw new NotImplementedException();
         }
 
+        [System.Obsolete("Use BuildExpression()", true)]
         public ExprNode GetTargetExpression() // Build tuple expression where target paths define a tuple and source paths are used leaf expressions in this tuple applied to the source set
         {
             return GetTargetExpression(null);
         }
+        [System.Obsolete("Use BuildExpression()", true)]
         public ExprNode GetTargetExpression(CsColumn dim) // Build tuple expression for the specified mapped dimension
         {
             // It is mapping from LesserSet to GreaterSet of the dimension

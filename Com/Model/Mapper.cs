@@ -592,7 +592,7 @@ namespace Com.Model
 
         /// <summary>
         /// Create and initialize a new mapping which produces a flat target set with all primitive dimensions for copying primitive data from the source set.
-        /// Only identity (PK) source dimensions are expanded. 
+        /// Only identity (PK) source dimensions are expanded recursively. 
         /// For relational source, this means that all primitive columns of the source table will be mapped with their relational names, no FK-referenced tables will be joined and no artifical column names will be used. 
         /// If it is necessary to expand entity dimensions (non-PK columns of joined tables) then a different implementation is needed (which will require joins, artifical column/path names etc.)
         /// </summary>

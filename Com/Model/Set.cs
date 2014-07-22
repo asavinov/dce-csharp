@@ -237,7 +237,7 @@ namespace Com.Model
             length--;
         }
 
-        public bool Find(ExprNode expr) // Use only identity dims (for general case use Search which returns a subset of elements)
+        public Offset Find(ExprNode expr) // Use only identity dims (for general case use Search which returns a subset of elements)
         {
             // Find: Find the tuple and all nested tuples. Is applied only if the value is null - otherwise it assumed existing and no recursion is made. 
             // Value: Output is set to offset for found tuples and (remains) null if not found.
@@ -314,7 +314,7 @@ namespace Com.Model
                 return true;
             }
             */
-            return true;
+            return 0;
         }
 
         public bool CanAppend(ExprNode expr) // Determine if this expression (it has to be evaluated) can be added into this set as a new instance
@@ -353,12 +353,46 @@ namespace Com.Model
             return true;
         }
 
-        public object Append(ExprNode expr) // Identity dims must be set (for uniqueness). Entity dims are also used when appending.
+        public Offset Append(ExprNode expr) // Identity dims must be set (for uniqueness). Entity dims are also used when appending.
         {
-            // Append: append *this* tuple to the set and, if necessary, all greater tuples. If necessary means "if no value for dimension is provided"  which means does not exist. 
-            // In particular, if all child expressions have values then only this set will be appended. 
-            // In particular, if this set has a value then it will not be appended (because it exists).
-            // Value: offset of new appended instance. 
+            // Append: append *this* tuple to the set 
+            // Greater tuples are not processed  - it is the task of the interpreter. If it is necessary to append (or do something else) with a greater tuple then it has to be done in the interpreter (depending on the operation, action and other parameters)
+            // This method is intended for only appending one row while tuple is used only as a data structure (so its usage for interpretation is not used)
+            // So this method expects that child nodes have been already evaluated and store the values in the result. 
+            // So this method is equivalent to appending using other row representations.
+            // The offset of the appended element is stored as a result in this tuple and also returned.
+            // If the tuple already exists then it is found and its current offset is returned.
+            // It is assumed that child expressions represent dimensions.
+            // It is assumed that the column names are resolved.
+
+            Debug.Assert(!IsPrimitive, "Wrong use: cannot append to a primitive set. ");
+            Debug.Assert(expr.Result.TypeTable == this, "Wrong use: expression OutputSet must be equal to the set its value is appended/found.");
+            Debug.Assert(expr.Operation == OperationType.TUPLE, "Wrong use: operation type for appending has to be TUPLE. ");
+
+            //
+            // TODO: Check existence (uniqueness of the identity)
+            //
+
+            //
+            // Really append a new element to the set
+            //
+            foreach (Dim dim in GreaterDims) // We must append one value to ALL greater dimensions (possibly null)
+            {
+                ExprNode childExpr = expr.GetChild(dim.Name); // TODO: replace by accessor by dimension reference (has to be resolved in the tuple)
+                object val = null;
+                if (childExpr != null) // A tuple contains a subset of all dimensions
+                {
+                    val = childExpr.Result.GetValue();
+                }
+                dim.ColumnData.Append(val);
+            }
+
+            //
+            // TODO: Check other constraints (for example, where constraint). Remove if not satisfies and return status.
+            //
+
+            length++;
+            return Length - 1;
 
             /*
             Debug.Assert(expr.OutputSet == this, "Wrong use: expression OutputSet must be equal to the set its value is appended/found.");
@@ -415,7 +449,7 @@ namespace Com.Model
             return expr.Output;
             */
 
-            return null;
+            return 0;
         }
 
         #endregion
@@ -443,11 +477,20 @@ namespace Com.Model
 
         /// <summary>
         /// Create all instances of this set. 
+        /// Notes:
+        /// - Population means produce a subset of all possible elements where all possible elements are defined by greater dimensions.
+        /// - There are two ways to restrict all possible elements: where predicate, and generating/projection lesser dimensions (equivalently, referencing from some lesser set by the generating dimensions).
+        /// - Accordingly, there are two algorithms: produce all combinations of greater elements (for identity dimensions), and produce all combinations of the lesser elements (for generating dimensions).
         /// </summary>
         public void Populate() 
         {
             if (TableDefinition.ProjectDimensions.Count == 0) // Product of local sets (no project/de-project from another set)
             {
+                // - greater with filter (use key dims; de-projection of several greater dims by storing all combinations of their inputs)
+                //   - use only Key greater dims for looping. 
+                //   - user greater sets input values as constituents for new tuples
+                //   - greater dims are populated simultaniously without evaluation (they do not have defs.)
+
                 // Find local greater key dimensions including the super-dim.
                 var dims = new List<CsColumn>();
                 dims.Add(SuperDim);
@@ -555,6 +598,13 @@ namespace Com.Model
             }
             else // There are import dimensions so copy data from another set (projection of another set)
             {
+                // - lesser with filter
+                //   - use only IsGenerating lesser dims for looping. 
+                //   - use thier lesser sets to loop through all their combinations
+                //   - !!! each lesser dim is evaluated using its formula that returns some constituent of the new set (or a new element in the case of 1 lesser dim)
+                //   - set elements store a combination of lesser dims outputs
+                //   - each lesser dim stores the new tuple in its output (alternatively, these dims could be evaluatd after set population - will it really work for multiple lesser dims?)
+
                 // Use only generating lesser dimensions (IsGenerating)
                 // Organize a loop on combinations of their inputs
                 // For each combination, evaluate all the lesser generating dimensions by finding their outputs
@@ -571,31 +621,21 @@ namespace Com.Model
 
                 if (sourceSet.Top is SetTopOledb) // Generating set data from a remote set in an external database
                 {
-                    // Produce a result set from the remote database by executing a query on the source table
-                    DataTable dataTable = ((SetTopOledb)sourceSet.Top).LoadTable(sourceSet);
-
                     // Loop over all remote result set records
-                    foreach (DataRow row in dataTable.Rows) // A row is <colName, primValue> collection
+                    while (evaluator.Next()) // A row is <colName, primValue> collection
                     {
-                        //evaluator.Evaluate(row); // Evaluate input
-
-                        //funcExpr.Input.Dimension.Value = row; // Initialize 'this'
-                        //funcExpr.Evaluate(); // Evaluate the expression tree by computing primtive tuple values
-                        //targetSet.Append(tupleExpression); // Append an element using the tuple composed of primitive values
+                        evaluator.Evaluate(); // Evaluate input
+                        // The tuple will be appended during evaluation depending on the action (read, append, update etc.)
                     }
                 }
                 else if (sourceSet.Top is SetTop) // Generating set data from a local set in this mashup
                 {
                     // Loop over all function inputs with evaluation and using the output tuple for appending
-                    for (Offset input = 0; input < sourceSet.TableData.Length; input++)
+                    while (evaluator.Next())
                     {
-                        evaluator.Evaluate(input); // Evaluate input
-                        //targetSet.TableData.Append(tupleExpression); // Append output
+                        evaluator.Evaluate(); // Evaluate input
                         // TODO: append also an instance to the function (the function has to be nullifed before the procedure)
-                        //SetValue(offset, SelectExpression.Output); // Store the final result
-
-                        // TODO: append also an instance to the function (the function has to be nullifed before this procedure)
-                        //SetValue(offset, SelectExpression.Output); // Store the final result
+                        // The tuple will be appended during evaluation depending on the action (read, append, update etc.)
                     }
                 }
             }

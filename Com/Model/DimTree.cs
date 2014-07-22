@@ -360,6 +360,7 @@ namespace Com.Model
         }
 
         public TreeNode<T> Parent { get; private set; }
+        public TreeNode<T> Root { get { TreeNode<T> node = this; while (node.Parent != null) node = node.Parent; return node; } }
 
         public T Value { get { return _value; } }
 

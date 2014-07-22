@@ -92,10 +92,9 @@ namespace Com.Model
         Offset Append(CsColumn[] dims, object[] values);
         void Remove(int input);
 
-
-        bool Find(ExprNode expr);
+        Offset Find(ExprNode expr);
         bool CanAppend(ExprNode expr);
-        object Append(ExprNode expr);
+        Offset Append(ExprNode expr);
         
         //Offset FindTuple(CsRecord record); // If many records can satisfy then another method has to be used. What is many found? Maybe return negative number with the number of records (-1 or Length means not found, positive means found 1)? 
         //void InsertTuple(Offset input, CsRecord record); // All keys are required? Are non-keys allowed?
@@ -227,13 +226,15 @@ namespace Com.Model
     {
         // Never changes any set - neither lesser nor greater - just compute output given input
 
-        CsTable LoopTable { get; }
+        bool Next(); // True if there exists a next element
 
         bool IsUpdate { get; }
 
-        object Evaluate(Offset input); // Compute output for the specified intput and write it
-        object EvaluateUpdate(Offset input); // Read group and measure for the specified input and compute update according to the aggregation formula. It may also increment another function if necessary.
-        bool EvaluateJoin(Offset input, object output); // Called for all pairs of input and output *if* the definition is a join predicate.
+        object Evaluate(); // Compute output for the specified intput and write it
+        object EvaluateUpdate(); // Read group and measure for the specified input and compute update according to the aggregation formula. It may also increment another function if necessary.
+        bool EvaluateJoin(object output); // Called for all pairs of input and output *if* the definition is a join predicate.
+
+        ExprNode GetOutput();
     }
 
     public interface CsVariable // It is a storage element like function or table

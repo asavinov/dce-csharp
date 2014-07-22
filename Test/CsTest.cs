@@ -315,34 +315,37 @@ namespace Test
             Set orderDetailsTable = new Set("Order Details");
             schema.AddTable(orderDetailsTable, null, null);
             
+            // Create mapping
             Mapper mapper = new Mapper();
             Mapping map = mapper.CreatePrimitive(top.FindTable("Order Details"), orderDetailsTable);
+            map.Matches.ForEach(m => m.TargetPath.Path.ForEach(p => p.Add()));
+
+            // Create generating/import column
             CsColumn dim = new Dim(map);
             dim.Add();
 
-            //dim.GreaterSet.TableDefinition.Populate();
-            // TODO next: generate correct evaluator for: various dim defs (arithm, mapping etc.), various source set/input types (local, oledb Row, etc.)
-            // - finish and test evaluator for arithmetic expressions by evaluating computed columns and generation of evaluator from expression
-            // - generate evaluator from mapping: either directly or first tuple expression tree and then (standard) evaluator
-            // - implement evaluator for remote (oledb) input where we have to iterate through another input type (Row object as input instead of Offset)
-
-            // Evaluator:
-            // - IsUpdate - type of change of the function output: accumulate or set. Essentially, whether it is aggregation evaluator.
+            dim.GreaterSet.TableDefinition.Populate();
+            Assert.AreEqual(58, dim.GreaterSet.TableData.Length);
+            
+            // Other TODOs:
+            // Evaluator interface rework:
+            // OledbEvaluator opens a data sets with loading data. So we need to correctly close the resul set etc. 
+            // - Probably, it could be done in Initialize and Finish methods (Next/Evaluate is called between them)
+            // Import dimensions do not store data so they should not have ColumnData object (null) even though they have some local type
+            // Evaluate/EvaluateUpdate etc. could be probably implemented within one Evaluate depending on the real expression and task to be performed
+            // - IsUpdate - type of change of the function output: accumulate or set. Essentially, whether it is aggregation evaluator. Do we need it?
             // - LoopTable - what set to iterate (fact set for aggregation)
             // - is supposed to be from Evaluate of Column to decide what to loop and how to update etc.
 
-            // Set population:
-            // - greater with filter (use key dims; de-projection of several greater dims by storing all combinations of their inputs)
-            //   - use only Key greater dims for looping. 
-            //   - user greater sets input values as constituents for new tuples
-            //   - greater dims are populated simultaniously without evaluation (they do not have defs.)
-            // - lesser with filter
-            //   - use only IsGenerating lesser dims for looping. 
-            //   - use thier lesser sets to loop through all their combinations
-            //   - !!! each lesser dim is evaluated using its formula that returns some constituent of the new set (or a new element in the case of 1 lesser dim)
-            //   - set elements store a combination of lesser dims outputs
-            //   - each lesser dim stores the new tuple in its output (alternatively, these dims could be evaluatd after set population - will it really work for multiple lesser dims?)
+            // ExprNode constructores and update code: name/operation/action constructor, type/set constructor
 
+            // Set::Populate
+            // !!! Append an element to the generating/projection column(s) if an element has been appended/found in the target set. Alternatively, we will have to evaluate this generating dimension separately (double work).
+            // - This means a principle: generating dimensions are not evaluated separately - they are evaluated during their target set population.
+            // - For Oledb (import/export) dims it is not needed because these dimensions do not store data.
+
+            // Dim population principles:
+            // - currently we Append from the loop manually and not from the expression (as opposed ot Set::Populate) - it is bad: either all in Evaluate or all in Populate
             //   - so we should NOT use column Evaluator for populating a set 
             //      --> column evaluator of generating dims is never used from the colum population procedure (but can be if called explicitly) 
             //      --> all column evaluators NEVER change (influence) their sets (neither greater nor lesser) - it computes only this function
