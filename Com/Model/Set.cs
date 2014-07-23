@@ -188,8 +188,10 @@ namespace Com.Model
             Debug.Assert(dims != null && values != null && dims.Length == values.Length, "Wrong use: for each dimension, there has to be a value specified.");
 
             Offset[] result = Enumerable.Range(0, Length).ToArray(); // All elements of this set (can be quite long)
+            bool hasBeenRestricted = false; // For the case where the Length==1, and no key columns are really provided, so we get at the end result.Length==1 which is misleading. Also, this fixes the problem of having no key dimensions.
             for (int i = 0; i < dims.Length; i++)
             {
+                hasBeenRestricted = true;
                 Offset[] range = dims[i].ColumnData.DeprojectValue(values[i]); // Deproject one value
                 result = result.Intersect(range).ToArray(); 
                 // OPTIMIZE: Write our own implementation for various operations (intersection etc.). Use the fact that they are ordered.
@@ -205,7 +207,8 @@ namespace Com.Model
             }
             else if (result.Length == 1) // Found single element - return its offset
             {
-                return result[0];
+                if (hasBeenRestricted) return result[0];
+                else return -result.Length;
             }
             else // Many elements satisfy these properties (non-unique identities). Use other methods for getting these records (like de-projection)
             {
@@ -239,6 +242,47 @@ namespace Com.Model
 
         public Offset Find(ExprNode expr) // Use only identity dims (for general case use Search which returns a subset of elements)
         {
+            // Find the specified tuple but not its nested tuples (if nested tuples have to be found before then use recursive calls, say, a visitor or recursive epxression evaluation)
+
+            Debug.Assert(!IsPrimitive, "Wrong use: cannot append to a primitive set. ");
+            Debug.Assert(expr.Result.TypeTable == this, "Wrong use: expression OutputSet must be equal to the set its value is appended/found.");
+            Debug.Assert(expr.Operation == OperationType.TUPLE, "Wrong use: operation type for appending has to be TUPLE. ");
+
+            Offset[] result = Enumerable.Range(0, Length).ToArray(); // All elements of this set (as long as this set length - can be quite long)
+            bool hasBeenRestricted = false; // For the case where the Length==1, and no key columns are really provided, so we get at the end result.Length==1 which is misleading. Also, this fixes the problem of having no key dimensions.
+            foreach (Dim dim in KeyColumns) // OPTIMIZE: the order of dimensions matters (use statistics, first dimensins with better filtering). Also, first identity dimensions.
+            {
+                ExprNode childExpr = expr.GetChild(dim.Name);
+                if (childExpr != null)
+                {
+                    object val = null;
+                    val = childExpr.Result.GetValue();
+
+                    hasBeenRestricted = true;
+                    Offset[] range = dim.ColumnData.DeprojectValue(val); // Deproject the value
+                    result = result.Intersect(range).ToArray(); // Intersect with previous de-projections
+                    // OPTIMIZE: Write our own implementation for intersection and other operations. Assume that they are ordered.
+                    // OPTIMIZE: Remember the position for the case this value will have to be inserted so we do not have again search for this positin during insertion (optimization)
+
+                    if (result.Length == 0) break; // Not found
+                }
+            }
+
+            if (result.Length == 0) // Not found
+            {
+                return -1;
+            }
+            else if (result.Length == 1) // Found single element - return its offset
+            {
+                if (hasBeenRestricted) return result[0];
+                else return -result.Length;
+            }
+            else // Many elements satisfy these properties (non-unique identities). Use other methods for getting these records (like de-projection)
+            {
+                return -result.Length;
+            }
+
+           
             // Find: Find the tuple and all nested tuples. Is applied only if the value is null - otherwise it assumed existing and no recursion is made. 
             // Value: Output is set to offset for found tuples and (remains) null if not found.
 

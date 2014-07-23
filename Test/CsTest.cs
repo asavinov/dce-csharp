@@ -70,7 +70,7 @@ namespace Test
 
             CsColumn c21 = schema.CreateColumn("Column 21", t2, schema.GetPrimitive("String"), true);
             c21.Add();
-            CsColumn c22 = schema.CreateColumn("Column 22", t2, schema.GetPrimitive("Integer"), false);
+            CsColumn c22 = schema.CreateColumn("Column 22", t2, schema.GetPrimitive("Integer"), true);
             c22.Add();
             CsColumn c23 = schema.CreateColumn("Column 23", t2, schema.GetPrimitive("Double"), false);
             c23.Add();
@@ -312,26 +312,55 @@ namespace Test
             //
             // Project "Table 2" along "Column 21" and get 2 unique records in a new set "Value A" (3 references) and "Value B" (1 reference)
             //
-            Set proj1 = new Set("Projection 1. Extraction of Column 21");
-            schema.AddTable(proj1, null, null);
+            CsTable t3 = schema.CreateTable("Table 3");
+            schema.AddTable(t3, null, null);
 
-            Mapper mapper = new Mapper();
-            Mapping map = mapper.CreatePrimitive(schema.FindTable("Table 2"), proj1);
-            map.Matches.ForEach(m => m.TargetPath.Path.ForEach(p => p.Add()));
+            CsColumn c31 = schema.CreateColumn(c21.Name, t3, c21.GreaterSet, true);
+            c31.Add();
 
-            // Create generating/import column
-            CsColumn col1 = new Dim(map);
-            col1.Add();
+            // Manually define a mapping as the generating column definition by using one column only. And create a generating dimension with this mapping.
+            Mapping map24 = new Mapping(t2, t3);
+            map24.AddMatch(new PathMatch(new DimPath(c21), new DimPath(c31)));
 
-            proj1.TableDefinition.Populate();
-            //Assert.AreEqual(2, proj1.TableData.Length);
+            // !!! TODO: we cannot use directly a constructor - replace by schema API like schema.CreateColumn(c21.Name, t3, c21.GreaterSet, true)
+            CsColumn c24 = new Dim(map24); // Create generating/import column
+            c24.Add();
+
+            t3.TableDefinition.Populate();
+            Assert.AreEqual(2, t3.TableData.Length);
+
+            Assert.AreEqual(0, c24.ColumnData.GetValue(0));
+            Assert.AreEqual(0, c24.ColumnData.GetValue(1));
+            Assert.AreEqual(0, c24.ColumnData.GetValue(2));
+            Assert.AreEqual(1, c24.ColumnData.GetValue(3));
 
             //
             // Defining a combination of "Column 21" and "Column 22" and project with 3 unique records in a new set
             //
-            Set proj2 = new Set("Projection 1. Extraction of Column 21 and Column 22");
-            schema.AddTable(proj2, null, null);
+            CsTable t4 = schema.CreateTable("Table 4");
+            schema.AddTable(t4, null, null);
 
+            CsColumn c41 = schema.CreateColumn(c21.Name, t4, c21.GreaterSet, true);
+            c41.Add();
+            CsColumn c42 = schema.CreateColumn(c22.Name, t4, c22.GreaterSet, true);
+            c42.Add();
+
+            // Manually define a mapping as the generating column definition by using one column only. And create a generating dimension with this mapping.
+            Mapping map25 = new Mapping(t2, t4);
+            map25.AddMatch(new PathMatch(new DimPath(c21), new DimPath(c41)));
+            map25.AddMatch(new PathMatch(new DimPath(c22), new DimPath(c42)));
+
+            // !!! TODO: we cannot use directly a constructor - replace by schema API like schema.CreateColumn(c21.Name, t3, c21.GreaterSet, true)
+            CsColumn c25 = new Dim(map25); // Create generating/import column
+            c25.Add();
+
+            t4.TableDefinition.Populate();
+            Assert.AreEqual(3, t4.TableData.Length);
+
+            Assert.AreEqual(0, c25.ColumnData.GetValue(0));
+            Assert.AreEqual(1, c25.ColumnData.GetValue(1));
+            Assert.AreEqual(1, c25.ColumnData.GetValue(2));
+            Assert.AreEqual(2, c25.ColumnData.GetValue(3));
         }
 
         [TestMethod]
@@ -396,6 +425,13 @@ namespace Test
             // - is supposed to be from Evaluate of Column to decide what to loop and how to update etc.
 
             // ExprNode constructores and update code: name/operation/action constructor, type/set constructor
+
+            // Set::Find, Set::Appenbd
+            // - There are two Find. Problem is that one uses only key dims while the other all provided parameter values - Decide what is better
+            // - Decide whether Append should check uniqueness and Where conditions or it has been done externally
+
+            // There are generating dims and simply mapped dims. Generating dims are used by set population only, while normal mapped dims are used by dim population. 
+            // Currently any new mapped dim created via Dim(Mapping) is marked as a generating dim. It is better to mark it explicitly as generating dim or not rather than automatically.
 
             // Set::Populate
             // !!! Append an element to the generating/projection column(s) if an element has been appended/found in the target set. Alternatively, we will have to evaluate this generating dimension separately (double work).

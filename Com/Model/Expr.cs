@@ -294,13 +294,14 @@ namespace Com.Model
                     if (Action == ActionType.READ) // Find the offset
                     {
                         Offset input = Result.TypeTable.TableData.Find(this);
-                        if (input >= 0 && input < Result.TypeTable.TableData.Length)
+
+                        if (input < 0 || input >= Result.TypeTable.TableData.Length) // Not found
                         {
-                            Result.SetValue(input);
+                            Result.SetValue(null);
                         }
                         else
                         {
-                            Result.SetValue(null);
+                            Result.SetValue(input);
                         }
                     }
                     else if (Action == ActionType.UPDATE) // Find and update the record
@@ -308,15 +309,14 @@ namespace Com.Model
                     }
                     else if (Action == ActionType.APPEND) // Find, try to update and append if cannot be found
                     {
-                        Offset input = Result.TypeTable.TableData.Append(this);
-                        if (input >= 0 && input < Result.TypeTable.TableData.Length)
+                        Offset input = Result.TypeTable.TableData.Find(this); // Uniqueness constraint: check if it exists already
+
+                        if (input < 0 || input >= Result.TypeTable.TableData.Length) // Not found
                         {
-                            Result.SetValue(input);
+                            input = Result.TypeTable.TableData.Append(this); // Append new
                         }
-                        else
-                        {
-                            Result.SetValue(null);
-                        }
+
+                        Result.SetValue(input);
                     }
                     else
                     {
