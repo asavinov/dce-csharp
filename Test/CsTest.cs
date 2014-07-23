@@ -46,10 +46,9 @@ namespace Test
             return ast;
         }
 
-        [TestMethod]
-        public void SchemaTest() // CsColumn. Manually add/remove tables/columns
+        protected CsSchema PrepareSampleSchema()
         {
-            // Schema
+            // Prepare schema
             CsSchema schema = new SetTop("My Schema");
 
             // Table 1
@@ -62,6 +61,8 @@ namespace Test
             c12.Add();
             CsColumn c13 = schema.CreateColumn("Column 13", t1, schema.GetPrimitive("Double"), false);
             c13.Add();
+            CsColumn c14 = schema.CreateColumn("Column 14", t1, schema.GetPrimitive("Decimal"), false);
+            c14.Add();
 
             // Table 2
             CsTable t2 = schema.CreateTable("Table 2");
@@ -69,17 +70,100 @@ namespace Test
 
             CsColumn c21 = schema.CreateColumn("Column 21", t2, schema.GetPrimitive("String"), true);
             c21.Add();
-            CsColumn c22 = schema.CreateColumn("Column 22", t2, schema.GetPrimitive("Double"), false);
+            CsColumn c22 = schema.CreateColumn("Column 22", t2, schema.GetPrimitive("Integer"), false);
             c22.Add();
+            CsColumn c23 = schema.CreateColumn("Column 23", t2, schema.GetPrimitive("Double"), false);
+            c23.Add();
 
+            return schema;
+        }
+
+        protected void PrepareSampleData(CsSchema schema)
+        {
+            //
+            // Fill sample data in "Table 1"
+            //
+            CsTable t1 = schema.FindTable("Table 1");
+
+            CsColumn c11 = t1.GetGreaterDim("Column 11");
+            CsColumn c12 = t1.GetGreaterDim("Column 12");
+            CsColumn c13 = t1.GetGreaterDim("Column 13");
+            CsColumn c14 = t1.GetGreaterDim("Column 14");
+
+            CsColumn[] cols = new CsColumn[] { c11, c12, c13, c14 };
+            object[] vals = new object[4];
+
+            vals[0] = 20;
+            vals[1] = "Record 0";
+            vals[2] = 20.0;
+            vals[3] = 20.0;
+            t1.TableData.Append(cols, vals);
+
+            vals[0] = 10;
+            vals[1] = "Record 1";
+            vals[2] = 10.0;
+            vals[3] = 20.0;
+            t1.TableData.Append(cols, vals);
+
+            vals[0] = 30;
+            vals[1] = "Record 2";
+            vals[2] = 30.0;
+            vals[3] = 20.0;
+            t1.TableData.Append(cols, vals);
+
+            //
+            // Fill sample data in "Table 2"
+            //
+            CsTable t2 = schema.FindTable("Table 2");
+
+            CsColumn c21 = t2.GetGreaterDim("Column 21");
+            CsColumn c22 = t2.GetGreaterDim("Column 22");
+            CsColumn c23 = t2.GetGreaterDim("Column 23");
+
+            cols = new CsColumn[] { c21, c22, c23 };
+            vals = new object[3];
+
+            vals[0] = "Value A";
+            vals[1] = 20;
+            vals[2] = 40.0;
+            t2.TableData.Append(cols, vals);
+
+            vals[0] = "Value A";
+            vals[1] = 30;
+            vals[2] = 40.0;
+            t2.TableData.Append(cols, vals);
+
+            vals[0] = "Value A";
+            vals[1] = 30;
+            vals[2] = 50.0;
+            t2.TableData.Append(cols, vals);
+
+            vals[0] = "Value B";
+            vals[1] = 30;
+            vals[2] = 50.0;
+            t2.TableData.Append(cols, vals);
+        }
+
+        [TestMethod]
+        public void SchemaTest() // CsColumn. Manually add/remove tables/columns
+        {
+            //
+            // Prepare schema
+            //
+            CsSchema schema = PrepareSampleSchema();
+
+            CsTable t1 = schema.FindTable("Table 1");
+            CsTable t2 = schema.FindTable("Table 2");
 
             // Finding by name and check various properties provided by the schema
-            Assert.AreEqual(schema.FindTable("Table 1"), t1);
-            Assert.AreEqual(schema.FindTable("Table 2"), t2);
+            Assert.AreEqual(schema.GetPrimitive("Decimal").Name, "Decimal");
+
+            Assert.AreEqual(t1.Name, "Table 1");
+            Assert.AreEqual(t2.Name, "Table 2");
             Assert.AreEqual(t1.GetTable("Table 2"), t2);
 
-            Assert.AreEqual(t1.GetGreaterDim("Column 11"), c11);
-            Assert.AreEqual(t2.GetGreaterDim("Column 21"), c21);
+            Assert.AreEqual(t1.GetGreaterDim("Column 11").Name, "Column 11");
+            Assert.AreEqual(t2.GetGreaterDim("Column 21").Name, "Column 21");
 
             Assert.AreEqual(t2.GetGreaterDim("Super").IsSuper, true);
             Assert.AreEqual(t2.SuperDim.LesserSet, t2);
@@ -92,28 +176,17 @@ namespace Test
             //
             // Prepare schema
             //
-            CsSchema schema = new SetTop("My Schema");
+            CsSchema schema = PrepareSampleSchema();
 
-            // Table 1
-            CsTable t1 = schema.CreateTable("Table 1");
-            schema.AddTable(t1, schema.Root, null);
+            CsTable t1 = schema.FindTable("Table 1");
+            CsTable t2 = schema.FindTable("Table 2");
 
-            CsColumn c11 = schema.CreateColumn("Column 11", t1, schema.GetPrimitive("Integer"), true);
-            c11.Add();
-            CsColumn c12 = schema.CreateColumn("Column 12", t1, schema.GetPrimitive("String"), true);
-            c12.Add();
-            CsColumn c13 = schema.CreateColumn("Column 13", t1, schema.GetPrimitive("Double"), false);
-            c13.Add();
+            CsColumn c11 = t1.GetGreaterDim("Column 11");
+            CsColumn c12 = t1.GetGreaterDim("Column 12");
+            CsColumn c13 = t1.GetGreaterDim("Column 13");
 
-            // Table 2
-
-            CsTable t2 = schema.CreateTable("Table 2");
-            schema.AddTable(t2, t1, null);
-
-            CsColumn c21 = schema.CreateColumn("Column 21", t2, schema.GetPrimitive("String"), true);
-            c21.Add();
-            CsColumn c22 = schema.CreateColumn("Column 22", t2, schema.GetPrimitive("Double"), false);
-            c22.Add();
+            CsColumn c21 = t2.GetGreaterDim("Column 21");
+            CsColumn c22 = t2.GetGreaterDim("Column 22");
 
             //
             // Data
@@ -139,11 +212,11 @@ namespace Test
 
             t2.TableData.Length = 2;
 
-            c21.ColumnData.SetValue(0, "Value 1");
-            c21.ColumnData.SetValue(1, "Value 2");
+            c21.ColumnData.SetValue(0, "Value A");
+            c21.ColumnData.SetValue(1, "Value B");
 
-            c22.ColumnData.SetValue(0, 1.0);
-            c22.ColumnData.SetValue(1, 2.0);
+            c22.ColumnData.SetValue(0, 10);
+            c22.ColumnData.SetValue(1, 20);
 
             t2.SuperDim.ColumnData.SetValue(0, 1); // It is offset to the parent record
             t2.SuperDim.ColumnData.SetValue(1, 2);
@@ -157,41 +230,19 @@ namespace Test
             //
             // Prepare schema
             //
-            CsSchema schema = new SetTop("My Schema");
+            CsSchema schema = PrepareSampleSchema();
+            PrepareSampleData(schema);
 
-            // Tables
-            CsTable t1 = schema.CreateTable("Table 1");
-            schema.AddTable(t1, schema.Root, null);
+            CsTable t1 = schema.FindTable("Table 1");
+            CsTable t2 = schema.FindTable("Table 2");
 
-            // Columns
-            CsColumn c11 = schema.CreateColumn("Column 11", t1, schema.GetPrimitive("Integer"), true);
-            c11.Add();
-            CsColumn c12 = schema.CreateColumn("Column 12", t1, schema.GetPrimitive("String"), true);
-            c12.Add();
-            CsColumn c13 = schema.CreateColumn("Column 13", t1, schema.GetPrimitive("Double"), false);
-            c13.Add();
+            CsColumn c11 = t1.GetGreaterDim("Column 11");
+            CsColumn c12 = t1.GetGreaterDim("Column 12");
+            CsColumn c13 = t1.GetGreaterDim("Column 13");
 
             //
             // Data manipulations
             //
-            CsColumn[] cols = new CsColumn[] { c11, c12, c13 };
-            object[] vals = new object[3];
-
-            vals[0] = 20;
-            vals[1] = "Record 0";
-            vals[2] = 20.0;
-            t1.TableData.Append(cols, vals);
-
-            vals[0] = 10;
-            vals[1] = "Record 1";
-            vals[2] = 10.0;
-            t1.TableData.Append(cols, vals);
-
-            vals[0] = 30;
-            vals[1] = "Record 2";
-            vals[2] = 30.0;
-            t1.TableData.Append(cols, vals);
-
             Assert.AreEqual(3, t1.TableData.Length);
 
             Offset input = t1.TableData.Find(new CsColumn[] { c11 }, new object[] { 10 } );
@@ -208,47 +259,17 @@ namespace Test
         public void ColumnDefinitionTest() // CsColumnDefinition. Defining new columns and evaluate them
         {
             //
-            // Prepare schema
+            // Prepare schema and fill data
             //
-            CsSchema schema = new SetTop("My Schema");
+            CsSchema schema = PrepareSampleSchema();
+            PrepareSampleData(schema);
 
-            // Tables
-            CsTable t1 = schema.CreateTable("Table 1");
-            schema.AddTable(t1, schema.Root, null);
+            CsTable t1 = schema.FindTable("Table 1");
 
-            // Columns
-            CsColumn c11 = schema.CreateColumn("Column 11", t1, schema.GetPrimitive("Integer"), true);
-            c11.Add();
-            CsColumn c12 = schema.CreateColumn("Column 12", t1, schema.GetPrimitive("String"), true);
-            c12.Add();
-            CsColumn c13 = schema.CreateColumn("Column 13", t1, schema.GetPrimitive("Double"), false);
-            c13.Add();
-            CsColumn c14 = schema.CreateColumn("Column 14", t1, schema.GetPrimitive("Decimal"), false);
-            c14.Add();
-
-            //
-            // Fill sample data
-            //
-            CsColumn[] cols = new CsColumn[] { c11, c12, c13, c14 };
-            object[] vals = new object[4];
-
-            vals[0] = 20;
-            vals[1] = "Record 0";
-            vals[2] = 20.0;
-            vals[3] = 20.0;
-            t1.TableData.Append(cols, vals);
-
-            vals[0] = 10;
-            vals[1] = "Record 1";
-            vals[2] = 10.0;
-            vals[3] = 20.0;
-            t1.TableData.Append(cols, vals);
-
-            vals[0] = 30;
-            vals[1] = "Record 2";
-            vals[2] = 30.0;
-            vals[3] = 20.0;
-            t1.TableData.Append(cols, vals);
+            CsColumn c11 = t1.GetGreaterDim("Column 11");
+            CsColumn c12 = t1.GetGreaterDim("Column 12");
+            CsColumn c13 = t1.GetGreaterDim("Column 13");
+            CsColumn c14 = t1.GetGreaterDim("Column 14");
 
             //
             // Define a derived column with a definition
@@ -279,6 +300,38 @@ namespace Test
         [TestMethod]
         public void ProjectionTest() // Defining new tables via function projection and populate them
         {
+            CsSchema schema = PrepareSampleSchema();
+            PrepareSampleData(schema);
+
+            CsTable t2 = schema.FindTable("Table 2");
+
+            CsColumn c21 = t2.GetGreaterDim("Column 21");
+            CsColumn c22 = t2.GetGreaterDim("Column 22");
+            CsColumn c23 = t2.GetGreaterDim("Column 23");
+
+            //
+            // Project "Table 2" along "Column 21" and get 2 unique records in a new set "Value A" (3 references) and "Value B" (1 reference)
+            //
+            Set proj1 = new Set("Projection 1. Extraction of Column 21");
+            schema.AddTable(proj1, null, null);
+
+            Mapper mapper = new Mapper();
+            Mapping map = mapper.CreatePrimitive(schema.FindTable("Table 2"), proj1);
+            map.Matches.ForEach(m => m.TargetPath.Path.ForEach(p => p.Add()));
+
+            // Create generating/import column
+            CsColumn col1 = new Dim(map);
+            col1.Add();
+
+            proj1.TableDefinition.Populate();
+            //Assert.AreEqual(2, proj1.TableData.Length);
+
+            //
+            // Defining a combination of "Column 21" and "Column 22" and project with 3 unique records in a new set
+            //
+            Set proj2 = new Set("Projection 1. Extraction of Column 21 and Column 22");
+            schema.AddTable(proj2, null, null);
+
         }
 
         [TestMethod]
@@ -305,7 +358,7 @@ namespace Test
 
             Assert.AreEqual("Orders", top.FindTable("Order Details").GetGreaterDim("Order ID").GreaterSet.Name);
 
-            // Load data
+            // Load data manually
             DataTable dataTable = top.LoadTable((SetRel)top.FindTable("Order Details"));
             Assert.AreEqual(58, dataTable.Rows.Count);
             Assert.AreEqual(37, dataTable.Rows[10][2]);
@@ -324,10 +377,15 @@ namespace Test
             CsColumn dim = new Dim(map);
             dim.Add();
 
-            dim.GreaterSet.TableDefinition.Populate();
-            Assert.AreEqual(58, dim.GreaterSet.TableData.Length);
+            orderDetailsTable.TableDefinition.Populate();
+            Assert.AreEqual(58, orderDetailsTable.TableData.Length);
             
             // Other TODOs:
+
+            // Expr Evaluate
+            // - Type inference rules for arithmetic expressions
+            // - Use of these rules in computing arithmetic results, that is, double+integer has to use double plus operation
+
             // Evaluator interface rework:
             // OledbEvaluator opens a data sets with loading data. So we need to correctly close the resul set etc. 
             // - Probably, it could be done in Initialize and Finish methods (Next/Evaluate is called between them)
