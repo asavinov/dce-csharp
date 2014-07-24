@@ -290,6 +290,11 @@ namespace Test
         }
 
         [TestMethod]
+        public void TableSubsetTest() // Define a filter to get a subset of record from one table
+        {
+        }
+
+        [TestMethod]
         public void TableProductTest() // Define a new table and populate it
         {
             CsSchema schema = PrepareSampleSchema();
@@ -304,9 +309,9 @@ namespace Test
             CsTable t3 = schema.CreateTable("Table 3");
             schema.AddTable(t3, null, null);
 
-            CsColumn c31 = schema.CreateColumn(t1.Name, t3, t1, true);
+            CsColumn c31 = schema.CreateColumn(t1.Name, t3, t1, true); // {*20, 10, *30}
             c31.Add();
-            CsColumn c32 = schema.CreateColumn(t2.Name, t3, t2, true);
+            CsColumn c32 = schema.CreateColumn(t2.Name, t3, t2, true); // {40, 40, *50, *50}
             c32.Add();
 
             t3.TableDefinition.Populate();
@@ -316,9 +321,17 @@ namespace Test
             // Add simple where expression
             //
 
-            //ExprNode ast = BuildExpr("([Table 1].[Column 11] < 10.0) && this.[Table 2].[Column 13] < 5");
-            //t3.TableDefinition.WhereExpression = ast;
+            ExprNode ast = BuildExpr("([Table 1].[Column 11] > 10) && this.[Table 2].[Column 23] == 50.0");
+            t3.TableDefinition.WhereExpression = ast;
 
+            t3.TableDefinition.Populate();
+            Assert.AreEqual(4, t3.TableData.Length);
+
+            Assert.AreEqual(0, c31.ColumnData.GetValue(0));
+            Assert.AreEqual(2, c32.ColumnData.GetValue(0));
+
+            Assert.AreEqual(0, c31.ColumnData.GetValue(1));
+            Assert.AreEqual(3, c32.ColumnData.GetValue(1));
         }
 
         [TestMethod]

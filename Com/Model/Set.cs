@@ -542,6 +542,9 @@ namespace Com.Model
                 //   - user greater sets input values as constituents for new tuples
                 //   - greater dims are populated simultaniously without evaluation (they do not have defs.)
 
+                // Empty the table (reset)
+                Length = 0;
+
                 // Find all local greater key dimensions including the super-dim.
                 CsColumn[] dims = KeyColumns.ToArray();
                 int dimCount = dims.Length;
@@ -577,17 +580,18 @@ namespace Com.Model
                         Offset input = Append(dims, vals);
 
                         // Now check if this appended element satsifies the where expression and if not then remove it
-                        bool satisfies = true;
                         if (eval != null)
                         {
+                            bool satisfies = true;
+
                             eval.Last();
                             eval.Evaluate();
                             satisfies = (bool)eval.GetResult();
-                        }
 
-                        if (!satisfies)
-                        {
-                            Remove(input);
+                            if (!satisfies)
+                            {
+                                Length = Length - 1;
+                            }
                         }
 
 

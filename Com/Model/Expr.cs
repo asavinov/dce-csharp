@@ -192,10 +192,19 @@ namespace Com.Model
                         this.Resolve(schema, variables);
                     }
                 }
-                else if (thisChild != null) // Function access (resolve column)
+                else if (childCount == 1) // Function applied to previous output (resolve column)
                 {
                     string methodName = this.Name;
-                    CsColumn col = thisChild.Result.TypeTable.GetGreaterDim(methodName);
+                    ExprNode outputChild = null;
+                    if (thisChild != null) // Function applied to 'this' (resolve column)
+                    {
+                        outputChild = thisChild;
+                    }
+                    else // Function applied to previous function output (resolve column)
+                    {
+                        outputChild = GetChild(0);
+                    }
+                    CsColumn col = outputChild.Result.TypeTable.GetGreaterDim(methodName);
                     column = col.ColumnData;
 
                     Result.TypeName = col.GreaterSet.Name;
@@ -209,7 +218,7 @@ namespace Com.Model
                     Result.TypeName = "Double";
                     Result.TypeTable = schema.GetPrimitive(Result.TypeName);
 
-                    switch(Action) 
+                    switch (Action)
                     {
                         case ActionType.MUL:
                         case ActionType.DIV:
@@ -335,6 +344,7 @@ namespace Com.Model
                 }
 
                 double doubleRes = 0;
+                bool boolRes = false;
 
                 if (Action == ActionType.READ)
                 {
@@ -351,8 +361,8 @@ namespace Com.Model
                     }
                     else if (column != null) 
                     {
-                        ExprNode thisNode = GetChild("this");
-                        Offset input = (Offset)thisNode.Result.GetValue();
+                        ExprNode prevOutput = GetChild(0);
+                        Offset input = (Offset)prevOutput.Result.GetValue();
                         object output = column.GetValue(input);
                         Result.SetValue(output);
                     }
@@ -362,6 +372,9 @@ namespace Com.Model
                         Result.SetValue(result);
                     }
                 }
+                //
+                // MUL, DIV, ADD, SUB, 
+                //
                 else if (Action == ActionType.MUL)
                 {
                     foreach (ExprNode childNode in Children)
@@ -402,9 +415,77 @@ namespace Com.Model
                     }
                     Result.SetValue(doubleRes);
                 }
-                else // Some procedure. Find its API specification or retrieve via reflection
+                //
+                // LEQ, GEQ, GRE, LES,
+                //
+                else if (Action == ActionType.LEQ)
                 {
 
+                    double arg1 = Convert.ToDouble(((ExprNode)Children[0]).Result.GetValue());
+                    double arg2 = Convert.ToDouble(((ExprNode)Children[1]).Result.GetValue());
+                    boolRes = arg1 <= arg2;
+                    Result.SetValue(boolRes);
+                }
+                else if (Action == ActionType.GEQ)
+                {
+
+                    double arg1 = Convert.ToDouble(((ExprNode)Children[0]).Result.GetValue());
+                    double arg2 = Convert.ToDouble(((ExprNode)Children[1]).Result.GetValue());
+                    boolRes = arg1 >= arg2;
+                    Result.SetValue(boolRes);
+                }
+                else if (Action == ActionType.GRE)
+                {
+
+                    double arg1 = Convert.ToDouble(((ExprNode)Children[0]).Result.GetValue());
+                    double arg2 = Convert.ToDouble(((ExprNode)Children[1]).Result.GetValue());
+                    boolRes = arg1 > arg2;
+                    Result.SetValue(boolRes);
+                }
+                else if (Action == ActionType.LES)
+                {
+
+                    double arg1 = Convert.ToDouble(((ExprNode)Children[0]).Result.GetValue());
+                    double arg2 = Convert.ToDouble(((ExprNode)Children[1]).Result.GetValue());
+                    boolRes = arg1 < arg2;
+                    Result.SetValue(boolRes);
+                }
+                //
+                // EQ, NEQ
+                //
+                else if (Action == ActionType.EQ)
+                {
+                    double arg1 = Convert.ToDouble(((ExprNode)Children[0]).Result.GetValue());
+                    double arg2 = Convert.ToDouble(((ExprNode)Children[1]).Result.GetValue());
+                    boolRes = arg1 == arg2;
+                    Result.SetValue(boolRes);
+                }
+                else if (Action == ActionType.NEQ)
+                {
+                    double arg1 = Convert.ToDouble(((ExprNode)Children[0]).Result.GetValue());
+                    double arg2 = Convert.ToDouble(((ExprNode)Children[1]).Result.GetValue());
+                    boolRes = arg1 != arg2;
+                    Result.SetValue(boolRes);
+                }
+                //
+                // AND, OR
+                //
+                else if (Action == ActionType.AND)
+                {
+                    bool arg1 = Convert.ToBoolean(((ExprNode)Children[0]).Result.GetValue());
+                    bool arg2 = Convert.ToBoolean(((ExprNode)Children[1]).Result.GetValue());
+                    boolRes = arg1 && arg2;
+                    Result.SetValue(boolRes);
+                }
+                else if (Action == ActionType.OR)
+                {
+                    bool arg1 = Convert.ToBoolean(((ExprNode)Children[0]).Result.GetValue());
+                    bool arg2 = Convert.ToBoolean(((ExprNode)Children[1]).Result.GetValue());
+                    boolRes = arg1 || arg2;
+                    Result.SetValue(boolRes);
+                }
+                else // Some procedure. Find its API specification or retrieve via reflection
+                {
                 }
             }
         }

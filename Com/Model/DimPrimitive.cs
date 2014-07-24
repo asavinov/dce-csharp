@@ -68,11 +68,13 @@ namespace Com.Model
                 // Update data and index in the case of increase (append to last) and decrease (delete last)
                 if (value > _length)
                 {
-                    while (value > _length) Append(null); // OPTIMIZE: Instead of appending individual values, write a method for appending an interval of offset (with default value)
+                    while (value > _length) Append(null); 
+                    // OPTIMIZE: Instead of appending individual values, write a method for appending an interval of offset (with default value)
                 }
                 else if (value < _length)
                 {
-                    // TODO: remove last elements
+                    while (value < _length) Remove(Length - 1);
+                    // OPTIMIZE: remove last elements directly
                 }
             }
         }
@@ -177,8 +179,18 @@ namespace Com.Model
         }
 
         public void Remove(Offset input) 
-        { 
-            throw new NotImplementedException();
+        {
+            int pos = FindIndex(input);
+
+            Array.Copy(_offsets, pos + 1, _offsets, pos, _length - pos - 1); // Remove this index element by shifting all next elements backward
+
+            // If it was null value then decrease also their count
+            if (pos < _nullCount)
+            {
+                _nullCount--;
+            }
+
+            _length = _length - 1;
         }
 
         public object ProjectValues(Offset[] offsets)

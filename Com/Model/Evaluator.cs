@@ -70,7 +70,7 @@ namespace Com.Model
                 columnData.SetValue(currentElement, exprNode.Result.GetValue());
             }
 
-            return null;
+            return exprNode.Result.GetValue();
         }
 
         public virtual object EvaluateUpdate() { return null; }
