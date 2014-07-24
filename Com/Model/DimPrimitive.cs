@@ -528,11 +528,11 @@ namespace Com.Model
 
             if (Dim.LesserSet.Top != Dim.GreaterSet.Top && Dim.LesserSet.Top is SetTopOledb) // Import data from a remote source
             {
-                evaluator = new OledbEvaluator(Dim);
+                evaluator = ExprEvaluator.CreateOledbEvaluator(Dim);
             }
             else // Local
             {
-                evaluator = new ExprEvaluator(Dim);
+                evaluator = ExprEvaluator.CreateColumnEvaluator(Dim);
             }
 
             return evaluator;
@@ -546,7 +546,7 @@ namespace Com.Model
 
         public void Evaluate()
         {
-            // Never changes any set - neither lesser nor greater (even in the case of generating/projection dimensions)
+            // Never change any set - neither lesser nor greater (even in the case of generating/projection dimensions)
 
             CsColumnEvaluator evaluator = GetColumnEvaluator();
 

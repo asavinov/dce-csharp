@@ -66,7 +66,7 @@ namespace Test
 
             // Table 2
             CsTable t2 = schema.CreateTable("Table 2");
-            schema.AddTable(t2, t1, null);
+            schema.AddTable(t2, schema.Root, null);
 
             CsColumn c21 = schema.CreateColumn("Column 21", t2, schema.GetPrimitive("String"), true);
             c21.Add();
@@ -160,14 +160,14 @@ namespace Test
 
             Assert.AreEqual(t1.Name, "Table 1");
             Assert.AreEqual(t2.Name, "Table 2");
-            Assert.AreEqual(t1.GetTable("Table 2"), t2);
+            Assert.AreEqual(schema.Root.GetTable("Table 2"), t2);
 
             Assert.AreEqual(t1.GetGreaterDim("Column 11").Name, "Column 11");
             Assert.AreEqual(t2.GetGreaterDim("Column 21").Name, "Column 21");
 
             Assert.AreEqual(t2.GetGreaterDim("Super").IsSuper, true);
             Assert.AreEqual(t2.SuperDim.LesserSet, t2);
-            Assert.AreEqual(t2.SuperDim.GreaterSet, t1);
+            Assert.AreEqual(t2.SuperDim.GreaterSet, schema.Root);
         }
 
         [TestMethod]
@@ -179,12 +179,12 @@ namespace Test
             CsSchema schema = PrepareSampleSchema();
 
             CsTable t1 = schema.FindTable("Table 1");
-            CsTable t2 = schema.FindTable("Table 2");
 
             CsColumn c11 = t1.GetGreaterDim("Column 11");
             CsColumn c12 = t1.GetGreaterDim("Column 12");
             CsColumn c13 = t1.GetGreaterDim("Column 13");
 
+            CsTable t2 = schema.FindTable("Table 2");
             CsColumn c21 = t2.GetGreaterDim("Column 21");
             CsColumn c22 = t2.GetGreaterDim("Column 22");
 
@@ -218,10 +218,8 @@ namespace Test
             c22.ColumnData.SetValue(0, 10);
             c22.ColumnData.SetValue(1, 20);
 
-            t2.SuperDim.ColumnData.SetValue(0, 1); // It is offset to the parent record
-            t2.SuperDim.ColumnData.SetValue(1, 2);
-
-            Assert.AreEqual(2, t2.SuperDim.ColumnData.GetValue(1));
+            Assert.AreEqual(10, c22.ColumnData.GetValue(0));
+            Assert.AreEqual(20, c22.ColumnData.GetValue(1));
         }
 
         [TestMethod]
@@ -234,7 +232,6 @@ namespace Test
             PrepareSampleData(schema);
 
             CsTable t1 = schema.FindTable("Table 1");
-            CsTable t2 = schema.FindTable("Table 2");
 
             CsColumn c11 = t1.GetGreaterDim("Column 11");
             CsColumn c12 = t1.GetGreaterDim("Column 12");
@@ -277,7 +274,7 @@ namespace Test
             CsColumn c15 = schema.CreateColumn("Column 15", t1, schema.GetPrimitive("Double"), false);
             c15.Add();
 
-            // Simple expression: arithmetic operation, column access in leaves and constant value in a leaf.
+            // Simple expression
             ExprNode ast = BuildExpr("([Column 11]+10.0) * this.[Column 13]"); // ConceptScript source code: "[Decimal] [Column 15] <body of expression>"
             c15.ColumnDefinition.Formula = ast;
             c15.ColumnDefinition.Evaluate(); // Evaluate the expression
@@ -293,8 +290,35 @@ namespace Test
         }
 
         [TestMethod]
-        public void TableDefinitionTest() // Define a new table and populate it
+        public void TableProductTest() // Define a new table and populate it
         {
+            CsSchema schema = PrepareSampleSchema();
+            PrepareSampleData(schema);
+
+            CsTable t1 = schema.FindTable("Table 1");
+            CsTable t2 = schema.FindTable("Table 2");
+
+            //
+            // Define a new product-set
+            //
+            CsTable t3 = schema.CreateTable("Table 3");
+            schema.AddTable(t3, null, null);
+
+            CsColumn c31 = schema.CreateColumn(t1.Name, t3, t1, true);
+            c31.Add();
+            CsColumn c32 = schema.CreateColumn(t2.Name, t3, t2, true);
+            c32.Add();
+
+            t3.TableDefinition.Populate();
+            Assert.AreEqual(12, t3.TableData.Length);
+
+            //
+            // Add simple where expression
+            //
+
+            //ExprNode ast = BuildExpr("([Table 1].[Column 11] < 10.0) && this.[Table 2].[Column 13] < 5");
+            //t3.TableDefinition.WhereExpression = ast;
+
         }
 
         [TestMethod]
@@ -437,6 +461,9 @@ namespace Test
             // !!! Append an element to the generating/projection column(s) if an element has been appended/found in the target set. Alternatively, we will have to evaluate this generating dimension separately (double work).
             // - This means a principle: generating dimensions are not evaluated separately - they are evaluated during their target set population.
             // - For Oledb (import/export) dims it is not needed because these dimensions do not store data.
+            // - !!! For product, turn off indexing and then index the whole result set at the end. It is because we append ALL generated elements and then remove them if they do not satisfy the where condition which can be very inefficient. 
+            //   - Introduce API for controling indexing (on/off, table/column etc.)
+            //   - Alternativey, we could introduce 'this' value as an Expr instance similar to having DataRow for 'this' value, and then a special evaluator. But it might be more difficult and more restrictive in future for complex where conditions.
 
             // Dim population principles:
             // - currently we Append from the loop manually and not from the expression (as opposed ot Set::Populate) - it is bad: either all in Evaluate or all in Populate

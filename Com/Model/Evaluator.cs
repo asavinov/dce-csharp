@@ -41,6 +41,20 @@ namespace Com.Model
             if (currentElement < loopTable.TableData.Length) return true;
             else return false;
         }
+        public virtual bool First()
+        {
+            currentElement = 0;
+
+            if (currentElement < loopTable.TableData.Length) return true;
+            else return false;
+        }
+        public virtual bool Last()
+        {
+            currentElement = loopTable.TableData.Length - 1;
+
+            if (currentElement >= 0) return true;
+            else return false;
+        }
 
         public virtual object Evaluate()
         {
@@ -51,7 +65,10 @@ namespace Com.Model
             exprNode.Evaluate();
 
             // Write the result value to the function
-            columnData.SetValue(currentElement, exprNode.Result.GetValue());
+            if (columnData != null)
+            {
+                columnData.SetValue(currentElement, exprNode.Result.GetValue());
+            }
 
             return null;
         }
@@ -60,7 +77,25 @@ namespace Com.Model
 
         public virtual bool EvaluateJoin(object output) { return false; }
 
-        public virtual ExprNode GetOutput() { return exprNode; }
+        public virtual object GetResult() { return exprNode.Result.GetValue(); }
+
+        public static CsColumnEvaluator CreateColumnEvaluator(CsColumn column)
+        {
+            ExprEvaluator eval = new ExprEvaluator(column);
+            return eval;
+        }
+
+        public static CsColumnEvaluator CreateOledbEvaluator(CsColumn column)
+        {
+            OledbEvaluator eval = new OledbEvaluator(column);
+            return eval;
+        }
+
+        public static CsColumnEvaluator CreateWhereEvaluator(CsTable table)
+        {
+            ExprEvaluator eval = new ExprEvaluator(table);
+            return eval;
+        }
 
         public ExprEvaluator(CsColumn column)
         {
@@ -82,6 +117,21 @@ namespace Com.Model
 
             // Resolve names in the expresion by storing direct references to storage objects which will be used during valuation (names will not be used
             exprNode.Resolve(column.LesserSet.Top, new List<CsVariable>() { thisVariable });
+        }
+
+        public ExprEvaluator(CsTable table)
+        {
+            exprNode = table.TableDefinition.WhereExpression;
+
+            currentElement = -1;
+            loopTable = table;
+            isUpdate = false;
+            thisVariable = new Variable("this", loopTable.Name);
+            thisVariable.TypeTable = loopTable;
+            columnData = null;
+
+            // Resolve names in the expresion by storing direct references to storage objects which will be used during valuation (names will not be used
+            exprNode.Resolve(table.Top, new List<CsVariable>() { thisVariable });
         }
     }
 

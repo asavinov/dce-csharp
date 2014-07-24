@@ -519,6 +519,13 @@ namespace Com.Model
         /// </summary>
         public ExprNode OrderbyExpression { get; set; }
 
+        public CsColumnEvaluator GetWhereEvaluator()
+        {
+            CsColumnEvaluator evaluator;
+            evaluator = ExprEvaluator.CreateWhereEvaluator(this);
+            return evaluator;
+        }
+
         /// <summary>
         /// Create all instances of this set. 
         /// Notes:
@@ -535,17 +542,19 @@ namespace Com.Model
                 //   - user greater sets input values as constituents for new tuples
                 //   - greater dims are populated simultaniously without evaluation (they do not have defs.)
 
-                // Find local greater key dimensions including the super-dim.
-                var dims = new List<CsColumn>();
-                dims.Add(SuperDim);
-                dims.AddRange(KeyColumns);
+                // Find all local greater key dimensions including the super-dim.
+                CsColumn[] dims = KeyColumns.ToArray();
+                int dimCount = dims.Length;
+                object[] vals = new object[dimCount];
 
-                // Create a tuple corresponding to these dimensions (an element of this set)
-                ExprNode tupleExpr = new ExprNode(); // Represents a record to be appended to the set (argument for Append method)
-                // TODO: Configure it as a one-level tuple with values in leaves
+                // Evaluator for where expression
+                CsColumnEvaluator eval = null;
+                if (TableDefinition.WhereExpression != null)
+                {
+                    eval = GetWhereEvaluator();
+                }
 
-                int dimCount = dims.Count();
-
+                // For building all combinations
                 Offset[] lengths = new Offset[dimCount];
                 for (int i = 0; i < dimCount; i++) lengths[i] = dims[i].GreaterSet.TableData.Length;
 
@@ -560,62 +569,27 @@ namespace Com.Model
                 {
                     if (top == dimCount) // New element is ready. Process it.
                     {
+                        // Initialize an instance and append it
+                        for (int i = 0; i < dimCount; i++)
+                        {
+                            vals[i] = offsets[i];
+                        }
+                        Offset input = Append(dims, vals);
+
+                        // Now check if this appended element satsifies the where expression and if not then remove it
                         bool satisfies = true;
-
-                        // TODO: Reset the tuple to be appended
-                        // tupleExpr.SetOutput(Operation.ALL, null);
-
-                        if (TableDefinition.WhereExpression != null)
+                        if (eval != null)
                         {
-                            // REWORK:
-                            // Probably, we should first append an instance (without indexing), and then the Where predicate will be either checked automatically (with exception), or we have to check it manually by applying to the newly appended element (then the automatic check has to be turned off).
-                            // In other words, we do not apply Where expression (boolean function) to a tuple or another object - we apply it to a normal element with some offset.
-                            // Alternatively, we could provide a tuple to Append method, and the tuple has Action=Append (not Find). So it is the Append method that knows how to add records and that knows how to check the predicate. This Populate method simply organizes a loop with tuple generation.
-                            // Prepare Where expression for evaluation. Check if it uses our columns and bind these nodes to our columns
-                            // Initialize the where-expression before evaluation by using current offsets
-                            /*
-                            for (int i = 0; i < dimCount; i++)
-                            {
-                                CsColumn d = dims[i];
-                                // Find all uses of the dimension in the expression and initialize it before evaluation
-                                List<Expression> dimExpressions = TableDefinition.WhereExpression.GetOperands(Operation.DOT, d.Name);
-                                foreach (Expression e in dimExpressions)
-                                {
-                                    if (e.Input.OutputSet != d.LesserSet) continue;
-                                    if (e.OutputSet != d.GreaterSet) continue;
-                                    Debug.Assert(!e.Input.OutputSet.IsPrimitive, "Wrong use: primitive set cannot be used in the product for producing a new set (too many combinations).");
-                                    e.Input.Output = -1; // The function will not be evaluated (actually, it should be set only once before the loop)
-                                    e.Output = offsets[i]; // Current offset (will be used as is without assignment during evaluation because Input.Output==-1
-                                }
-
-                                // Also initialize an instance for the case it has to be appended
-                                Expression dimExpression = tupleExpr.GetOperand(d);
-                                if (dimExpression != null) dimExpression.Output = offsets[i];
-                            }
-
-                            //
-                            // Check if it satisfies the constraints by evaluating WhereExpression and append
-                            //
-                            TableDefinition.WhereExpression.Evaluate();
-                            satisfies = (bool)TableDefinition.WhereExpression.Output;
-                            */
+                            eval.Last();
+                            eval.Evaluate();
+                            satisfies = (bool)eval.GetResult();
                         }
 
-                        // REWORK
-                        /*
-                        if (satisfies)
+                        if (!satisfies)
                         {
-                            // Initialize an instance for appending
-                            for (int i = 0; i < dimCount; i++)
-                            {
-                                CsColumn d = dims[i];
-                                Expression dimExpression = tupleExpr.GetOperand(d);
-                                if (dimExpression != null) dimExpression.Output = offsets[i];
-                            }
-
-                            Append(tupleExpr); // Set output for all key (also non-key) dimensions
+                            Remove(input);
                         }
-                        */
+
 
                         top--;
                         while (top >= 0 && lengths[top] == 0) // Go up by skipping empty dimensions and reseting 

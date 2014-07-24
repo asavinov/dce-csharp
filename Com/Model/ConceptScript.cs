@@ -115,6 +115,8 @@ namespace Com.Model
 
         ExprNode OrderbyExpression { get; set; } // Here we should store something like Comparator
 
+        CsColumnEvaluator GetWhereEvaluator(); // Get an object which is used to compute the where expression according to the formula
+
         void Populate();
         void Unpopulate(); // Is not it Length=0?
     }
@@ -213,7 +215,7 @@ namespace Com.Model
         CsColumnEvaluator GetColumnEvaluator(); // Get an object which is used to compute the function values according to the formula
 
         //
-        // Compuate
+        // Compute
         //
 
         void Initialize();
@@ -227,6 +229,8 @@ namespace Com.Model
         // Never changes any set - neither lesser nor greater - just compute output given input
 
         bool Next(); // True if there exists a next element
+        bool First(); // True if there exists a first element (if the set is not empty)
+        bool Last(); // True if there exists a last element (if the set is not empty)
 
         bool IsUpdate { get; }
 
@@ -234,7 +238,7 @@ namespace Com.Model
         object EvaluateUpdate(); // Read group and measure for the specified input and compute update according to the aggregation formula. It may also increment another function if necessary.
         bool EvaluateJoin(object output); // Called for all pairs of input and output *if* the definition is a join predicate.
 
-        ExprNode GetOutput();
+        object GetResult();
     }
 
     public interface CsVariable // It is a storage element like function or table
