@@ -335,6 +335,30 @@ namespace Test
             // AGG(this (fact), value (measure), accu (SUM, AVG etc.) );
             // Problem: we need to define somewhere the output function name, that is, the result (aggregated function) where everything is stored and which is computed
             // Indeed, it is a definition of some function: Double MyFunc() = ...
+
+
+            // Agg func definition
+            // - updater expr. normal expr with two vars: this and value. It will read the current value and then compute a new value (but theoretically, it couild do arbitrary computations). Importantly, it will use a special variable 'value'.
+            // - group expr. normal expr of the fact set
+            // - measre expr. normal expr of the fact set
+
+            // Agg func evaluation in the loop for fact set
+            // - next call will change 'this' variable visible from group and measure expr
+            // - evaluate group expr and write result to group var (in the context of the updater expr)
+            // - evalue measure expr and write to value var (in the context of the updater expr)
+            // - evalute updater expr and write the result to the function (as a new value)
+            // Conclusions:
+            // - so we need at least two contexts with separate variables: for group/measure expression, and for update expression
+            // - the resolver has to separate these two contexts when resolving different expressions
+            // - probably we can implement a separate Evaluator class for Updating which has fields for group/measure dims and knows how to use two contexts and three expressions
+            // - column defintion has two options: normal column (arithmetic, tuple etc.) and aggregation/updater column. Populating method and GetEvaluator know about it by having IF for them.
+
+            // Normal func definition
+            // - expr using 'this' variable
+            // Normal func evaluation
+            // - next call will 'this' variable visible from the expr
+            // - evaluate expr and write the result to the function (as a new value)
+
         }
 
         [TestMethod]
