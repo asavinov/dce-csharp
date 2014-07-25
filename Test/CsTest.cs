@@ -287,6 +287,54 @@ namespace Test
         [TestMethod]
         public void AggregationTest() // Defining new aggregated columns and evaluate them
         {
+            // Algorithm aggregation
+            // Loop through the fact set via iterator/evaluator
+            // Compuate measure output via measure expression (one fact column in the simplest case)
+            // Computer group output via grouping expression (one fact column in the simplest case)
+            // Update aggregated function for input=group with new value=measure using update expression (standard accumaltor in the simplest case)
+
+            // More complex case:
+            // This set is a product of some greater sets
+            // Multidimensional grouping: grouping function returns a tuple of several greater dims
+            // Question: 
+            // - do we have to define this mapped grouping dim explicitly (and compute in advance) or 
+            //   - explicit column will already contain/store the group outputs (evaluated and stored independently)
+            // - we can define a md-grouping dimension on the fly in the definition of the aggregation function?
+            //   - the column for storing values does not exist as an object or at least is not part of the schema (temporary column existing only within the expression)
+            //   - so the question is: can we define/use a tuple expression without column objects?
+
+            // The real computations are specified by the accumulator expression/function:
+            // - get new value in parameter (named 'value', provided along with 'this')
+            // - read the current value stored in the function (READ action for 'this')
+            // - make a call of the accu expression with the current value and old value
+            // - store the result either manually or automatically as WRITE action
+
+            // So if we have standard aggregation functions like SUM then they have embedded implementation
+            // We need a general marker or node type for an aggregation like AGG
+            // It has the following parameters: 
+            // - fact set (loop set)
+            // - measure dim (or expr) from fact to this dim greater set
+            // - grouping dim (or expr) from fact to this dim lesser set
+            // - aggregation operator 
+            //   - built-in (SUM etc.) - processed in switch: read group, read measre, read old val, compute new val, store new val (either directly in the function or as a result of the expression)
+            //   - expression like Double MyExpr(input, value) or Double MyExpr(oldVal, newVal)
+
+            // So we define a special node with several child nodes with special treatment
+            // Children are processed by accessing group and measure expressions (they have standard defintions). 
+            // After that, the special accumulator expression is processed. It can be, in fact, this node (rather than a child node)
+            // The task of the accumulator is to read old value using input (this=group), combine it with meausure value, and store as output of the whole expression. 
+
+            // Accu node. Name defines the accu function (like SUM). Action is UPDATE or AGGR
+            // - this child is not a variable but rather the result of a grouping function which uses 'this' (of the fact set)
+            // - value child computes its value as an output of measure function (which uses 'this' from the fact set)
+            // In contrast to READ, this node first reads a value (of this child) but then combines it with 'value' child
+            // Importantly, the output value corresponds to 'this=group' and not to 'this=fact' variable.
+            // - So either this node itself has to store the output, or the Evaluator has to understand what function to change and what input offset to use (NOT fact offset).
+
+            // Syntactically, it could be defined as a special aggregation function call:
+            // AGG(this (fact), value (measure), accu (SUM, AVG etc.) );
+            // Problem: we need to define somewhere the output function name, that is, the result (aggregated function) where everything is stored and which is computed
+            // Indeed, it is a definition of some function: Double MyFunc() = ...
         }
 
         [TestMethod]

@@ -478,28 +478,13 @@ namespace Com.Model
 
         #region CsColumnDefinition interface
 
-        //
-        // Represents a function definition in terms of other functions.
-        //
+        public AstNode FormulaAst { get; set; }
+
         public ExprNode Formula { get; set; }
 
-        /// <summary>
-        /// It is a formula (expression) defining a function for this dimension. 
-        /// When evaluated, it computes a value of the greater set for the identity value of the lesser set.
-        /// </summary>
-        public ExprNode SelectExpression { get; set; }
-
-        // Source (user, non-executable) formula for computing this function consisting of value-operations
-        public AstNode FormulaAst { get; set; } // Analogous to SelectExpression
-
-        /// <summary>
-        /// One particular type of function specification used for defining mapped dimensions, import specification, copy specification etc.
-        /// It defines greater set (nested) tuple in terms of the lesser set (nested) tuple. 
-        /// The function computation procedure can transoform this mapping to a normal expression for evaluation in a loop or it can translate it to a join or other target engine formats.
-        /// </summary>
         public Mapping Mapping { get; set; }
 
-        public ExprNode WhereExpression { get; set; } // It describes the domain of the function or where the function returns null independent of other definitions
+        public ExprNode WhereExpression { get; set; }
 
         public bool IsGenerating { get; set; }
 
@@ -510,12 +495,12 @@ namespace Com.Model
         // Fact set is a set for looping through and providing input for measure and group functions. By default, it is this (lesser) set.
         public CsTable LoopSet { get; set; } // Dependency on a lesser set and lesser functions
         // It is a translated, optimized and directly executable code (value operatinos) for computing output values given an input value (input is fact set which by default is this set)
-        public ValueOp MeasureCode { get; set; } // Input=FactSet. Output as declared by this function output (generaly, as consumed by the accumulator operator). By default, it is an expression for computing this function output given this set input (so normal evaluation). In the simplest case, it is a single call of an existing function.
-        public ValueOp GroupCode { get; set; } // Input=FactSet. Output as declared by this function input (this set)
-        public ValueOp AccuCode { get; set; } // Accumulator expression which computes a new value by taking into account the current value and a new output. For built-in functions it has a single system procedure call like SUM, AVG etc.
+        public ExprNode MeasureCode { get; set; } // Input=FactSet/LoopSet. Output as declared by this function output (generaly, as consumed by the accumulator operator). By default, it is an expression for computing this function output given this set input (so normal evaluation). In the simplest case, it is a single call of an existing function.
+        public ExprNode GroupCode { get; set; } // Input=FactSet/LoopSet. Output as declared by this function input (this set)
+        public ExprNode AccuCode { get; set; } // Accumulator expression which computes a new value by taking into account the current value and a new output. For built-in functions it has a single system procedure call like SUM, AVG etc.
         // Principle: LoopSet.GroupCode + ThisSet.ThisFunc = LoopSet.MeasureCode
         // Principle: if LoopSet == ThisSet then GroupCode = null, ThisFunc = MeasureCode
-        public Dim CountDim { get; set; } // Input=ThisSet. This dimension will store group counts
+        public CsColumn CountDim { get; set; } // Input=ThisSet. This dimension will store group counts
 
         //
         // Dependencies
@@ -576,42 +561,6 @@ namespace Com.Model
                     evaluator.Evaluate();
                 }
             }
-        }
-
-        public void Evaluate_OLD()
-        {
-            /*
-            if (Mapping != null)
-            {
-                Debug.Assert(Mapping.SourceSet == Dim.LesserSet && Mapping.TargetSet == Dim.GreaterSet, "Wrong use: the mapping source and target sets have to corresond to the dimension sets.");
-
-                // Build a function from the mapping for populating a mapped dimension (type change or new mapped dimension)
-                Expression tupleExpr = Mapping.GetTargetExpression(this);
-
-                var funcExpr = ExpressionScope.CreateFunctionDeclaration(Dim.Name, Dim.LesserSet.Name, Dim.GreaterSet.Name);
-                funcExpr.Statements[0].Input = tupleExpr; // Return statement
-                funcExpr.ResolveFunction(Dim.LesserSet.Top);
-                funcExpr.Resolve();
-
-                SelectExpression = funcExpr;
-            }
-
-            if (SelectExpression != null) // Function definition the values of which have to be computed and stored
-            {
-                Debug.Assert(SelectExpression.Operation == Operation.FUNCTION, "Wrong use: derived function has to be FUNCTION expression.");
-                Debug.Assert(SelectExpression.Input != null, "Wrong use: derived function must have Input representing this argument.");
-                Debug.Assert(SelectExpression.Input.Operation == Operation.PARAMETER, "Wrong use: derived function Input has to be of PARAMETER type.");
-                Debug.Assert(SelectExpression.Input.Dimension != null, "Wrong use: derived function Input has to reference a valid variable.");
-
-                for (Offset input = 0; input < Dim.LesserSet.Length; input++) // Compute the output function value for each input value (offset)
-                {
-                    // SelectExpression.SetOutput(Operation.PARAMETER, offset);
-                    SelectExpression.Input.Dimension.Value = input; // Initialize 'this'
-                    SelectExpression.Evaluate(); // Compute
-                    SetValue(input, SelectExpression.Output); // Store the final result
-                }
-            }
-            */
         }
 
         public void Finish() { }

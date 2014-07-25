@@ -199,17 +199,32 @@ namespace Com.Model
 
     public interface CsColumnDefinition // How a function is represented and evaluated. It uses API of the column storage like read, write (typed or untyped).
     {
-        //
-        // Represent formula
-        //
+        /// <summary>
+        /// Source (user, non-executable) formula for computing this function consisting of value-operations
+        /// </summary>
+        AstNode FormulaAst { get; set; }
+
+        /// <summary>
+        /// Represents a function definition in terms of other functions (select expression).
+        /// When evaluated, it computes a value of the greater set for the identity value of the lesser set.
+        /// </summary>
         ExprNode Formula { get; set; }
 
-        ExprNode SelectExpression { get; set; }
-        AstNode FormulaAst { get; set; } // Analogous to SelectExpression
+        /// <summary>
+        /// One particular type of function specification used for defining mapped dimensions, import specification, copy specification etc.
+        /// It defines greater set (nested) tuple in terms of the lesser set (nested) tuple. 
+        /// The function computation procedure can transoform this mapping to a normal expression for evaluation in a loop or it can translate it to a join or other target engine formats.
+        /// </summary>
         Mapping Mapping { get; set; }
 
+        /// <summary>
+        /// It describes the domain of the function or where the function returns null independent of other definitions
+        /// </summary>
         ExprNode WhereExpression { get; set; }
 
+        /// <summary>
+        /// Whether output values are appended to the output set. 
+        /// </summary>
         bool IsGenerating { get; set; }
 
         CsColumnEvaluator GetColumnEvaluator(); // Get an object which is used to compute the function values according to the formula
