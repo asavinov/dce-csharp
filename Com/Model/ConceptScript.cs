@@ -200,6 +200,11 @@ namespace Com.Model
     public interface CsColumnDefinition // How a function is represented and evaluated. It uses API of the column storage like read, write (typed or untyped).
     {
         /// <summary>
+        /// Whether output values are appended to the output set. 
+        /// </summary>
+        bool IsGenerating { get; set; }
+
+        /// <summary>
         /// Source (user, non-executable) formula for computing this function consisting of value-operations
         /// </summary>
         AstNode FormulaAst { get; set; }
@@ -207,6 +212,7 @@ namespace Com.Model
         /// <summary>
         /// Represents a function definition in terms of other functions (select expression).
         /// When evaluated, it computes a value of the greater set for the identity value of the lesser set.
+        /// For aggregated columns, it is an updater expression which computes a new value from the current value and a new fact (measure).
         /// </summary>
         ExprNode Formula { get; set; }
 
@@ -222,10 +228,28 @@ namespace Com.Model
         /// </summary>
         ExprNode WhereExpression { get; set; }
 
+        //
+        // Aggregation
+        //
+
         /// <summary>
-        /// Whether output values are appended to the output set. 
+        /// Fact set is a set for looping through and providing input for measure and group functions. By default, it is this (lesser) set.
         /// </summary>
-        bool IsGenerating { get; set; }
+        CsTable FactTable { get; set; } // Dependency on a lesser set and lesser functions
+
+        /// <summary>
+        /// Computes a group (this column input) from the current fact (fact table input). Result of this expression is input for this column.
+        /// </summary>
+        ExprNode GroupFormula { get; set; }
+
+        /// <summary>
+        /// Computes a new value (this column output) from the current fact (fact table input). Result of this expression has to be aggregated with the current output stored in this column.
+        /// </summary>
+        ExprNode MeasureFormula { get; set; }
+
+        //
+        // Dependencies
+        //
 
         CsColumnEvaluator GetColumnEvaluator(); // Get an object which is used to compute the function values according to the formula
 

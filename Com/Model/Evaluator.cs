@@ -19,7 +19,7 @@ namespace Com.Model
     {
         protected ExprNode exprNode; // Can contain more specific nodes OledbExprNode to access attributes in DataRow
 
-        protected CsVariable thisVariable; // Stores as a value a reference to the current DataRow (incremented for each iteration)
+        protected CsVariable thisVariable; // Stores current input (offset in a local set or reference to the current DataRow)
 
         protected Offset currentElement;
 
@@ -97,6 +97,12 @@ namespace Com.Model
             return eval;
         }
 
+        public static CsColumnEvaluator CreateAggrEvaluator(CsColumn column)
+        {
+            AggrEvaluator eval = new AggrEvaluator(column);
+            return eval;
+        }
+
         public ExprEvaluator(CsColumn column)
         {
             if (column.ColumnDefinition.Mapping != null)
@@ -131,7 +137,11 @@ namespace Com.Model
             columnData = null;
 
             // Resolve names in the expresion by storing direct references to storage objects which will be used during valuation (names will not be used
-            exprNode.Resolve(table.Top, new List<CsVariable>() { thisVariable });
+            exprNode.Resolve(loopTable.Top, new List<CsVariable>() { thisVariable });
+        }
+
+        public ExprEvaluator()
+        {
         }
     }
 
@@ -171,16 +181,104 @@ namespace Com.Model
             return null;
         }
 
-        public override object EvaluateUpdate() { return null; }
-
-        public override bool EvaluateJoin(object output) { return false; }
-
         public OledbEvaluator(CsColumn column)
             : base(column)
         {
             // Produce a result set from the remote database by executing a query on the source table
             dataTable = ((SetTopOledb)loopTable.Top).LoadTable(loopTable);
             rows = dataTable.Rows.GetEnumerator();
+        }
+    }
+
+    /// <summary>
+    /// Notes:
+    /// - distinguish between this table (where the aggregated column is defined, and a fact table which provides values to be aggregated where group and measure functions are defined.
+    /// - the way of aggregation is defined as an updater expression which knows how to compute a new value given the old (current) value and a new measure.
+    /// </summary>
+    public class AggrEvaluator : ExprEvaluator
+    {
+        //
+        // Fact-related members
+        //
+
+        // base::thisVariable stores current fact in the loop table. is used by group expr and meausre expr
+        // base::currentElement is offset in the fact table
+        // base::loopTable is a fact set which is iterated in this class
+
+        protected ExprNode groupExpr; // Returns a group this fact belongs to, is stored in the group variable
+
+        protected ExprNode measureExpr; // Returns a new value to be aggregated with the old value, is stored in the measure variable
+
+        //
+        // Aggregation-related members
+        //
+
+        protected CsVariable groupVariable; // Stores current group (input for the aggregated function)
+
+        protected CsVariable measureVariable; // Stores new value (output for the aggregated function)
+
+        // base::exprNode - updater expression. works in the context of two variables: group and measure
+        // base::columnData is the aggregated function to be computed
+
+        //
+        // CsColumnEvaluator interface
+        //
+
+        public override object Evaluate()
+        {
+            //
+            // Evalute group and measure expressions for the current fact
+            //
+
+            // Use input value to evaluate the expression
+            thisVariable.SetValue(currentElement);
+
+            groupExpr.Evaluate();
+            Offset groupElement = (Offset)groupExpr.Result.GetValue();
+            groupVariable.SetValue(groupElement);
+
+            measureExpr.Evaluate();
+            object measureValue = measureExpr.Result.GetValue();
+            measureVariable.SetValue(measureValue);
+
+            //
+            // Evaluate the update expression and store the new computed value
+            //
+            exprNode.Evaluate();
+
+            object newValue = exprNode.Result.GetValue();
+            columnData.SetValue(groupElement, newValue);
+
+            return exprNode.Result.GetValue();
+        }
+
+        public AggrEvaluator(CsColumn column)
+        {
+            exprNode = column.ColumnDefinition.Formula;
+
+            currentElement = -1;
+            loopTable = column.ColumnDefinition.FactTable;
+            isUpdate = true;
+
+            thisVariable = new Variable("this", loopTable.Name);
+            thisVariable.TypeTable = loopTable;
+
+            columnData = column.ColumnData;
+
+            groupVariable = new Variable("this", column.LesserSet.Name);
+            groupVariable.TypeTable = column.LesserSet;
+
+            measureVariable = new Variable("value", column.GreaterSet.Name);
+            measureVariable.TypeTable = column.GreaterSet;
+
+            groupExpr = column.ColumnDefinition.GroupFormula;
+            measureExpr = column.ColumnDefinition.MeasureFormula;
+
+            // Resolve names in the expresions using appropriate variables
+            exprNode.Resolve(column.LesserSet.Top, new List<CsVariable>() { groupVariable, measureVariable });
+
+            groupExpr.Resolve(loopTable.Top, new List<CsVariable>() { thisVariable });
+            measureExpr.Resolve(loopTable.Top, new List<CsVariable>() { thisVariable });
         }
     }
 

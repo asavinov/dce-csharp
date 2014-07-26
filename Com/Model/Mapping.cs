@@ -349,7 +349,7 @@ namespace Com.Model
                 ExprNode leafNode = tupleExpr.AddToTuple(match.TargetPath, false);
 
                 // Add an access expression to this branch
-                ExprNode accessNode = ExprNode.CreateCall(match.SourcePath, true);
+                ExprNode accessNode = ExprNode.CreateReader(match.SourcePath, true);
                 leafNode.AddChild((ExprNode)accessNode.Root);
                 // TODO: Old question: what is in the tuple leaves: VALUE, CALL, or whatever
 

@@ -74,6 +74,8 @@ namespace Test
             c22.Add();
             CsColumn c23 = schema.CreateColumn("Column 23", t2, schema.GetPrimitive("Double"), false);
             c23.Add();
+            CsColumn c24 = schema.CreateColumn("Table 1", t2, t1, false);
+            c24.Add();
 
             return schema;
         }
@@ -119,28 +121,33 @@ namespace Test
             CsColumn c21 = t2.GetGreaterDim("Column 21");
             CsColumn c22 = t2.GetGreaterDim("Column 22");
             CsColumn c23 = t2.GetGreaterDim("Column 23");
+            CsColumn c24 = t2.GetGreaterDim("Table 1");
 
-            cols = new CsColumn[] { c21, c22, c23 };
-            vals = new object[3];
+            cols = new CsColumn[] { c21, c22, c23, c24 };
+            vals = new object[4];
 
             vals[0] = "Value A";
             vals[1] = 20;
             vals[2] = 40.0;
+            vals[3] = 0;
             t2.TableData.Append(cols, vals);
 
             vals[0] = "Value A";
             vals[1] = 30;
             vals[2] = 40.0;
+            vals[3] = 1;
             t2.TableData.Append(cols, vals);
 
             vals[0] = "Value A";
             vals[1] = 30;
             vals[2] = 50.0;
+            vals[3] = 1;
             t2.TableData.Append(cols, vals);
 
             vals[0] = "Value B";
             vals[1] = 30;
             vals[2] = 50.0;
+            vals[3] = 1;
             t2.TableData.Append(cols, vals);
         }
 
@@ -274,10 +281,11 @@ namespace Test
             CsColumn c15 = schema.CreateColumn("Column 15", t1, schema.GetPrimitive("Double"), false);
             c15.Add();
 
-            // Simple expression
-            ExprNode ast = BuildExpr("([Column 11]+10.0) * this.[Column 13]"); // ConceptScript source code: "[Decimal] [Column 15] <body of expression>"
-            c15.ColumnDefinition.Formula = ast;
-            c15.ColumnDefinition.Evaluate(); // Evaluate the expression
+            // Define simple expression
+            c15.ColumnDefinition.Formula = BuildExpr("([Column 11]+10.0) * this.[Column 13]"); // ConceptScript source code: "[Decimal] [Column 15] <body of expression>"
+
+            // Evaluate column
+            c15.ColumnDefinition.Evaluate();
 
             Assert.AreEqual(50.0, c15.ColumnData.GetValue(0));
             Assert.AreEqual(30.0, c15.ColumnData.GetValue(1));
@@ -287,15 +295,46 @@ namespace Test
         [TestMethod]
         public void AggregationTest() // Defining new aggregated columns and evaluate them
         {
-            // Algorithm aggregation
-            // Loop through the fact set via iterator/evaluator
-            // Compuate measure output via measure expression (one fact column in the simplest case)
-            // Computer group output via grouping expression (one fact column in the simplest case)
-            // Update aggregated function for input=group with new value=measure using update expression (standard accumaltor in the simplest case)
+            //
+            // Prepare schema and fill data
+            //
+            CsSchema schema = PrepareSampleSchema();
+            PrepareSampleData(schema);
+
+            CsTable t1 = schema.FindTable("Table 1");
+
+            CsTable t2 = schema.FindTable("Table 2");
+
+            CsColumn c23 = t2.GetGreaterDim("Column 23");
+            CsColumn c24 = t2.GetGreaterDim("Table 1");
+
+            //
+            // Define aggregated column
+            //
+            CsColumn c15 = schema.CreateColumn("Agg of Column 23", t1, schema.GetPrimitive("Double"), false);
+            c15.Add();
+
+            c15.ColumnDefinition.Formula = ExprNode.CreateUpdater(c15, ActionType.ADD); // Update expression
+            c15.ColumnDefinition.FactTable = t2; // Fact table
+            c15.ColumnDefinition.GroupFormula = (ExprNode)ExprNode.CreateReader(c24).Root; // Group expression
+            c15.ColumnDefinition.MeasureFormula = (ExprNode)ExprNode.CreateReader(c23).Root; // Measure expression
+
+            //
+            // Evaluate expression
+            //
+            c15.ColumnDefinition.Evaluate(); // {40, 140, 0}
+
+            Assert.AreEqual(40.0, c15.ColumnData.GetValue(0));
+            Assert.AreEqual(140.0, c15.ColumnData.GetValue(1));
+            Assert.AreEqual(0.0, c15.ColumnData.GetValue(2)); // In fact, it has to be NaN or null (no values have been aggregated)
+
+            // TODO:
+            // - initializer and finalizer for aggregation evluation (also for other evaluators but for agg it is more important)
+            // - null measure, null facts
 
             // More complex case:
             // This set is a product of some greater sets
-            // Multidimensional grouping: grouping function returns a tuple of several greater dims
+            // grouping function returns a tuple of several greater dims: it is either defined/evaluated independently, or it is defined via grouping expression only for aggregation
             // Question: 
             // - do we have to define this mapped grouping dim explicitly (and compute in advance) or 
             //   - explicit column will already contain/store the group outputs (evaluated and stored independently)
@@ -303,61 +342,14 @@ namespace Test
             //   - the column for storing values does not exist as an object or at least is not part of the schema (temporary column existing only within the expression)
             //   - so the question is: can we define/use a tuple expression without column objects?
 
-            // The real computations are specified by the accumulator expression/function:
-            // - get new value in parameter (named 'value', provided along with 'this')
-            // - read the current value stored in the function (READ action for 'this')
-            // - make a call of the accu expression with the current value and old value
-            // - store the result either manually or automatically as WRITE action
-
-            // So if we have standard aggregation functions like SUM then they have embedded implementation
-            // We need a general marker or node type for an aggregation like AGG
-            // It has the following parameters: 
-            // - fact set (loop set)
-            // - measure dim (or expr) from fact to this dim greater set
-            // - grouping dim (or expr) from fact to this dim lesser set
-            // - aggregation operator 
-            //   - built-in (SUM etc.) - processed in switch: read group, read measre, read old val, compute new val, store new val (either directly in the function or as a result of the expression)
-            //   - expression like Double MyExpr(input, value) or Double MyExpr(oldVal, newVal)
-
-            // So we define a special node with several child nodes with special treatment
-            // Children are processed by accessing group and measure expressions (they have standard defintions). 
-            // After that, the special accumulator expression is processed. It can be, in fact, this node (rather than a child node)
-            // The task of the accumulator is to read old value using input (this=group), combine it with meausure value, and store as output of the whole expression. 
-
-            // Accu node. Name defines the accu function (like SUM). Action is UPDATE or AGGR
-            // - this child is not a variable but rather the result of a grouping function which uses 'this' (of the fact set)
-            // - value child computes its value as an output of measure function (which uses 'this' from the fact set)
-            // In contrast to READ, this node first reads a value (of this child) but then combines it with 'value' child
-            // Importantly, the output value corresponds to 'this=group' and not to 'this=fact' variable.
-            // - So either this node itself has to store the output, or the Evaluator has to understand what function to change and what input offset to use (NOT fact offset).
-
-            // Syntactically, it could be defined as a special aggregation function call:
+            // How to define AGG function syntactically:
+            // special aggregation function call with all necessary parameters:
             // AGG(this (fact), value (measure), accu (SUM, AVG etc.) );
             // Problem: we need to define somewhere the output function name, that is, the result (aggregated function) where everything is stored and which is computed
             // Indeed, it is a definition of some function: Double MyFunc() = ...
-
-
-            // Agg func definition
-            // - updater expr. normal expr with two vars: this and value. It will read the current value and then compute a new value (but theoretically, it couild do arbitrary computations). Importantly, it will use a special variable 'value'.
-            // - group expr. normal expr of the fact set
-            // - measre expr. normal expr of the fact set
-
-            // Agg func evaluation in the loop for fact set
-            // - next call will change 'this' variable visible from group and measure expr
-            // - evaluate group expr and write result to group var (in the context of the updater expr)
-            // - evalue measure expr and write to value var (in the context of the updater expr)
-            // - evalute updater expr and write the result to the function (as a new value)
-            // Conclusions:
-            // - so we need at least two contexts with separate variables: for group/measure expression, and for update expression
-            // - the resolver has to separate these two contexts when resolving different expressions
-            // - probably we can implement a separate Evaluator class for Updating which has fields for group/measure dims and knows how to use two contexts and three expressions
-            // - column defintion has two options: normal column (arithmetic, tuple etc.) and aggregation/updater column. Populating method and GetEvaluator know about it by having IF for them.
-
-            // Normal func definition
-            // - expr using 'this' variable
-            // Normal func evaluation
-            // - next call will 'this' variable visible from the expr
-            // - evaluate expr and write the result to the function (as a new value)
+            // Alternatively, 
+            // - it can be a definition for an updater expression (can be defined for any function along with the setter expression).
+            // - in addition, we point to a feeder or provider of facts for this updater (can be shared among many updaters) which is defind independently in the fact table
 
         }
 

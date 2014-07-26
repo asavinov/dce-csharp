@@ -478,6 +478,8 @@ namespace Com.Model
 
         #region CsColumnDefinition interface
 
+        public bool IsGenerating { get; set; }
+
         public AstNode FormulaAst { get; set; }
 
         public ExprNode Formula { get; set; }
@@ -486,21 +488,18 @@ namespace Com.Model
 
         public ExprNode WhereExpression { get; set; }
 
-        public bool IsGenerating { get; set; }
-
         //
         // Aggregation
         //
 
-        // Fact set is a set for looping through and providing input for measure and group functions. By default, it is this (lesser) set.
-        public CsTable LoopSet { get; set; } // Dependency on a lesser set and lesser functions
-        // It is a translated, optimized and directly executable code (value operatinos) for computing output values given an input value (input is fact set which by default is this set)
-        public ExprNode MeasureCode { get; set; } // Input=FactSet/LoopSet. Output as declared by this function output (generaly, as consumed by the accumulator operator). By default, it is an expression for computing this function output given this set input (so normal evaluation). In the simplest case, it is a single call of an existing function.
-        public ExprNode GroupCode { get; set; } // Input=FactSet/LoopSet. Output as declared by this function input (this set)
-        public ExprNode AccuCode { get; set; } // Accumulator expression which computes a new value by taking into account the current value and a new output. For built-in functions it has a single system procedure call like SUM, AVG etc.
-        // Principle: LoopSet.GroupCode + ThisSet.ThisFunc = LoopSet.MeasureCode
-        // Principle: if LoopSet == ThisSet then GroupCode = null, ThisFunc = MeasureCode
-        public CsColumn CountDim { get; set; } // Input=ThisSet. This dimension will store group counts
+        public CsTable FactTable { get; set; }
+
+        public ExprNode GroupFormula { get; set; }
+
+        public ExprNode MeasureFormula { get; set; }
+
+        // Aassert: FactTable.GroupFormula + ThisSet.ThisFunc = FactTable.MeasureFormula
+        // Aassert: if LoopSet == ThisSet then GroupCode = null, ThisFunc = MeasureCode
 
         //
         // Dependencies
@@ -527,9 +526,13 @@ namespace Com.Model
             {
                 evaluator = ExprEvaluator.CreateOledbEvaluator(Dim);
             }
-            else // Local
+            else if (FactTable == null || FactTable == Dim.LesserSet) // Non-aggregation
             {
                 evaluator = ExprEvaluator.CreateColumnEvaluator(Dim);
+            }
+            else
+            {
+                evaluator = ExprEvaluator.CreateAggrEvaluator(Dim);
             }
 
             return evaluator;
@@ -547,20 +550,11 @@ namespace Com.Model
 
             CsColumnEvaluator evaluator = GetColumnEvaluator();
 
-            if (evaluator.IsUpdate)
+            while (evaluator.Next())
             {
-                while (evaluator.Next())
-                {
-                    evaluator.EvaluateUpdate();
-                }
+                evaluator.Evaluate();
             }
-            else
-            {
-                while (evaluator.Next())
-                {
-                    evaluator.Evaluate();
-                }
-            }
+
         }
 
         public void Finish() { }

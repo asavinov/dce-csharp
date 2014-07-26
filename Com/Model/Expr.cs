@@ -374,21 +374,6 @@ namespace Com.Model
                 }
                 if (Action == ActionType.UPDATE) // Compute new value for the specified offset using a new value in the variable
                 {
-                    ExprNode thisNode = GetChild("this");
-                    ExprNode valueNode = GetChild("value");
-
-                    Offset group = (Offset)groupNode.Result.GetValue();
-                    object value = measureNode.Result.GetValue();
-
-                    object currentValue = column.GetValue(group);
-                    switch(Name) 
-                    {
-                        case "SUM":
-                            doubleRes = Convert.ToDouble(currentValue) + Convert.ToDouble(value);
-                            break;
-                    }
-                    Result.SetValue(doubleRes);
-
                 }
                 //
                 // MUL, DIV, ADD, SUB, 
@@ -568,7 +553,7 @@ namespace Com.Model
         /// If this variable is requested then the return expression will create at one node. 
         /// Return the last node of the expression (this node if requested) which corresponds to the first segment of the path.
         /// </summary>
-        public static ExprNode CreateCall(DimPath path, bool withThisVariable) 
+        public static ExprNode CreateReader(DimPath path, bool withThisVariable) 
         {
             ExprNode expr = null;
 
@@ -628,6 +613,15 @@ namespace Com.Model
         }
 
         /// <summary>
+        /// Create a read expression for the specified column. 
+        /// This expression will read one variables from the context: 'this' typed by the column lesser set.
+        /// </summary>
+        public static ExprNode CreateReader(CsColumn column)
+        {
+            return CreateReader(new DimPath(column), true);
+        }
+
+        /// <summary>
         /// Create an upate expression for the specified aggregation column and standard aggregation function. 
         /// This expression will read two variables from the context: 'this' typed by the column lesser set and 'value' typed by the column greater set.
         /// </summary>
@@ -636,7 +630,7 @@ namespace Com.Model
             //
             // A node for reading the current function value at the offset in 'this' variable
             //
-            ExprNode currentValueNode = CreateReader(column);
+            ExprNode currentValueNode = (ExprNode)CreateReader(column).Root;
 
             //
             // A node for reading a new function value from the well-known variable
@@ -663,39 +657,6 @@ namespace Com.Model
             // Two arguments in child nodes
             expr.AddChild(currentValueNode);
             expr.AddChild(valueNode);
-
-            return expr;
-        }
-
-        /// <summary>
-        /// Create a read expression for the specified column. 
-        /// This expression will read one variables from the context: 'this' typed by the column lesser set.
-        /// </summary>
-        public static ExprNode CreateReader(CsColumn column)
-        {
-            //
-            // A node for reading the offset to be read from the well-known variable
-            //
-            ExprNode thisNode = new ExprNode();
-            thisNode.Name = "this";
-            thisNode.Operation = OperationType.CALL;
-            thisNode.Action = ActionType.READ;
-
-            thisNode.Result.TypeTable = column.LesserSet;
-            thisNode.Result.TypeName = column.LesserSet.Name;
-
-            //
-            // A node for reading the current function value at the offset in 'this' variable
-            //
-            ExprNode expr = new ExprNode();
-            expr.Name = column.Name;
-            expr.Operation = OperationType.CALL;
-            expr.Action = ActionType.READ;
-
-            expr.Result.TypeTable = column.GreaterSet;
-            expr.Result.TypeName = column.GreaterSet.Name;
-
-            expr.AddChild(thisNode);
 
             return expr;
         }
