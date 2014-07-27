@@ -356,6 +356,23 @@ namespace Test
         [TestMethod]
         public void TableSubsetTest() // Define a filter to get a subset of record from one table
         {
+            CsSchema schema = PrepareSampleSchema();
+            PrepareSampleData(schema);
+
+            CsTable t2 = schema.FindTable("Table 2");
+
+            //
+            // Define a new filter-set
+            //
+            CsTable t3 = schema.CreateTable("Table 3");
+            schema.AddTable(t3, t2, null);
+
+            ExprNode ast = BuildExpr("[Column 22] > 20.0 && this.Super.[Column 23] < 50");
+            t3.TableDefinition.WhereExpression = ast;
+
+            t3.TableDefinition.Populate();
+            Assert.AreEqual(1, t3.TableData.Length);
+            Assert.AreEqual(1, t3.SuperDim.ColumnData.GetValue(0));
         }
 
         [TestMethod]

@@ -172,24 +172,81 @@ namespace Com.Model
                     // Try to resolve as a variable (including this variable). If success then finish.
                     CsVariable var = variables.FirstOrDefault(v => StringSimilarity.SameColumnName(v.Name, Name));
 
-                    if (var != null)
+                    if (var != null) // Resolved as a variable
                     {
                         variable = var;
 
                         Result.TypeName = var.TypeName;
                         Result.TypeTable = var.TypeTable;
                     }
-                    else // Cannot resolve as a variable - try resolve as a column name of 'this'
+                    else // Cannot resolve as a variable - try resolve as a column name starting from 'this' table and then continue to super tables
                     {
-                        // Add expression node representing 'this' variable (so we apply a function to this variable)
+                        //
+                        // Start from 'this' node bound to 'this' variable
+                        //
+                        CsVariable thisVar = variables.FirstOrDefault(v => StringSimilarity.SameColumnName(v.Name, "this"));
+
                         thisChild = new ExprNode();
-                        thisChild.Name = "this";
                         thisChild.Operation = OperationType.CALL;
                         thisChild.Action = ActionType.READ;
-                        AddChild(thisChild);
+                        thisChild.Name = "this";
+                        thisChild.Result.TypeName = thisVar.TypeName;
+                        thisChild.Result.TypeTable = thisVar.TypeTable;
+                        thisChild.variable = thisVar;
 
-                        // Call this method again. It will resolve this same node as a column applied to this variabe (just added as a child) 
-                        this.Resolve(schema, variables);
+                        ExprNode path = thisChild;
+                        CsTable contextTable = thisChild.Result.TypeTable;
+                        CsColumn col = null;
+
+                        while (contextTable != null)
+                        {
+                            //
+                            // Try to resolve name
+                            //
+                            col = contextTable.GetGreaterDim(Name);
+
+                            if (col != null) // Resolved
+                            {
+                                break;
+                            }
+
+                            //
+                            // Iterator. Find super-column in the current context (where we have just failed to resolve the name)
+                            //
+                            CsColumn superColumn = contextTable.SuperDim;
+                            contextTable = contextTable.SuperSet;
+
+                            if (contextTable == null || contextTable == contextTable.Top.Root)
+                            {
+                                break; // Root. No super dimensions anymore
+                            }
+
+                            //
+                            // Build next super-access node and resolve it
+                            //
+                            ExprNode superNode = new ExprNode();
+                            superNode.Operation = OperationType.CALL;
+                            superNode.Action = ActionType.READ;
+                            superNode.Name = superColumn.Name;
+                            superNode.column = superColumn.ColumnData;
+
+                            superNode.AddChild(path);
+                            path = superNode;
+                        }
+
+                        if (col != null) // Successfully resolved. Store the results.
+                        {
+                            column = col.ColumnData;
+
+                            Result.TypeName = col.GreaterSet.Name;
+                            Result.TypeTable = col.GreaterSet;
+
+                            AddChild(path);
+                        }
+                        else // Failed to resolve symbol
+                        {
+                            ; // ERROR: failed to resolve symbol in this and parent contexts
+                        }
                     }
                 }
                 else if (childCount == 1) // Function applied to previous output (resolve column)
