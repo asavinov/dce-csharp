@@ -512,7 +512,7 @@ namespace Test
 
             // Configure import 
             CsSchema schema = new SetTop("My Schema");
-            Set orderDetailsTable = new Set("Order Details");
+            CsTable orderDetailsTable = schema.CreateTable("Order Details");
             schema.AddTable(orderDetailsTable, null, null);
             
             // Create mapping
@@ -568,4 +568,7 @@ namespace Test
         }
 
     }
+    // TODO:
+    // - utility method to (quickly) check type of primitive set without comparing name (with case sensititivy). Maybe introduce enumerator. 
+    // - also, find primitive type using enumerator instead of string comparison.
 }

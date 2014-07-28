@@ -1,4 +1,23 @@
-Configure:
+OLEDB
+-----
+- The Microsoft.ACE.OLEDB.12.0 has two different version for 64 and 32bit that cannot be installed together on the same machine.
+  - There are two redistributables which can be installed: http://www.microsoft.com/en-us/download/details.aspx?id=13255
+  - If Office is installed, then it seems that it is determined by the version of the Office
+
+- Program executed as 64bit cannot use 32bit drivers (and vice versa)
+  - !!! Principle: Program must run in the same mode as the installed OLEDB driver
+
+- AnyCpu option entails flexibility: program code will be executed as 64bit code on 64bit systems and as 32bit code on 32bit systems
+  - We can fix it by choosing x86 or x64 in options
+  - Microsoft itself says that if you don't have a specific reason to use AnyCPU it is better to stick with x86
+
+- Test have their own parameter for the architecture: TEST | Test Settings | Default Processor Architecture
+  - This parameter determines the chosen test architecture if project architecture is AnyCPU
+  - It has to corresonds to the project architecture
+
+ANTLR
+-----
+
 - Adding ANTLR (for generating grammars - could be done via Java library but does not work for all versions). This makes it possible to compile grammars during VS build (not manually)
   - Right click solution root
   - Choose Manage NuGet Packages
@@ -13,6 +32,10 @@ Configure:
   - Type antlr in Search field
   - Install "ANTLR Language Support"
   - Restart of VS is required
+
+GIT
+---
+
 - Git Extensions is installed by downloading (not necessary - only for Git)
 
 Git for Visual Studio:

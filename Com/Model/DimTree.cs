@@ -668,6 +668,7 @@ namespace Com.Model
             // Add child nodes for greater dimension (no recursion)
             foreach (CsColumn gd in LesserSet.GreaterDims)
             {
+                if (gd.IsIdentity) continue;
                 if (ExistsChild(gd)) continue;
 
                 // New child instances need to have the type of this instance (this instance can be an extension of this class so we do not know it)
