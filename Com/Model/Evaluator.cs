@@ -107,7 +107,14 @@ namespace Com.Model
         {
             if (column.ColumnDefinition.Mapping != null)
             {
-                exprNode = column.ColumnDefinition.Mapping.BuildExpression();
+                if (column.ColumnDefinition.IsGenerating)
+                {
+                    exprNode = column.ColumnDefinition.Mapping.BuildExpression(ActionType.APPEND);
+                }
+                else
+                {
+                    exprNode = column.ColumnDefinition.Mapping.BuildExpression(ActionType.READ);
+                }
             }
             else if (column.ColumnDefinition.Formula != null)
             {

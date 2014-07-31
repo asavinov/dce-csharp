@@ -315,7 +315,7 @@ namespace Com.Model
         /// <summary>
         /// Return an expression tree with the structure of the target paths and leaves corresponding to the source paths.
         /// </summary>
-        public ExprNode BuildExpression()
+        public ExprNode BuildExpression(ActionType action)
         {
             // Two algorithms:
             // - for all matches: add all target paths to the expression root and for each of them generate a continuation from the source path by attaching to the leaf
@@ -337,7 +337,7 @@ namespace Com.Model
             // Create root tuple expression corresponding to the set
             ExprNode tupleExpr = new ExprNode();
             tupleExpr.Operation = OperationType.TUPLE;
-            tupleExpr.Action = ActionType.APPEND;
+            tupleExpr.Action = action;
             tupleExpr.Name = ""; // This tuple is not a member in any other tuple
             tupleExpr.Result.TypeTable = TargetSet; // This tuple is a member in the set
             tupleExpr.Result.TypeName = TargetSet.Name;
@@ -353,22 +353,6 @@ namespace Com.Model
                 leafNode.AddChild((ExprNode)accessNode.Root);
                 // TODO: Old question: what is in the tuple leaves: VALUE, CALL, or whatever
 
-/* OLD
-                DimPath srcPath = match.SourceSet.GetGreaterPath(match.SourcePath.Path); // First, we try to find a direct path/function 
-                if (srcPath == null) // No direct path. Use a sequence of simple dimensions
-                {
-                    srcExpr = Expression.CreateProjectExpression(match.SourcePath.Path, Operation.DOT);
-                }
-                else // There is a direct path (relation attribute in a relational data source). Use attribute name as function name
-                {
-                    srcExpr = new Expression(srcPath.Name, Operation.DOT, match.TargetPath.GreaterSet);
-                }
-                srcExpr.GetInputLeaf().Input = thisExpr;
-
-
-                Expression leafTuple = tupleExpr.AddPath(match.TargetPath);
-                leafTuple.Input = srcExpr;
-*/
             }
 
             return tupleExpr;

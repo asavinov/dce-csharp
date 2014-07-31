@@ -51,12 +51,22 @@ namespace Com.Model
         }
         public bool RemoveChild(DimTree child)
         {
+            int pos = Children.IndexOf(child);
             bool ret = Children.Remove(child);
 
-            OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, child));
+            if (ret)
+            {
+                OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, child, pos));
+            }
 
             return ret;
         }
+        public void Clear()
+        {
+            Children.Clear();
+            OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+        }
+
         public bool ExistsChild(CsTable set)
         {
             return Children.Exists(c => c.Set == set);
@@ -73,7 +83,6 @@ namespace Com.Model
         {
             return new[] { this }.Union(Children.SelectMany(x => x.Flatten()));
         }
-
 
         public DimTree Root // Find the tree root
         {

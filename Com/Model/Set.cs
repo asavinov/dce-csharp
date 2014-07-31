@@ -93,7 +93,7 @@ namespace Com.Model
         // Return true if this set is included in the specified set, that is, the specified set is a direct or indirect super-set of this set
         public bool IsIn(CsTable parent) // IsSub
         {
-            for (CsTable set = this; set != null; set = set.SuperDim.GreaterSet)
+            for (CsTable set = this; set != null; set = set.SuperSet)
             {
                 if (set == parent) return true;
             }
