@@ -287,9 +287,9 @@ namespace Test
             // Evaluate column
             c15.ColumnDefinition.Evaluate();
 
-            Assert.AreEqual(50.0, c15.ColumnData.GetValue(0));
-            Assert.AreEqual(30.0, c15.ColumnData.GetValue(1));
-            Assert.AreEqual(70.0, c15.ColumnData.GetValue(2));
+            Assert.AreEqual(600.0, c15.ColumnData.GetValue(0));
+            Assert.AreEqual(200.0, c15.ColumnData.GetValue(1));
+            Assert.AreEqual(1200.0, c15.ColumnData.GetValue(2));
         }
 
         [TestMethod]
@@ -316,8 +316,8 @@ namespace Test
 
             c15.ColumnDefinition.Formula = ExprNode.CreateUpdater(c15, ActionType.ADD); // Update expression
             c15.ColumnDefinition.FactTable = t2; // Fact table
-            c15.ColumnDefinition.GroupFormula = (ExprNode)ExprNode.CreateReader(c24).Root; // Group expression
-            c15.ColumnDefinition.MeasureFormula = (ExprNode)ExprNode.CreateReader(c23).Root; // Measure expression
+            c15.ColumnDefinition.GroupFormula = (ExprNode)ExprNode.CreateReader(c24, true).Root; // Group expression
+            c15.ColumnDefinition.MeasureFormula = (ExprNode)ExprNode.CreateReader(c23, true).Root; // Measure expression
 
             //
             // Evaluate expression

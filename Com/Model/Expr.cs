@@ -400,7 +400,7 @@ namespace Com.Model
                     childNode.Evaluate();
                 }
 
-                double doubleRes = 0;
+                double doubleRes;
                 bool boolRes = false;
 
                 if (Action == ActionType.READ)
@@ -437,19 +437,21 @@ namespace Com.Model
                 //
                 else if (Action == ActionType.MUL)
                 {
+                    doubleRes = 1.0;
                     foreach (ExprNode childNode in Children)
                     {
                         double arg = Convert.ToDouble(childNode.Result.GetValue());
                         if (double.IsNaN(arg)) continue;
-                        doubleRes += arg;
+                        doubleRes *= arg;
                     }
                     Result.SetValue(doubleRes);
                 }
                 else if (Action == ActionType.DIV)
                 {
-                    foreach (ExprNode childNode in Children)
+                    doubleRes = Convert.ToDouble(((ExprNode)Children[0]).Result.GetValue());
+                    for (int i = 1; i < Children.Count; i++)
                     {
-                        double arg = Convert.ToDouble(childNode.Result.GetValue());
+                        double arg = Convert.ToDouble(((ExprNode)Children[i]).Result.GetValue());
                         if (double.IsNaN(arg)) continue;
                         doubleRes /= arg;
                     }
@@ -457,6 +459,7 @@ namespace Com.Model
                 }
                 else if (Action == ActionType.ADD)
                 {
+                    doubleRes = 0.0;
                     foreach (ExprNode childNode in Children)
                     {
                         double arg = Convert.ToDouble(childNode.Result.GetValue());
@@ -467,9 +470,10 @@ namespace Com.Model
                 }
                 else if (Action == ActionType.SUB)
                 {
-                    foreach (ExprNode childNode in Children)
+                    doubleRes = Convert.ToDouble(((ExprNode)Children[0]).Result.GetValue());
+                    for (int i = 1; i < Children.Count; i++)
                     {
-                        double arg = Convert.ToDouble(childNode.Result.GetValue());
+                        double arg = Convert.ToDouble(((ExprNode)Children[i]).Result.GetValue());
                         if (double.IsNaN(arg)) continue;
                         doubleRes /= arg;
                     }
@@ -633,8 +637,8 @@ namespace Com.Model
                     node.Operation = OperationType.CALL;
                     node.Action = ActionType.READ;
                     node.Name = seg.Name;
-                    node.Result.TypeTable = seg.LesserSet;
-                    node.Result.TypeName = seg.LesserSet.Name;
+                    node.Result.TypeTable = seg.GreaterSet;
+                    node.Result.TypeName = seg.GreaterSet.Name;
 
                     if (expr != null)
                     {
@@ -658,12 +662,12 @@ namespace Com.Model
 
                 thisNode.Result.TypeTable = path.LesserSet;
                 thisNode.Result.TypeName = path.LesserSet.Name;
-            }
 
-            if (expr != null)
-            {
-                expr.AddChild(thisNode);
-                expr = thisNode;
+                if (expr != null)
+                {
+                    expr.AddChild(thisNode);
+                    expr = thisNode;
+                }
             }
 
             return expr;
@@ -673,9 +677,9 @@ namespace Com.Model
         /// Create a read expression for the specified column. 
         /// This expression will read one variables from the context: 'this' typed by the column lesser set.
         /// </summary>
-        public static ExprNode CreateReader(CsColumn column)
+        public static ExprNode CreateReader(CsColumn column, bool withThisVariable)
         {
-            return CreateReader(new DimPath(column), true);
+            return CreateReader(new DimPath(column), withThisVariable);
         }
 
         /// <summary>
@@ -687,7 +691,7 @@ namespace Com.Model
             //
             // A node for reading the current function value at the offset in 'this' variable
             //
-            ExprNode currentValueNode = (ExprNode)CreateReader(column).Root;
+            ExprNode currentValueNode = (ExprNode)CreateReader(column, true).Root;
 
             //
             // A node for reading a new function value from the well-known variable
