@@ -400,6 +400,7 @@ namespace Com.Model
                     childNode.Evaluate();
                 }
 
+                int intRes;
                 double doubleRes;
                 bool boolRes = false;
 
@@ -478,6 +479,12 @@ namespace Com.Model
                         doubleRes /= arg;
                     }
                     Result.SetValue(doubleRes);
+                }
+                else if (Action == ActionType.COUNT)
+                {
+                    intRes = Convert.ToInt32(((ExprNode)Children[0]).Result.GetValue());
+                    intRes += 1;
+                    Result.SetValue(intRes);
                 }
                 //
                 // LEQ, GEQ, GRE, LES,
@@ -686,8 +693,26 @@ namespace Com.Model
         /// Create an upate expression for the specified aggregation column and standard aggregation function. 
         /// This expression will read two variables from the context: 'this' typed by the column lesser set and 'value' typed by the column greater set.
         /// </summary>
-        public static ExprNode CreateUpdater(CsColumn column, ActionType aggregation)
+        public static ExprNode CreateUpdater(CsColumn column, string aggregationFunction)
         {
+            ActionType aggregation;
+            if (aggregationFunction.Equals("COUNT"))
+            {
+                aggregation = ActionType.COUNT;
+            }
+            else if (aggregationFunction.Equals("SUM"))
+            {
+                aggregation = ActionType.ADD;
+            }
+            else if (aggregationFunction.Equals("MUL"))
+            {
+                aggregation = ActionType.MUL;
+            }
+            else
+            {
+                throw new NotImplementedException("Aggregation function is not implemented.");
+            }
+
             //
             // A node for reading the current function value at the offset in 'this' variable
             //
@@ -824,6 +849,11 @@ namespace Com.Model
 
         AND,
         OR,
+
+        // Arithmetics
+        COUNT,
+        // ADD ("SUM")
+        // MUL ("MUL")
     }
 
     public class Variable : CsVariable

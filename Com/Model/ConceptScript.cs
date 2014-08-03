@@ -240,12 +240,17 @@ namespace Com.Model
         /// <summary>
         /// Computes a group (this column input) from the current fact (fact table input). Result of this expression is input for this column.
         /// </summary>
-        ExprNode GroupFormula { get; set; }
+        List<DimPath> GroupPaths { get; set; }
 
         /// <summary>
         /// Computes a new value (this column output) from the current fact (fact table input). Result of this expression has to be aggregated with the current output stored in this column.
         /// </summary>
-        ExprNode MeasureFormula { get; set; }
+        List<DimPath> MeasurePaths { get; set; }
+
+        /// <summary>
+        /// Name of the function for accumulating facts.
+        /// </summary>
+        string Updater { get; set; }
 
         //
         // Dependencies

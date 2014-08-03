@@ -314,11 +314,11 @@ namespace Test
             CsColumn c15 = schema.CreateColumn("Agg of Column 23", t1, schema.GetPrimitive("Double"), false);
             c15.Add();
 
-            c15.ColumnDefinition.Formula = ExprNode.CreateUpdater(c15, ActionType.ADD); // Update expression
             c15.ColumnDefinition.FactTable = t2; // Fact table
-            c15.ColumnDefinition.GroupFormula = (ExprNode)ExprNode.CreateReader(c24, true).Root; // Group expression
-            c15.ColumnDefinition.MeasureFormula = (ExprNode)ExprNode.CreateReader(c23, true).Root; // Measure expression
-
+            c15.ColumnDefinition.GroupPaths = new List<DimPath>(new DimPath[] { new DimPath(c24) }); // One group path
+            c15.ColumnDefinition.MeasurePaths = new List<DimPath>(new DimPath[] { new DimPath(c23) }); // One measure path
+            c15.ColumnDefinition.Updater = "SUM"; // Aggregation function
+            
             //
             // Evaluate expression
             //

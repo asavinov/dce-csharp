@@ -494,9 +494,11 @@ namespace Com.Model
 
         public CsTable FactTable { get; set; }
 
-        public ExprNode GroupFormula { get; set; }
+        public List<DimPath> GroupPaths { get; set; }
 
-        public ExprNode MeasureFormula { get; set; }
+        public List<DimPath> MeasurePaths { get; set; }
+
+        public string Updater { get; set; }
 
         // Aassert: FactTable.GroupFormula + ThisSet.ThisFunc = FactTable.MeasureFormula
         // Aassert: if LoopSet == ThisSet then GroupCode = null, ThisFunc = MeasureCode
@@ -604,6 +606,11 @@ namespace Com.Model
             {
                 _nullValue = default(T);
             }
+
+            GroupPaths = new List<DimPath>();
+            MeasurePaths = new List<DimPath>();
+
+            Dependencies = new List<Dim>();
         }
 
         #endregion

@@ -278,8 +278,12 @@ namespace Com.Model
             measureVariable = new Variable("value", column.GreaterSet.Name);
             measureVariable.TypeTable = column.GreaterSet;
 
-            groupExpr = column.ColumnDefinition.GroupFormula;
-            measureExpr = column.ColumnDefinition.MeasureFormula;
+            groupExpr = ExprNode.CreateReader(column.ColumnDefinition.GroupPaths[0], true); // Currently only one path is used
+            measureExpr = ExprNode.CreateReader(column.ColumnDefinition.MeasurePaths[0], true);
+            groupExpr = (ExprNode)groupExpr.Root;
+            measureExpr = (ExprNode)measureExpr.Root;
+
+            exprNode = ExprNode.CreateUpdater(column, column.ColumnDefinition.Updater);
 
             // Resolve names in the expresions using appropriate variables
             exprNode.Resolve(column.LesserSet.Top, new List<CsVariable>() { groupVariable, measureVariable });
