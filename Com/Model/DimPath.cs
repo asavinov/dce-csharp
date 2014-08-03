@@ -13,13 +13,14 @@ namespace Com.Model
     public class DimPath : Dim
     {
 
-        public string ComplexName
+        public string ColumnNamePath // A list of segment column names (dot separated)
         {
             get
             {
                 if (Size == 0) return "";
                 string complexName = "";
-                foreach (CsColumn seg in Path) complexName += "_" + seg.Name;
+                foreach (CsColumn seg in Path) complexName += "[" + seg.Name + "].";
+                complexName = complexName.Substring(0, complexName.Length-1); // Remove last dot
                 return complexName;
             }
         }

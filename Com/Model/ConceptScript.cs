@@ -232,6 +232,16 @@ namespace Com.Model
         // Aggregation
         //
 
+        // TODO: Conceptual:
+        // - Separating fact feeder from updater:
+        //   - Separate fact feeder description (fact table + group + measure) from updater expression.
+        //   - Aggr column has only updater + ref to a feeder object (by name or by ref.) Or a feeder referendes several aggr columns. 
+        //   - Several aggr columns can reference one feeder.
+        //   - Evaluation is done by running a loop over a feeder by filling several aggr columns
+        // - Add initializer and finalizer expressions:
+        //   - Initializer for aggr column before evaluation. Can be arbitrary complex expr. 
+        //   - Finalizer for aggre column after evaluation. Is a normal expr, also, quite complex, say, devide by another column (COUNT).
+
         /// <summary>
         /// Fact set is a set for looping through and providing input for measure and group functions. By default, it is this (lesser) set.
         /// </summary>

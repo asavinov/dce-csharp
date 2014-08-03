@@ -59,11 +59,11 @@ namespace Com.Model
         public CsTable RemoveTable(CsTable table) 
         {
             Debug.Assert(!table.IsPrimitive, "Wrong use: users do not create/delete primitive sets - they are part of the schema.");
-            foreach(CsColumn col in LesserDims) 
+            foreach (CsColumn col in table.LesserDims.ToList()) 
             {
                 col.Remove();
             }
-            foreach (CsColumn col in GreaterDims)
+            foreach (CsColumn col in table.GreaterDims.ToList())
             {
                 col.Remove();
             }

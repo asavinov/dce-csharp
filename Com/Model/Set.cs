@@ -885,7 +885,7 @@ namespace Com.Model
 
                 DimAttribute newPath = new DimAttribute(pathName);
                 newPath.Path = new List<CsColumn>(p.Path);
-                newPath.Name = newPath.ComplexName; // Overwrite previous pathName (so previous is not needed actually)
+                newPath.Name = newPath.ColumnNamePath; // Overwrite previous pathName (so previous is not needed actually)
                 newPath.RelationalColumnName = newPath.Name; // It actually will be used for relational queries
                 newPath.RelationalFkName = path.RelationalFkName; // Belongs to the same FK
                 newPath.RelationalPkName = null;
