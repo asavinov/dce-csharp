@@ -250,7 +250,12 @@ namespace Com.Model
 
             Offset[] result = Enumerable.Range(0, Length).ToArray(); // All elements of this set (as long as this set length - can be quite long)
             bool hasBeenRestricted = false; // For the case where the Length==1, and no key columns are really provided, so we get at the end result.Length==1 which is misleading. Also, this fixes the problem of having no key dimensions.
-            foreach (Dim dim in KeyColumns) // OPTIMIZE: the order of dimensions matters (use statistics, first dimensins with better filtering). Also, first identity dimensions.
+
+            List<CsColumn> dims = new List<CsColumn>();
+            dims.AddRange(KeyColumns);
+            dims.AddRange(NonkeyColumns);
+
+            foreach (Dim dim in dims) // OPTIMIZE: the order of dimensions matters (use statistics, first dimensins with better filtering). Also, first identity dimensions.
             {
                 ExprNode childExpr = expr.GetChild(dim.Name);
                 if (childExpr != null)
