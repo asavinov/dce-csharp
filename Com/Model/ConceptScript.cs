@@ -150,8 +150,9 @@ namespace Com.Model
         // Other properties: isNullable, isPrimitive, IsInstantiable (is supposed/able to have instances = lesser set instantiable), isTemporary
         bool IsPrimitive { get; }
 
-        CsTable LesserSet { get; }
-        CsTable GreaterSet { get; }
+        // Note: Set property works only for handing dims. For connected dims, a dim has to be disconnected first, then change its lesser/greater set and finally added again.
+        CsTable LesserSet { get; set; }
+        CsTable GreaterSet { get; set; }
 
         void Add(); // Add to schema
         void Remove(); // Remove from schema
@@ -203,6 +204,11 @@ namespace Com.Model
         /// Whether output values are appended to the output set. 
         /// </summary>
         bool IsGenerating { get; set; }
+
+        /// <summary>
+        /// Restricts kind of formula used to define this column. 
+        /// </summary>
+        ColumnDefinitionType ColumnDefinitionType { get; set; }
 
         /// <summary>
         /// Source (user, non-executable) formula for computing this function consisting of value-operations
@@ -275,6 +281,14 @@ namespace Com.Model
         void Initialize();
         void Evaluate(); 
         void Finish();
+    }
+
+    public enum ColumnDefinitionType // Specific types of column formula
+    {
+        ANY, // Arbitrary formula without constraints
+        ARITHMETIC, // Column uses only other columns or paths of this same table as well as operations
+        LINK, // Column is defined via a mapping represented as a tuple with paths as leaves
+        AGGREGATION, // Column is defined via an updater (accumulator) function which is fed by facts using grouping and measure paths
     }
 
     // This class is used only by the column evaluation procedure. 

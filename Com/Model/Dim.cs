@@ -48,12 +48,31 @@ namespace Com.Model
         /// <summary>
         /// Lesser (input) set. 
         /// </summary>
-        public CsTable LesserSet { get; protected set; }
+        protected CsTable lesserSet;
+        public CsTable LesserSet 
+        {
+            get { return lesserSet; }
+            set 
+            {
+                if (lesserSet == value) return;
+                lesserSet = value; 
+            }
+        }
 
         /// <summary>
         /// Greater (output) set.
         /// </summary>
-        public CsTable GreaterSet { get; protected set; }
+        protected CsTable greaterSet;
+        public CsTable GreaterSet
+        {
+            get { return greaterSet; }
+            set
+            {
+                if (greaterSet == value) return;
+                greaterSet = value;
+                columnData = CreateColumnData(greaterSet, this);
+            }
+        }
 
         /// <summary>
         /// Add (attach) to its lesser and greater sets if not added yet. 
@@ -124,6 +143,64 @@ namespace Com.Model
 
         #region Constructors and initializers.
 
+        /// <summary>
+        /// Creae storage for the function and its definition depending on the output set type.
+        /// </summary>
+        /// <returns></returns>
+        public static CsColumnData CreateColumnData(CsTable type, CsColumn column)
+        {
+            CsColumnData colData = new DimEmpty();
+
+            if (type == null || string.IsNullOrEmpty(type.Name))
+            {
+            }
+            else if (StringSimilarity.SameTableName(type.Name, "Void"))
+            {
+            }
+            else if (StringSimilarity.SameTableName(type.Name, "Top"))
+            {
+            }
+            else if (StringSimilarity.SameTableName(type.Name, "Bottom")) // Not possible by definition
+            {
+            }
+            else if (StringSimilarity.SameTableName(type.Name, "Root"))
+            {
+            }
+            else if (StringSimilarity.SameTableName(type.Name, "Integer"))
+            {
+                colData = new DimPrimitive<int>(column);
+            }
+            else if (StringSimilarity.SameTableName(type.Name, "Double"))
+            {
+                colData = new DimPrimitive<double>(column);
+            }
+            else if (StringSimilarity.SameTableName(type.Name, "Decimal"))
+            {
+                colData = new DimPrimitive<decimal>(column);
+            }
+            else if (StringSimilarity.SameTableName(type.Name, "String"))
+            {
+                colData = new DimPrimitive<string>(column);
+            }
+            else if (StringSimilarity.SameTableName(type.Name, "Boolean"))
+            {
+                colData = new DimPrimitive<bool>(column);
+            }
+            else if (StringSimilarity.SameTableName(type.Name, "DateTime"))
+            {
+                colData = new DimPrimitive<DateTime>(column);
+            }
+            else if (StringSimilarity.SameTableName(type.Name, "Set"))
+            {
+            }
+            else // User (non-primitive) set
+            {
+                colData = new DimPrimitive<int>(column);
+            }
+
+            return colData;
+        }
+
         public Dim()
         {
             Id = Guid.NewGuid();
@@ -179,59 +256,8 @@ namespace Com.Model
             //
             // Creae storage for the function and its definition depending on the output set type
             //
-            columnData = new DimEmpty();
-            CsTable output = greaterSet;
-            if (output == null || string.IsNullOrEmpty(output.Name))
-            {
-            }
-            else if (StringSimilarity.SameTableName(output.Name, "Void"))
-            {
-            }
-            else if (StringSimilarity.SameTableName(output.Name, "Top"))
-            {
-            }
-            else if (StringSimilarity.SameTableName(output.Name, "Bottom")) // Not possible by definition
-            {
-            }
-            else if (StringSimilarity.SameTableName(output.Name, "Root"))
-            {
-            }
-            else if (StringSimilarity.SameTableName(output.Name, "Integer"))
-            {
-                columnData = new DimPrimitive<int>(this);
-            }
-            else if (StringSimilarity.SameTableName(output.Name, "Double"))
-            {
-                columnData = new DimPrimitive<double>(this);
-            }
-            else if (StringSimilarity.SameTableName(output.Name, "Decimal"))
-            {
-                columnData = new DimPrimitive<decimal>(this);
-            }
-            else if (StringSimilarity.SameTableName(output.Name, "String"))
-            {
-                columnData = new DimPrimitive<string>(this);
-            }
-            else if (StringSimilarity.SameTableName(output.Name, "Boolean"))
-            {
-                columnData = new DimPrimitive<bool>(this);
-            }
-            else if (StringSimilarity.SameTableName(output.Name, "DateTime"))
-            {
-                columnData = new DimPrimitive<DateTime>(this);
-            }
-            else if (StringSimilarity.SameTableName(output.Name, "Set"))
-            {
-            }
-            else // User (non-primitive) set
-            {
-                columnData = new DimPrimitive<int>(this);
-            }
-
-            if (columnData is CsColumnDefinition)
-            {
-                columnDefinition = (CsColumnDefinition)columnData;
-            }
+            columnData = CreateColumnData(greaterSet, this);
+            columnDefinition = new ColumnDefinition(this);
         }
 
         #endregion

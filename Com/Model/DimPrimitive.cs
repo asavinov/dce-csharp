@@ -15,7 +15,7 @@ namespace Com.Model
     /// One array of type T stores elements in their original order without sorting. 
     /// Second array stores indexes (offsets) of elements in the first array in sorted order.
     /// </summary>
-    public class DimPrimitive<T> : CsColumnData, CsColumnDefinition
+    public class DimPrimitive<T> : CsColumnData
     {
         protected CsColumn Dim { get; set; }
 
@@ -475,10 +475,197 @@ namespace Com.Model
         }
 
         #endregion
+/*
+        #region CsColumnDefinition interface
+
+        public bool IsGenerating { get; set; }
+
+        public ColumnDefinitionType ColumnDefinitionType { get; set; }
+
+        public AstNode FormulaAst { get; set; }
+
+        public ExprNode Formula { get; set; }
+
+        public Mapping Mapping { get; set; }
+
+        public ExprNode WhereExpression { get; set; }
+
+        //
+        // Aggregation
+        //
+
+        public CsTable FactTable { get; set; }
+
+        public List<DimPath> GroupPaths { get; set; }
+
+        public List<DimPath> MeasurePaths { get; set; }
+
+        public string Updater { get; set; }
+
+        // Aassert: FactTable.GroupFormula + ThisSet.ThisFunc = FactTable.MeasureFormula
+        // Aassert: if LoopSet == ThisSet then GroupCode = null, ThisFunc = MeasureCode
+
+        //
+        // Dependencies
+        //
+
+        public List<Dim> Dependencies { get; set; } // Other functions this function directly depends upon. Computed from the definition of this function.
+        // Find and store all outputs of this function by evaluating (executing) its definition in a loop for all input elements of the fact set (not necessarily this set)
+
+        public CsColumnEvaluator GetColumnEvaluator()
+        {
+            // Principle: population methods are unaware of Definition type (expressions etc.) - they use only evaluator (no dependency on the definition details)
+
+            // Here we return different types of objects that implement this interface depending on the definition type (and reflecting/based on the definition)
+            // Based on Mapping - can be transformed an (tuple) expression
+            // Based on tuple expression - object that can evaluate tuple tree (find, append etc.), say, an extension of a passive tuple or simply implement the Evaluator interface by the expression object
+            // Based on expression - as above
+            // Based on aggregation - it is update function so initially we can return a standard updater like SUM (untyped), in future, return typed updaters, and in future also custom updaters based on v-expr or other code
+            // Based on library - load lib, instantiate via factory, initialize (say, resolve names), return object
+            // Based on source code - compile class, instantiate, initialize (say, resolve), return instance
+
+            CsColumnEvaluator evaluator;
+
+            if (Dim.LesserSet.Top != Dim.GreaterSet.Top && Dim.LesserSet.Top is SetTopOledb) // Import data from a remote source
+            {
+                evaluator = ExprEvaluator.CreateOledbEvaluator(Dim);
+            }
+            else if (FactTable == null || FactTable == Dim.LesserSet) // Non-aggregation
+            {
+                evaluator = ExprEvaluator.CreateColumnEvaluator(Dim);
+            }
+            else
+            {
+                evaluator = ExprEvaluator.CreateAggrEvaluator(Dim);
+            }
+
+            return evaluator;
+        }
+
+        //
+        // Compute
+        //
+
+        public void Initialize() { }
+
+        public void Evaluate()
+        {
+            // Never change any set - neither lesser nor greater (even in the case of generating/projection dimensions)
+
+            CsColumnEvaluator evaluator = GetColumnEvaluator();
+
+            while (evaluator.Next())
+            {
+                evaluator.Evaluate();
+            }
+
+        }
+
+        public void Finish() { }
+
+        #endregion
+*/
+        #region Constructors
+
+        public DimPrimitive(CsColumn dim)
+        {
+            // TODO: Check if output (greater) set is of correct type
+
+            Dim = dim;
+
+            _length = 0;
+            allocatedSize = initialSize;
+            _cells = new T[allocatedSize];
+            _offsets = new int[allocatedSize];
+
+            _nullCount = Length;
+
+            Length = dim.LesserSet.TableData.Length;
+
+            // Initialize what representative value will be used instead of nulls
+            _nullValue = default(T); // Check if type is nullable: http://stackoverflow.com/questions/374651/how-to-check-if-an-object-is-nullable
+            Type type = typeof(T);
+            if (type == typeof(int))
+            {
+                _nullValue = ObjectToGeneric(int.MinValue);
+                Aggregator = new IntAggregator() as IAggregator<T>;
+            }
+            else if (type == typeof(double))
+            {
+                _nullValue = ObjectToGeneric(double.NaN);
+                Aggregator = new DoubleAggregator() as IAggregator<T>;
+            }
+            else if (type == typeof(decimal))
+            {
+                _nullValue = ObjectToGeneric(decimal.MinValue);
+                Aggregator = new DecimalAggregator() as IAggregator<T>;
+            }
+            else if (!type.IsValueType) // Reference type
+            {
+                _nullValue = default(T);
+            }
+            else if (Nullable.GetUnderlyingType(type) != null) // Nullable<T> (like int?)
+            {
+                _nullValue = default(T);
+            }
+
+        }
+
+        #endregion
+    }
+
+    /// <summary>
+    /// Empty data.
+    /// 
+    /// </summary>
+    public class DimEmpty : CsColumnData
+    {
+
+        #region CsColumnData interface
+
+        protected Offset _length;
+        public Offset Length
+        {
+            get
+            {
+                return _length;
+            }
+            set
+            {
+                _length = value;
+            }
+        }
+
+        public bool IsNull(Offset input) { return true; }
+
+        public object GetValue(Offset input) { return null; }
+
+        public void SetValue(Offset input, object value) { }
+
+        public void NullifyValues() { }
+
+        public void Append(object value) { }
+
+        public void Insert(Offset input, object value) { }
+
+        public void Remove(Offset input) { }
+
+        public object ProjectValues(Offset[] offsets) { return null; }
+
+        public Offset[] DeprojectValue(object value) { return null; } // Or empty array 
+
+        #endregion
+    }
+
+    public class ColumnDefinition : CsColumnDefinition 
+    {
+        protected CsColumn Dim { get; set; }
 
         #region CsColumnDefinition interface
 
         public bool IsGenerating { get; set; }
+
+        public ColumnDefinitionType ColumnDefinitionType { get; set; }
 
         public AstNode FormulaAst { get; set; }
 
@@ -563,100 +750,19 @@ namespace Com.Model
 
         #endregion
 
-        #region Constructors
-
-        public DimPrimitive(CsColumn dim)
+        public ColumnDefinition(CsColumn dim)
         {
-            // TODO: Check if output (greater) set is of correct type
-
             Dim = dim;
 
-            _length = 0;
-            allocatedSize = initialSize;
-            _cells = new T[allocatedSize];
-            _offsets = new int[allocatedSize];
-
-            _nullCount = Length;
-
-            Length = dim.LesserSet.TableData.Length;
-
-            // Initialize what representative value will be used instead of nulls
-            _nullValue = default(T); // Check if type is nullable: http://stackoverflow.com/questions/374651/how-to-check-if-an-object-is-nullable
-            Type type = typeof(T);
-            if (type == typeof(int))
-            {
-                _nullValue = ObjectToGeneric(int.MinValue);
-                Aggregator = new IntAggregator() as IAggregator<T>;
-            }
-            else if (type == typeof(double))
-            {
-                _nullValue = ObjectToGeneric(double.NaN);
-                Aggregator = new DoubleAggregator() as IAggregator<T>;
-            }
-            else if (type == typeof(decimal))
-            {
-                _nullValue = ObjectToGeneric(decimal.MinValue);
-                Aggregator = new DecimalAggregator() as IAggregator<T>;
-            }
-            else if (!type.IsValueType) // Reference type
-            {
-                _nullValue = default(T);
-            }
-            else if (Nullable.GetUnderlyingType(type) != null) // Nullable<T> (like int?)
-            {
-                _nullValue = default(T);
-            }
-
+            IsGenerating = false;
+            ColumnDefinitionType = ColumnDefinitionType.ANY;
+            
             GroupPaths = new List<DimPath>();
             MeasurePaths = new List<DimPath>();
 
             Dependencies = new List<Dim>();
         }
 
-        #endregion
-    }
-
-    /// <summary>
-    /// Empty data.
-    /// 
-    /// </summary>
-    public class DimEmpty : CsColumnData
-    {
-
-        #region CsColumnData interface
-
-        protected Offset _length;
-        public Offset Length
-        {
-            get
-            {
-                return _length;
-            }
-            set
-            {
-                _length = value;
-            }
-        }
-
-        public bool IsNull(Offset input) { return true; }
-
-        public object GetValue(Offset input) { return null; }
-
-        public void SetValue(Offset input, object value) { }
-
-        public void NullifyValues() { }
-
-        public void Append(object value) { }
-
-        public void Insert(Offset input, object value) { }
-
-        public void Remove(Offset input) { }
-
-        public object ProjectValues(Offset[] offsets) { return null; }
-
-        public Offset[] DeprojectValue(object value) { return null; } // Or empty array 
-
-        #endregion
     }
 
 }

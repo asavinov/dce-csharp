@@ -524,6 +524,12 @@ namespace Com.Model
             if (Dim.GreaterSet != null) ((Set)Dim.GreaterSet).CollectionChanged -= GreaterSet_CollectionChanged;
         }
 
+        public void NotifyAllOnPropertyChanged(string propertyName)
+        {
+            OnPropertyChanged(new PropertyChangedEventArgs(propertyName));
+            foreach (var c in this) c.NotifyAllOnPropertyChanged(propertyName);
+        }
+
         public DimNode(CsColumn dim, DimNode parent = null)
         {
             Dim = dim;
