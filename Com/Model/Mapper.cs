@@ -583,9 +583,12 @@ namespace Com.Model
             Mapping mapping = mapper.GetBestMapping(sourceSet, targetSchema);
             mapping.AddTargetToSchema(targetSchema);
 
+            // Define the column
             CsColumn dimImport = new Dim(mapping);
             dimImport.Add();
-            dimImport.GreaterSet.TableDefinition.ProjectDimensions.Add(dimImport); // Formula. Definition of the set
+
+            // Define the table
+            dimImport.GreaterSet.Definition.DefinitionType = TableDefinitionType.PROJECTION;
 
             return mapping.TargetSet;
         }

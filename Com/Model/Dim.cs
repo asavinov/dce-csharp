@@ -103,9 +103,9 @@ namespace Com.Model
 
 
         protected CsColumnData columnData;
-        public virtual CsColumnData ColumnData { get { return columnData; } }
+        public virtual CsColumnData Data { get { return columnData; } }
         protected CsColumnDefinition columnDefinition;
-        public virtual CsColumnDefinition ColumnDefinition { get { return columnDefinition; } }
+        public virtual CsColumnDefinition Definition { get { return columnDefinition; } }
 
         #endregion
 
@@ -230,10 +230,11 @@ namespace Com.Model
         public Dim(Mapping mapping)
             : this(mapping.SourceSet.Name, mapping.SourceSet, mapping.TargetSet, false, false)
         {
-            if (ColumnDefinition != null)
+            if (Definition != null)
             {
-                ColumnDefinition.Mapping = mapping;
+                Definition.Mapping = mapping;
                 columnDefinition.IsGenerating = true;
+                if (GreaterSet != null) GreaterSet.Definition.DefinitionType = TableDefinitionType.PROJECTION;
             }
         }
 

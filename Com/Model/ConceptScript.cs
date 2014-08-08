@@ -65,8 +65,8 @@ namespace Com.Model
         CsTable GetTable(string name);
         CsTable FindTable(string name);
 
-        CsTableData TableData { get; }
-        CsTableDefinition TableDefinition { get; }
+        CsTableData Data { get; }
+        CsTableDefinition Definition { get; }
     }
 
     public interface CsTableData // It is interface for manipulating data in a table.
@@ -109,16 +109,38 @@ namespace Com.Model
 
     public interface CsTableDefinition
     {
+        /// <summary>
+        /// Specifies kind of formula used to define this table. 
+        /// </summary>
+        TableDefinitionType DefinitionType { get; set; }
+
+        /// <summary>
+        /// Constraints on all possible instances. 
+        /// Currently, it is written in terms of and is applied to source (already existing) instances - not instances of this set. Only instances satisfying these constraints are used for populating this set. 
+        /// In future, we should probabyl apply these constraints to this set elements while the source set has its own constraints.
+        /// </summary>
         ExprNode WhereExpression { get; set; } // May store CsColumn which stores a boolean function definition
 
-        List<CsColumn> ProjectDimensions { get; set; }
+        List<CsColumn> GeneratingDimensions { get; }
 
+        /// <summary>
+        /// Ordering of the instances. 
+        /// Here again we have a choice: it is how source elements are sorted or it is how elements of this set have to be sorted. 
+        /// </summary>
         ExprNode OrderbyExpression { get; set; } // Here we should store something like Comparator
 
         CsColumnEvaluator GetWhereEvaluator(); // Get an object which is used to compute the where expression according to the formula
 
         void Populate();
         void Unpopulate(); // Is not it Length=0?
+    }
+
+    public enum TableDefinitionType // Specific types of table formula
+    {
+        ANY, // Arbitrary formula without constraints
+        PROJECTION, // Table gets its elements from (unique) outputs of some function
+        PRODUCT, // Table contains all combinations of its greater (key) sets satsifying the constraints
+        FILTER, // Tables contains a subset of elements from its super-set
     }
 
     public interface CsSchema : CsTable
@@ -157,8 +179,8 @@ namespace Com.Model
         void Add(); // Add to schema
         void Remove(); // Remove from schema
 
-        CsColumnData ColumnData { get; }
-        CsColumnDefinition ColumnDefinition { get; }
+        CsColumnData Data { get; }
+        CsColumnDefinition Definition { get; }
     }
 
     public interface CsColumnData // It is interface for managing function data as a mapping to output values (implemented by some kind of storage manager). Input always offset. Output type is a parameter.
@@ -208,7 +230,7 @@ namespace Com.Model
         /// <summary>
         /// Restricts kind of formula used to define this column. 
         /// </summary>
-        ColumnDefinitionType ColumnDefinitionType { get; set; }
+        ColumnDefinitionType DefinitionType { get; set; }
 
         /// <summary>
         /// Source (user, non-executable) formula for computing this function consisting of value-operations
@@ -289,6 +311,7 @@ namespace Com.Model
         ARITHMETIC, // Column uses only other columns or paths of this same table as well as operations
         LINK, // Column is defined via a mapping represented as a tuple with paths as leaves
         AGGREGATION, // Column is defined via an updater (accumulator) function which is fed by facts using grouping and measure paths
+        CASE,
     }
 
     // This class is used only by the column evaluation procedure. 

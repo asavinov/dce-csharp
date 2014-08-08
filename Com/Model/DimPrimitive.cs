@@ -580,7 +580,7 @@ namespace Com.Model
 
             _nullCount = Length;
 
-            Length = dim.LesserSet.TableData.Length;
+            Length = dim.LesserSet.Data.Length;
 
             // Initialize what representative value will be used instead of nulls
             _nullValue = default(T); // Check if type is nullable: http://stackoverflow.com/questions/374651/how-to-check-if-an-object-is-nullable
@@ -665,7 +665,7 @@ namespace Com.Model
 
         public bool IsGenerating { get; set; }
 
-        public ColumnDefinitionType ColumnDefinitionType { get; set; }
+        public ColumnDefinitionType DefinitionType { get; set; }
 
         public AstNode FormulaAst { get; set; }
 
@@ -755,7 +755,7 @@ namespace Com.Model
             Dim = dim;
 
             IsGenerating = false;
-            ColumnDefinitionType = ColumnDefinitionType.ANY;
+            DefinitionType = ColumnDefinitionType.ANY;
             
             GroupPaths = new List<DimPath>();
             MeasurePaths = new List<DimPath>();

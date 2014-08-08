@@ -114,7 +114,7 @@ namespace Com.Model
                         if (parent.Result.TypeTable != null && !string.IsNullOrEmpty(Name))
                         {
                             CsColumn col = parent.Result.TypeTable.GetGreaterDim(Name);
-                            column = col.ColumnData;
+                            column = col.Data;
                             Result.TypeTable = col.GreaterSet;
                             Result.TypeName = col.GreaterSet.Name;
                         }
@@ -124,7 +124,7 @@ namespace Com.Model
                         if (parent.Result.TypeTable != null && !string.IsNullOrEmpty(Name))
                         {
                             CsColumn col = parent.Result.TypeTable.GetGreaterDim(Name);
-                            column = col.ColumnData;
+                            column = col.Data;
                             Result.TypeTable = col.GreaterSet;
                             Result.TypeName = col.GreaterSet.Name;
                         }
@@ -228,7 +228,7 @@ namespace Com.Model
                             superNode.Operation = OperationType.CALL;
                             superNode.Action = ActionType.READ;
                             superNode.Name = superColumn.Name;
-                            superNode.column = superColumn.ColumnData;
+                            superNode.column = superColumn.Data;
 
                             superNode.AddChild(path);
                             path = superNode;
@@ -236,7 +236,7 @@ namespace Com.Model
 
                         if (col != null) // Successfully resolved. Store the results.
                         {
-                            column = col.ColumnData;
+                            column = col.Data;
 
                             Result.TypeName = col.GreaterSet.Name;
                             Result.TypeTable = col.GreaterSet;
@@ -262,7 +262,7 @@ namespace Com.Model
                         outputChild = GetChild(0);
                     }
                     CsColumn col = outputChild.Result.TypeTable.GetGreaterDim(methodName);
-                    column = col.ColumnData;
+                    column = col.Data;
 
                     Result.TypeName = col.GreaterSet.Name;
                     Result.TypeTable = col.GreaterSet;
@@ -359,9 +359,9 @@ namespace Com.Model
                     // Find, append or update an element in this set (depending on the action type)
                     if (Action == ActionType.READ) // Find the offset
                     {
-                        Offset input = Result.TypeTable.TableData.Find(this);
+                        Offset input = Result.TypeTable.Data.Find(this);
 
-                        if (input < 0 || input >= Result.TypeTable.TableData.Length) // Not found
+                        if (input < 0 || input >= Result.TypeTable.Data.Length) // Not found
                         {
                             Result.SetValue(null);
                         }
@@ -375,11 +375,11 @@ namespace Com.Model
                     }
                     else if (Action == ActionType.APPEND) // Find, try to update and append if cannot be found
                     {
-                        Offset input = Result.TypeTable.TableData.Find(this); // Uniqueness constraint: check if it exists already
+                        Offset input = Result.TypeTable.Data.Find(this); // Uniqueness constraint: check if it exists already
 
-                        if (input < 0 || input >= Result.TypeTable.TableData.Length) // Not found
+                        if (input < 0 || input >= Result.TypeTable.Data.Length) // Not found
                         {
-                            input = Result.TypeTable.TableData.Append(this); // Append new
+                            input = Result.TypeTable.Data.Append(this); // Append new
                         }
 
                         Result.SetValue(input);

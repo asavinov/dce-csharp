@@ -144,9 +144,9 @@ namespace Com.Model
             return set;
         }
 
-        public CsTableData TableData { get { return this; } }
+        public CsTableData Data { get { return this; } }
 
-        public CsTableDefinition TableDefinition { get { return this; } }
+        public CsTableDefinition Definition { get { return this; } }
 
         #endregion
 
@@ -164,7 +164,7 @@ namespace Com.Model
                 foreach (CsColumn col in GreaterDims)
                 {
                     length = value;
-                    col.ColumnData.Length = value;
+                    col.Data.Length = value;
                 }
             }
         }
@@ -173,14 +173,14 @@ namespace Com.Model
         {
             Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
             CsColumn dim = GetGreaterDim(name);
-            return dim.ColumnData.GetValue(offset);
+            return dim.Data.GetValue(offset);
         }
 
         public void SetValue(string name, int offset, object value)
         {
             Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
             CsColumn dim = GetGreaterDim(name);
-            dim.ColumnData.SetValue(offset, value);
+            dim.Data.SetValue(offset, value);
         }
 
         public Offset Find(CsColumn[] dims, object[] values) // Type of dimensions (super, id, non-id) is not important and is not used
@@ -192,7 +192,7 @@ namespace Com.Model
             for (int i = 0; i < dims.Length; i++)
             {
                 hasBeenRestricted = true;
-                Offset[] range = dims[i].ColumnData.DeprojectValue(values[i]); // Deproject one value
+                Offset[] range = dims[i].Data.DeprojectValue(values[i]); // Deproject one value
                 result = result.Intersect(range).ToArray(); 
                 // OPTIMIZE: Write our own implementation for various operations (intersection etc.). Use the fact that they are ordered.
                 // OPTIMIZE: Use statistics for column distribution to choose best order of de-projections. Alternatively, the order of dimensions can be set by the external procedure taking into account statistics. Say, there could be a special utility method like SortDimensionsAccordingDiscriminationFactor or SortDimsForFinding tuples.
@@ -223,7 +223,7 @@ namespace Com.Model
 
             for (int i = 0; i < dims.Length; i++)
             {
-                dims[i].ColumnData.Append(values[i]);
+                dims[i].Data.Append(values[i]);
             }
 
             length++;
@@ -234,7 +234,7 @@ namespace Com.Model
         {
             for (int i = 0; i < GreaterDims.Count; i++)
             {
-                GreaterDims[i].ColumnData.Remove(input);
+                GreaterDims[i].Data.Remove(input);
             }
 
             length--;
@@ -264,7 +264,7 @@ namespace Com.Model
                     val = childExpr.Result.GetValue();
 
                     hasBeenRestricted = true;
-                    Offset[] range = dim.ColumnData.DeprojectValue(val); // Deproject the value
+                    Offset[] range = dim.Data.DeprojectValue(val); // Deproject the value
                     result = result.Intersect(range).ToArray(); // Intersect with previous de-projections
                     // OPTIMIZE: Write our own implementation for intersection and other operations. Assume that they are ordered.
                     // OPTIMIZE: Remember the position for the case this value will have to be inserted so we do not have again search for this positin during insertion (optimization)
@@ -433,7 +433,7 @@ namespace Com.Model
                 {
                     val = childExpr.Result.GetValue();
                 }
-                dim.ColumnData.Append(val);
+                dim.Data.Append(val);
             }
 
             //
@@ -505,23 +505,15 @@ namespace Com.Model
 
         #region CsTableDefinition
 
-        /// <summary>
-        /// Constraints on all possible instances. 
-        /// Currently, it is written in terms of and is applied to source (already existing) instances - not instances of this set. Only instances satisfying these constraints are used for populating this set. 
-        /// In future, we should probabyl apply these constraints to this set elements while the source set has its own constraints.
-        /// </summary>
+        public TableDefinitionType DefinitionType { get; set; }
+
         public ExprNode WhereExpression { get; set; }
 
-        public List<CsColumn> ProjectDimensions // Output tuples of these dimensions are appended to this set (other tuples are excluded). Alternatively, this element must be referenced by at one lesser element COUNT(this<-proj_dim<-(Set)) > 0
+        public List<CsColumn> GeneratingDimensions // Output tuples of these dimensions are appended to this set (other tuples are excluded). Alternatively, this element must be referenced by at one lesser element COUNT(this<-proj_dim<-(Set)) > 0
         {
-            get { return LesserDims.Where(d => d.ColumnDefinition.IsGenerating).ToList(); }
-            set { ; } // Use a flag of some lesser dimension
+            get { return LesserDims.Where(d => d.Definition.IsGenerating).ToList(); }
         }
 
-        /// <summary>
-        /// Ordering of the instances. 
-        /// Here again we have a choice: it is how source elements are sorted or it is how elements of this set have to be sorted. 
-        /// </summary>
         public ExprNode OrderbyExpression { get; set; }
 
         public CsColumnEvaluator GetWhereEvaluator()
@@ -540,7 +532,7 @@ namespace Com.Model
         /// </summary>
         public void Populate() 
         {
-            if (TableDefinition.ProjectDimensions.Count == 0) // Product of local sets (no project/de-project from another set)
+            if (DefinitionType == TableDefinitionType.PRODUCT) // Product of local sets (no project/de-project from another set)
             {
                 // - greater with filter (use key dims; de-projection of several greater dims by storing all combinations of their inputs)
                 //   - use only Key greater dims for looping. 
@@ -557,14 +549,14 @@ namespace Com.Model
 
                 // Evaluator for where expression
                 CsColumnEvaluator eval = null;
-                if (TableDefinition.WhereExpression != null)
+                if (Definition.WhereExpression != null)
                 {
                     eval = GetWhereEvaluator();
                 }
 
                 // For building all combinations
                 Offset[] lengths = new Offset[dimCount];
-                for (int i = 0; i < dimCount; i++) lengths[i] = dims[i].GreaterSet.TableData.Length;
+                for (int i = 0; i < dimCount; i++) lengths[i] = dims[i].GreaterSet.Data.Length;
 
                 Offset[] offsets = new Offset[dimCount]; // Here we store the current state of choices for each dimensions
                 for (int i = 0; i < dimCount; i++) offsets[i] = -1;
@@ -623,7 +615,7 @@ namespace Com.Model
                 }
 
             }
-            else // There are import dimensions so copy data from another set (projection of another set)
+            else if(DefinitionType == TableDefinitionType.PROJECTION) // There are import dimensions so copy data from another set (projection of another set)
             {
                 // - lesser with filter
                 //   - use only IsGenerating lesser dims for looping. 
@@ -639,12 +631,12 @@ namespace Com.Model
                 // If appended or found, then set values of the greater generating dimensions
                 // If cannot be added (does not satisfy constraints) then set values of the greater generating dimensions to null
 
-                CsColumn projectDim = TableDefinition.ProjectDimensions[0];
+                CsColumn projectDim = Definition.GeneratingDimensions[0];
                 CsTable sourceSet = projectDim.LesserSet;
                 CsTable targetSet = projectDim.GreaterSet; // this set
 
                 // Prepare the expression from the mapping
-                CsColumnEvaluator evaluator = projectDim.ColumnDefinition.GetColumnEvaluator();
+                CsColumnEvaluator evaluator = projectDim.Definition.GetColumnEvaluator();
 
                 if (sourceSet.Top is SetTopOledb) // Generating set data from a remote set in an external database
                 {
@@ -665,6 +657,10 @@ namespace Com.Model
                         // The tuple will be appended during evaluation depending on the action (read, append, update etc.)
                     }
                 }
+            }
+            else
+            {
+                throw new NotImplementedException("This table definition type is not implemented and cannot be populated.");
             }
 
         }
@@ -769,7 +765,7 @@ namespace Com.Model
             greaterDims = new List<CsColumn>(); // Up arrows
             lesserDims = new List<CsColumn>();
 
-            ProjectDimensions = new List<CsColumn>();
+            DefinitionType = TableDefinitionType.PRODUCT;
         }
 
         #endregion

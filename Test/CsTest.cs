@@ -99,19 +99,19 @@ namespace Test
             vals[1] = "Record 0";
             vals[2] = 20.0;
             vals[3] = 20.0;
-            t1.TableData.Append(cols, vals);
+            t1.Data.Append(cols, vals);
 
             vals[0] = 10;
             vals[1] = "Record 1";
             vals[2] = 10.0;
             vals[3] = 20.0;
-            t1.TableData.Append(cols, vals);
+            t1.Data.Append(cols, vals);
 
             vals[0] = 30;
             vals[1] = "Record 2";
             vals[2] = 30.0;
             vals[3] = 20.0;
-            t1.TableData.Append(cols, vals);
+            t1.Data.Append(cols, vals);
 
             //
             // Fill sample data in "Table 2"
@@ -130,25 +130,25 @@ namespace Test
             vals[1] = 20;
             vals[2] = 40.0;
             vals[3] = 0;
-            t2.TableData.Append(cols, vals);
+            t2.Data.Append(cols, vals);
 
             vals[0] = "Value A";
             vals[1] = 30;
             vals[2] = 40.0;
             vals[3] = 1;
-            t2.TableData.Append(cols, vals);
+            t2.Data.Append(cols, vals);
 
             vals[0] = "Value A";
             vals[1] = 30;
             vals[2] = 50.0;
             vals[3] = 1;
-            t2.TableData.Append(cols, vals);
+            t2.Data.Append(cols, vals);
 
             vals[0] = "Value B";
             vals[1] = 30;
             vals[2] = 50.0;
             vals[3] = 1;
-            t2.TableData.Append(cols, vals);
+            t2.Data.Append(cols, vals);
         }
 
         [TestMethod]
@@ -199,34 +199,34 @@ namespace Test
             // Data
             //
 
-            t1.TableData.Length = 3;
+            t1.Data.Length = 3;
 
             // 2. Write/read individual column data by using column data methods (not table methods)
 
-            Assert.AreEqual(true, c11.ColumnData.IsNull(1)); // Initially, all outputs must be null
-            c11.ColumnData.SetValue(1, 10);
-            c11.ColumnData.SetValue(0, 20);
-            c11.ColumnData.SetValue(2, 30);
-            Assert.AreEqual(false, c11.ColumnData.IsNull(1));
-            Assert.AreEqual(10, c11.ColumnData.GetValue(1));
+            Assert.AreEqual(true, c11.Data.IsNull(1)); // Initially, all outputs must be null
+            c11.Data.SetValue(1, 10);
+            c11.Data.SetValue(0, 20);
+            c11.Data.SetValue(2, 30);
+            Assert.AreEqual(false, c11.Data.IsNull(1));
+            Assert.AreEqual(10, c11.Data.GetValue(1));
 
-            Assert.AreEqual(true, c13.ColumnData.IsNull(2)); // Initially, all outputs must be null
-            c13.ColumnData.SetValue(1, 10.0);
-            c13.ColumnData.SetValue(0, 20.0);
-            c13.ColumnData.SetValue(2, 30.0);
-            Assert.AreEqual(false, c13.ColumnData.IsNull(1));
-            Assert.AreEqual(10.0, c13.ColumnData.GetValue(1));
+            Assert.AreEqual(true, c13.Data.IsNull(2)); // Initially, all outputs must be null
+            c13.Data.SetValue(1, 10.0);
+            c13.Data.SetValue(0, 20.0);
+            c13.Data.SetValue(2, 30.0);
+            Assert.AreEqual(false, c13.Data.IsNull(1));
+            Assert.AreEqual(10.0, c13.Data.GetValue(1));
 
-            t2.TableData.Length = 2;
+            t2.Data.Length = 2;
 
-            c21.ColumnData.SetValue(0, "Value A");
-            c21.ColumnData.SetValue(1, "Value B");
+            c21.Data.SetValue(0, "Value A");
+            c21.Data.SetValue(1, "Value B");
 
-            c22.ColumnData.SetValue(0, 10);
-            c22.ColumnData.SetValue(1, 20);
+            c22.Data.SetValue(0, 10);
+            c22.Data.SetValue(1, 20);
 
-            Assert.AreEqual(10, c22.ColumnData.GetValue(0));
-            Assert.AreEqual(20, c22.ColumnData.GetValue(1));
+            Assert.AreEqual(10, c22.Data.GetValue(0));
+            Assert.AreEqual(20, c22.Data.GetValue(1));
         }
 
         [TestMethod]
@@ -247,15 +247,15 @@ namespace Test
             //
             // Data manipulations
             //
-            Assert.AreEqual(3, t1.TableData.Length);
+            Assert.AreEqual(3, t1.Data.Length);
 
-            Offset input = t1.TableData.Find(new CsColumn[] { c11 }, new object[] { 10 } );
+            Offset input = t1.Data.Find(new CsColumn[] { c11 }, new object[] { 10 } );
             Assert.AreEqual(1, input);
 
-            input = t1.TableData.Find(new CsColumn[] { c12 }, new object[] { "Record 1" });
+            input = t1.Data.Find(new CsColumn[] { c12 }, new object[] { "Record 1" });
             Assert.AreEqual(1, input);
 
-            input = t1.TableData.Find(new CsColumn[] { c12 }, new object[] { "Record Does Not Exist" });
+            input = t1.Data.Find(new CsColumn[] { c12 }, new object[] { "Record Does Not Exist" });
             Assert.AreEqual(-1, input);
         }
         
@@ -282,14 +282,14 @@ namespace Test
             c15.Add();
 
             // Define simple expression
-            c15.ColumnDefinition.Formula = BuildExpr("([Column 11]+10.0) * this.[Column 13]"); // ConceptScript source code: "[Decimal] [Column 15] <body of expression>"
+            c15.Definition.Formula = BuildExpr("([Column 11]+10.0) * this.[Column 13]"); // ConceptScript source code: "[Decimal] [Column 15] <body of expression>"
 
             // Evaluate column
-            c15.ColumnDefinition.Evaluate();
+            c15.Definition.Evaluate();
 
-            Assert.AreEqual(600.0, c15.ColumnData.GetValue(0));
-            Assert.AreEqual(200.0, c15.ColumnData.GetValue(1));
-            Assert.AreEqual(1200.0, c15.ColumnData.GetValue(2));
+            Assert.AreEqual(600.0, c15.Data.GetValue(0));
+            Assert.AreEqual(200.0, c15.Data.GetValue(1));
+            Assert.AreEqual(1200.0, c15.Data.GetValue(2));
         }
 
         [TestMethod]
@@ -314,19 +314,19 @@ namespace Test
             CsColumn c15 = schema.CreateColumn("Agg of Column 23", t1, schema.GetPrimitive("Double"), false);
             c15.Add();
 
-            c15.ColumnDefinition.FactTable = t2; // Fact table
-            c15.ColumnDefinition.GroupPaths = new List<DimPath>(new DimPath[] { new DimPath(c24) }); // One group path
-            c15.ColumnDefinition.MeasurePaths = new List<DimPath>(new DimPath[] { new DimPath(c23) }); // One measure path
-            c15.ColumnDefinition.Updater = "SUM"; // Aggregation function
+            c15.Definition.FactTable = t2; // Fact table
+            c15.Definition.GroupPaths = new List<DimPath>(new DimPath[] { new DimPath(c24) }); // One group path
+            c15.Definition.MeasurePaths = new List<DimPath>(new DimPath[] { new DimPath(c23) }); // One measure path
+            c15.Definition.Updater = "SUM"; // Aggregation function
             
             //
             // Evaluate expression
             //
-            c15.ColumnDefinition.Evaluate(); // {40, 140, 0}
+            c15.Definition.Evaluate(); // {40, 140, 0}
 
-            Assert.AreEqual(40.0, c15.ColumnData.GetValue(0));
-            Assert.AreEqual(140.0, c15.ColumnData.GetValue(1));
-            Assert.AreEqual(0.0, c15.ColumnData.GetValue(2)); // In fact, it has to be NaN or null (no values have been aggregated)
+            Assert.AreEqual(40.0, c15.Data.GetValue(0));
+            Assert.AreEqual(140.0, c15.Data.GetValue(1));
+            Assert.AreEqual(0.0, c15.Data.GetValue(2)); // In fact, it has to be NaN or null (no values have been aggregated)
 
             // TODO:
             // - initializer and finalizer for aggregation evluation (also for other evaluators but for agg it is more important)
@@ -368,11 +368,11 @@ namespace Test
             schema.AddTable(t3, t2, null);
 
             ExprNode ast = BuildExpr("[Column 22] > 20.0 && this.Super.[Column 23] < 50");
-            t3.TableDefinition.WhereExpression = ast;
+            t3.Definition.WhereExpression = ast;
 
-            t3.TableDefinition.Populate();
-            Assert.AreEqual(1, t3.TableData.Length);
-            Assert.AreEqual(1, t3.SuperDim.ColumnData.GetValue(0));
+            t3.Definition.Populate();
+            Assert.AreEqual(1, t3.Data.Length);
+            Assert.AreEqual(1, t3.SuperDim.Data.GetValue(0));
         }
 
         [TestMethod]
@@ -395,24 +395,24 @@ namespace Test
             CsColumn c32 = schema.CreateColumn(t2.Name, t3, t2, true); // {40, 40, *50, *50}
             c32.Add();
 
-            t3.TableDefinition.Populate();
-            Assert.AreEqual(12, t3.TableData.Length);
+            t3.Definition.Populate();
+            Assert.AreEqual(12, t3.Data.Length);
 
             //
             // Add simple where expression
             //
 
             ExprNode ast = BuildExpr("([Table 1].[Column 11] > 10) && this.[Table 2].[Column 23] == 50.0");
-            t3.TableDefinition.WhereExpression = ast;
+            t3.Definition.WhereExpression = ast;
 
-            t3.TableDefinition.Populate();
-            Assert.AreEqual(4, t3.TableData.Length);
+            t3.Definition.Populate();
+            Assert.AreEqual(4, t3.Data.Length);
 
-            Assert.AreEqual(0, c31.ColumnData.GetValue(0));
-            Assert.AreEqual(2, c32.ColumnData.GetValue(0));
+            Assert.AreEqual(0, c31.Data.GetValue(0));
+            Assert.AreEqual(2, c32.Data.GetValue(0));
 
-            Assert.AreEqual(0, c31.ColumnData.GetValue(1));
-            Assert.AreEqual(3, c32.ColumnData.GetValue(1));
+            Assert.AreEqual(0, c31.Data.GetValue(1));
+            Assert.AreEqual(3, c32.Data.GetValue(1));
         }
 
         [TestMethod]
@@ -444,13 +444,13 @@ namespace Test
             CsColumn c24 = new Dim(map24); // Create generating/import column
             c24.Add();
 
-            t3.TableDefinition.Populate();
-            Assert.AreEqual(2, t3.TableData.Length);
+            t3.Definition.Populate();
+            Assert.AreEqual(2, t3.Data.Length);
 
-            Assert.AreEqual(0, c24.ColumnData.GetValue(0));
-            Assert.AreEqual(0, c24.ColumnData.GetValue(1));
-            Assert.AreEqual(0, c24.ColumnData.GetValue(2));
-            Assert.AreEqual(1, c24.ColumnData.GetValue(3));
+            Assert.AreEqual(0, c24.Data.GetValue(0));
+            Assert.AreEqual(0, c24.Data.GetValue(1));
+            Assert.AreEqual(0, c24.Data.GetValue(2));
+            Assert.AreEqual(1, c24.Data.GetValue(3));
 
             //
             // Defining a combination of "Column 21" and "Column 22" and project with 3 unique records in a new set
@@ -472,13 +472,13 @@ namespace Test
             CsColumn c25 = new Dim(map25); // Create generating/import column
             c25.Add();
 
-            t4.TableDefinition.Populate();
-            Assert.AreEqual(3, t4.TableData.Length);
+            t4.Definition.Populate();
+            Assert.AreEqual(3, t4.Data.Length);
 
-            Assert.AreEqual(0, c25.ColumnData.GetValue(0));
-            Assert.AreEqual(1, c25.ColumnData.GetValue(1));
-            Assert.AreEqual(1, c25.ColumnData.GetValue(2));
-            Assert.AreEqual(2, c25.ColumnData.GetValue(3));
+            Assert.AreEqual(0, c25.Data.GetValue(0));
+            Assert.AreEqual(1, c25.Data.GetValue(1));
+            Assert.AreEqual(1, c25.Data.GetValue(2));
+            Assert.AreEqual(2, c25.Data.GetValue(3));
         }
 
         [TestMethod]
@@ -524,8 +524,8 @@ namespace Test
             CsColumn dim = new Dim(map);
             dim.Add();
 
-            orderDetailsTable.TableDefinition.Populate();
-            Assert.AreEqual(58, orderDetailsTable.TableData.Length);
+            orderDetailsTable.Definition.Populate();
+            Assert.AreEqual(58, orderDetailsTable.Data.Length);
             
             // Other TODOs:
 

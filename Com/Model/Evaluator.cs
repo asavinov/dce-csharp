@@ -36,21 +36,21 @@ namespace Com.Model
 
         public virtual bool Next()
         {
-            if (currentElement < loopTable.TableData.Length) currentElement++;
+            if (currentElement < loopTable.Data.Length) currentElement++;
 
-            if (currentElement < loopTable.TableData.Length) return true;
+            if (currentElement < loopTable.Data.Length) return true;
             else return false;
         }
         public virtual bool First()
         {
             currentElement = 0;
 
-            if (currentElement < loopTable.TableData.Length) return true;
+            if (currentElement < loopTable.Data.Length) return true;
             else return false;
         }
         public virtual bool Last()
         {
-            currentElement = loopTable.TableData.Length - 1;
+            currentElement = loopTable.Data.Length - 1;
 
             if (currentElement >= 0) return true;
             else return false;
@@ -105,20 +105,20 @@ namespace Com.Model
 
         public ExprEvaluator(CsColumn column)
         {
-            if (column.ColumnDefinition.Mapping != null)
+            if (column.Definition.Mapping != null)
             {
-                if (column.ColumnDefinition.IsGenerating)
+                if (column.Definition.IsGenerating)
                 {
-                    exprNode = column.ColumnDefinition.Mapping.BuildExpression(ActionType.APPEND);
+                    exprNode = column.Definition.Mapping.BuildExpression(ActionType.APPEND);
                 }
                 else
                 {
-                    exprNode = column.ColumnDefinition.Mapping.BuildExpression(ActionType.READ);
+                    exprNode = column.Definition.Mapping.BuildExpression(ActionType.READ);
                 }
             }
-            else if (column.ColumnDefinition.Formula != null)
+            else if (column.Definition.Formula != null)
             {
-                exprNode = column.ColumnDefinition.Formula;
+                exprNode = column.Definition.Formula;
             }
 
             currentElement = -1;
@@ -126,7 +126,7 @@ namespace Com.Model
             isUpdate = false;
             thisVariable = new Variable("this", loopTable.Name);
             thisVariable.TypeTable = loopTable;
-            columnData = column.ColumnData;
+            columnData = column.Data;
 
             // Resolve names in the expresion by storing direct references to storage objects which will be used during valuation (names will not be used
             exprNode.Resolve(column.LesserSet.Top, new List<CsVariable>() { thisVariable });
@@ -134,7 +134,7 @@ namespace Com.Model
 
         public ExprEvaluator(CsTable table)
         {
-            exprNode = table.TableDefinition.WhereExpression;
+            exprNode = table.Definition.WhereExpression;
 
             currentElement = -1;
             loopTable = table;
@@ -261,16 +261,16 @@ namespace Com.Model
 
         public AggrEvaluator(CsColumn column)
         {
-            exprNode = column.ColumnDefinition.Formula;
+            exprNode = column.Definition.Formula;
 
             currentElement = -1;
-            loopTable = column.ColumnDefinition.FactTable;
+            loopTable = column.Definition.FactTable;
             isUpdate = true;
 
             thisVariable = new Variable("this", loopTable.Name);
             thisVariable.TypeTable = loopTable;
 
-            columnData = column.ColumnData;
+            columnData = column.Data;
 
             groupVariable = new Variable("this", column.LesserSet.Name);
             groupVariable.TypeTable = column.LesserSet;
@@ -278,12 +278,12 @@ namespace Com.Model
             measureVariable = new Variable("value", column.GreaterSet.Name);
             measureVariable.TypeTable = column.GreaterSet;
 
-            groupExpr = ExprNode.CreateReader(column.ColumnDefinition.GroupPaths[0], true); // Currently only one path is used
-            measureExpr = ExprNode.CreateReader(column.ColumnDefinition.MeasurePaths[0], true);
+            groupExpr = ExprNode.CreateReader(column.Definition.GroupPaths[0], true); // Currently only one path is used
+            measureExpr = ExprNode.CreateReader(column.Definition.MeasurePaths[0], true);
             groupExpr = (ExprNode)groupExpr.Root;
             measureExpr = (ExprNode)measureExpr.Root;
 
-            exprNode = ExprNode.CreateUpdater(column, column.ColumnDefinition.Updater);
+            exprNode = ExprNode.CreateUpdater(column, column.Definition.Updater);
 
             // Resolve names in the expresions using appropriate variables
             exprNode.Resolve(column.LesserSet.Top, new List<CsVariable>() { groupVariable, measureVariable });
