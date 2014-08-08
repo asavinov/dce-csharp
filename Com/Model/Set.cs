@@ -36,7 +36,7 @@ namespace Com.Model
         /// Whether it is a primitive set. Primitive sets do not have greater dimensions.
         /// It can depend on other propoerties (it should be clarified) like instantiable, autopopulated, virtual etc.
         /// </summary>
-        public bool IsPrimitive { get { return SuperDim.GreaterSet is CsSchema; } }
+        public bool IsPrimitive { get { return SuperSet is CsSchema; } } // If its super-set is Top
 
         //
         // Outputs
@@ -161,9 +161,9 @@ namespace Com.Model
             get { return length; }
             set // Uniqueness of keys is not (and cannot be) checked and can be broken
             {
+                length = value;
                 foreach (CsColumn col in GreaterDims)
                 {
-                    length = value;
                     col.Data.Length = value;
                 }
             }
@@ -532,15 +532,15 @@ namespace Com.Model
         /// </summary>
         public void Populate() 
         {
+            // Empty the table (reset)
+            Length = 0;
+
             if (DefinitionType == TableDefinitionType.PRODUCT) // Product of local sets (no project/de-project from another set)
             {
                 // - greater with filter (use key dims; de-projection of several greater dims by storing all combinations of their inputs)
                 //   - use only Key greater dims for looping. 
                 //   - user greater sets input values as constituents for new tuples
                 //   - greater dims are populated simultaniously without evaluation (they do not have defs.)
-
-                // Empty the table (reset)
-                Length = 0;
 
                 // Find all local greater key dimensions including the super-dim.
                 CsColumn[] dims = KeyColumns.ToArray();
