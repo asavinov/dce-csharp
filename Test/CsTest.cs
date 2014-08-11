@@ -279,10 +279,11 @@ namespace Test
             // Define a derived column with a definition
             //
             CsColumn c15 = schema.CreateColumn("Column 15", t1, schema.GetPrimitive("Double"), false);
-            c15.Add();
 
-            // Define simple expression
+            c15.Definition.DefinitionType = ColumnDefinitionType.ARITHMETIC;
             c15.Definition.Formula = BuildExpr("([Column 11]+10.0) * this.[Column 13]"); // ConceptScript source code: "[Decimal] [Column 15] <body of expression>"
+
+            c15.Add();
 
             // Evaluate column
             c15.Definition.Evaluate();
@@ -312,13 +313,14 @@ namespace Test
             // Define aggregated column
             //
             CsColumn c15 = schema.CreateColumn("Agg of Column 23", t1, schema.GetPrimitive("Double"), false);
-            c15.Add();
-
+            c15.Definition.DefinitionType = ColumnDefinitionType.AGGREGATION;
             c15.Definition.FactTable = t2; // Fact table
             c15.Definition.GroupPaths = new List<DimPath>(new DimPath[] { new DimPath(c24) }); // One group path
             c15.Definition.MeasurePaths = new List<DimPath>(new DimPath[] { new DimPath(c23) }); // One measure path
             c15.Definition.Updater = "SUM"; // Aggregation function
-            
+
+            c15.Add();
+
             //
             // Evaluate expression
             //
@@ -365,10 +367,11 @@ namespace Test
             // Define a new filter-set
             //
             CsTable t3 = schema.CreateTable("Table 3");
-            schema.AddTable(t3, t2, null);
 
             ExprNode ast = BuildExpr("[Column 22] > 20.0 && this.Super.[Column 23] < 50");
             t3.Definition.WhereExpression = ast;
+            t3.Definition.DefinitionType = TableDefinitionType.PRODUCT;
+            schema.AddTable(t3, t2, null);
 
             t3.Definition.Populate();
             Assert.AreEqual(1, t3.Data.Length);
@@ -388,6 +391,7 @@ namespace Test
             // Define a new product-set
             //
             CsTable t3 = schema.CreateTable("Table 3");
+            t3.Definition.DefinitionType = TableDefinitionType.PRODUCT;
             schema.AddTable(t3, null, null);
 
             CsColumn c31 = schema.CreateColumn(t1.Name, t3, t1, true); // {*20, 10, *30}
@@ -431,6 +435,7 @@ namespace Test
             // Project "Table 2" along "Column 21" and get 2 unique records in a new set "Value A" (3 references) and "Value B" (1 reference)
             //
             CsTable t3 = schema.CreateTable("Table 3");
+            t3.Definition.DefinitionType = TableDefinitionType.PROJECTION;
             schema.AddTable(t3, null, null);
 
             CsColumn c31 = schema.CreateColumn(c21.Name, t3, c21.GreaterSet, true);
@@ -440,11 +445,15 @@ namespace Test
             Mapping map24 = new Mapping(t2, t3);
             map24.AddMatch(new PathMatch(new DimPath(c21), new DimPath(c31)));
 
-            // !!! TODO: we cannot use directly a constructor - replace by schema API like schema.CreateColumn(c21.Name, t3, c21.GreaterSet, true)
-            CsColumn c24 = new Dim(map24); // Create generating/import column
+            // Create a generating column
+            CsColumn c24 = schema.CreateColumn(map24.SourceSet.Name, map24.SourceSet, map24.TargetSet, false);
+            c24.Definition.Mapping = map24;
+            c24.Definition.DefinitionType = ColumnDefinitionType.LINK;
+            c24.Definition.IsGenerating = true;
             c24.Add();
 
             t3.Definition.Populate();
+
             Assert.AreEqual(2, t3.Data.Length);
 
             Assert.AreEqual(0, c24.Data.GetValue(0));
@@ -456,6 +465,7 @@ namespace Test
             // Defining a combination of "Column 21" and "Column 22" and project with 3 unique records in a new set
             //
             CsTable t4 = schema.CreateTable("Table 4");
+            t4.Definition.DefinitionType = TableDefinitionType.PROJECTION;
             schema.AddTable(t4, null, null);
 
             CsColumn c41 = schema.CreateColumn(c21.Name, t4, c21.GreaterSet, true);
@@ -468,11 +478,15 @@ namespace Test
             map25.AddMatch(new PathMatch(new DimPath(c21), new DimPath(c41)));
             map25.AddMatch(new PathMatch(new DimPath(c22), new DimPath(c42)));
 
-            // !!! TODO: we cannot use directly a constructor - replace by schema API like schema.CreateColumn(c21.Name, t3, c21.GreaterSet, true)
-            CsColumn c25 = new Dim(map25); // Create generating/import column
+            // Create generating/import column
+            CsColumn c25 = schema.CreateColumn(map25.SourceSet.Name, map25.SourceSet, map25.TargetSet, false);
+            c25.Definition.Mapping = map25;
+            c25.Definition.DefinitionType = ColumnDefinitionType.LINK;
+            c25.Definition.IsGenerating = true;
             c25.Add();
 
             t4.Definition.Populate();
+
             Assert.AreEqual(3, t4.Data.Length);
 
             Assert.AreEqual(0, c25.Data.GetValue(0));
@@ -512,7 +526,9 @@ namespace Test
 
             // Configure import 
             CsSchema schema = new SetTop("My Schema");
+
             CsTable orderDetailsTable = schema.CreateTable("Order Details");
+            orderDetailsTable.Definition.DefinitionType = TableDefinitionType.PROJECTION;
             schema.AddTable(orderDetailsTable, null, null);
             
             // Create mapping
@@ -521,10 +537,15 @@ namespace Test
             map.Matches.ForEach(m => m.TargetPath.Path.ForEach(p => p.Add()));
 
             // Create generating/import column
-            CsColumn dim = new Dim(map);
+            CsColumn dim = schema.CreateColumn(map.SourceSet.Name, map.SourceSet, map.TargetSet, false);
+            dim.Definition.Mapping = map;
+            dim.Definition.DefinitionType = ColumnDefinitionType.LINK;
+            dim.Definition.IsGenerating = true;
+
             dim.Add();
 
             orderDetailsTable.Definition.Populate();
+
             Assert.AreEqual(58, orderDetailsTable.Data.Length);
             
             // Other TODOs:

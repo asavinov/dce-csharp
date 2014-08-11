@@ -620,19 +620,27 @@ namespace Com.Model
             // Based on library - load lib, instantiate via factory, initialize (say, resolve names), return object
             // Based on source code - compile class, instantiate, initialize (say, resolve), return instance
 
-            CsColumnEvaluator evaluator;
+            CsColumnEvaluator evaluator = null;
 
-            if (Dim.LesserSet.Top != Dim.GreaterSet.Top && Dim.LesserSet.Top is SetTopOledb) // Import data from a remote source
+            if (DefinitionType == ColumnDefinitionType.NONE) 
+            {
+                ; // Nothing to do
+            }
+            else if (Dim.LesserSet.Top != Dim.GreaterSet.Top && Dim.LesserSet.Top is SetTopOledb) // Import data from a remote source
             {
                 evaluator = ExprEvaluator.CreateOledbEvaluator(Dim);
             }
-            else if (FactTable == null || FactTable == Dim.LesserSet) // Non-aggregation
+            else if (DefinitionType == ColumnDefinitionType.AGGREGATION)
+            {
+                evaluator = ExprEvaluator.CreateAggrEvaluator(Dim);
+            }
+            else if (DefinitionType == ColumnDefinitionType.ARITHMETIC || DefinitionType == ColumnDefinitionType.LINK)
             {
                 evaluator = ExprEvaluator.CreateColumnEvaluator(Dim);
             }
             else
             {
-                evaluator = ExprEvaluator.CreateAggrEvaluator(Dim);
+                throw new NotImplementedException("This type of column definition is not implemented.");
             }
 
             return evaluator;
@@ -646,15 +654,13 @@ namespace Com.Model
 
         public void Evaluate()
         {
-            // Never change any set - neither lesser nor greater (even in the case of generating/projection dimensions)
-
             CsColumnEvaluator evaluator = GetColumnEvaluator();
+            if (evaluator == null) return;
 
             while (evaluator.Next())
             {
                 evaluator.Evaluate();
             }
-
         }
 
         public void Finish() { }
@@ -666,7 +672,7 @@ namespace Com.Model
             Dim = dim;
 
             IsGenerating = false;
-            DefinitionType = ColumnDefinitionType.ANY;
+            DefinitionType = ColumnDefinitionType.NONE;
             
             GroupPaths = new List<DimPath>();
             MeasurePaths = new List<DimPath>();

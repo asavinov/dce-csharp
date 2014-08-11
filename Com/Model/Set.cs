@@ -532,8 +532,12 @@ namespace Com.Model
         /// </summary>
         public void Populate() 
         {
-            // Empty the table (reset)
-            Length = 0;
+            if (DefinitionType == TableDefinitionType.NONE)
+            {
+                return; // Nothing to do
+            }
+
+            Length = 0; // Empty the table (reset). Maybe should be done in Initialize?
 
             if (DefinitionType == TableDefinitionType.PRODUCT) // Product of local sets (no project/de-project from another set)
             {
@@ -565,7 +569,7 @@ namespace Com.Model
                 do ++top; while (top < dimCount && lengths[top] == 0);
 
                 // Alternative recursive iteration: http://stackoverflow.com/questions/13655299/c-sharp-most-efficient-way-to-iterate-through-multiple-arrays-list
-                while (top >= 0) 
+                while (top >= 0)
                 {
                     if (top == dimCount) // New element is ready. Process it.
                     {
@@ -594,7 +598,7 @@ namespace Com.Model
 
                         top--;
                         while (top >= 0 && lengths[top] == 0) // Go up by skipping empty dimensions and reseting 
-                        { offsets[top--] = -1; } 
+                        { offsets[top--] = -1; }
                     }
                     else
                     {
@@ -603,19 +607,19 @@ namespace Com.Model
 
                         if (offsets[top] < lengths[top]) // Offset chosen
                         {
-                            do ++top; 
+                            do ++top;
                             while (top < dimCount && lengths[top] == 0); // Go up (foreward) by skipping empty dimensions
                         }
                         else // Level is finished. Go back.
                         {
-                            do { offsets[top--] = -1; } 
+                            do { offsets[top--] = -1; }
                             while (top >= 0 && lengths[top] == 0); // Go down (backward) by skipping empty dimensions and reseting 
                         }
                     }
                 }
 
             }
-            else if(DefinitionType == TableDefinitionType.PROJECTION) // There are import dimensions so copy data from another set (projection of another set)
+            else if (DefinitionType == TableDefinitionType.PROJECTION) // There are import dimensions so copy data from another set (projection of another set)
             {
                 // - lesser with filter
                 //   - use only IsGenerating lesser dims for looping. 
@@ -765,7 +769,7 @@ namespace Com.Model
             greaterDims = new List<CsColumn>(); // Up arrows
             lesserDims = new List<CsColumn>();
 
-            DefinitionType = TableDefinitionType.PRODUCT;
+            DefinitionType = TableDefinitionType.NONE;
         }
 
         #endregion

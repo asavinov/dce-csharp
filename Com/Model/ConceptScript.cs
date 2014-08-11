@@ -131,13 +131,18 @@ namespace Com.Model
 
         CsColumnEvaluator GetWhereEvaluator(); // Get an object which is used to compute the where expression according to the formula
 
+        /// <summary>
+        /// Notes: 
+        /// - (principle): never change any set - neither lesser nor greater (even in the case of generating/projection dimensions)
+        /// </summary>
         void Populate();
         void Unpopulate(); // Is not it Length=0?
     }
 
     public enum TableDefinitionType // Specific types of table formula
     {
-        ANY, // Arbitrary formula without constraints
+        NONE, // No definition for the table (and cannot be defined). Example: manually created table with primitive dimensions.
+        ANY, // Arbitrary formula without constraints can be provided with a mix of various expression types
         PROJECTION, // Table gets its elements from (unique) outputs of some function
         PRODUCT, // Table contains all combinations of its greater (key) sets satsifying the constraints
         FILTER, // Tables contains a subset of elements from its super-set
@@ -307,7 +312,8 @@ namespace Com.Model
 
     public enum ColumnDefinitionType // Specific types of column formula
     {
-        ANY, // Arbitrary formula without constraints
+        NONE, // No definition for the column (and cannot be defined). Example: key columns of a product table
+        ANY, // Arbitrary formula without constraints which can mix many other types of expressions
         ARITHMETIC, // Column uses only other columns or paths of this same table as well as operations
         LINK, // Column is defined via a mapping represented as a tuple with paths as leaves
         AGGREGATION, // Column is defined via an updater (accumulator) function which is fed by facts using grouping and measure paths
