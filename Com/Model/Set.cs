@@ -523,13 +523,6 @@ namespace Com.Model
             return evaluator;
         }
 
-        /// <summary>
-        /// Create all instances of this set. 
-        /// Notes:
-        /// - Population means produce a subset of all possible elements where all possible elements are defined by greater dimensions.
-        /// - There are two ways to restrict all possible elements: where predicate, and generating/projection lesser dimensions (equivalently, referencing from some lesser set by the generating dimensions).
-        /// - Accordingly, there are two algorithms: produce all combinations of greater elements (for identity dimensions), and produce all combinations of the lesser elements (for generating dimensions).
-        /// </summary>
         public void Populate() 
         {
             if (DefinitionType == TableDefinitionType.NONE)
@@ -669,9 +662,6 @@ namespace Com.Model
 
         }
 
-        /// <summary>
-        /// Remove all instances.
-        /// </summary>
         public void Unpopulate()
         {
             // TODO: SuperDim.Length = 0;
@@ -686,6 +676,130 @@ namespace Com.Model
             return; 
         }
 
+        public List<CsTable> GetPreviousTables(bool recursive) // This element depends upon
+        {
+            List<CsTable> res = new List<CsTable>();
+
+            foreach (CsColumn col in GreaterDims) // If a greater set has changed then this set has to be updated
+            {
+                if (!col.IsIdentity) continue;
+                res.Add(col.GreaterSet);
+            }
+
+            foreach (CsColumn col in LesserDims) // If a generating source set has changed then this set has to be updated
+            {
+                if (!col.Definition.IsGenerating) continue;
+                res.Add(col.LesserSet);
+            }
+
+            // Recursion
+            if (recursive)
+            {
+                foreach (CsTable tab in res.ToList())
+                {
+                    var list = tab.Definition.GetPreviousTables(recursive); // Recusrion
+                    foreach (CsTable table in list)
+                    {
+                        Debug.Assert(!res.Contains(table), "Cyclic dependence in tables.");
+                        res.Add(table);
+                    }
+                }
+            }
+
+            return res;
+        }
+        public List<CsTable> GetNextTables(bool recursive) // Dependants
+        {
+            List<CsTable> res = new List<CsTable>();
+
+            foreach (CsColumn col in LesserDims) // If this set has changed then all its lesser sets have to be updated
+            {
+                if (!col.IsIdentity) continue;
+                res.Add(col.LesserSet);
+            }
+
+            foreach (CsColumn col in GreaterDims) // If this table has changed then output tables of generating dimensions have to be updated
+            {
+                if (!col.Definition.IsGenerating) continue;
+                res.Add(col.GreaterSet);
+            }
+
+            // Recursion
+            if (recursive)
+            {
+                foreach (CsTable tab in res.ToList())
+                {
+                    var list = tab.Definition.GetNextTables(recursive); // Recusrion
+                    foreach (CsTable table in list)
+                    {
+                        Debug.Assert(!res.Contains(table), "Cyclic dependence in tables.");
+                        res.Add(table);
+                    }
+                }
+            }
+
+            return res;
+        }
+
+
+        public List<CsColumn> GetPreviousColumns(bool recursive) // This element depends upon
+        {
+            List<CsColumn> res = new List<CsColumn>();
+
+            foreach (CsColumn col in LesserDims) // If a generating source column (definition) has changed then this set has to be updated
+            {
+                if (!col.Definition.IsGenerating) continue;
+                res.Add(col);
+            }
+
+            // Recursion
+            if (recursive)
+            {
+                foreach (CsColumn col in res.ToList())
+                {
+                    var list = col.Definition.GetPreviousColumns(recursive); // Recursion
+                    foreach (CsColumn column in list)
+                    {
+                        Debug.Assert(!res.Contains(column), "Cyclic dependence in columns.");
+                        res.Add(column);
+                    }
+                }
+            }
+
+            return res;
+        }
+        public List<CsColumn> GetNextColumns(bool recursive) // Dependants
+        {
+            List<CsColumn> res = new List<CsColumn>();
+
+            foreach (CsColumn col in LesserDims) // If this set has changed then all lesser columns have to be updated
+            {
+                res.Add(col);
+            }
+
+            foreach (CsColumn col in GreaterDims) // If this set has changed then all greater generating columns have to be updated
+            {
+                if (!col.Definition.IsGenerating) continue;
+                res.Add(col);
+            }
+
+            // Recursion
+            if (recursive)
+            {
+                foreach (CsColumn col in res.ToList())
+                {
+                    var list = col.Definition.GetNextColumns(recursive); // Recursion
+                    foreach (CsColumn column in list)
+                    {
+                        Debug.Assert(!res.Contains(column), "Cyclic dependence in columns.");
+                        res.Add(column);
+                    }
+                }
+            }
+
+            return res;
+        }
+        
         #endregion
 
         #region System interfaces

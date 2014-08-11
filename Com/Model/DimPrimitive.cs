@@ -665,6 +665,57 @@ namespace Com.Model
 
         public void Finish() { }
 
+        public List<CsTable> GetPreviousTables(bool recursive) // This element depends upon
+        {
+            List<CsTable> res = new List<CsTable>();
+
+            // TODO: Which other sets influence the contents of this functino? Fact set. This set.
+            if (DefinitionType == ColumnDefinitionType.NONE)
+            {
+                ;
+            }
+            else if (DefinitionType == ColumnDefinitionType.ANY || DefinitionType == ColumnDefinitionType.ARITHMETIC || DefinitionType == ColumnDefinitionType.LINK)
+            {
+                // Analyze formula
+                // Visit all nodes and retrieve functions used in there
+                // QUESTION: should we read also functions used in composition or they will be anyway retrieved via own recursion here? 
+                // In other words, is not recursion in expression formula the same as recursion here in dependency analysis?
+            }
+            else if(DefinitionType == ColumnDefinitionType.AGGREGATION)
+            {
+                // Fact set.
+            }
+
+            return res;
+        }
+        public List<CsTable> GetNextTables(bool recursive) // Dependants
+        {
+            List<CsTable> res = new List<CsTable>();
+
+            // TODO: Which other sets use this function for their content? Say, if it is a generating function. Or it is a group/measure function.
+            // Analyze other function definitions and check if this function is used there directly. 
+            // If such a function has been found, then make the same call for it, that is find other functins where it is used.
+
+            return res;
+        }
+
+        public List<CsColumn> GetPreviousColumns(bool recursive) // This element depends upon
+        {
+            List<CsColumn> res = new List<CsColumn>();
+
+            // TODO: Find other columns used in the definition of this column
+
+            return res;
+        }
+        public List<CsColumn> GetNextColumns(bool recursive) // Dependants
+        {
+            List<CsColumn> res = new List<CsColumn>();
+
+            // TODO: Find which other columns use this column in the definition
+
+            return res;
+        }
+
         #endregion
 
         public ColumnDefinition(CsColumn dim)

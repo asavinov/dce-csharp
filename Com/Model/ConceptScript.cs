@@ -132,11 +132,27 @@ namespace Com.Model
         CsColumnEvaluator GetWhereEvaluator(); // Get an object which is used to compute the where expression according to the formula
 
         /// <summary>
-        /// Notes: 
+        /// Create all instances of this set. 
+        /// Notes:
         /// - (principle): never change any set - neither lesser nor greater (even in the case of generating/projection dimensions)
+        /// - Population means produce a subset of all possible elements where all possible elements are defined by greater dimensions.
+        /// - There are two ways to restrict all possible elements: where predicate, and generating/projection lesser dimensions (equivalently, referencing from some lesser set by the generating dimensions).
+        /// - Accordingly, there are two algorithms: produce all combinations of greater elements (for identity dimensions), and produce all combinations of the lesser elements (for generating dimensions).
         /// </summary>
         void Populate();
+        /// <summary>
+        /// Remove all instances.
+        /// </summary>
         void Unpopulate(); // Is not it Length=0?
+
+        //
+        // Dependencies. The order is important and corresponds to dependency chain
+        //
+        List<CsTable> GetPreviousTables(bool recursive); // This element depends upon
+        List<CsTable> GetNextTables(bool recursive); // Dependants
+
+        List<CsColumn> GetPreviousColumns(bool recursive); // This element depends upon
+        List<CsColumn> GetNextColumns(bool recursive); // Dependants
     }
 
     public enum TableDefinitionType // Specific types of table formula
@@ -296,18 +312,23 @@ namespace Com.Model
         string Updater { get; set; }
 
         //
-        // Dependencies
+        // Compute
         //
 
         CsColumnEvaluator GetColumnEvaluator(); // Get an object which is used to compute the function values according to the formula
 
-        //
-        // Compute
-        //
-
         void Initialize();
         void Evaluate(); 
         void Finish();
+
+        //
+        // Dependencies. The order is important and corresponds to dependency chain
+        //
+        List<CsTable> GetPreviousTables(bool recursive); // This element depends upon
+        List<CsTable> GetNextTables(bool recursive); // Dependants
+
+        List<CsColumn> GetPreviousColumns(bool recursive); // This element depends upon
+        List<CsColumn> GetNextColumns(bool recursive); // Dependants
     }
 
     public enum ColumnDefinitionType // Specific types of column formula
