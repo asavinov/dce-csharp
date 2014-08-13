@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Data;
@@ -635,24 +637,9 @@ namespace Com.Model
                 // Prepare the expression from the mapping
                 CsColumnEvaluator evaluator = projectDim.Definition.GetColumnEvaluator();
 
-                if (sourceSet.Top is SetTopOledb) // Generating set data from a remote set in an external database
+                while (evaluator.Next()) 
                 {
-                    // Loop over all remote result set records
-                    while (evaluator.Next()) // A row is <colName, primValue> collection
-                    {
-                        evaluator.Evaluate(); // Evaluate input
-                        // The tuple will be appended during evaluation depending on the action (read, append, update etc.)
-                    }
-                }
-                else if (sourceSet.Top is SetTop) // Generating set data from a local set in this mashup
-                {
-                    // Loop over all function inputs with evaluation and using the output tuple for appending
-                    while (evaluator.Next())
-                    {
-                        evaluator.Evaluate(); // Evaluate input
-                        // TODO: append also an instance to the function (the function has to be nullifed before the procedure)
-                        // The tuple will be appended during evaluation depending on the action (read, append, update etc.)
-                    }
+                    evaluator.Evaluate();
                 }
             }
             else
@@ -676,28 +663,36 @@ namespace Com.Model
             return; 
         }
 
-        public List<CsTable> GetPreviousTables(bool recursive) // This element depends upon
+        //
+        // Dependencies
+        //
+
+        public List<CsTable> UsesTables(bool recursive) // This element depends upon
         {
+            // Assume that we have just added this table. It uses and depends on other tables. We need to list them.
+
             List<CsTable> res = new List<CsTable>();
 
-            foreach (CsColumn col in GreaterDims) // If a greater set has changed then this set has to be updated
+            foreach (CsColumn col in GreaterDims) // If a greater (key) set has changed then this set has to be populated
             {
                 if (!col.IsIdentity) continue;
                 res.Add(col.GreaterSet);
             }
 
-            foreach (CsColumn col in LesserDims) // If a generating source set has changed then this set has to be updated
+            foreach (CsColumn col in LesserDims) // If a generating source set has changed then this set has to be populated
             {
                 if (!col.Definition.IsGenerating) continue;
                 res.Add(col.LesserSet);
             }
+
+            // TODO: Add tables used in the Where expression
 
             // Recursion
             if (recursive)
             {
                 foreach (CsTable tab in res.ToList())
                 {
-                    var list = tab.Definition.GetPreviousTables(recursive); // Recusrion
+                    var list = tab.Definition.UsesTables(recursive); // Recusrion
                     foreach (CsTable table in list)
                     {
                         Debug.Assert(!res.Contains(table), "Cyclic dependence in tables.");
@@ -708,17 +703,17 @@ namespace Com.Model
 
             return res;
         }
-        public List<CsTable> GetNextTables(bool recursive) // Dependants
+        public List<CsTable> IsUsedInTables(bool recursive) // Dependants
         {
             List<CsTable> res = new List<CsTable>();
 
-            foreach (CsColumn col in LesserDims) // If this set has changed then all its lesser sets have to be updated
+            foreach (CsColumn col in LesserDims) // If this set has changed then all its lesser (key) sets have to be populated
             {
                 if (!col.IsIdentity) continue;
                 res.Add(col.LesserSet);
             }
 
-            foreach (CsColumn col in GreaterDims) // If this table has changed then output tables of generating dimensions have to be updated
+            foreach (CsColumn col in GreaterDims) // If this table has changed then output tables of generating dimensions have to be populated
             {
                 if (!col.Definition.IsGenerating) continue;
                 res.Add(col.GreaterSet);
@@ -729,7 +724,7 @@ namespace Com.Model
             {
                 foreach (CsTable tab in res.ToList())
                 {
-                    var list = tab.Definition.GetNextTables(recursive); // Recusrion
+                    var list = tab.Definition.IsUsedInTables(recursive); // Recusrion
                     foreach (CsTable table in list)
                     {
                         Debug.Assert(!res.Contains(table), "Cyclic dependence in tables.");
@@ -742,8 +737,10 @@ namespace Com.Model
         }
 
 
-        public List<CsColumn> GetPreviousColumns(bool recursive) // This element depends upon
+        public List<CsColumn> UsesColumns(bool recursive) // This element depends upon
         {
+            // Assume that we have just added this table. It uses and depends on other columns. We need to list them.
+
             List<CsColumn> res = new List<CsColumn>();
 
             foreach (CsColumn col in LesserDims) // If a generating source column (definition) has changed then this set has to be updated
@@ -752,12 +749,14 @@ namespace Com.Model
                 res.Add(col);
             }
 
+            // TODO: Add columns used in the Where expression
+
             // Recursion
             if (recursive)
             {
                 foreach (CsColumn col in res.ToList())
                 {
-                    var list = col.Definition.GetPreviousColumns(recursive); // Recursion
+                    var list = col.Definition.UsesColumns(recursive); // Recursion
                     foreach (CsColumn column in list)
                     {
                         Debug.Assert(!res.Contains(column), "Cyclic dependence in columns.");
@@ -768,7 +767,7 @@ namespace Com.Model
 
             return res;
         }
-        public List<CsColumn> GetNextColumns(bool recursive) // Dependants
+        public List<CsColumn> IsUsedInColumns(bool recursive) // Dependants
         {
             List<CsColumn> res = new List<CsColumn>();
 
@@ -783,12 +782,14 @@ namespace Com.Model
                 res.Add(col);
             }
 
+            // TODO: Find columns with expressions which use this table
+
             // Recursion
             if (recursive)
             {
                 foreach (CsColumn col in res.ToList())
                 {
-                    var list = col.Definition.GetNextColumns(recursive); // Recursion
+                    var list = col.Definition.IsUsedInColumns(recursive); // Recursion
                     foreach (CsColumn column in list)
                     {
                         Debug.Assert(!res.Contains(column), "Cyclic dependence in columns.");
@@ -988,6 +989,7 @@ namespace Com.Model
         [System.Obsolete("What was the purpose of this method?", true)]
         public void AddAllNonStoredPaths()
         {
+            // The method adds entity (non-PK) columns from referenced (by FK) tables (recursively).
             int pathCounter = 0;
 
             DimAttribute path = new DimAttribute("");
@@ -1030,4 +1032,40 @@ namespace Com.Model
 
         #endregion
     }
+
+    /// <summary>
+    /// A table stored as a text file.
+    /// </summary>
+    public class SetCsv : Set
+    {
+        /// <summary>
+        /// Complete file name for this table (where this table is stored).
+        /// </summary>
+        public string FilePath { get; set; }
+
+        public string FileName { get { return Path.GetFileNameWithoutExtension(FilePath); } }
+
+        //
+        // Storage and format parameters for this table which determine how it is serialized
+        //
+        public bool HasHeaderRecord { get; set; }
+        public string Delimiter { get; set; }
+        public CultureInfo CultureInfo { get; set; }
+        public Encoding Encoding { get; set; }
+
+
+        #region Constructors and initializers.
+
+        public SetCsv(string name)
+            : base(name)
+        {
+            HasHeaderRecord = true;
+            Delimiter = ",";
+            CultureInfo = System.Globalization.CultureInfo.CurrentCulture;
+            Encoding = Encoding.UTF8;
+        }
+
+        #endregion
+    }
+
 }

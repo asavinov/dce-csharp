@@ -26,6 +26,8 @@ namespace Test
         public static string Northwind = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\\Users\\savinov\\git\\comcsharp\\Test\\Northwind.accdb";
         public static string TextDbConnection = "Provider=Microsoft.ACE.OLEDB.12.0; Data Source=C:\\Users\\savinov\\git\\comcsharp\\Test; Extended Properties='Text;Excel 12.0;HDR=Yes;FMT=CSVDelimited;'";
 
+        public static string CsvConnection = "C:\\Users\\savinov\\git\\comcsharp\\Test\\Products.csv";
+
         protected ExprNode BuildExpr(string str)
         {
             ExprLexer lexer;
@@ -511,7 +513,9 @@ namespace Test
             SetTopOledb top = new SetTopOledb("");
             top.connection = conn;
 
+            //
             // Load schema
+            //
             top.LoadSchema();
 
             Assert.AreEqual(20, top.Root.SubSets.Count);
@@ -524,7 +528,9 @@ namespace Test
             Assert.AreEqual(58, dataTable.Rows.Count);
             Assert.AreEqual(37, dataTable.Rows[10][2]);
 
+            //
             // Configure import 
+            //
             CsSchema schema = new SetTop("My Schema");
 
             CsTable orderDetailsTable = schema.CreateTable("Order Details");
@@ -547,49 +553,100 @@ namespace Test
             orderDetailsTable.Definition.Populate();
 
             Assert.AreEqual(58, orderDetailsTable.Data.Length);
-            
-            // Other TODOs:
+        }
 
-            // Expr Evaluate
-            // - Type inference rules for arithmetic expressions
-            // - Use of these rules in computing arithmetic results, that is, double+integer has to use double plus operation
+        [TestMethod]
+        public void CsvTest() // Load Csv schema and data
+        {
+            // Connection object
+            ConnectionCsv conn = new ConnectionCsv();
 
-            // Evaluator interface rework:
-            // OledbEvaluator opens a data sets with loading data. So we need to correctly close the resul set etc. 
-            // - Probably, it could be done in Initialize and Finish methods (Next/Evaluate is called between them)
-            // Import dimensions do not store data so they should not have ColumnData object (null) even though they have some local type
-            // Evaluate/EvaluateUpdate etc. could be probably implemented within one Evaluate depending on the real expression and task to be performed
-            // - IsUpdate - type of change of the function output: accumulate or set. Essentially, whether it is aggregation evaluator. Do we need it?
-            // - LoopTable - what set to iterate (fact set for aggregation)
-            // - is supposed to be from Evaluate of Column to decide what to loop and how to update etc.
+            // Create schema for a remote db
+            SetTopCsv top = new SetTopCsv("My Files");
+            top.connection = conn;
 
-            // ExprNode constructores and update code: name/operation/action constructor, type/set constructor
+            // Load schema
+            SetCsv table = (SetCsv)top.CreateTable("Products");
+            table.FilePath = CsvConnection;
+            top.LoadSchema(table);
 
-            // Set::Find, Set::Appenbd
-            // - There are two Find. Problem is that one uses only key dims while the other all provided parameter values - Decide what is better
-            // - Decide whether Append should check uniqueness and Where conditions or it has been done externally
+            Assert.AreEqual(1, top.Root.SubSets.Count);
+            Assert.AreEqual(15, top.FindTable("Products").GreaterDims.Count);
 
-            // There are generating dims and simply mapped dims. Generating dims are used by set population only, while normal mapped dims are used by dim population. 
-            // Currently any new mapped dim created via Dim(Mapping) is marked as a generating dim. It is better to mark it explicitly as generating dim or not rather than automatically.
+            Assert.AreEqual("String", top.FindTable("Products").GetGreaterDim("Product Name").GreaterSet.Name);
+            Assert.AreEqual("3", ((DimCsv)top.FindTable("Products").GetGreaterDim("ID")).SampleValues[1]);
 
-            // Set::Populate
-            // !!! Append an element to the generating/projection column(s) if an element has been appended/found in the target set. Alternatively, we will have to evaluate this generating dimension separately (double work).
-            // - This means a principle: generating dimensions are not evaluated separately - they are evaluated during their target set population.
-            // - For Oledb (import/export) dims it is not needed because these dimensions do not store data.
-            // - !!! For product, turn off indexing and then index the whole result set at the end. It is because we append ALL generated elements and then remove them if they do not satisfy the where condition which can be very inefficient. 
-            //   - Introduce API for controling indexing (on/off, table/column etc.)
-            //   - Alternativey, we could introduce 'this' value as an Expr instance similar to having DataRow for 'this' value, and then a special evaluator. But it might be more difficult and more restrictive in future for complex where conditions.
+            //
+            // Configure import 
+            //
+            CsSchema schema = new SetTop("My Schema");
 
-            // Dim population principles:
-            // - currently we Append from the loop manually and not from the expression (as opposed ot Set::Populate) - it is bad: either all in Evaluate or all in Populate
-            //   - so we should NOT use column Evaluator for populating a set 
-            //      --> column evaluator of generating dims is never used from the colum population procedure (but can be if called explicitly) 
-            //      --> all column evaluators NEVER change (influence) their sets (neither greater nor lesser) - it computes only this function
+            CsTable productsTable = schema.CreateTable("Products");
+            productsTable.Definition.DefinitionType = TableDefinitionType.PROJECTION;
+            schema.AddTable(productsTable, null, null);
 
+            // Create mapping. 
+            Mapper mapper = new Mapper();
+            Mapping map = mapper.CreatePrimitive(top.FindTable("Products"), productsTable); // It will map source String to different target types
+            map.Matches.ForEach(m => m.TargetPath.Path.ForEach(p => p.Add()));
+
+            // Create generating/import column
+            CsColumn dim = schema.CreateColumn(map.SourceSet.Name, map.SourceSet, map.TargetSet, false);
+            dim.Definition.Mapping = map;
+            dim.Definition.DefinitionType = ColumnDefinitionType.LINK;
+            dim.Definition.IsGenerating = true;
+
+            dim.Add();
+
+            productsTable.Definition.Populate();
+
+            Assert.AreEqual(45, productsTable.Data.Length);
         }
 
     }
+
     // TODO:
     // - utility method to (quickly) check type of primitive set without comparing name (with case sensititivy). Maybe introduce enumerator. 
     // - also, find primitive type using enumerator instead of string comparison.
+
+    // Other TODOs:
+
+    // Expr Evaluate
+    // - Type inference rules for arithmetic expressions
+    // - Use of these rules in computing arithmetic results, that is, double+integer has to use double plus operation
+
+    // Evaluator interface rework:
+    // OledbEvaluator opens a data sets with loading data. So we need to correctly close the resul set etc. 
+    // - Probably, it could be done in Initialize and Finish methods (Next/Evaluate is called between them)
+    // Import dimensions do not store data so they should not have ColumnData object (null) even though they have some local type
+    // Evaluate/EvaluateUpdate etc. could be probably implemented within one Evaluate depending on the real expression and task to be performed
+    // - IsUpdate - type of change of the function output: accumulate or set. Essentially, whether it is aggregation evaluator. Do we need it?
+    // - LoopTable - what set to iterate (fact set for aggregation)
+    // - is supposed to be from Evaluate of Column to decide what to loop and how to update etc.
+
+    // ExprNode constructores and update code: name/operation/action constructor, type/set constructor
+
+    // Set::Find, Set::Appenbd
+    // - There are two Find. Problem is that one uses only key dims while the other all provided parameter values - Decide what is better
+    // - Decide whether Append should check uniqueness and Where conditions or it has been done externally
+
+    // There are generating dims and simply mapped dims. Generating dims are used by set population only, while normal mapped dims are used by dim population. 
+    // Currently any new mapped dim created via Dim(Mapping) is marked as a generating dim. It is better to mark it explicitly as generating dim or not rather than automatically.
+
+    // Set::Populate
+    // !!! Append an element to the generating/projection column(s) if an element has been appended/found in the target set. Alternatively, we will have to evaluate this generating dimension separately (double work).
+    // - This means a principle: generating dimensions are not evaluated separately - they are evaluated during their target set population.
+    // - For Oledb (import/export) dims it is not needed because these dimensions do not store data.
+    // - !!! For product, turn off indexing and then index the whole result set at the end. It is because we append ALL generated elements and then remove them if they do not satisfy the where condition which can be very inefficient. 
+    //   - Introduce API for controling indexing (on/off, table/column etc.)
+    //   - Alternativey, we could introduce 'this' value as an Expr instance similar to having DataRow for 'this' value, and then a special evaluator. But it might be more difficult and more restrictive in future for complex where conditions.
+
+    // Dim population principles:
+    // - currently we Append from the loop manually and not from the expression (as opposed ot Set::Populate) - it is bad: either all in Evaluate or all in Populate
+    //   - so we should NOT use column Evaluator for populating a set 
+    //      --> column evaluator of generating dims is never used from the colum population procedure (but can be if called explicitly) 
+    //      --> all column evaluators NEVER change (influence) their sets (neither greater nor lesser) - it computes only this function
+
+
+
 }

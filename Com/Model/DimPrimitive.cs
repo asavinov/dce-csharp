@@ -626,6 +626,10 @@ namespace Com.Model
             {
                 ; // Nothing to do
             }
+            else if (Dim.LesserSet.Top != Dim.GreaterSet.Top && Dim.LesserSet.Top is SetTopCsv) // Import data from a remote source
+            {
+                evaluator = ExprEvaluator.CreateCsvEvaluator(Dim);
+            }
             else if (Dim.LesserSet.Top != Dim.GreaterSet.Top && Dim.LesserSet.Top is SetTopOledb) // Import data from a remote source
             {
                 evaluator = ExprEvaluator.CreateOledbEvaluator(Dim);
@@ -665,30 +669,55 @@ namespace Com.Model
 
         public void Finish() { }
 
-        public List<CsTable> GetPreviousTables(bool recursive) // This element depends upon
+        //
+        // Dependencies
+        //
+
+        public List<CsTable> UsesTables(bool recursive) // This element depends upon
         {
             List<CsTable> res = new List<CsTable>();
 
-            // TODO: Which other sets influence the contents of this functino? Fact set. This set.
             if (DefinitionType == ColumnDefinitionType.NONE)
             {
                 ;
             }
             else if (DefinitionType == ColumnDefinitionType.ANY || DefinitionType == ColumnDefinitionType.ARITHMETIC || DefinitionType == ColumnDefinitionType.LINK)
             {
-                // Analyze formula
-                // Visit all nodes and retrieve functions used in there
-                // QUESTION: should we read also functions used in composition or they will be anyway retrieved via own recursion here? 
-                // In other words, is not recursion in expression formula the same as recursion here in dependency analysis?
+                if (Formula != null) // Dependency information is stored in expression (formula)
+                {
+                    res = Formula.FindTables();
+                }
             }
-            else if(DefinitionType == ColumnDefinitionType.AGGREGATION)
+            else if (DefinitionType == ColumnDefinitionType.AGGREGATION)
             {
-                // Fact set.
+                res.Add(FactTable); // This column depends on the fact table
+
+                // Grouping and measure paths are used in this column
+                if (GroupPaths != null)
+                {
+                    foreach (var path in GroupPaths)
+                    {
+                        foreach (var seg in path.Path)
+                        {
+                            if (!res.Contains(seg.GreaterSet)) res.Add(seg.GreaterSet);
+                        }
+                    }
+                }
+                if (MeasurePaths != null)
+                {
+                    foreach (var path in MeasurePaths)
+                    {
+                        foreach (var seg in path.Path)
+                        {
+                            if (!res.Contains(seg.GreaterSet)) res.Add(seg.GreaterSet);
+                        }
+                    }
+                }
             }
 
             return res;
         }
-        public List<CsTable> GetNextTables(bool recursive) // Dependants
+        public List<CsTable> IsUsedInTables(bool recursive) // Dependants
         {
             List<CsTable> res = new List<CsTable>();
 
@@ -696,18 +725,54 @@ namespace Com.Model
             // Analyze other function definitions and check if this function is used there directly. 
             // If such a function has been found, then make the same call for it, that is find other functins where it is used.
 
+            // A functino can be used in Filter expression and Sort expression
+
             return res;
         }
 
-        public List<CsColumn> GetPreviousColumns(bool recursive) // This element depends upon
+        public List<CsColumn> UsesColumns(bool recursive) // This element depends upon
         {
             List<CsColumn> res = new List<CsColumn>();
 
-            // TODO: Find other columns used in the definition of this column
+            if (DefinitionType == ColumnDefinitionType.NONE)
+            {
+                ;
+            }
+            else if (DefinitionType == ColumnDefinitionType.ANY || DefinitionType == ColumnDefinitionType.ARITHMETIC || DefinitionType == ColumnDefinitionType.LINK)
+            {
+                if (Formula != null) // Dependency information is stored in expression (formula)
+                {
+                    res = Formula.FindColumns();
+                }
+            }
+            else if (DefinitionType == ColumnDefinitionType.AGGREGATION)
+            {
+                // Grouping and measure paths are used in this column
+                if (GroupPaths != null)
+                {
+                    foreach (var path in GroupPaths)
+                    {
+                        foreach (var seg in path.Path)
+                        {
+                            if (!res.Contains(seg)) res.Add(seg);
+                        }
+                    }
+                }
+                if (MeasurePaths != null)
+                {
+                    foreach (var path in MeasurePaths)
+                    {
+                        foreach (var seg in path.Path)
+                        {
+                            if (!res.Contains(seg)) res.Add(seg);
+                        }
+                    }
+                }
+            }
 
             return res;
         }
-        public List<CsColumn> GetNextColumns(bool recursive) // Dependants
+        public List<CsColumn> IsUsedInColumns(bool recursive) // Dependants
         {
             List<CsColumn> res = new List<CsColumn>();
 

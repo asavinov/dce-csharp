@@ -148,11 +148,11 @@ namespace Com.Model
         //
         // Dependencies. The order is important and corresponds to dependency chain
         //
-        List<CsTable> GetPreviousTables(bool recursive); // This element depends upon
-        List<CsTable> GetNextTables(bool recursive); // Dependants
+        List<CsTable> UsesTables(bool recursive); // This element depends upon
+        List<CsTable> IsUsedInTables(bool recursive); // Dependants
 
-        List<CsColumn> GetPreviousColumns(bool recursive); // This element depends upon
-        List<CsColumn> GetNextColumns(bool recursive); // Dependants
+        List<CsColumn> UsesColumns(bool recursive); // This element depends upon
+        List<CsColumn> IsUsedInColumns(bool recursive); // Dependants
     }
 
     public enum TableDefinitionType // Specific types of table formula
@@ -324,11 +324,12 @@ namespace Com.Model
         //
         // Dependencies. The order is important and corresponds to dependency chain
         //
-        List<CsTable> GetPreviousTables(bool recursive); // This element depends upon
-        List<CsTable> GetNextTables(bool recursive); // Dependants
 
-        List<CsColumn> GetPreviousColumns(bool recursive); // This element depends upon
-        List<CsColumn> GetNextColumns(bool recursive); // Dependants
+        List<CsTable> UsesTables(bool recursive); // This element depends upon
+        List<CsTable> IsUsedInTables(bool recursive); // Dependants
+
+        List<CsColumn> UsesColumns(bool recursive); // This element depends upon
+        List<CsColumn> IsUsedInColumns(bool recursive); // Dependants
     }
 
     public enum ColumnDefinitionType // Specific types of column formula

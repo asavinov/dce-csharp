@@ -42,7 +42,7 @@ namespace Com.Model
         // Is resolved from name at compile-time if the name represents a method (dimension, function etc.)
         // It could be CsColumnEvaluator (at least for Dim storage) so that we directly access values at run-time. 
         // Alternatively, the whole node implements this interface
-        protected CsColumnData column;
+        protected CsColumn column;
         protected CsVariable variable;
         // Action type. A modifier that helps to choose the function variation
         public ActionType Action { get; set; }
@@ -114,7 +114,7 @@ namespace Com.Model
                         if (parent.Result.TypeTable != null && !string.IsNullOrEmpty(Name))
                         {
                             CsColumn col = parent.Result.TypeTable.GetGreaterDim(Name);
-                            column = col.Data;
+                            column = col;
                             Result.TypeTable = col.GreaterSet;
                             Result.TypeName = col.GreaterSet.Name;
                         }
@@ -124,7 +124,7 @@ namespace Com.Model
                         if (parent.Result.TypeTable != null && !string.IsNullOrEmpty(Name))
                         {
                             CsColumn col = parent.Result.TypeTable.GetGreaterDim(Name);
-                            column = col.Data;
+                            column = col;
                             Result.TypeTable = col.GreaterSet;
                             Result.TypeName = col.GreaterSet.Name;
                         }
@@ -228,7 +228,7 @@ namespace Com.Model
                             superNode.Operation = OperationType.CALL;
                             superNode.Action = ActionType.READ;
                             superNode.Name = superColumn.Name;
-                            superNode.column = superColumn.Data;
+                            superNode.column = superColumn;
 
                             superNode.AddChild(path);
                             path = superNode;
@@ -236,7 +236,7 @@ namespace Com.Model
 
                         if (col != null) // Successfully resolved. Store the results.
                         {
-                            column = col.Data;
+                            column = col;
 
                             Result.TypeName = col.GreaterSet.Name;
                             Result.TypeTable = col.GreaterSet;
@@ -262,7 +262,7 @@ namespace Com.Model
                         outputChild = GetChild(0);
                     }
                     CsColumn col = outputChild.Result.TypeTable.GetGreaterDim(methodName);
-                    column = col.Data;
+                    column = col;
 
                     Result.TypeName = col.GreaterSet.Name;
                     Result.TypeTable = col.GreaterSet;
@@ -319,7 +319,7 @@ namespace Com.Model
                     object val = childNode.Result.GetValue();
 
                     // Copy result from the child expression and convert it to this node type
-                    if (val is DBNull) 
+                    if (val is DBNull || (val is string && string.IsNullOrWhiteSpace((string)val))) 
                     {
                         Result.SetValue(null);
                     }
@@ -406,7 +406,18 @@ namespace Com.Model
 
                 if (Action == ActionType.READ)
                 {
-                    if(this is OledbExprNode) // It is easier to do it here rather than (correctly) in the extension
+                    if (this is CsvExprNode) // It is easier to do it here rather than (correctly) in the extension
+                    {
+                        // Find current Row object
+                        ExprNode thisNode = GetChild("this");
+                        string[] input = (string[])thisNode.Result.GetValue();
+
+                        // Use attribute name or number by applying it to the current Row object (offset is not used)
+                        int attributeIndex = ((DimCsv)column).ColumnIndex;
+                        object output = input[attributeIndex];
+                        Result.SetValue(output);
+                    }
+                    else if (this is OledbExprNode) // It is easier to do it here rather than (correctly) in the extension
                     {
                         // Find current Row object
                         ExprNode thisNode = GetChild("this");
@@ -421,7 +432,7 @@ namespace Com.Model
                     {
                         ExprNode prevOutput = GetChild(0);
                         Offset input = (Offset)prevOutput.Result.GetValue();
-                        object output = column.GetValue(input);
+                        object output = column.Data.GetValue(input);
                         Result.SetValue(output);
                     }
                     else if (variable != null)
@@ -562,6 +573,56 @@ namespace Com.Model
         }
 
         /// <summary>
+        /// Return all column objects that are used in this expression. 
+        /// By the use we mean dependency, that is, this expression result depends on these columns.
+        /// The expressions have to be resolved because we need object references rather than names.
+        /// </summary>
+        public List<CsColumn> FindColumns()
+        {
+            var res = new List<CsColumn>();
+
+            Action<ExprNode> visitor = delegate(ExprNode node)
+            {
+                if (node.column != null) // If this node uses a function then store it
+                {
+                    if (!res.Contains(node.column))
+                    {
+                        res.Add(node.column);
+                    }
+                }
+            };
+
+            this.Traverse(visitor); // Visit all nodes 
+
+            return res;
+        }
+
+        /// <summary>
+        /// Return all column objects that are used in this expression. 
+        /// By the use we mean dependency, that is, this expression (as a function) result depends on how these tables are populated.
+        /// The expressions have to be resolved because we need object references rather than names.
+        /// </summary>
+        public List<CsTable> FindTables()
+        {
+            var res = new List<CsTable>();
+
+            Action<ExprNode> visitor = delegate(ExprNode node)
+            {
+                if (node.Result != null && node.Result.TypeTable != null)
+                {
+                    if (!res.Contains(node.Result.TypeTable))
+                    {
+                        res.Add(node.Result.TypeTable);
+                    }
+                }
+            };
+
+            this.Traverse(visitor); // Visit all nodes 
+
+            return res;
+        }
+
+        /// <summary>
         /// // Assuming that this expression is a tuple, add a new branch to the tuple tree based on the specified dimension path. 
         /// Ensure that the specified path exists in the tuple expression tree by finding and creating if not found the nodes corresponding to path segments.
         /// Return the leaf node of the tuple branch (this variable if it is requested) which correponds to the first segment in the path.
@@ -625,7 +686,18 @@ namespace Com.Model
         {
             ExprNode expr = null;
 
-            if (path.LesserSet.Top is SetTopOledb) // Access via relational attribute
+            if (path.LesserSet.Top is SetTopCsv) // Access via column index
+            {
+                DimCsv seg = (DimCsv)path.FirstSegment;
+
+                expr = new CsvExprNode();
+                expr.Operation = OperationType.CALL;
+                expr.Action = ActionType.READ;
+                expr.Name = seg.Name;
+                expr.Result.TypeTable = seg.GreaterSet;
+                expr.Result.TypeName = seg.GreaterSet.Name;
+            }
+            else if (path.LesserSet.Top is SetTopOledb) // Access via relational attribute
             {
                 expr = new OledbExprNode();
                 expr.Operation = OperationType.CALL;
@@ -763,11 +835,51 @@ namespace Com.Model
         {
             if (Operation == OperationType.VALUE)
             {
+                base.Resolve(schema, variables);
+            }
+            else if (Operation == OperationType.TUPLE)
+            {
+                base.Resolve(schema, variables);
+            }
+            else if (Operation == OperationType.CALL)
+            {
+                base.Resolve(schema, variables);
+                // Resolve attribute names by preparing them for access - use directly the name for accessting the row object found in the this child
+            }
+        }
+
+        public override void Evaluate()
+        {
+            if (Operation == OperationType.VALUE)
+            {
                 base.Evaluate();
             }
             else if (Operation == OperationType.TUPLE)
             {
+                throw new NotImplementedException("ERROR: Wrong use: tuple is never evaluated for relational table.");
+            }
+            else if (Operation == OperationType.CALL)
+            {
                 base.Evaluate();
+            }
+        }
+
+    }
+
+    /// <summary>
+    /// This class implements functions for accessing Csv data source as input. 
+    /// </summary>
+    public class CsvExprNode : ExprNode
+    {
+        public override void Resolve(CsSchema schema, List<CsVariable> variables)
+        {
+            if (Operation == OperationType.VALUE)
+            {
+                base.Resolve(schema, variables);
+            }
+            else if (Operation == OperationType.TUPLE)
+            {
+                base.Resolve(schema, variables);
             }
             else if (Operation == OperationType.CALL)
             {

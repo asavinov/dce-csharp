@@ -85,6 +85,12 @@ namespace Com.Model
             return eval;
         }
 
+        public static CsColumnEvaluator CreateCsvEvaluator(CsColumn column)
+        {
+            CsvEvaluator eval = new CsvEvaluator(column);
+            return eval;
+        }
+
         public static CsColumnEvaluator CreateOledbEvaluator(CsColumn column)
         {
             OledbEvaluator eval = new OledbEvaluator(column);
@@ -152,6 +158,58 @@ namespace Com.Model
         }
     }
 
+    public class CsvEvaluator : ExprEvaluator
+    {
+        protected string[] currentRecord;
+        protected ConnectionCsv connectionCsv;
+
+        //
+        // CsColumnEvaluator interface
+        //
+
+        protected bool isUpdate;
+        public bool IsUpdate { get { return isUpdate; } }
+
+        public override bool Next()
+        {
+            currentRecord = connectionCsv.CurrentRecord;
+
+            if (currentRecord == null) return false;
+
+            thisVariable.SetValue(currentRecord);
+
+            connectionCsv.Next(); // We increment after iteration because csv is opened with first record initialized
+            currentElement++;
+
+            return true;
+        }
+
+        public override object Evaluate()
+        {
+            // Use input value to evaluate the expression
+            thisVariable.SetValue(currentRecord);
+
+            // evaluate the expression
+            exprNode.Evaluate();
+
+            // Write the result value to the function
+            // columnData.SetValue(currentElement, exprNode.Result.GetValue()); // We do not store import functions (we do not need this data)
+
+            return null;
+        }
+
+        public CsvEvaluator(CsColumn column)
+            : base(column)
+        {
+            // Produce a result set that can be iterated through
+            connectionCsv = ((SetTopCsv)loopTable.Top).connection;
+            connectionCsv.Open((SetCsv)loopTable);
+
+            currentElement = 0;
+            currentRecord = connectionCsv.CurrentRecord; // Start from the first record
+        }
+    }
+
     public class OledbEvaluator : ExprEvaluator
     {
         protected DataRow currentRow;
@@ -168,8 +226,10 @@ namespace Com.Model
         public override bool Next()
         {
             currentElement++;
+
             bool res = rows.MoveNext();
             currentRow = (DataRow)rows.Current;
+
             thisVariable.SetValue(currentRow);
             return res;
         }

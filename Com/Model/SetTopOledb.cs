@@ -16,9 +16,11 @@ namespace Com.Model
     public class SetTopOledb : SetTop
     {
         #region Connection methods
+
         public ConnectionOledb connection; // Connection object for access to the native engine functions
 
         // Use name of the connection for setting schema name
+
         #endregion
 
         #region Schema methods
@@ -342,7 +344,7 @@ namespace Com.Model
         /// Load data corresponding to the specified set from the underlying database. 
         /// </summary>
         /// <returns></returns>
-        public override DataTable LoadTable(CsTable table) // Load data for only this table (without greater tables connected via FKs)
+        public DataTable LoadTable(CsTable table) // Load data for only this table (without greater tables connected via FKs)
         {
             SetRel set = (SetRel)table;
 
@@ -603,6 +605,25 @@ namespace Com.Model
 */
         #endregion
 
+        #region CsSchema interface
+
+        public override CsTable CreateTable(String name)
+        {
+            CsTable table = new SetRel(name);
+            return table;
+        }
+
+        public override CsColumn CreateColumn(string name, CsTable input, CsTable output, bool isKey)
+        {
+            Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
+
+            CsColumn dim = new DimRel(name, input, output, isKey, false);
+
+            return dim;
+        }
+
+        #endregion
+
         protected override void CreateDataTypes() // Create all primitive data types from some specification like Enum, List or XML
         {
             Set set;
@@ -626,8 +647,6 @@ namespace Com.Model
             : base(name)
         {
             DataSourceType = DataSourceType.OLEDB;
-
-            //CreateDataTypes(); // Generate all predefined primitive sets as subsets
         }
 
     }

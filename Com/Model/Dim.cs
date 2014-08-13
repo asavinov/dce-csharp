@@ -104,6 +104,7 @@ namespace Com.Model
 
         protected CsColumnData columnData;
         public virtual CsColumnData Data { get { return columnData; } }
+
         protected CsColumnDefinition columnDefinition;
         public virtual CsColumnDefinition Definition { get { return columnDefinition; } }
 
@@ -288,6 +289,36 @@ namespace Com.Model
         public DimRel(string name, CsTable lesserSet, CsTable greaterSet, bool isIdentity, bool isSuper)
             : base(name, lesserSet, greaterSet, isIdentity, isSuper)
         {
+        }
+    }
+
+    /// <summary>
+    /// Dimension representing a column in a text file. 
+    /// </summary>
+    public class DimCsv : Dim
+    {
+        /// <summary>
+        /// Sample values. 
+        /// </summary>
+        public List<string> SampleValues { get; set; }
+
+        public int ColumnIndex { get; set; }
+
+        public DimCsv(string name)
+            : this(name, null, null)
+        {
+        }
+
+        public DimCsv(string name, CsTable lesserSet, CsTable greaterSet)
+            : this(name, lesserSet, greaterSet, false, false)
+        {
+        }
+
+        public DimCsv(string name, CsTable lesserSet, CsTable greaterSet, bool isIdentity, bool isSuper)
+            : base(name, lesserSet, greaterSet, isIdentity, isSuper)
+        {
+            SampleValues = new List<string>();
+            ColumnIndex = -1;
         }
     }
 

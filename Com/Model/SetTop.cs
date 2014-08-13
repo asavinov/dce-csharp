@@ -17,7 +17,7 @@ namespace Com.Model
     public class SetTop : Set, CsSchema
     {
 
-        #region CsSchema
+        #region CsSchema interface
 
         public CsTable GetPrimitive(string name)
         {
@@ -32,13 +32,13 @@ namespace Com.Model
         // Factories for tables and columns
         //
 
-        public CsTable CreateTable(String name) 
+        public virtual CsTable CreateTable(String name) 
         {
             CsTable table = new Set(name);
             return table;
         }
 
-        public CsTable AddTable(CsTable table, CsTable parent, string superName)
+        public virtual CsTable AddTable(CsTable table, CsTable parent, string superName)
         {
             if (parent == null)
             {
@@ -56,7 +56,7 @@ namespace Com.Model
             return table;
         }
 
-        public CsTable RemoveTable(CsTable table) 
+        public virtual CsTable RemoveTable(CsTable table) 
         {
             Debug.Assert(!table.IsPrimitive, "Wrong use: users do not create/delete primitive sets - they are part of the schema.");
             foreach (CsColumn col in table.LesserDims.ToList()) 
@@ -71,7 +71,7 @@ namespace Com.Model
             return table; 
         }
 
-        public CsColumn CreateColumn(string name, CsTable input, CsTable output, bool isKey)
+        public virtual CsColumn CreateColumn(string name, CsTable input, CsTable output, bool isKey)
         {
             Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
 
@@ -83,22 +83,6 @@ namespace Com.Model
         #endregion
 
         public DataSourceType DataSourceType { get; protected set; } // Where data is stored and processed (engine). Replace class name
-
-        public virtual DataTable LoadTable(CsTable set)
-        {
-            // Check if this set is our child
-            DataTable dataTable = new DataTable(set.Name);
-            // Add rows by reading them from this set local dimensions
-            return null;
-        }
-
-        public virtual DataTable LoadTableTree(CsTable set)
-        {
-            // Check if this set is our child
-            DataTable dataTable = new DataTable(set.Name);
-            // Add rows by reading them from this set local dimensions
-            return null;
-        }
 
         protected virtual void CreateDataTypes() // Create all primitive data types from some specification like Enum, List or XML
         {

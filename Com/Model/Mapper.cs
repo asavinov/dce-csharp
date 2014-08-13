@@ -5,6 +5,7 @@ using System.Collections.ObjectModel;
 using System.Data;
 using System.Data.OleDb;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 
@@ -178,6 +179,13 @@ namespace Com.Model
                     Mapping map = new Mapping(sourceSet, targetSet);
                     map.Similarity = 1.0;
                     maps.Add(map);
+                }
+            }
+            else if (sourceSchema is SetTopCsv) // SetTopCsv -> *
+            {
+                if (targetSchema.GetType() == typeof(SetTop)) // SetTopCsv -> SetTop
+                {
+                    string targetType = "String";
                 }
             }
 
@@ -610,7 +618,8 @@ namespace Com.Model
 
             DimPath sp;
             DimPath tp;
-            Dim td;
+
+            CsColumn td;
 
             PathMatch match;
 
@@ -628,6 +637,70 @@ namespace Com.Model
                     td = new Dim(att.RelationalColumnName, map.TargetSet, targetType, att.IsIdentity, false);
                     tp = new DimPath(td);
                     tp.Name = sp.Name;
+
+                    match = new PathMatch(sp, tp, 1.0);
+
+                    map.Matches.Add(match);
+                }
+            }
+            else if (sourceSchema is SetTopCsv)
+            {
+                CsTable set = (CsTable)map.SourceSet;
+                foreach (CsColumn sd in set.GreaterDims)
+                {
+                    if (sd.IsSuper) continue;
+
+                    // Recommend matching target type (mapping primitive types)
+                    //this.MapPrimitiveSet(sd, targetSchema);
+                    //CsTable targetType = this.GetBestTargetSet(sd.GreaterSet, targetSchema);
+
+                    //
+                    // Analyze sample values of sd and choose the most specific target type
+                    //
+                    List<string> values = ((DimCsv)sd).SampleValues;
+                    string targetTypeName = "String";
+                    bool success = false;
+
+                    if (success == false)
+                    {
+                        targetTypeName = "Integer";
+                        success = true;
+                        foreach (var val in values)
+                        {
+                            int intValue;
+                            if (!int.TryParse(val, NumberStyles.Integer, CultureInfo.InvariantCulture, out intValue))
+                            {
+                                success = false;
+                                break;
+                            }
+                        }
+                    }
+                    if (success == false)
+                    {
+                        targetTypeName = "Double";
+                        success = true;
+                        foreach (var val in values)
+                        {
+                            double doubleValue;
+                            if (!double.TryParse(val, NumberStyles.Float, CultureInfo.InvariantCulture, out doubleValue))
+                            {
+                                success = false;
+                                break;
+                            }
+                        }
+                    }
+                    if (success == false)
+                    {
+                        targetTypeName = "String";
+                        success = true;
+                    }
+
+                    CsTable targetType = targetSchema.GetPrimitive(targetTypeName);
+
+                    td = targetSchema.CreateColumn(sd.Name, map.TargetSet, targetType, sd.IsIdentity);
+
+                    sp = new DimPath(sd);
+                    tp = new DimPath(td);
 
                     match = new PathMatch(sp, tp, 1.0);
 
