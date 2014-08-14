@@ -215,6 +215,30 @@ namespace Com.Model
             Children.ForEach(c => c.NotifyAllOnPropertyChanged(propertyName));
         }
 
+        public DimTree FindPath(DimPath path) // Find a node corresponding to the path.
+        {
+            Debug.Assert(path != null && path.LesserSet == Set, "Wrong use: path must start from the node it is added to.");
+
+            if (path.Path == null || path.Path.Count == 0) return null;
+
+            CsColumn seg;
+            DimTree node = this;
+            for (int i = 0; i < path.Path.Count; i++) // We try to find segments sequentially
+            {
+                seg = path.Path[i];
+                DimTree child = node.GetChild(seg); // Find a child corresponding to this segment
+
+                if (child == null) // Add a new child corresponding to this segment
+                {
+                    return null;
+                }
+
+                node = child;
+            }
+
+            return node;
+        }
+
         public DimTree AddPath(DimPath path) // Find or create nodes corresponding to the path.
         {
             Debug.Assert(path != null && path.LesserSet == Set, "Wrong use: path must start from the node it is added to.");

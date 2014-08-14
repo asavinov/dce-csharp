@@ -579,6 +579,29 @@ namespace Com.Model
         }
 
         /// <summary>
+        /// Find best path starting from the target set and corresponding to the source path.
+        /// </summary>
+        public DimPath MapDim(DimPath sourcePath, CsTable targetSet)
+        {
+            List<DimPath> targetPaths = (new PathEnumerator(targetSet, DimensionType.IDENTITY_ENTITY)).ToList();
+            if (targetPaths.Count == 0) return null;
+
+            DimPath bestTargetPath = null;
+            double bestSimilarity = Double.MinValue;
+            foreach(DimPath targetPath in targetPaths) 
+            {
+                double similarity = StringSimilarity.ComputePathSimilarity(sourcePath, targetPath);
+                if (similarity > bestSimilarity)
+                {
+                    bestSimilarity = similarity;
+                    bestTargetPath = targetPath;
+                }
+            }
+
+            return bestTargetPath;
+        }
+
+        /// <summary>
         /// Import the specified set along with all its greater sets. 
         /// The set is not populated but is ready to be populated. 
         /// It is a convenience method simplifying a typical operation. 
