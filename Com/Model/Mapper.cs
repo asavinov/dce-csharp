@@ -630,14 +630,15 @@ namespace Com.Model
         /// For relational source, this means that all primitive columns of the source table will be mapped with their relational names, no FK-referenced tables will be joined and no artifical column names will be used. 
         /// If it is necessary to expand entity dimensions (non-PK columns of joined tables) then a different implementation is needed (which will require joins, artifical column/path names etc.)
         /// </summary>
-        public Mapping CreatePrimitive(CsTable sourceSet, CsTable targetSet)
+        public Mapping CreatePrimitive(CsTable sourceSet, CsTable targetSet, CsSchema targetSchema)
         {
             Debug.Assert(!sourceSet.IsPrimitive && !targetSet.IsPrimitive, "Wrong use: copy mapping can be created for only non-primitive sets.");
+            Debug.Assert(targetSchema != null || targetSet.Top != null, "Wrong use: target schema must be specified.");
 
             Mapping map = new Mapping(sourceSet, targetSet);
 
             CsSchema sourceSchema = map.SourceSet.Top;
-            CsSchema targetSchema = map.TargetSet.Top;
+            if (targetSchema == null) targetSchema = targetSet.Top;
 
             DimPath sp;
             DimPath tp;

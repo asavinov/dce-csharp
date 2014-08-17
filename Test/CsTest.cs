@@ -535,11 +535,10 @@ namespace Test
 
             CsTable orderDetailsTable = schema.CreateTable("Order Details");
             orderDetailsTable.Definition.DefinitionType = TableDefinitionType.PROJECTION;
-            schema.AddTable(orderDetailsTable, null, null);
             
             // Create mapping
             Mapper mapper = new Mapper();
-            Mapping map = mapper.CreatePrimitive(top.FindTable("Order Details"), orderDetailsTable);
+            Mapping map = mapper.CreatePrimitive(top.FindTable("Order Details"), orderDetailsTable, schema);
             map.Matches.ForEach(m => m.TargetPath.Path.ForEach(p => p.Add()));
 
             // Create generating/import column
@@ -550,6 +549,7 @@ namespace Test
 
             dim.Add();
 
+            schema.AddTable(orderDetailsTable, null, null);
             orderDetailsTable.Definition.Populate();
 
             Assert.AreEqual(58, orderDetailsTable.Data.Length);
@@ -583,11 +583,10 @@ namespace Test
 
             CsTable productsTable = schema.CreateTable("Products");
             productsTable.Definition.DefinitionType = TableDefinitionType.PROJECTION;
-            schema.AddTable(productsTable, null, null);
 
             // Create mapping. 
             Mapper mapper = new Mapper();
-            Mapping map = mapper.CreatePrimitive(top.FindTable("Products"), productsTable); // It will map source String to different target types
+            Mapping map = mapper.CreatePrimitive(top.FindTable("Products"), productsTable, schema); // It will map source String to different target types
             map.Matches.ForEach(m => m.TargetPath.Path.ForEach(p => p.Add()));
 
             // Create generating/import column
@@ -598,6 +597,7 @@ namespace Test
 
             dim.Add();
 
+            schema.AddTable(productsTable, null, null);
             productsTable.Definition.Populate();
 
             Assert.AreEqual(45, productsTable.Data.Length);
