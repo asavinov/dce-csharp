@@ -380,6 +380,11 @@ namespace Com.Model
 
         public TreeNode()
         {
+            if (this is T) // If 'this' can be stored as a value (by casting) then store it
+            {
+                _value = (T)(object)this; // Works only via intermediate casting to object
+                //_value = (T)Convert.ChangeType(this, typeof(T)); // Does not work
+            }
         }
 
         public TreeNode(T value)

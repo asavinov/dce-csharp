@@ -42,8 +42,8 @@ namespace Com.Model
         // Is resolved from name at compile-time if the name represents a method (dimension, function etc.)
         // It could be CsColumnEvaluator (at least for Dim storage) so that we directly access values at run-time. 
         // Alternatively, the whole node implements this interface
-        protected CsColumn column;
-        protected CsVariable variable;
+        public CsColumn Column { get; set; }
+        public CsVariable Variable { get; set; }
         // Action type. A modifier that helps to choose the function variation
         public ActionType Action { get; set; }
 
@@ -114,7 +114,7 @@ namespace Com.Model
                         if (parent.Result.TypeTable != null && !string.IsNullOrEmpty(Name))
                         {
                             CsColumn col = parent.Result.TypeTable.GetGreaterDim(Name);
-                            column = col;
+                            Column = col;
                             Result.TypeTable = col.GreaterSet;
                             Result.TypeName = col.GreaterSet.Name;
                         }
@@ -124,7 +124,7 @@ namespace Com.Model
                         if (parent.Result.TypeTable != null && !string.IsNullOrEmpty(Name))
                         {
                             CsColumn col = parent.Result.TypeTable.GetGreaterDim(Name);
-                            column = col;
+                            Column = col;
                             Result.TypeTable = col.GreaterSet;
                             Result.TypeName = col.GreaterSet.Name;
                         }
@@ -174,7 +174,7 @@ namespace Com.Model
 
                     if (var != null) // Resolved as a variable
                     {
-                        variable = var;
+                        Variable = var;
 
                         Result.TypeName = var.TypeName;
                         Result.TypeTable = var.TypeTable;
@@ -192,7 +192,7 @@ namespace Com.Model
                         thisChild.Name = "this";
                         thisChild.Result.TypeName = thisVar.TypeName;
                         thisChild.Result.TypeTable = thisVar.TypeTable;
-                        thisChild.variable = thisVar;
+                        thisChild.Variable = thisVar;
 
                         ExprNode path = thisChild;
                         CsTable contextTable = thisChild.Result.TypeTable;
@@ -228,7 +228,7 @@ namespace Com.Model
                             superNode.Operation = OperationType.CALL;
                             superNode.Action = ActionType.READ;
                             superNode.Name = superColumn.Name;
-                            superNode.column = superColumn;
+                            superNode.Column = superColumn;
 
                             superNode.AddChild(path);
                             path = superNode;
@@ -236,7 +236,7 @@ namespace Com.Model
 
                         if (col != null) // Successfully resolved. Store the results.
                         {
-                            column = col;
+                            Column = col;
 
                             Result.TypeName = col.GreaterSet.Name;
                             Result.TypeTable = col.GreaterSet;
@@ -262,7 +262,7 @@ namespace Com.Model
                         outputChild = GetChild(0);
                     }
                     CsColumn col = outputChild.Result.TypeTable.GetGreaterDim(methodName);
-                    column = col;
+                    Column = col;
 
                     Result.TypeName = col.GreaterSet.Name;
                     Result.TypeTable = col.GreaterSet;
@@ -413,7 +413,7 @@ namespace Com.Model
                         string[] input = (string[])thisNode.Result.GetValue();
 
                         // Use attribute name or number by applying it to the current Row object (offset is not used)
-                        int attributeIndex = ((DimCsv)column).ColumnIndex;
+                        int attributeIndex = ((DimCsv)Column).ColumnIndex;
                         object output = input[attributeIndex];
                         Result.SetValue(output);
                     }
@@ -428,16 +428,16 @@ namespace Com.Model
                         object output = input[attributeName];
                         Result.SetValue(output);
                     }
-                    else if (column != null) 
+                    else if (Column != null) 
                     {
                         ExprNode prevOutput = GetChild(0);
                         Offset input = (Offset)prevOutput.Result.GetValue();
-                        object output = column.Data.GetValue(input);
+                        object output = Column.Data.GetValue(input);
                         Result.SetValue(output);
                     }
-                    else if (variable != null)
+                    else if (Variable != null)
                     {
-                        object result = variable.GetValue();
+                        object result = Variable.GetValue();
                         Result.SetValue(result);
                     }
                 }
@@ -573,22 +573,21 @@ namespace Com.Model
         }
 
         /// <summary>
-        /// Return all column objects that are used in this expression. 
-        /// By the use we mean dependency, that is, this expression result depends on these columns.
+        /// Return all nodes that use the specified column. If the parameter is null then all nodes are returned that use any column. 
+        /// By the use we mean dependency, that is, this expression result depends on this column as a function. 
         /// The expressions have to be resolved because we need object references rather than names.
         /// </summary>
-        public List<CsColumn> FindColumns()
+        public List<ExprNode> Find(CsColumn column)
         {
-            var res = new List<CsColumn>();
+            var res = new List<ExprNode>();
 
             Action<ExprNode> visitor = delegate(ExprNode node)
             {
-                if (node.column != null) // If this node uses a function then store it
+                if(node.Column == null) return; // The node does not use a column (e.g., it is an operator or an external function)
+
+                if (column == null || column == node.Column)
                 {
-                    if (!res.Contains(node.column))
-                    {
-                        res.Add(node.column);
-                    }
+                    if(!res.Contains(node)) res.Add(node);
                 }
             };
 
@@ -598,22 +597,21 @@ namespace Com.Model
         }
 
         /// <summary>
-        /// Return all column objects that are used in this expression. 
-        /// By the use we mean dependency, that is, this expression (as a function) result depends on how these tables are populated.
+        /// Return all nodes that use the specified table. If the parameter is null then all nodes are returned that use any table. 
+        /// By the use we mean dependency, that is, this expression result depends on this table (if the table changes then this node must be re-evaluated). 
         /// The expressions have to be resolved because we need object references rather than names.
         /// </summary>
-        public List<CsTable> FindTables()
+        public List<ExprNode> Find(CsTable table)
         {
-            var res = new List<CsTable>();
+            var res = new List<ExprNode>();
 
             Action<ExprNode> visitor = delegate(ExprNode node)
             {
-                if (node.Result != null && node.Result.TypeTable != null)
+                if (node.Result == null || node.Result.TypeTable == null) return; // The node does not use a table
+
+                if (table == null || table == node.Result.TypeTable)
                 {
-                    if (!res.Contains(node.Result.TypeTable))
-                    {
-                        res.Add(node.Result.TypeTable);
-                    }
+                    if (!res.Contains(node)) res.Add(node);
                 }
             };
 

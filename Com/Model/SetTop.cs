@@ -71,6 +71,11 @@ namespace Com.Model
             return table; 
         }
 
+        public void RenameTable(CsTable table, string newName)
+        {
+            RenameElement(table, newName);
+        }
+
         public virtual CsColumn CreateColumn(string name, CsTable input, CsTable output, bool isKey)
         {
             Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
@@ -78,6 +83,64 @@ namespace Com.Model
             CsColumn dim = new Dim(name, input, output, isKey, false);
 
             return dim;
+        }
+
+        public void RenameColumn(CsColumn column, string newName)
+        {
+            RenameElement(column, newName);
+        }
+
+        protected void RenameElement(object element, string newName)
+        {
+            CsSchema schema = this;
+
+            //
+            // Check all elements of the schema that can store column or table name (tables, columns etc.)
+            // Update their definition so that it uses the new name of the specified element
+            //
+            List<CsTable> tables = schema.GetAllSubsets();
+            var nodes = new List<ExprNode>();
+            foreach (var tab in tables)
+            {
+                if (tab.IsPrimitive) continue;
+
+                foreach (var col in tab.GreaterDims)
+                {
+                    if (col.Definition == null) continue;
+
+                    if (col.Definition.Formula != null)
+                    {
+                        if(element is CsTable) nodes = col.Definition.Formula.Find((CsTable)element);
+                        else if (element is CsColumn) nodes = col.Definition.Formula.Find((CsColumn)element);
+                        nodes.ForEach(x => x.Name = newName);
+                    }
+                    if (col.Definition.WhereExpression != null)
+                    {
+                        if (element is CsTable) nodes = col.Definition.WhereExpression.Find((CsTable)element);
+                        else if (element is CsColumn) nodes = col.Definition.WhereExpression.Find((CsColumn)element);
+                        nodes.ForEach(x => x.Name = newName);
+                    }
+                }
+
+                if (tab.Definition == null) continue;
+
+                // Update table definitions by finding the uses of the specified column
+                if (tab.Definition.WhereExpression != null)
+                {
+                    if (element is CsTable) nodes = tab.Definition.WhereExpression.Find((CsTable)element);
+                    else if (element is CsColumn) nodes = tab.Definition.WhereExpression.Find((CsColumn)element);
+                    nodes.ForEach(x => x.Name = newName);
+                }
+                if (tab.Definition.OrderbyExpression != null)
+                {
+                    if (element is CsTable) nodes = tab.Definition.OrderbyExpression.Find((CsTable)element);
+                    else if (element is CsColumn) nodes = tab.Definition.OrderbyExpression.Find((CsColumn)element);
+                    nodes.ForEach(x => x.Name = newName);
+                }
+            }
+
+            if (element is CsTable) ((CsTable)element).Name = newName;
+            else if (element is CsColumn) ((CsColumn)element).Name = newName;
         }
 
         #endregion

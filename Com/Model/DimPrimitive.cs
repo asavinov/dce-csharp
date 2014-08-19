@@ -685,7 +685,7 @@ namespace Com.Model
             {
                 if (Formula != null) // Dependency information is stored in expression (formula)
                 {
-                    res = Formula.FindTables();
+                    res = Formula.Find((CsTable)null).Select(x => x.Result.TypeTable).ToList();
                 }
             }
             else if (DefinitionType == ColumnDefinitionType.AGGREGATION)
@@ -742,7 +742,7 @@ namespace Com.Model
             {
                 if (Formula != null) // Dependency information is stored in expression (formula)
                 {
-                    res = Formula.FindColumns();
+                    res = Formula.Find((CsColumn)null).Select(x => x.Column).ToList();
                 }
             }
             else if (DefinitionType == ColumnDefinitionType.AGGREGATION)
