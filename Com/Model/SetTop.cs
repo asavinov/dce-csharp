@@ -56,9 +56,10 @@ namespace Com.Model
             return table;
         }
 
-        public virtual CsTable RemoveTable(CsTable table) 
+        public virtual void DeleteTable(CsTable table) 
         {
             Debug.Assert(!table.IsPrimitive, "Wrong use: users do not create/delete primitive sets - they are part of the schema.");
+
             foreach (CsColumn col in table.LesserDims.ToList()) 
             {
                 col.Remove();
@@ -67,8 +68,6 @@ namespace Com.Model
             {
                 col.Remove();
             }
-
-            return table; 
         }
 
         public void RenameTable(CsTable table, string newName)
@@ -83,6 +82,87 @@ namespace Com.Model
             CsColumn dim = new Dim(name, input, output, isKey, false);
 
             return dim;
+        }
+
+        public virtual void DeleteColumn(CsColumn column)
+        {
+            Debug.Assert(!column.LesserSet.IsPrimitive, "Wrong use: top columns cannot be created/deleted.");
+
+            CsSchema schema = this;
+
+            //
+            // Delete all expression nodes that use the deleted column and all references to this column from other objects
+            //
+            List<CsTable> tables = schema.GetAllSubsets();
+            var nodes = new List<ExprNode>();
+            foreach (var tab in tables)
+            {
+                if (tab.IsPrimitive) continue;
+
+                foreach (var col in tab.GreaterDims)
+                {
+                    if (col.Definition == null) continue;
+
+                    if (col.Definition.Formula != null)
+                    {
+                        nodes = col.Definition.Formula.Find(column);
+                        foreach (var node in nodes) if (node.Parent != null) node.Parent.RemoveChild(node);
+                    }
+                    if (col.Definition.WhereExpression != null)
+                    {
+                        nodes = col.Definition.WhereExpression.Find(column);
+                        foreach (var node in nodes) if (node.Parent != null) node.Parent.RemoveChild(node);
+                    }
+
+                    if (col.Definition.Mapping != null)
+                    {
+                        foreach (var match in col.Definition.Mapping.Matches.ToList())
+                        {
+                            if (match.SourcePath.IndexOf(column) >= 0 || match.TargetPath.IndexOf(column) >= 0)
+                            {
+                                col.Definition.Mapping.Matches.Remove(match);
+                            }
+                        }
+                    }
+                    if (col.Definition.GroupPaths != null)
+                    {
+                        foreach (var path in col.Definition.GroupPaths.ToList())
+                        {
+                            if (path.IndexOf(column) >= 0)
+                            {
+                                col.Definition.GroupPaths.Remove(path);
+                            }
+                        }
+                    }
+                    if (col.Definition.MeasurePaths != null)
+                    {
+                        foreach (var path in col.Definition.MeasurePaths.ToList())
+                        {
+                            if (path.IndexOf(column) >= 0)
+                            {
+                                col.Definition.MeasurePaths.Remove(path);
+                            }
+                        }
+                    }
+
+                }
+
+                if (tab.Definition == null) continue;
+
+                // Update table definitions by finding the uses of the specified column
+                if (tab.Definition.WhereExpression != null)
+                {
+                    nodes = tab.Definition.WhereExpression.Find(column);
+                    foreach (var node in nodes) if (node.Parent != null) node.Parent.RemoveChild(node);
+                }
+                if (tab.Definition.OrderbyExpression != null)
+                {
+                    nodes = tab.Definition.OrderbyExpression.Find(column);
+                    foreach (var node in nodes) if (node.Parent != null) node.Parent.RemoveChild(node);
+                }
+            }
+
+            column.Remove();
         }
 
         public void RenameColumn(CsColumn column, string newName)

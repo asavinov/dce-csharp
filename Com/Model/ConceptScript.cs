@@ -175,10 +175,11 @@ namespace Com.Model
         
         CsTable CreateTable(string name);
         CsTable AddTable(CsTable table, CsTable parent, string superName);
-        CsTable RemoveTable(CsTable table);
+        void DeleteTable(CsTable table);
         void RenameTable(CsTable table, string newName);
 
         CsColumn CreateColumn(string name, CsTable input, CsTable output, bool isKey);
+        void DeleteColumn(CsColumn column);
         void RenameColumn(CsColumn column, string newName);
     }
 
