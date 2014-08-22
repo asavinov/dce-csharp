@@ -11,15 +11,34 @@ using Offset = System.Int32;
 
 namespace Com.Model
 {
+    /// <summary>
+    /// This classe implements high-level API for accessing schemas, tables, columns and other elements.
+    /// These elements can be then manipulated using their own interface. 
+    /// It implements an environment for managing schema and data elements.
+    /// </summary>
     public class ConceptScript
     {
-        public string N { get; set; }
+        //
+        // Schema methods. Create, delete, access schemas.
+        //
 
-        public CsSchema schema { get; set; }
+        // Once we have a schema (CsSchema) object, we can use its API for: create/delete/access tables and columns.
 
-        public ConceptScript(string name)
+        // Once we have a table (CsTable) object, we can use its API to manipulate its properties. This includes CsTableData for data access, and CsTableDefinition for the formula.
+
+        // Once we have a column (CsColumn) object, we can use its API to manipulate its properties. This includes CsColumnData for data access, and CsColumnDefinition for the formula.
+
+        //
+        // Configuration of the environment itself.
+        //
+
+        public string Name { get; set; }
+
+        public List<CsSchema> schemas { get; set; }
+
+        public ConceptScript(string name) // We need a constructor accepting configuration parameters
         {
-            N = name;
+            Name = name;
         }
     }
 
