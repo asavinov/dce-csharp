@@ -47,7 +47,7 @@ namespace Com.Model
             for (int i = 0; i < names.Count; i++)
             {
                 string columnName = names[i];
-                CsTable type = this.GetPrimitive("String");
+                ComTable type = this.GetPrimitive("String");
                 DimCsv column = (DimCsv)this.CreateColumn(columnName, table, type, false);
                 column.ColumnIndex = i;
                 column.Add();
@@ -70,17 +70,17 @@ namespace Com.Model
 
         #region CsSchema interface
 
-        public override CsTable CreateTable(String name)
+        public override ComTable CreateTable(String name)
         {
-            CsTable table = new SetCsv(name);
+            ComTable table = new SetCsv(name);
             return table;
         }
 
-        public override CsColumn CreateColumn(string name, CsTable input, CsTable output, bool isKey)
+        public override ComColumn CreateColumn(string name, ComTable input, ComTable output, bool isKey)
         {
             Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
 
-            CsColumn dim = new DimCsv(name, input, output, isKey, false);
+            ComColumn dim = new DimCsv(name, input, output, isKey, false);
 
             return dim;
         }

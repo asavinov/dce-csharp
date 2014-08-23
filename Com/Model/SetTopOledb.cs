@@ -25,9 +25,9 @@ namespace Com.Model
 
         #region Schema methods
 
-        public List<CsTable> LoadTables(List<string> tableNames = null)
+        public List<ComTable> LoadTables(List<string> tableNames = null)
         {
-            List<CsTable> tables = new List<CsTable>();
+            List<ComTable> tables = new List<ComTable>();
 
             if (tableNames == null)
             {
@@ -49,7 +49,7 @@ namespace Com.Model
             //
             // Add them to the schema
             //
-            foreach (CsTable table in tables)
+            foreach (ComTable table in tables)
             {
                 AddTable(table, null, null);
             }
@@ -61,7 +61,7 @@ namespace Com.Model
         {
             connection.Open();
 
-            List<CsTable> tables = LoadTables();
+            List<ComTable> tables = LoadTables();
 
             List<DimAttribute> attributes = new List<DimAttribute>();
 
@@ -73,7 +73,7 @@ namespace Com.Model
 
             connection.Close();
 
-            List<CsColumn> columns = new List<CsColumn>();
+            List<ComColumn> columns = new List<ComColumn>();
             attributes.ForEach(a => a.ExpandAttribute(attributes, columns));
 
             // Add dims and paths to the sets
@@ -141,7 +141,7 @@ namespace Com.Model
             {
                 string columnName = col["COLUMN_NAME"].ToString();
                 string columnType = ((OleDbType)col["DATA_TYPE"]).ToString();
-                CsTable typeTable = Top.GetPrimitive(columnType);
+                ComTable typeTable = Top.GetPrimitive(columnType);
 
                 //
                 // Create an attribute object representing this column
@@ -344,7 +344,7 @@ namespace Com.Model
         /// Load data corresponding to the specified set from the underlying database. 
         /// </summary>
         /// <returns></returns>
-        public DataTable LoadTable(CsTable table) // Load data for only this table (without greater tables connected via FKs)
+        public DataTable LoadTable(ComTable table) // Load data for only this table (without greater tables connected via FKs)
         {
             SetRel set = (SetRel)table;
 
@@ -607,17 +607,17 @@ namespace Com.Model
 
         #region CsSchema interface
 
-        public override CsTable CreateTable(String name)
+        public override ComTable CreateTable(String name)
         {
-            CsTable table = new SetRel(name);
+            ComTable table = new SetRel(name);
             return table;
         }
 
-        public override CsColumn CreateColumn(string name, CsTable input, CsTable output, bool isKey)
+        public override ComColumn CreateColumn(string name, ComTable input, ComTable output, bool isKey)
         {
             Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
 
-            CsColumn dim = new DimRel(name, input, output, isKey, false);
+            ComColumn dim = new DimRel(name, input, output, isKey, false);
 
             return dim;
         }

@@ -16,8 +16,8 @@ namespace Com.Model
 
         public double Similarity { get; set; }
 
-        private CsTable _sourceSet;
-        public CsTable SourceSet
+        private ComTable _sourceSet;
+        public ComTable SourceSet
         {
             get { return _sourceSet; }
             set
@@ -51,8 +51,8 @@ namespace Com.Model
             }
         }
 
-        private CsTable _targetSet;
-        public CsTable TargetSet
+        private ComTable _targetSet;
+        public ComTable TargetSet
         {
             get { return _targetSet; }
             set
@@ -148,7 +148,7 @@ namespace Com.Model
             return null;
         }
 
-        public void AddPaths(CsColumn sd, CsColumn td, Mapping gMapping) // Add this pair by expanding it using the mapping
+        public void AddPaths(ComColumn sd, ComColumn td, Mapping gMapping) // Add this pair by expanding it using the mapping
         {
             Debug.Assert(sd != null && sd.LesserSet == SourceSet, "Wrong use: source path must start from the source set.");
             Debug.Assert(td != null && td.LesserSet == TargetSet, "Wrong use: target path must start from the target set.");
@@ -370,7 +370,7 @@ namespace Com.Model
             return GetTargetExpression(null);
         }
         [System.Obsolete("Use BuildExpression()", true)]
-        public ExprNode GetTargetExpression(CsColumn dim) // Build tuple expression for the specified mapped dimension
+        public ExprNode GetTargetExpression(ComColumn dim) // Build tuple expression for the specified mapped dimension
         {
             // It is mapping from LesserSet to GreaterSet of the dimension
             Debug.Assert(dim == null || dim.LesserSet == SourceSet, "Wrong use: lesser set of the mapped dimension corresponds to the source set of the mapping.");
@@ -411,11 +411,11 @@ namespace Com.Model
             return null;
         }
 
-        public void AddSourceToSchema(CsSchema schema = null)
+        public void AddSourceToSchema(ComSchema schema = null)
         {
             throw new NotImplementedException();
         }
-        public void AddTargetToSchema(CsSchema schema = null) // Ensure that all target elements exist in the specified schema
+        public void AddTargetToSchema(ComSchema schema = null) // Ensure that all target elements exist in the specified schema
         {
             // The mapping can reference new elements which are not in the schema yet so we try to find them and add if necessary
 
@@ -434,7 +434,7 @@ namespace Com.Model
             return String.Format("{0} -> {1}. Similarity={2}. Matches={3}", SourceSet.Name, TargetSet.Name, Similarity, Matches.Count);
         }
 
-        public Mapping(CsTable sourceSet, CsTable targetSet)
+        public Mapping(ComTable sourceSet, ComTable targetSet)
         {
             // Debug.Assert((sourceSet.IsPrimitive && targetSet.IsPrimitive) || (!sourceSet.IsPrimitive && !targetSet.IsPrimitive), "Wrong use: cannot create a mapping between a primitive set and a non-primitive set.");
             Debug.Assert(sourceSet != null && targetSet != null, "Wrong use: parametes cannot be null.");
@@ -456,8 +456,8 @@ namespace Com.Model
         public DimPath TargetPath { get; private set; }
         public double Similarity { get; set; }
 
-        public CsTable SourceSet { get { return SourcePath == null ? null : SourcePath.LesserSet; } }
-        public CsTable TargetSet { get { return TargetPath == null ? null : TargetPath.LesserSet; } }
+        public ComTable SourceSet { get { return SourcePath == null ? null : SourcePath.LesserSet; } }
+        public ComTable TargetSet { get { return TargetPath == null ? null : TargetPath.LesserSet; } }
 
         public bool MatchesSource(DimPath path) // This is more specific (longer) than argument
         {

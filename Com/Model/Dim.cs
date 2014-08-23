@@ -14,7 +14,7 @@ namespace Com.Model
     /// Extensions also can define functions defined via a formula or a query to an external database.
     /// It is only important that a function somehow impplements a mapping from its lesser set to its greater set. 
     /// </summary>
-    public class Dim : CsColumn
+    public class Dim : ComColumn
     {
         private static int uniqueId;
 
@@ -48,8 +48,8 @@ namespace Com.Model
         /// <summary>
         /// Lesser (input) set. 
         /// </summary>
-        protected CsTable lesserSet;
-        public CsTable LesserSet 
+        protected ComTable lesserSet;
+        public ComTable LesserSet 
         {
             get { return lesserSet; }
             set 
@@ -62,8 +62,8 @@ namespace Com.Model
         /// <summary>
         /// Greater (output) set.
         /// </summary>
-        protected CsTable greaterSet;
-        public CsTable GreaterSet
+        protected ComTable greaterSet;
+        public ComTable GreaterSet
         {
             get { return greaterSet; }
             set
@@ -102,11 +102,11 @@ namespace Com.Model
         }
 
 
-        protected CsColumnData columnData;
-        public virtual CsColumnData Data { get { return columnData; } }
+        protected ComColumnData columnData;
+        public virtual ComColumnData Data { get { return columnData; } }
 
-        protected CsColumnDefinition columnDefinition;
-        public virtual CsColumnDefinition Definition { get { return columnDefinition; } }
+        protected ComColumnDefinition columnDefinition;
+        public virtual ComColumnDefinition Definition { get { return columnDefinition; } }
 
         #endregion
 
@@ -148,9 +148,9 @@ namespace Com.Model
         /// Creae storage for the function and its definition depending on the output set type.
         /// </summary>
         /// <returns></returns>
-        public static CsColumnData CreateColumnData(CsTable type, CsColumn column)
+        public static ComColumnData CreateColumnData(ComTable type, ComColumn column)
         {
-            CsColumnData colData = new DimEmpty();
+            ComColumnData colData = new DimEmpty();
 
             if (type == null || string.IsNullOrEmpty(type.Name))
             {
@@ -207,7 +207,7 @@ namespace Com.Model
             Id = Guid.NewGuid();
         }
 
-        public Dim(CsTable set) // Empty dimension
+        public Dim(ComTable set) // Empty dimension
             : this("", set, set)
         {
         }
@@ -239,12 +239,12 @@ namespace Com.Model
             }
         }
 
-        public Dim(string name, CsTable lesserSet, CsTable greaterSet)
+        public Dim(string name, ComTable lesserSet, ComTable greaterSet)
             : this(name, lesserSet, greaterSet, false, false)
         {
         }
 
-        public Dim(string name, CsTable lesserSet, CsTable greaterSet, bool isIdentity, bool isSuper)
+        public Dim(string name, ComTable lesserSet, ComTable greaterSet, bool isIdentity, bool isSuper)
             : this()
         {
             Name = name;
@@ -281,12 +281,12 @@ namespace Com.Model
         {
         }
 
-        public DimRel(string name, CsTable lesserSet, CsTable greaterSet)
+        public DimRel(string name, ComTable lesserSet, ComTable greaterSet)
             : this(name, lesserSet, greaterSet, false, false)
         {
         }
 
-        public DimRel(string name, CsTable lesserSet, CsTable greaterSet, bool isIdentity, bool isSuper)
+        public DimRel(string name, ComTable lesserSet, ComTable greaterSet, bool isIdentity, bool isSuper)
             : base(name, lesserSet, greaterSet, isIdentity, isSuper)
         {
         }
@@ -309,12 +309,12 @@ namespace Com.Model
         {
         }
 
-        public DimCsv(string name, CsTable lesserSet, CsTable greaterSet)
+        public DimCsv(string name, ComTable lesserSet, ComTable greaterSet)
             : this(name, lesserSet, greaterSet, false, false)
         {
         }
 
-        public DimCsv(string name, CsTable lesserSet, CsTable greaterSet, bool isIdentity, bool isSuper)
+        public DimCsv(string name, ComTable lesserSet, ComTable greaterSet, bool isIdentity, bool isSuper)
             : base(name, lesserSet, greaterSet, isIdentity, isSuper)
         {
             SampleValues = new List<string>();

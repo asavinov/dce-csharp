@@ -15,17 +15,17 @@ using Offset = System.Int32;
 namespace Com.Model
 {
 
-    public class ExprEvaluator : CsColumnEvaluator
+    public class ExprEvaluator : ComColumnEvaluator
     {
         protected ExprNode exprNode; // Can contain more specific nodes OledbExprNode to access attributes in DataRow
 
-        protected CsVariable thisVariable; // Stores current input (offset in a local set or reference to the current DataRow)
+        protected ComVariable thisVariable; // Stores current input (offset in a local set or reference to the current DataRow)
 
         protected Offset currentElement;
 
-        protected CsColumnData columnData;
+        protected ComColumnData columnData;
 
-        protected CsTable loopTable;
+        protected ComTable loopTable;
 
         //
         // CsColumnEvaluator interface
@@ -79,37 +79,37 @@ namespace Com.Model
 
         public virtual object GetResult() { return exprNode.Result.GetValue(); }
 
-        public static CsColumnEvaluator CreateColumnEvaluator(CsColumn column)
+        public static ComColumnEvaluator CreateColumnEvaluator(ComColumn column)
         {
             ExprEvaluator eval = new ExprEvaluator(column);
             return eval;
         }
 
-        public static CsColumnEvaluator CreateCsvEvaluator(CsColumn column)
+        public static ComColumnEvaluator CreateCsvEvaluator(ComColumn column)
         {
             CsvEvaluator eval = new CsvEvaluator(column);
             return eval;
         }
 
-        public static CsColumnEvaluator CreateOledbEvaluator(CsColumn column)
+        public static ComColumnEvaluator CreateOledbEvaluator(ComColumn column)
         {
             OledbEvaluator eval = new OledbEvaluator(column);
             return eval;
         }
 
-        public static CsColumnEvaluator CreateWhereEvaluator(CsTable table)
+        public static ComColumnEvaluator CreateWhereEvaluator(ComTable table)
         {
             ExprEvaluator eval = new ExprEvaluator(table);
             return eval;
         }
 
-        public static CsColumnEvaluator CreateAggrEvaluator(CsColumn column)
+        public static ComColumnEvaluator CreateAggrEvaluator(ComColumn column)
         {
             AggrEvaluator eval = new AggrEvaluator(column);
             return eval;
         }
 
-        public ExprEvaluator(CsColumn column)
+        public ExprEvaluator(ComColumn column)
         {
             if (column.Definition.Mapping != null)
             {
@@ -135,10 +135,10 @@ namespace Com.Model
             columnData = column.Data;
 
             // Resolve names in the expresion by storing direct references to storage objects which will be used during valuation (names will not be used
-            exprNode.Resolve(column.LesserSet.Top, new List<CsVariable>() { thisVariable });
+            exprNode.Resolve(column.LesserSet.Top, new List<ComVariable>() { thisVariable });
         }
 
-        public ExprEvaluator(CsTable table)
+        public ExprEvaluator(ComTable table)
         {
             exprNode = table.Definition.WhereExpression;
 
@@ -150,7 +150,7 @@ namespace Com.Model
             columnData = null;
 
             // Resolve names in the expresion by storing direct references to storage objects which will be used during valuation (names will not be used
-            exprNode.Resolve(loopTable.Top, new List<CsVariable>() { thisVariable });
+            exprNode.Resolve(loopTable.Top, new List<ComVariable>() { thisVariable });
         }
 
         public ExprEvaluator()
@@ -198,7 +198,7 @@ namespace Com.Model
             return null;
         }
 
-        public CsvEvaluator(CsColumn column)
+        public CsvEvaluator(ComColumn column)
             : base(column)
         {
             // Produce a result set that can be iterated through
@@ -248,7 +248,7 @@ namespace Com.Model
             return null;
         }
 
-        public OledbEvaluator(CsColumn column)
+        public OledbEvaluator(ComColumn column)
             : base(column)
         {
             // Produce a result set from the remote database by executing a query on the source table
@@ -280,9 +280,9 @@ namespace Com.Model
         // Aggregation-related members
         //
 
-        protected CsVariable groupVariable; // Stores current group (input for the aggregated function)
+        protected ComVariable groupVariable; // Stores current group (input for the aggregated function)
 
-        protected CsVariable measureVariable; // Stores new value (output for the aggregated function)
+        protected ComVariable measureVariable; // Stores new value (output for the aggregated function)
 
         // base::exprNode - updater expression. works in the context of two variables: group and measure
         // base::columnData is the aggregated function to be computed
@@ -319,7 +319,7 @@ namespace Com.Model
             return exprNode.Result.GetValue();
         }
 
-        public AggrEvaluator(CsColumn column)
+        public AggrEvaluator(ComColumn column)
         {
             exprNode = column.Definition.Formula;
 
@@ -346,10 +346,10 @@ namespace Com.Model
             exprNode = ExprNode.CreateUpdater(column, column.Definition.Updater);
 
             // Resolve names in the expresions using appropriate variables
-            exprNode.Resolve(column.LesserSet.Top, new List<CsVariable>() { groupVariable, measureVariable });
+            exprNode.Resolve(column.LesserSet.Top, new List<ComVariable>() { groupVariable, measureVariable });
 
-            groupExpr.Resolve(loopTable.Top, new List<CsVariable>() { thisVariable });
-            measureExpr.Resolve(loopTable.Top, new List<CsVariable>() { thisVariable });
+            groupExpr.Resolve(loopTable.Top, new List<ComVariable>() { thisVariable });
+            measureExpr.Resolve(loopTable.Top, new List<ComVariable>() { thisVariable });
         }
     }
 

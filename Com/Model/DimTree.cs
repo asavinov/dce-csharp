@@ -15,14 +15,14 @@ namespace Com.Model
         /// <summary>
         /// It is one element of the tree. It is null for the bottom (root) and its direct children which do not have lesser dimensions.
         /// </summary>
-        private CsColumn _dim;
-        public CsColumn Dim { get { return _dim; } set { _dim = value; } }
+        private ComColumn _dim;
+        public ComColumn Dim { get { return _dim; } set { _dim = value; } }
 
         /// <summary>
         /// It is a set corresponding to the node. If dimension is present then it is equal to the greater set.  
         /// It is null only for the bottom (root). It can be set only if dimension is null (otherwise set the dimension). 
         /// </summary>
-        public CsTable Set
+        public ComTable Set
         {
             get { return Dim != null ? Dim.GreaterSet : null; }
         }
@@ -67,15 +67,15 @@ namespace Com.Model
             OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
         }
 
-        public bool ExistsChild(CsTable set)
+        public bool ExistsChild(ComTable set)
         {
             return Children.Exists(c => c.Set == set);
         }
-        public bool ExistsChild(CsColumn dim)
+        public bool ExistsChild(ComColumn dim)
         {
             return Children.Exists(c => c.Dim == dim);
         }
-        public DimTree GetChild(CsColumn dim)
+        public DimTree GetChild(ComColumn dim)
         {
             return Children.FirstOrDefault(c => c.Dim == dim);
         }
@@ -154,12 +154,12 @@ namespace Com.Model
             return res;
         }
 
-        public List<List<CsTable>> GetRankedSets() // A list of lists where each internal list corresponds to one rank starting from 0 (primitive sets) for the first list.
+        public List<List<ComTable>> GetRankedSets() // A list of lists where each internal list corresponds to one rank starting from 0 (primitive sets) for the first list.
         {
             List<List<DimTree>> rankedNodes = GetRankedNodes();
 
-            List<List<CsTable>> rankedSets = new List<List<CsTable>>();
-            for (int r = 0; r < rankedNodes.Count; r++) rankedSets.Add(new List<CsTable>());
+            List<List<ComTable>> rankedSets = new List<List<ComTable>>();
+            for (int r = 0; r < rankedNodes.Count; r++) rankedSets.Add(new List<ComTable>());
 
             for (int r = 0; r < rankedNodes.Count; r++)
             {
@@ -169,7 +169,7 @@ namespace Com.Model
             return rankedSets;
         }
 
-        public List<CsTable> GetSets()
+        public List<ComTable> GetSets()
         {
             return Flatten().Select(n => n.Set).Distinct().ToList();
         }
@@ -221,7 +221,7 @@ namespace Com.Model
 
             if (path.Path == null || path.Path.Count == 0) return null;
 
-            CsColumn seg;
+            ComColumn seg;
             DimTree node = this;
             for (int i = 0; i < path.Path.Count; i++) // We try to find segments sequentially
             {
@@ -245,7 +245,7 @@ namespace Com.Model
 
             if (path.Path == null || path.Path.Count == 0) return null;
 
-            CsColumn seg;
+            ComColumn seg;
             DimTree node = this;
             for (int i = 0; i < path.Path.Count; i++) // We add all segments sequentially
             {
@@ -289,12 +289,12 @@ namespace Com.Model
 
             if (Set.IsGreatest) return; // No greater sets - nothing to expand
 
-            List<CsTable> sets = new List<CsTable>(new[] { Set });
+            List<ComTable> sets = new List<ComTable>(new[] { Set });
             sets.AddRange(Set.GetAllSubsets());
 
-            foreach (CsTable s in sets)
+            foreach (ComTable s in sets)
             {
-                foreach (CsColumn d in s.GreaterDims)
+                foreach (ComColumn d in s.GreaterDims)
                 {
                     if (ExistsChild(d)) continue;
                     // New child instances need to have the type of this instance (this instance can be an extension of this class so we do not know it)
@@ -319,7 +319,7 @@ namespace Com.Model
         /// If a set is not included in the schema then include it. Inclusion is performed by storing all dimensions into the set including (a new) super-dimension. 
         /// TODO: In fact, all elements should have super-dimensions which specify the parent set or the root of the schema to include into, and then the parameter is not needed. 
         /// </summary>
-        public void AddToSchema(CsSchema top)
+        public void AddToSchema(ComSchema top)
         {
             if (Set.IsPrimitive)
             {
@@ -346,14 +346,14 @@ namespace Com.Model
             }
         }
 
-        public DimTree(CsColumn dim, DimTree parent = null)
+        public DimTree(ComColumn dim, DimTree parent = null)
         {
             Dim = dim;
             Children = new List<DimTree>();
             if (parent != null) parent.AddChild(this);
         }
 
-        public DimTree(CsTable set, DimTree parent = null)
+        public DimTree(ComTable set, DimTree parent = null)
         {
             Dim = new Dim(set);
             Children = new List<DimTree>();
@@ -465,11 +465,11 @@ namespace Com.Model
         /// <summary>
         /// It can be null for special nodes representing non-existing dimensions like bottom or top dimensions (normally root of the tree).
         /// </summary>
-        private CsColumn _dim;
-        public CsColumn Dim { get { return _dim; } protected set { _dim = value; } }
+        private ComColumn _dim;
+        public ComColumn Dim { get { return _dim; } protected set { _dim = value; } }
 
-        public CsTable GreaterSet { get { return Dim != null ? Dim.GreaterSet : null; } }
-        public CsTable LesserSet { get { return Dim != null ? Dim.LesserSet : null; } }
+        public ComTable GreaterSet { get { return Dim != null ? Dim.GreaterSet : null; } }
+        public ComTable LesserSet { get { return Dim != null ? Dim.LesserSet : null; } }
 
         //
         // Tree methods
@@ -511,11 +511,11 @@ namespace Com.Model
 
             return ret;
         }
-        public bool ExistsChild(CsColumn dim)
+        public bool ExistsChild(ComColumn dim)
         {
             return GetChild(dim) != null;
         }
-        public DimNode GetChild(CsColumn dim)
+        public DimNode GetChild(ComColumn dim)
         {
             return this.FirstOrDefault(c => c.Dim == dim);
         }
@@ -559,7 +559,7 @@ namespace Com.Model
             foreach (var c in this) c.NotifyAllOnPropertyChanged(propertyName);
         }
 
-        public DimNode(CsColumn dim, DimNode parent = null)
+        public DimNode(ComColumn dim, DimNode parent = null)
         {
             Dim = dim;
             if (parent != null) parent.AddChild(this);
@@ -615,7 +615,7 @@ namespace Com.Model
         {
             if (!IsSubsetNode) return; // Child nodes are added/deleted for only super-dimensions (for subset trees)
 
-            CsColumn dim = null;
+            ComColumn dim = null;
             if (e.Action == NotifyCollectionChangedAction.Add) // Decide if this node has to add a new child node
             {
                 dim = e.NewItems != null && e.NewItems.Count > 0 ? (Dim)e.NewItems[0] : null;
@@ -698,7 +698,7 @@ namespace Com.Model
                 return;
             }
 
-            foreach (CsColumn sd in LesserSet.SubDims)
+            foreach (ComColumn sd in LesserSet.SubDims)
             {
                 if (ExistsChild(sd)) continue;
 
@@ -710,7 +710,7 @@ namespace Com.Model
             }
 
             // Add child nodes for greater dimension (no recursion)
-            foreach (CsColumn gd in LesserSet.GreaterDims)
+            foreach (ComColumn gd in LesserSet.GreaterDims)
             {
                 if (gd.IsSuper) continue;
                 if (ExistsChild(gd)) continue;
@@ -721,7 +721,7 @@ namespace Com.Model
             }
         }
 
-        public SubsetTree(CsColumn dim, DimNode parent = null)
+        public SubsetTree(ComColumn dim, DimNode parent = null)
             : base(dim, parent)
         {
             // Register for events from the schema (or inside constructor?)

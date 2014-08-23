@@ -14,31 +14,31 @@ namespace Com.Model
     /// Top set is used to represent a whole database like a local mash up or a remote database. 
     /// It also can describe how its instances are loaded from a remote source and stored.
     /// </summary>
-    public class SetTop : Set, CsSchema
+    public class SetTop : Set, ComSchema
     {
 
         #region CsSchema interface
 
-        public CsTable GetPrimitive(string name)
+        public ComTable GetPrimitive(string name)
         {
-            CsColumn dim = SubDims.FirstOrDefault(x => StringSimilarity.SameTableName(x.LesserSet.Name, name));
+            ComColumn dim = SubDims.FirstOrDefault(x => StringSimilarity.SameTableName(x.LesserSet.Name, name));
             return dim != null ? dim.LesserSet : null;
         }
 
-        public CsTable Root { get { return GetPrimitive("Root"); } }
+        public ComTable Root { get { return GetPrimitive("Root"); } }
 
 
         //
         // Factories for tables and columns
         //
 
-        public virtual CsTable CreateTable(String name) 
+        public virtual ComTable CreateTable(String name) 
         {
-            CsTable table = new Set(name);
+            ComTable table = new Set(name);
             return table;
         }
 
-        public virtual CsTable AddTable(CsTable table, CsTable parent, string superName)
+        public virtual ComTable AddTable(ComTable table, ComTable parent, string superName)
         {
             if (parent == null)
             {
@@ -56,44 +56,44 @@ namespace Com.Model
             return table;
         }
 
-        public virtual void DeleteTable(CsTable table) 
+        public virtual void DeleteTable(ComTable table) 
         {
             Debug.Assert(!table.IsPrimitive, "Wrong use: users do not create/delete primitive sets - they are part of the schema.");
 
-            foreach (CsColumn col in table.LesserDims.ToList()) 
+            foreach (ComColumn col in table.LesserDims.ToList()) 
             {
                 col.Remove();
             }
-            foreach (CsColumn col in table.GreaterDims.ToList())
+            foreach (ComColumn col in table.GreaterDims.ToList())
             {
                 col.Remove();
             }
         }
 
-        public void RenameTable(CsTable table, string newName)
+        public void RenameTable(ComTable table, string newName)
         {
             RenameElement(table, newName);
         }
 
-        public virtual CsColumn CreateColumn(string name, CsTable input, CsTable output, bool isKey)
+        public virtual ComColumn CreateColumn(string name, ComTable input, ComTable output, bool isKey)
         {
             Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
 
-            CsColumn dim = new Dim(name, input, output, isKey, false);
+            ComColumn dim = new Dim(name, input, output, isKey, false);
 
             return dim;
         }
 
-        public virtual void DeleteColumn(CsColumn column)
+        public virtual void DeleteColumn(ComColumn column)
         {
             Debug.Assert(!column.LesserSet.IsPrimitive, "Wrong use: top columns cannot be created/deleted.");
 
-            CsSchema schema = this;
+            ComSchema schema = this;
 
             //
             // Delete all expression nodes that use the deleted column and all references to this column from other objects
             //
-            List<CsTable> tables = schema.GetAllSubsets();
+            List<ComTable> tables = schema.GetAllSubsets();
             var nodes = new List<ExprNode>();
             foreach (var tab in tables)
             {
@@ -165,20 +165,20 @@ namespace Com.Model
             column.Remove();
         }
 
-        public void RenameColumn(CsColumn column, string newName)
+        public void RenameColumn(ComColumn column, string newName)
         {
             RenameElement(column, newName);
         }
 
         protected void RenameElement(object element, string newName)
         {
-            CsSchema schema = this;
+            ComSchema schema = this;
 
             //
             // Check all elements of the schema that can store column or table name (tables, columns etc.)
             // Update their definition so that it uses the new name of the specified element
             //
-            List<CsTable> tables = schema.GetAllSubsets();
+            List<ComTable> tables = schema.GetAllSubsets();
             var nodes = new List<ExprNode>();
             foreach (var tab in tables)
             {
@@ -190,14 +190,14 @@ namespace Com.Model
 
                     if (col.Definition.Formula != null)
                     {
-                        if(element is CsTable) nodes = col.Definition.Formula.Find((CsTable)element);
-                        else if (element is CsColumn) nodes = col.Definition.Formula.Find((CsColumn)element);
+                        if(element is ComTable) nodes = col.Definition.Formula.Find((ComTable)element);
+                        else if (element is ComColumn) nodes = col.Definition.Formula.Find((ComColumn)element);
                         nodes.ForEach(x => x.Name = newName);
                     }
                     if (col.Definition.WhereExpression != null)
                     {
-                        if (element is CsTable) nodes = col.Definition.WhereExpression.Find((CsTable)element);
-                        else if (element is CsColumn) nodes = col.Definition.WhereExpression.Find((CsColumn)element);
+                        if (element is ComTable) nodes = col.Definition.WhereExpression.Find((ComTable)element);
+                        else if (element is ComColumn) nodes = col.Definition.WhereExpression.Find((ComColumn)element);
                         nodes.ForEach(x => x.Name = newName);
                     }
                 }
@@ -207,20 +207,20 @@ namespace Com.Model
                 // Update table definitions by finding the uses of the specified column
                 if (tab.Definition.WhereExpression != null)
                 {
-                    if (element is CsTable) nodes = tab.Definition.WhereExpression.Find((CsTable)element);
-                    else if (element is CsColumn) nodes = tab.Definition.WhereExpression.Find((CsColumn)element);
+                    if (element is ComTable) nodes = tab.Definition.WhereExpression.Find((ComTable)element);
+                    else if (element is ComColumn) nodes = tab.Definition.WhereExpression.Find((ComColumn)element);
                     nodes.ForEach(x => x.Name = newName);
                 }
                 if (tab.Definition.OrderbyExpression != null)
                 {
-                    if (element is CsTable) nodes = tab.Definition.OrderbyExpression.Find((CsTable)element);
-                    else if (element is CsColumn) nodes = tab.Definition.OrderbyExpression.Find((CsColumn)element);
+                    if (element is ComTable) nodes = tab.Definition.OrderbyExpression.Find((ComTable)element);
+                    else if (element is ComColumn) nodes = tab.Definition.OrderbyExpression.Find((ComColumn)element);
                     nodes.ForEach(x => x.Name = newName);
                 }
             }
 
-            if (element is CsTable) ((CsTable)element).Name = newName;
-            else if (element is CsColumn) ((CsColumn)element).Name = newName;
+            if (element is ComTable) ((ComTable)element).Name = newName;
+            else if (element is ComColumn) ((ComColumn)element).Name = newName;
         }
 
         #endregion
@@ -289,4 +289,14 @@ namespace Com.Model
         Set, // It is any set that is not root (non-primititve type). Arbitrary user-defined name.
     }
 
+    public enum DataSourceType // Essentially, it a marker for a subclass of SetTop (Schema)
+    {
+        LOCAL, // This database
+        ACCESS,
+        OLEDB,
+        SQL, // Generic (standard) SQL
+        CSV,
+        ODATA,
+        EXCEL
+    }
 }

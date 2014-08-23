@@ -20,7 +20,7 @@ namespace Com.Model
     /// A set is also characterized by width and length of its members. 
     /// And a set provides methods for manipulating its structure and intances. 
     /// </summary>
-    public class Set : INotifyCollectionChanged, INotifyPropertyChanged, CsTable, CsTableData, CsTableDefinition
+    public class Set : INotifyCollectionChanged, INotifyPropertyChanged, ComTable, ComTableData, ComTableDefinition
     {
         /// <summary>
         /// Unique set id (in this database) . In C++, this Id field would be used as a reference filed
@@ -38,43 +38,43 @@ namespace Com.Model
         /// Whether it is a primitive set. Primitive sets do not have greater dimensions.
         /// It can depend on other propoerties (it should be clarified) like instantiable, autopopulated, virtual etc.
         /// </summary>
-        public bool IsPrimitive { get { return SuperSet is CsSchema; } } // If its super-set is Top
+        public bool IsPrimitive { get { return SuperSet is ComSchema; } } // If its super-set is Top
 
         //
         // Outputs
         //
-        protected List<CsColumn> greaterDims;
-        public List<CsColumn> GreaterDims { get { return greaterDims; } } // Outgoing up arrows. Outputs
-        public CsColumn SuperDim { get { return GreaterDims.FirstOrDefault(x => x.IsSuper); } }
-        public List<CsColumn> KeyColumns { get { return GreaterDims.Where(x => x.IsIdentity).ToList(); } }
-        public List<CsColumn> NonkeyColumns { get { return GreaterDims.Where(x => !x.IsIdentity).ToList(); } }
-        public CsSchema Top
+        protected List<ComColumn> greaterDims;
+        public List<ComColumn> GreaterDims { get { return greaterDims; } } // Outgoing up arrows. Outputs
+        public ComColumn SuperDim { get { return GreaterDims.FirstOrDefault(x => x.IsSuper); } }
+        public List<ComColumn> KeyColumns { get { return GreaterDims.Where(x => x.IsIdentity).ToList(); } }
+        public List<ComColumn> NonkeyColumns { get { return GreaterDims.Where(x => !x.IsIdentity).ToList(); } }
+        public ComSchema Top
         {
             get
             {
-                CsTable set = this;
+                ComTable set = this;
                 while (set.SuperSet != null) set = set.SuperSet;
                 return set is SetTop ? (SetTop)set : null; // A set which is not integrated in the schema does not have top
             }
         }
-        public List<CsTable> GetGreaterSets() { return GreaterDims.Select(x => x.GreaterSet).ToList(); }
-        public CsTable SuperSet { get { return SuperDim != null ? SuperDim.GreaterSet : null; } }
+        public List<ComTable> GetGreaterSets() { return GreaterDims.Select(x => x.GreaterSet).ToList(); }
+        public ComTable SuperSet { get { return SuperDim != null ? SuperDim.GreaterSet : null; } }
 
         //
         // Inputs
         //
 
-        protected List<CsColumn> lesserDims;
-        public List<CsColumn> LesserDims { get { return lesserDims; } } // Incoming arrows. Inputs
-        public List<CsColumn> SubDims { get { return LesserDims.Where(x => x.IsSuper).ToList(); } }
-        public List<CsTable> SubSets { get { return SubDims.Select(x => x.LesserSet).ToList(); } }
-        public List<CsTable> GetAllSubsets() // Should be solved using general enumerator? Other: get all lesser, get all greater
+        protected List<ComColumn> lesserDims;
+        public List<ComColumn> LesserDims { get { return lesserDims; } } // Incoming arrows. Inputs
+        public List<ComColumn> SubDims { get { return LesserDims.Where(x => x.IsSuper).ToList(); } }
+        public List<ComTable> SubSets { get { return SubDims.Select(x => x.LesserSet).ToList(); } }
+        public List<ComTable> GetAllSubsets() // Should be solved using general enumerator? Other: get all lesser, get all greater
         {
             int count = SubSets.Count;
-            List<CsTable> result = new List<CsTable>(SubSets);
+            List<ComTable> result = new List<ComTable>(SubSets);
             for (int i = 0; i < count; i++)
             {
-                List<CsTable> subsets = ((Set)result[i]).GetAllSubsets();
+                List<ComTable> subsets = ((Set)result[i]).GetAllSubsets();
                 if (subsets == null || subsets.Count == 0)
                 {
                     continue;
@@ -93,16 +93,16 @@ namespace Com.Model
         // And then define shortcut methods via this general methods. In fact, IsLess *is* already defined via enumeator
 
         // Return true if this set is included in the specified set, that is, the specified set is a direct or indirect super-set of this set
-        public bool IsIn(CsTable parent) // IsSub
+        public bool IsIn(ComTable parent) // IsSub
         {
-            for (CsTable set = this; set != null; set = set.SuperSet)
+            for (ComTable set = this; set != null; set = set.SuperSet)
             {
                 if (set == parent) return true;
             }
             return false;
         }
 
-        public bool IsLesser(CsTable set) // IsLess
+        public bool IsLesser(ComTable set) // IsLess
         {
             var paths = new PathEnumerator(this, set, DimensionType.IDENTITY_ENTITY);
             return paths.Count() > 0;
@@ -122,16 +122,16 @@ namespace Com.Model
         // Name methods
         //
 
-        public CsColumn GetGreaterDim(string name)
+        public ComColumn GetGreaterDim(string name)
         {
             return GreaterDims.FirstOrDefault(d => StringSimilarity.SameColumnName(d.Name, name));
         }
 
-        public CsTable GetTable(string name) { return LesserDims.FirstOrDefault(d => StringSimilarity.SameColumnName(d.LesserSet.Name, name)).LesserSet; }
+        public ComTable GetTable(string name) { return LesserDims.FirstOrDefault(d => StringSimilarity.SameColumnName(d.LesserSet.Name, name)).LesserSet; }
 
-        public CsTable FindTable(string name)
+        public ComTable FindTable(string name)
         {
-            CsTable set = null;
+            ComTable set = null;
             if (StringSimilarity.SameTableName(Name, name))
             {
                 set = this;
@@ -146,9 +146,9 @@ namespace Com.Model
             return set;
         }
 
-        public CsTableData Data { get { return this; } }
+        public ComTableData Data { get { return this; } }
 
-        public CsTableDefinition Definition { get { return this; } }
+        public ComTableDefinition Definition { get { return this; } }
 
         #endregion
 
@@ -164,7 +164,7 @@ namespace Com.Model
             set // Uniqueness of keys is not (and cannot be) checked and can be broken
             {
                 length = value;
-                foreach (CsColumn col in GreaterDims)
+                foreach (ComColumn col in GreaterDims)
                 {
                     col.Data.Length = value;
                 }
@@ -174,18 +174,18 @@ namespace Com.Model
         public object GetValue(string name, int offset)
         {
             Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
-            CsColumn dim = GetGreaterDim(name);
+            ComColumn dim = GetGreaterDim(name);
             return dim.Data.GetValue(offset);
         }
 
         public void SetValue(string name, int offset, object value)
         {
             Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
-            CsColumn dim = GetGreaterDim(name);
+            ComColumn dim = GetGreaterDim(name);
             dim.Data.SetValue(offset, value);
         }
 
-        public Offset Find(CsColumn[] dims, object[] values) // Type of dimensions (super, id, non-id) is not important and is not used
+        public Offset Find(ComColumn[] dims, object[] values) // Type of dimensions (super, id, non-id) is not important and is not used
         {
             Debug.Assert(dims != null && values != null && dims.Length == values.Length, "Wrong use: for each dimension, there has to be a value specified.");
 
@@ -218,7 +218,7 @@ namespace Com.Model
             }
         }
 
-        public Offset Append(CsColumn[] dims, object[] values) // Identity dims must be set (for uniqueness). Entity dims are also used when appending. Possibility to append (CanAppend) is not checked. 
+        public Offset Append(ComColumn[] dims, object[] values) // Identity dims must be set (for uniqueness). Entity dims are also used when appending. Possibility to append (CanAppend) is not checked. 
         {
             Debug.Assert(dims != null && values != null && dims.Length == values.Length, "Wrong use: for each dimension, there has to be a value specified.");
             Debug.Assert(!IsPrimitive, "Wrong use: cannot append to a primitive set. ");
@@ -253,7 +253,7 @@ namespace Com.Model
             Offset[] result = Enumerable.Range(0, Length).ToArray(); // All elements of this set (as long as this set length - can be quite long)
             bool hasBeenRestricted = false; // For the case where the Length==1, and no key columns are really provided, so we get at the end result.Length==1 which is misleading. Also, this fixes the problem of having no key dimensions.
 
-            List<CsColumn> dims = new List<CsColumn>();
+            List<ComColumn> dims = new List<ComColumn>();
             dims.AddRange(KeyColumns);
             dims.AddRange(NonkeyColumns);
 
@@ -511,16 +511,16 @@ namespace Com.Model
 
         public ExprNode WhereExpression { get; set; }
 
-        public List<CsColumn> GeneratingDimensions // Output tuples of these dimensions are appended to this set (other tuples are excluded). Alternatively, this element must be referenced by at one lesser element COUNT(this<-proj_dim<-(Set)) > 0
+        public List<ComColumn> GeneratingDimensions // Output tuples of these dimensions are appended to this set (other tuples are excluded). Alternatively, this element must be referenced by at one lesser element COUNT(this<-proj_dim<-(Set)) > 0
         {
             get { return LesserDims.Where(d => d.Definition.IsGenerating).ToList(); }
         }
 
         public ExprNode OrderbyExpression { get; set; }
 
-        public CsColumnEvaluator GetWhereEvaluator()
+        public ComColumnEvaluator GetWhereEvaluator()
         {
-            CsColumnEvaluator evaluator;
+            ComColumnEvaluator evaluator;
             evaluator = ExprEvaluator.CreateWhereEvaluator(this);
             return evaluator;
         }
@@ -542,12 +542,12 @@ namespace Com.Model
                 //   - greater dims are populated simultaniously without evaluation (they do not have defs.)
 
                 // Find all local greater key dimensions including the super-dim.
-                CsColumn[] dims = KeyColumns.ToArray();
+                ComColumn[] dims = KeyColumns.ToArray();
                 int dimCount = dims.Length;
                 object[] vals = new object[dimCount];
 
                 // Evaluator for where expression
-                CsColumnEvaluator eval = null;
+                ComColumnEvaluator eval = null;
                 if (Definition.WhereExpression != null)
                 {
                     eval = GetWhereEvaluator();
@@ -630,12 +630,12 @@ namespace Com.Model
                 // If appended or found, then set values of the greater generating dimensions
                 // If cannot be added (does not satisfy constraints) then set values of the greater generating dimensions to null
 
-                CsColumn projectDim = Definition.GeneratingDimensions[0];
-                CsTable sourceSet = projectDim.LesserSet;
-                CsTable targetSet = projectDim.GreaterSet; // this set
+                ComColumn projectDim = Definition.GeneratingDimensions[0];
+                ComTable sourceSet = projectDim.LesserSet;
+                ComTable targetSet = projectDim.GreaterSet; // this set
 
                 // Prepare the expression from the mapping
-                CsColumnEvaluator evaluator = projectDim.Definition.GetColumnEvaluator();
+                ComColumnEvaluator evaluator = projectDim.Definition.GetColumnEvaluator();
 
                 while (evaluator.Next()) 
                 {
@@ -667,19 +667,19 @@ namespace Com.Model
         // Dependencies
         //
 
-        public List<CsTable> UsesTables(bool recursive) // This element depends upon
+        public List<ComTable> UsesTables(bool recursive) // This element depends upon
         {
             // Assume that we have just added this table. It uses and depends on other tables. We need to list them.
 
-            List<CsTable> res = new List<CsTable>();
+            List<ComTable> res = new List<ComTable>();
 
-            foreach (CsColumn col in GreaterDims) // If a greater (key) set has changed then this set has to be populated
+            foreach (ComColumn col in GreaterDims) // If a greater (key) set has changed then this set has to be populated
             {
                 if (!col.IsIdentity) continue;
                 res.Add(col.GreaterSet);
             }
 
-            foreach (CsColumn col in LesserDims) // If a generating source set has changed then this set has to be populated
+            foreach (ComColumn col in LesserDims) // If a generating source set has changed then this set has to be populated
             {
                 if (!col.Definition.IsGenerating) continue;
                 res.Add(col.LesserSet);
@@ -690,10 +690,10 @@ namespace Com.Model
             // Recursion
             if (recursive)
             {
-                foreach (CsTable tab in res.ToList())
+                foreach (ComTable tab in res.ToList())
                 {
                     var list = tab.Definition.UsesTables(recursive); // Recusrion
-                    foreach (CsTable table in list)
+                    foreach (ComTable table in list)
                     {
                         Debug.Assert(!res.Contains(table), "Cyclic dependence in tables.");
                         res.Add(table);
@@ -703,17 +703,17 @@ namespace Com.Model
 
             return res;
         }
-        public List<CsTable> IsUsedInTables(bool recursive) // Dependants
+        public List<ComTable> IsUsedInTables(bool recursive) // Dependants
         {
-            List<CsTable> res = new List<CsTable>();
+            List<ComTable> res = new List<ComTable>();
 
-            foreach (CsColumn col in LesserDims) // If this set has changed then all its lesser (key) sets have to be populated
+            foreach (ComColumn col in LesserDims) // If this set has changed then all its lesser (key) sets have to be populated
             {
                 if (!col.IsIdentity) continue;
                 res.Add(col.LesserSet);
             }
 
-            foreach (CsColumn col in GreaterDims) // If this table has changed then output tables of generating dimensions have to be populated
+            foreach (ComColumn col in GreaterDims) // If this table has changed then output tables of generating dimensions have to be populated
             {
                 if (!col.Definition.IsGenerating) continue;
                 res.Add(col.GreaterSet);
@@ -722,10 +722,10 @@ namespace Com.Model
             // Recursion
             if (recursive)
             {
-                foreach (CsTable tab in res.ToList())
+                foreach (ComTable tab in res.ToList())
                 {
                     var list = tab.Definition.IsUsedInTables(recursive); // Recusrion
-                    foreach (CsTable table in list)
+                    foreach (ComTable table in list)
                     {
                         Debug.Assert(!res.Contains(table), "Cyclic dependence in tables.");
                         res.Add(table);
@@ -737,13 +737,13 @@ namespace Com.Model
         }
 
 
-        public List<CsColumn> UsesColumns(bool recursive) // This element depends upon
+        public List<ComColumn> UsesColumns(bool recursive) // This element depends upon
         {
             // Assume that we have just added this table. It uses and depends on other columns. We need to list them.
 
-            List<CsColumn> res = new List<CsColumn>();
+            List<ComColumn> res = new List<ComColumn>();
 
-            foreach (CsColumn col in LesserDims) // If a generating source column (definition) has changed then this set has to be updated
+            foreach (ComColumn col in LesserDims) // If a generating source column (definition) has changed then this set has to be updated
             {
                 if (!col.Definition.IsGenerating) continue;
                 res.Add(col);
@@ -754,10 +754,10 @@ namespace Com.Model
             // Recursion
             if (recursive)
             {
-                foreach (CsColumn col in res.ToList())
+                foreach (ComColumn col in res.ToList())
                 {
                     var list = col.Definition.UsesColumns(recursive); // Recursion
-                    foreach (CsColumn column in list)
+                    foreach (ComColumn column in list)
                     {
                         Debug.Assert(!res.Contains(column), "Cyclic dependence in columns.");
                         res.Add(column);
@@ -767,16 +767,16 @@ namespace Com.Model
 
             return res;
         }
-        public List<CsColumn> IsUsedInColumns(bool recursive) // Dependants
+        public List<ComColumn> IsUsedInColumns(bool recursive) // Dependants
         {
-            List<CsColumn> res = new List<CsColumn>();
+            List<ComColumn> res = new List<ComColumn>();
 
-            foreach (CsColumn col in LesserDims) // If this set has changed then all lesser columns have to be updated
+            foreach (ComColumn col in LesserDims) // If this set has changed then all lesser columns have to be updated
             {
                 res.Add(col);
             }
 
-            foreach (CsColumn col in GreaterDims) // If this set has changed then all greater generating columns have to be updated
+            foreach (ComColumn col in GreaterDims) // If this set has changed then all greater generating columns have to be updated
             {
                 if (!col.Definition.IsGenerating) continue;
                 res.Add(col);
@@ -787,10 +787,10 @@ namespace Com.Model
             // Recursion
             if (recursive)
             {
-                foreach (CsColumn col in res.ToList())
+                foreach (ComColumn col in res.ToList())
                 {
                     var list = col.Definition.IsUsedInColumns(recursive); // Recursion
-                    foreach (CsColumn column in list)
+                    foreach (ComColumn column in list)
                     {
                         Debug.Assert(!res.Contains(column), "Cyclic dependence in columns.");
                         res.Add(column);
@@ -881,8 +881,8 @@ namespace Com.Model
 
             Name = name;
 
-            greaterDims = new List<CsColumn>(); // Up arrows
-            lesserDims = new List<CsColumn>();
+            greaterDims = new List<ComColumn>(); // Up arrows
+            lesserDims = new List<ComColumn>();
 
             DefinitionType = TableDefinitionType.NONE;
         }
@@ -902,7 +902,7 @@ namespace Com.Model
         public string RelationalTableName { get; set; }
         public string RelationalPkName { get; set; } // Note that the same field exists also in Dim
 
-        public CsColumn GetGreaterDimByFkName(string name)
+        public ComColumn GetGreaterDimByFkName(string name)
         {
             return GreaterDims.FirstOrDefault(d => StringSimilarity.SameColumnName(((DimRel)d).RelationalFkName, name));
         }
@@ -948,7 +948,7 @@ namespace Com.Model
             if (path == null || path.Path == null) return null;
             return GetGreaterPath(path.Path);
         }
-        public DimAttribute GetGreaterPath(List<CsColumn> path)
+        public DimAttribute GetGreaterPath(List<ComColumn> path)
         {
             if (path == null) return null;
             foreach (DimAttribute p in GreaterPaths)
@@ -971,7 +971,7 @@ namespace Com.Model
             if (path == null || path.Path == null) return new List<DimAttribute>();
             return GetGreaterPathsStartingWith(path.Path);
         }
-        public List<DimAttribute> GetGreaterPathsStartingWith(List<CsColumn> path)
+        public List<DimAttribute> GetGreaterPathsStartingWith(List<ComColumn> path)
         {
             var result = new List<DimAttribute>();
             foreach (DimAttribute p in GreaterPaths)
@@ -1005,7 +1005,7 @@ namespace Com.Model
                 string pathName = "__inherited__" + ++pathCounter;
 
                 DimAttribute newPath = new DimAttribute(pathName);
-                newPath.Path = new List<CsColumn>(p.Path);
+                newPath.Path = new List<ComColumn>(p.Path);
                 newPath.Name = newPath.ColumnNamePath; // Overwrite previous pathName (so previous is not needed actually)
                 newPath.RelationalColumnName = newPath.Name; // It actually will be used for relational queries
                 newPath.RelationalFkName = path.RelationalFkName; // Belongs to the same FK

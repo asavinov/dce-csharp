@@ -15,9 +15,9 @@ namespace Com.Model
     /// One array of type T stores elements in their original order without sorting. 
     /// Second array stores indexes (offsets) of elements in the first array in sorted order.
     /// </summary>
-    public class DimPrimitive<T> : CsColumnData
+    public class DimPrimitive<T> : ComColumnData
     {
-        protected CsColumn Dim { get; set; }
+        protected ComColumn Dim { get; set; }
 
         private T[] _cells; // Each cell contains a T value in arbitrary original order
         private int[] _offsets; // Each cell contains an offset to an element in cells in ascending or descending order
@@ -478,7 +478,7 @@ namespace Com.Model
 
         #region Constructors
 
-        public DimPrimitive(CsColumn dim)
+        public DimPrimitive(ComColumn dim)
         {
             // TODO: Check if output (greater) set is of correct type
 
@@ -529,7 +529,7 @@ namespace Com.Model
     /// Empty data.
     /// 
     /// </summary>
-    public class DimEmpty : CsColumnData
+    public class DimEmpty : ComColumnData
     {
 
         #region CsColumnData interface
@@ -568,9 +568,9 @@ namespace Com.Model
         #endregion
     }
 
-    public class ColumnDefinition : CsColumnDefinition 
+    public class ColumnDefinition : ComColumnDefinition 
     {
-        protected CsColumn Dim { get; set; }
+        protected ComColumn Dim { get; set; }
 
         #region CsColumnDefinition interface
 
@@ -590,7 +590,7 @@ namespace Com.Model
         // Aggregation
         //
 
-        public CsTable FactTable { get; set; }
+        public ComTable FactTable { get; set; }
 
         public List<DimPath> GroupPaths { get; set; }
 
@@ -608,7 +608,7 @@ namespace Com.Model
         public List<Dim> Dependencies { get; set; } // Other functions this function directly depends upon. Computed from the definition of this function.
         // Find and store all outputs of this function by evaluating (executing) its definition in a loop for all input elements of the fact set (not necessarily this set)
 
-        public CsColumnEvaluator GetColumnEvaluator()
+        public ComColumnEvaluator GetColumnEvaluator()
         {
             // Principle: population methods are unaware of Definition type (expressions etc.) - they use only evaluator (no dependency on the definition details)
 
@@ -620,7 +620,7 @@ namespace Com.Model
             // Based on library - load lib, instantiate via factory, initialize (say, resolve names), return object
             // Based on source code - compile class, instantiate, initialize (say, resolve), return instance
 
-            CsColumnEvaluator evaluator = null;
+            ComColumnEvaluator evaluator = null;
 
             if (DefinitionType == ColumnDefinitionType.NONE) 
             {
@@ -658,7 +658,7 @@ namespace Com.Model
 
         public void Evaluate()
         {
-            CsColumnEvaluator evaluator = GetColumnEvaluator();
+            ComColumnEvaluator evaluator = GetColumnEvaluator();
             if (evaluator == null) return;
 
             while (evaluator.Next())
@@ -673,9 +673,9 @@ namespace Com.Model
         // Dependencies
         //
 
-        public List<CsTable> UsesTables(bool recursive) // This element depends upon
+        public List<ComTable> UsesTables(bool recursive) // This element depends upon
         {
-            List<CsTable> res = new List<CsTable>();
+            List<ComTable> res = new List<ComTable>();
 
             if (DefinitionType == ColumnDefinitionType.NONE)
             {
@@ -685,7 +685,7 @@ namespace Com.Model
             {
                 if (Formula != null) // Dependency information is stored in expression (formula)
                 {
-                    res = Formula.Find((CsTable)null).Select(x => x.Result.TypeTable).ToList();
+                    res = Formula.Find((ComTable)null).Select(x => x.Result.TypeTable).ToList();
                 }
             }
             else if (DefinitionType == ColumnDefinitionType.AGGREGATION)
@@ -717,9 +717,9 @@ namespace Com.Model
 
             return res;
         }
-        public List<CsTable> IsUsedInTables(bool recursive) // Dependants
+        public List<ComTable> IsUsedInTables(bool recursive) // Dependants
         {
-            List<CsTable> res = new List<CsTable>();
+            List<ComTable> res = new List<ComTable>();
 
             // TODO: Which other sets use this function for their content? Say, if it is a generating function. Or it is a group/measure function.
             // Analyze other function definitions and check if this function is used there directly. 
@@ -730,9 +730,9 @@ namespace Com.Model
             return res;
         }
 
-        public List<CsColumn> UsesColumns(bool recursive) // This element depends upon
+        public List<ComColumn> UsesColumns(bool recursive) // This element depends upon
         {
-            List<CsColumn> res = new List<CsColumn>();
+            List<ComColumn> res = new List<ComColumn>();
 
             if (DefinitionType == ColumnDefinitionType.NONE)
             {
@@ -742,7 +742,7 @@ namespace Com.Model
             {
                 if (Formula != null) // Dependency information is stored in expression (formula)
                 {
-                    res = Formula.Find((CsColumn)null).Select(x => x.Column).ToList();
+                    res = Formula.Find((ComColumn)null).Select(x => x.Column).ToList();
                 }
             }
             else if (DefinitionType == ColumnDefinitionType.AGGREGATION)
@@ -772,9 +772,9 @@ namespace Com.Model
 
             return res;
         }
-        public List<CsColumn> IsUsedInColumns(bool recursive) // Dependants
+        public List<ComColumn> IsUsedInColumns(bool recursive) // Dependants
         {
-            List<CsColumn> res = new List<CsColumn>();
+            List<ComColumn> res = new List<ComColumn>();
 
             // TODO: Find which other columns use this column in the definition
 
@@ -783,7 +783,7 @@ namespace Com.Model
 
         #endregion
 
-        public ColumnDefinition(CsColumn dim)
+        public ColumnDefinition(ComColumn dim)
         {
             Dim = dim;
 

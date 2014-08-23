@@ -42,8 +42,8 @@ namespace Com.Model
         // Is resolved from name at compile-time if the name represents a method (dimension, function etc.)
         // It could be CsColumnEvaluator (at least for Dim storage) so that we directly access values at run-time. 
         // Alternatively, the whole node implements this interface
-        public CsColumn Column { get; set; }
-        public CsVariable Variable { get; set; }
+        public ComColumn Column { get; set; }
+        public ComVariable Variable { get; set; }
         // Action type. A modifier that helps to choose the function variation
         public ActionType Action { get; set; }
 
@@ -52,7 +52,7 @@ namespace Com.Model
         //
 
         // Return run-time value after processing this node to be used by the parent. It must have the specified type.
-        public CsVariable Result { get; set; }
+        public ComVariable Result { get; set; }
 
         //
         // Maybe we need a method for retrieving dependency information, that is, a list of other functions (with their sets) used in the formula, including maybe system functions, variables and other context objects
@@ -70,7 +70,7 @@ namespace Com.Model
         /// - Types in tuples depend on the parent type. Columns (variables, procedures etc.) depend on the children. 
         /// </summary>
         /// <param name="variables"></param>
-        public virtual void Resolve(CsSchema schema, List<CsVariable> variables)
+        public virtual void Resolve(ComSchema schema, List<ComVariable> variables)
         {
             if (Operation == OperationType.VALUE)
             {
@@ -113,7 +113,7 @@ namespace Com.Model
                     {
                         if (parent.Result.TypeTable != null && !string.IsNullOrEmpty(Name))
                         {
-                            CsColumn col = parent.Result.TypeTable.GetGreaterDim(Name);
+                            ComColumn col = parent.Result.TypeTable.GetGreaterDim(Name);
                             Column = col;
                             Result.TypeTable = col.GreaterSet;
                             Result.TypeName = col.GreaterSet.Name;
@@ -123,7 +123,7 @@ namespace Com.Model
                     {
                         if (parent.Result.TypeTable != null && !string.IsNullOrEmpty(Name))
                         {
-                            CsColumn col = parent.Result.TypeTable.GetGreaterDim(Name);
+                            ComColumn col = parent.Result.TypeTable.GetGreaterDim(Name);
                             Column = col;
                             Result.TypeTable = col.GreaterSet;
                             Result.TypeName = col.GreaterSet.Name;
@@ -170,7 +170,7 @@ namespace Com.Model
                 if (childCount == 0) // Resolve variable (or add a child this variable assuming that it has been omitted)
                 {
                     // Try to resolve as a variable (including this variable). If success then finish.
-                    CsVariable var = variables.FirstOrDefault(v => StringSimilarity.SameColumnName(v.Name, Name));
+                    ComVariable var = variables.FirstOrDefault(v => StringSimilarity.SameColumnName(v.Name, Name));
 
                     if (var != null) // Resolved as a variable
                     {
@@ -184,7 +184,7 @@ namespace Com.Model
                         //
                         // Start from 'this' node bound to 'this' variable
                         //
-                        CsVariable thisVar = variables.FirstOrDefault(v => StringSimilarity.SameColumnName(v.Name, "this"));
+                        ComVariable thisVar = variables.FirstOrDefault(v => StringSimilarity.SameColumnName(v.Name, "this"));
 
                         thisChild = new ExprNode();
                         thisChild.Operation = OperationType.CALL;
@@ -195,8 +195,8 @@ namespace Com.Model
                         thisChild.Variable = thisVar;
 
                         ExprNode path = thisChild;
-                        CsTable contextTable = thisChild.Result.TypeTable;
-                        CsColumn col = null;
+                        ComTable contextTable = thisChild.Result.TypeTable;
+                        ComColumn col = null;
 
                         while (contextTable != null)
                         {
@@ -213,7 +213,7 @@ namespace Com.Model
                             //
                             // Iterator. Find super-column in the current context (where we have just failed to resolve the name)
                             //
-                            CsColumn superColumn = contextTable.SuperDim;
+                            ComColumn superColumn = contextTable.SuperDim;
                             contextTable = contextTable.SuperSet;
 
                             if (contextTable == null || contextTable == contextTable.Top.Root)
@@ -261,7 +261,7 @@ namespace Com.Model
                     {
                         outputChild = GetChild(0);
                     }
-                    CsColumn col = outputChild.Result.TypeTable.GetGreaterDim(methodName);
+                    ComColumn col = outputChild.Result.TypeTable.GetGreaterDim(methodName);
                     Column = col;
 
                     Result.TypeName = col.GreaterSet.Name;
@@ -577,7 +577,7 @@ namespace Com.Model
         /// By the use we mean dependency, that is, this expression result depends on this column as a function. 
         /// The expressions have to be resolved because we need object references rather than names.
         /// </summary>
-        public List<ExprNode> Find(CsColumn column)
+        public List<ExprNode> Find(ComColumn column)
         {
             var res = new List<ExprNode>();
 
@@ -601,7 +601,7 @@ namespace Com.Model
         /// By the use we mean dependency, that is, this expression result depends on this table (if the table changes then this node must be re-evaluated). 
         /// The expressions have to be resolved because we need object references rather than names.
         /// </summary>
-        public List<ExprNode> Find(CsTable table)
+        public List<ExprNode> Find(ComTable table)
         {
             var res = new List<ExprNode>();
 
@@ -636,7 +636,7 @@ namespace Com.Model
             ExprNode node = this;
             for (int i = 0; i < path.Path.Count; i++) // We add all segments sequentially
             {
-                CsColumn seg = path.Path[i];
+                ComColumn seg = path.Path[i];
                 ExprNode child = node.GetChild(seg.Name); // Try to find a child corresponding to this segment
 
                 if (child == null) // Not found. Add a new child corresponding to this segment
@@ -708,7 +708,7 @@ namespace Com.Model
             {
                 for (int i = path.Path.Count() - 1; i >= 0; i--)
                 {
-                    CsColumn seg = path.Path[i];
+                    ComColumn seg = path.Path[i];
 
                     ExprNode node = new ExprNode();
                     node.Operation = OperationType.CALL;
@@ -754,7 +754,7 @@ namespace Com.Model
         /// Create a read expression for the specified column. 
         /// This expression will read one variables from the context: 'this' typed by the column lesser set.
         /// </summary>
-        public static ExprNode CreateReader(CsColumn column, bool withThisVariable)
+        public static ExprNode CreateReader(ComColumn column, bool withThisVariable)
         {
             return CreateReader(new DimPath(column), withThisVariable);
         }
@@ -763,7 +763,7 @@ namespace Com.Model
         /// Create an upate expression for the specified aggregation column and standard aggregation function. 
         /// This expression will read two variables from the context: 'this' typed by the column lesser set and 'value' typed by the column greater set.
         /// </summary>
-        public static ExprNode CreateUpdater(CsColumn column, string aggregationFunction)
+        public static ExprNode CreateUpdater(ComColumn column, string aggregationFunction)
         {
             ActionType aggregation;
             if (aggregationFunction.Equals("COUNT"))
@@ -829,7 +829,7 @@ namespace Com.Model
     /// </summary>
     public class OledbExprNode : ExprNode
     {
-        public override void Resolve(CsSchema schema, List<CsVariable> variables)
+        public override void Resolve(ComSchema schema, List<ComVariable> variables)
         {
             if (Operation == OperationType.VALUE)
             {
@@ -869,7 +869,7 @@ namespace Com.Model
     /// </summary>
     public class CsvExprNode : ExprNode
     {
-        public override void Resolve(CsSchema schema, List<CsVariable> variables)
+        public override void Resolve(ComSchema schema, List<ComVariable> variables)
         {
             if (Operation == OperationType.VALUE)
             {
@@ -966,7 +966,7 @@ namespace Com.Model
         // MUL ("MUL")
     }
 
-    public class Variable : CsVariable
+    public class Variable : ComVariable
     {
         protected bool isNull;
         object Value;
@@ -977,7 +977,7 @@ namespace Com.Model
         //
 
         public string TypeName { get; set; }
-        public CsTable TypeTable { get; set; }
+        public ComTable TypeTable { get; set; }
 
         public string Name { get; set; }
 
@@ -1019,7 +1019,7 @@ namespace Com.Model
             Value = null;
         }
 
-        public Variable(string name, CsTable type)
+        public Variable(string name, ComTable type)
         {
             Name = name;
             TypeName = type.Name;

@@ -50,6 +50,9 @@ VisualStudio.gitignore is used in comcsharp
 Gigignore for Visual Studio: 
 http://stackoverflow.com/questions/2143956/gitignore-for-visual-studio-projects-and-solutions
 
+CRLF parameter:
+http://stackoverflow.com/questions/170961/whats-the-best-crlf-handling-strategy-with-git
+
 NuGet:
 http://docs.nuget.org/docs/creating-packages/hosting-your-own-nuget-feeds
 
