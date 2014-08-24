@@ -296,6 +296,7 @@ namespace Com.Model
             {
                 foreach (ComColumn d in s.GreaterDims)
                 {
+                    if (d.IsSuper) continue;
                     if (ExistsChild(d)) continue;
                     // New child instances need to have the type of this instance (this instance can be an extension of this class so we do not know it)
                     DimTree child = (DimTree)Activator.CreateInstance(this.GetType());

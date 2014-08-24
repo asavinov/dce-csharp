@@ -685,38 +685,38 @@ namespace Com.Model
         {
             // TODO: We need also loop over all source sets
 
-            if (!AtDestination()) // Try to move forward by attaching a new segment
+            // Move several steps forward until next terminal continuation is found
+            // true - new terminal continuation found, false - cannot continue the current path
+            bool terminalFound = MoveForward();
+            if (terminalFound && TargetSetValid()) // This new path satisfies also our set constraints
             {
-                bool destinationFound = MoveForward(); // Move several steps forward until next destination is found
-                if (destinationFound) return true; // A destination was really found
-                // else // No valid destination was found by moving forward. We have to move backward
+                return true;
             }
 
-            bool continuationFound = MoveBackward(); // Try to move backward by removing segments until a previous set with an unvisited path forward is found
-            if (!continuationFound) return false;
-
-            if (AtDestination()) return true;
-
-            return MoveNext(); // Recursive
+            while (true)
+            {
+                // Try to move backward by removing segments until some parent with an unvisited continuation
+                // return true - found a next continuation from some parent (always terminal), false - not found a parent with possibility to continue (end, go to next source set)
+                bool continuationFound = MoveBackward(); // Here real recursive loop of the whole algorithm
+                if (!continuationFound) return false; // No valid paths anymore
+                if (TargetSetValid()) return true;
+            }
         }
         private bool MoveForward() // return true - valid destination set found, false - no valid destination found (and cannot move forward anymore)
         {
-            while (!AtDestination()) // Not a destination - move one more step forward
+            // always attach first possible segment (next segments will be attached while moving back)
+            // true - new terminal continuation found, false - cannot continue the current path
+            List<ComColumn> nextSegs = GetNextValidSegments();
+            if (nextSegs.Count == 0) return false;
+            while (nextSegs.Count > 0)
             {
-                List<ComColumn> dims = GetContinuations();
-
-                if (dims.Count != 0) // Continue depth-first by adding the very first dimension
-                {
-                    AddLastSegment(dims[0]);
-                }
-                else
-                {
-                    return false; // Not a destination but no possibility to move forward
-                }
+                AddLastSegment(nextSegs[0]);
+                nextSegs = GetNextValidSegments();
             }
+
             return true;
         }
-        private bool MoveBackward() // return true - found a set with a possibility to continued (with unvisited continuation), false - not found a set with possibility to continue(end, go to next source set)
+        private bool MoveBackward() // return true - found a continuation from some parent, false - not found a set with possibility to continue(end, go to next source set)
         {
             ComColumn segment = null;
             do // A loop for removing last segment and moving backward
@@ -728,13 +728,16 @@ namespace Com.Model
 
                 segment = RemoveLastSegment(); // Remove last segment
 
-                List<ComColumn> nextSegs = GetContinuations();
+                List<ComColumn> nextSegs = GetNextValidSegments();
 
                 int segIndex = nextSegs.IndexOf(segment);
                 if (segIndex + 1 < nextSegs.Count) // Continuation found. Use it
                 {
                     segment = nextSegs[segIndex + 1];
                     AddLastSegment(segment); // Add next last segment
+
+                    bool terminalFound = MoveForward();
+
                     return true;
                 }
                 else // Continuation not found. Continue removing.
@@ -746,24 +749,29 @@ namespace Com.Model
             return false; // All segments removed but no continuation found in any of the previous sets including the source one
         }
 
-        private List<ComColumn> GetContinuations()
+        private List<ComColumn> GetNextValidSegments() // Here we find continuation segments that satisfy our criteria on columns
         {
             if (!isInverse) // Move up from lesser to greater
             {
+                if (GreaterSet.IsPrimitive) return new List<ComColumn>(); // We exclude the top element
                 switch (dimType)
                 {
+                    case DimensionType.IDENTITY_ENTITY: return GreaterSet.GreaterDims.Where(x => x.LesserSet.Top == x.GreaterSet.Top).ToList();
                     case DimensionType.IDENTITY: return GreaterSet.GreaterDims.Where(x => x.IsIdentity && x.LesserSet.Top == x.GreaterSet.Top).ToList();
                     case DimensionType.ENTITY: return GreaterSet.GreaterDims.Where(x => !x.IsIdentity && x.LesserSet.Top == x.GreaterSet.Top).ToList();
-                    case DimensionType.IDENTITY_ENTITY: return GreaterSet.GreaterDims.Where(x => x.LesserSet.Top == x.GreaterSet.Top).ToList();
+
+                    case DimensionType.GENERATING: return GreaterSet.GreaterDims.Where(x => (x.Definition != null && x.Definition.IsGenerating) && x.LesserSet.Top == x.GreaterSet.Top).ToList();
                 }
             }
             else
             {
                 switch (dimType)
                 {
+                    case DimensionType.IDENTITY_ENTITY: return LesserSet.LesserDims.Where(x => x.LesserSet.Top == x.GreaterSet.Top).ToList();
                     case DimensionType.IDENTITY: return LesserSet.LesserDims.Where(x => x.IsIdentity && x.LesserSet.Top == x.GreaterSet.Top).ToList();
                     case DimensionType.ENTITY: return LesserSet.LesserDims.Where(x => !x.IsIdentity && x.LesserSet.Top == x.GreaterSet.Top).ToList();
-                    case DimensionType.IDENTITY_ENTITY: return LesserSet.LesserDims.Where(x => x.LesserSet.Top == x.GreaterSet.Top).ToList();
+
+                    case DimensionType.GENERATING: return LesserSet.LesserDims.Where(x => (x.Definition != null && x.Definition.IsGenerating) && x.LesserSet.Top == x.GreaterSet.Top).ToList();
                 }
             }
 
@@ -795,22 +803,23 @@ namespace Com.Model
                 InsertFirst(segment);
             }
         }
-        private bool AtDestination()
+        private bool TargetSetValid() // Here we determined of the set satisfy our criteria on tables
         {
             List<ComTable> destinations = !isInverse ? greaterSets : lesserSets;
             ComTable dest = !isInverse ? GreaterSet : LesserSet;
 
-            if (destinations == null) // 
+            if (destinations == null) // Destinations are primitive and only primitive sets
             {
-                // Destinations are primitive sets
                 if (!isInverse) return GreaterSet.IsPrimitive;
                 else return LesserSet.IsLeast; // Just least set because primitive sets do not exist for least sets
             }
-            else if (destinations.Count == 0)
+            else if (destinations.Count == 0) // Destinations are terminal sets (greatest or least). Check possibility to continue.
             {
-                // Destinations are terminal sets (greatest or least). Check possibility to continue.
+                return true;
+/*
                 if (!isInverse) return GreaterSet.IsGreatest;
                 else return LesserSet.IsLeast;
+*/
             }
             else // Concrete destinations are specified
             {
@@ -911,7 +920,7 @@ namespace Com.Model
     */
 
     // TODO: We probably should introduce a bit mask instead of the enumerator
-    // Bits: isIdentity, isPoset, isInclusion, isInterschema, isInverse, 
+    // Bits: isIdentity, isPoset (exclude isSuper), isInclusion (exclude isPoset), isInterschema (greater != lesser), isInverse, Definition.isGenerating
     public enum DimensionType
     {
         INCLUSION, // Both super and sub
@@ -923,10 +932,10 @@ namespace Com.Model
         LESSER, // 
 
         IDENTITY_ENTITY, // Both identity and entity
-        IDENTITY, //
-        ENTITY, // 
+        IDENTITY, // IsKey
+        ENTITY, // !IsKey
 
-        EXPORT,
+        GENERATING,
     }
 
 }
