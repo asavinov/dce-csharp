@@ -630,6 +630,11 @@ namespace Com.Model
         protected DimensionType dimType; // The path will be composed of only these types of segments
         protected bool allowIntermediateSets = false; // Not implemented. lesser and greater sets only as source and destination - not in the middle of the path (default). Otherwise, they can appear in the middle of the path (say, one greater set and then the final greater set).
 
+        // Here we store the current child number for the next element
+        protected int[] childNumber = new int[1024];
+        // Whether the current set is valid or not. If it is valid then all parents/previous are invalid in the case of coverage condition.
+        protected bool[] isValidSet = new bool[1024];
+
         public DimComplexEnumerator(List<ComTable> _lesserSets, List<ComTable> _greaterSets, bool _isInverse, DimensionType _dimType)
             : base(null)
         {
@@ -649,6 +654,9 @@ namespace Com.Model
                 LesserSet = greaterSets[0];
                 GreaterSet = greaterSets[0];
             }
+
+            childNumber = Enumerable.Repeat(-1, 1024).ToArray();
+            isValidSet = Enumerable.Repeat(false, 1024).ToArray();
         }
 
         public DimComplexEnumerator(ComTable set)
@@ -658,11 +666,18 @@ namespace Com.Model
             greaterSets = new List<ComTable>(new ComTable[] { set.Top.Root }); // All destination sets from this schema
 
             isInverse = false;
+
+            childNumber = Enumerable.Repeat(-1, 1024).ToArray();
+            isValidSet = Enumerable.Repeat(false, 1024).ToArray();
         }
     }
 
     /// <summary>
     /// Enumerate all different paths between specified sets. 
+    /// Notes:
+    /// - Consider only segments that satisfy constraints imposed on segment types (entity, identity etc.) Only these segments are used to traverse the poset.
+    /// - Consider only sets that satisfy the constraints imposed on possible lesser and greater sets (only primitive, all, selected sets etc.) Only paths starting/ending with these sets can be returned (and the paths involve only segments of the specified type).
+    /// - Currently we return only maximum length paths. 
     /// </summary>
     public class PathEnumerator : DimComplexEnumerator
     {
@@ -685,48 +700,81 @@ namespace Com.Model
         {
             // TODO: We need also loop over all source sets
 
-            // Move several steps forward until next terminal continuation is found
-            // true - new terminal continuation found, false - cannot continue the current path
-            bool terminalFound = MoveForward();
-            if (terminalFound && TargetSetValid()) // This new path satisfies also our set constraints
-            {
-                return true;
-            }
-
+            // It is a traverse algorithm. We move either one step forward or one step back on each iteration of the loop.
+            // Various conditions are checked after we arrive at a new child (forward) or before we leave a node and go to the parent. 
+            // The algorithm returns if either a good node is found (true) or no nodes exist anymore (false).
             while (true)
             {
-                // Try to move backward by removing segments until some parent with an unvisited continuation
-                // return true - found a next continuation from some parent (always terminal), false - not found a parent with possibility to continue (end, go to next source set)
-                bool continuationFound = MoveBackward(); // Here real recursive loop of the whole algorithm
-                if (!continuationFound) return false; // No valid paths anymore
-                if (TargetSetValid()) return true;
-            }
-        }
-        private bool MoveForward() // return true - valid destination set found, false - no valid destination found (and cannot move forward anymore)
-        {
-            // always attach first possible segment (next segments will be attached while moving back)
-            // true - new terminal continuation found, false - cannot continue the current path
-            List<ComColumn> nextSegs = GetNextValidSegments();
-            if (nextSegs.Count == 0) return false;
-            while (nextSegs.Count > 0)
-            {
-                AddLastSegment(nextSegs[0]);
-                nextSegs = GetNextValidSegments();
-            }
+                var nextSegs = GetNextValidSegments();
+                int childNo = childNumber[Size];
 
-            return true;
+                if (childNo + 1 < nextSegs.Count) // Can move to the next child
+                {
+                    childNumber[Size] = childNo + 1;
+                    AddLastSegment(nextSegs[childNo + 1]);
+
+                    // Process a new node
+                    isValidSet[Size] = TargetSetValid();
+                    // Coverage. We are interested only in longest paths. If we need to return all (even shorter) paths then remove this block.
+                    if (isValidSet[Size])
+                    {
+                        for (int i = 0; i < Size; i++) isValidSet[i] = false;
+                    }
+
+                    // Process the child node just added on the next iteration.
+                }
+                else // No children anymore - return to the previous parent
+                {
+                    // Before leaving this node, we are able to decide whether it is what we have been looking for because all its children have been processed
+                    // If it is what we need then return true
+                    if (isValidSet[Size])
+                    {
+                        isValidSet[Size] = false; // During next call, we have to skip this block
+                        return true;
+                    }
+
+                    if (Size == 0) // Detect finish condition
+                    {
+                        return false; // All nodes have been visited - no nodes anymore
+                    }
+
+                    // Really leave this node
+                    childNumber[Size] = -1;
+                    ComColumn column = RemoveLastSegment();
+
+                    // Process the parent node we have just returned to on the next iteration.
+                }
+
+            }
+                
         }
+
+        [System.Obsolete("Not needed.", true)]
+        private bool MoveForward() // return true - valid destination set found, false - no valid destination found and cannot continue (terminal)
+        {
+            // Move using only valid segments. 
+            List<ComColumn> nextSegs;
+            bool moved = false;
+            while (true)
+            {
+                nextSegs = GetNextValidSegments();
+                if (nextSegs.Count == 0) return moved;
+
+                moved = true;
+                AddLastSegment(nextSegs[0]); // always attach first possible segment (next segments will be attached while moving back)
+            }
+        }
+        [System.Obsolete("Not needed.", true)]
         private bool MoveBackward() // return true - found a continuation from some parent, false - not found a set with possibility to continue(end, go to next source set)
         {
             ComColumn segment = null;
-            do // A loop for removing last segment and moving backward
+            while(true) // A loop for removing last segment and moving backward
             {
-                if (Size == 0) // Nothing to remove. End.
-                {
-                    return false;
-                }
-
                 segment = RemoveLastSegment(); // Remove last segment
+                if (segment == null)
+                {
+                    return false; // All segments removed but no continuation found in any of the previous sets including the source one
+                }
 
                 List<ComColumn> nextSegs = GetNextValidSegments();
 
@@ -736,17 +784,12 @@ namespace Com.Model
                     segment = nextSegs[segIndex + 1];
                     AddLastSegment(segment); // Add next last segment
 
-                    bool terminalFound = MoveForward();
-
                     return true;
                 }
-                else // Continuation not found. Continue removing.
+                else // Continuation from the parent not found. Continue removing to the next parent. 
                 {
-                    segment = null;
                 }
-            } while (segment == null);
-
-            return false; // All segments removed but no continuation found in any of the previous sets including the source one
+            }
         }
 
         private List<ComColumn> GetNextValidSegments() // Here we find continuation segments that satisfy our criteria on columns

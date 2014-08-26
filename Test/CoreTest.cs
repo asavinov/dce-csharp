@@ -177,6 +177,10 @@ namespace Test
             Assert.AreEqual(t2.GetGreaterDim("Super").IsSuper, true);
             Assert.AreEqual(t2.SuperDim.LesserSet, t2);
             Assert.AreEqual(t2.SuperDim.GreaterSet, schema.Root);
+
+            // Test path enumerator
+            var pathEnum = new PathEnumerator(t2, t1, DimensionType.IDENTITY_ENTITY);
+            Assert.AreEqual(1, pathEnum.Count());
         }
 
         [TestMethod]

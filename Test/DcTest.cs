@@ -16,7 +16,7 @@ namespace Test
     {
 
         [TestMethod]
-        public void SchemaTest()
+        public void ImportTest()
         {
             string schemaJson;
             string tableJson;
