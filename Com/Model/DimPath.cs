@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -355,6 +356,75 @@ namespace Com.Model
             return null;
         }
 
+        #region Overriding System.Object and interfaces
+
+        public override string ToString()
+        {
+            string path = "";
+            for (int i = 0; i < Size; i++)
+            {
+                path += "[" + Path[i].Name + "].";
+            }
+            if (Size > 0) path = path.Substring(0, path.Length-1);
+
+            return String.Format("{0}: {1} -> {2}, {3}", Name, LesserSet.Name, GreaterSet.Name, path);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (obj == null) return false;
+            if (Object.ReferenceEquals(this, obj)) return true;
+            //if (this.GetType() != obj.GetType()) return false;
+
+            if (obj is DimPath)
+            {
+                List<ComColumn> objSegs = ((DimPath)obj).Path;
+
+                if (Size != objSegs.Count) return false;
+                for (int i = 0; i < Size; i++) if (Path[i] != objSegs[i]) return false;
+                return true;
+            }
+            else if (obj is ComColumn)
+            {
+                ComColumn objSeg = (ComColumn)obj;
+
+                if (Size != 1) return false;
+                if (FirstSegment != objSeg) return false;
+                return true;
+            }
+            else if (obj is IList) // List of objects that implement interface
+            {
+                var objSegs = (IList)obj;
+
+                if (Size != objSegs.Count) return false;
+                for (int i = 0; i < Size; i++) if (Path[i] != objSegs[i]) return false;
+                return true;
+            }
+            else if(obj.GetType().IsGenericType && obj.GetType().GetGenericTypeDefinition() == typeof(IList<>)) 
+            {
+                List<object> objSegs = (obj as IEnumerable<object>).Cast<object>().ToList();
+                //List<object> objSegs = (obj as IEnumerable).OfType<object>().ToList();
+
+                if (Size != objSegs.Count) return false;
+                for (int i = 0; i < Size; i++) if (Path[i] != objSegs[i]) return false;
+                return true;
+
+                // Alternatively, we can get the generic type and check if it is a column object
+                //Type lt = obj.GetType().GetGenericArguments()[0];
+            }
+
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return Id.GetHashCode();
+        }
+
+        #endregion
+
+        #region Constructors and initializers.
+
         public DimPath()
         {
             Path = new List<ComColumn>();
@@ -405,6 +475,9 @@ namespace Com.Model
         {
             Path = new List<ComColumn>();
         }
+
+        #endregion
+
     }
 
     /// <summary>
