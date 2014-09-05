@@ -817,6 +817,29 @@ namespace Com.Model
             return expr;
         }
 
+        //
+        // Serialization
+        //
+
+        public virtual string ToCoel()
+        {
+            string coel = "";
+
+            return coel;
+        }
+
+        public virtual string ToJson()
+        {
+            string json = "coel: " + ToCoel();
+
+            return json;
+        }
+
+        public override string ToString()
+        {
+            return Name;
+        }
+
         public ExprNode()
         {
             Result = new Variable("return", "Void");

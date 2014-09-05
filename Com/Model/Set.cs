@@ -836,6 +836,75 @@ namespace Com.Model
             }
         }
 
+        //
+        // Serialization
+        //
+
+        public virtual string ToJson()
+        {
+            string json = "";
+
+            //
+            // This (set) object
+            //
+
+            // Name
+            json += "name: " + Name;
+
+            //
+            // Data object
+            //
+            string jsonData = "";
+
+            jsonData = "data: { " + jsonData + "}";
+
+            //
+            // Definition object
+            //
+            string jsonDefinition = "";
+
+            jsonDefinition += "definition_type: " + DefinitionType + "\n";
+            jsonDefinition += "where_expression: " + WhereExpression.ToJson() + "\n";
+            jsonDefinition += "orderby_expression: " + OrderbyExpression.ToJson() + "\n";
+
+            jsonDefinition = "definition: { " + jsonDefinition + "}";
+
+            json = json + jsonDefinition + jsonData; // We return only content without header because extensions should be able to attach their own additional fields
+
+            return json;
+        }
+
+        public virtual ComTable FromJson(string json) // Initialize this object by using parameters from the json string
+        {
+            // Extended properties also have to be called
+
+            // Note that here we need to be able to set all properties even private and which can correlated with other properties. So we might need to change API.
+
+            Name = "Name";
+
+            return null;
+        }
+
+        public static ComTable CreateFomJson(string json) // Determine the class (subclass of Set) that represents this json object this json object and instantiate it
+        {
+            // Problem: object class is determined by analyzing the json and then it is instantiated followed by initialization
+
+            // So we need a method like GetClass(string json) which returns a class (say, by using a lookup table for getting a C# class for various well-known field values).
+            // It is done once and does not depend on this class or any other class actually - so it is a kind of global utility method (can either one method for all classes or one method for one class branch in the hierarchy)
+            // By using this method we can create a new object. Note that for that purpose we need an empty constructor (which is not always available).
+            // Alternative: method GetClass takes json which can be: 1. assignment like field:value (so we can use other field name or value for getting the class), 2. only the value with fields so we use only the field, say, 'klass' field
+            // Issue: in some cases, it is important to know the context where the field or object are used because both the assigned field name and the klass field value can contain the same type for various objects/contexts. Say, definition is used in both tables and columns, so we have to know what kind of definition we have.
+            // One solution is to pass a context object and its internal object the type of which we want to get.
+
+            Type type = typeof(Set); // Find the class of the json element
+
+            Set instance = (Set)Activator.CreateInstance(type);
+            //Set instance = (Set)Activator.CreateInstance("MyNamespace.ObjectType, MyAssembly");
+            //SetRel instance = (SetRel)Activator.CreateInstance(klass).Unwrap();
+
+            return instance;
+        }
+
         public override string ToString()
         {
             return String.Format("{0} gDims: {1}, IdArity: {2}", Name, GreaterDims.Count, KeyColumns.Count);
