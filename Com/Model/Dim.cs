@@ -80,6 +80,14 @@ namespace Com.Model
         /// </summary>
         public virtual void Add()
         {
+            if (IsSuper) // Only one super-dim per table can exist
+            {
+                if (LesserSet != null && LesserSet.SuperDim != null)
+                {
+                    LesserSet.SuperDim.Remove(); // Replace the existing column by the new one
+                }
+            }
+
             if (GreaterSet != null) GreaterSet.LesserDims.Add(this);
             if (LesserSet != null) LesserSet.GreaterDims.Add(this);
 

@@ -127,7 +127,11 @@ namespace Com.Model
             return GreaterDims.FirstOrDefault(d => StringSimilarity.SameColumnName(d.Name, name));
         }
 
-        public ComTable GetTable(string name) { return LesserDims.FirstOrDefault(d => StringSimilarity.SameColumnName(d.LesserSet.Name, name)).LesserSet; }
+        public ComTable GetTable(string name) 
+        { 
+            ComColumn col = LesserDims.FirstOrDefault(d => StringSimilarity.SameColumnName(d.LesserSet.Name, name));
+            return col == null ? null : col.LesserSet; 
+        }
 
         public ComTable FindTable(string name)
         {

@@ -4,6 +4,9 @@ using System.Linq;
 using System.Data;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+
 using Antlr4.Runtime;
 //using Antlr4.Runtime.Atn;
 //using Antlr4.Runtime.Dfa;
@@ -48,7 +51,7 @@ namespace Test
             return ast;
         }
 
-        protected ComSchema PrepareSampleSchema()
+        protected ComSchema CreateSampleSchema()
         {
             // Prepare schema
             ComSchema schema = new SetTop("My Schema");
@@ -82,7 +85,7 @@ namespace Test
             return schema;
         }
 
-        protected void PrepareSampleData(ComSchema schema)
+        protected void CreateSampleData(ComSchema schema)
         {
             //
             // Fill sample data in "Table 1"
@@ -159,7 +162,7 @@ namespace Test
             //
             // Prepare schema
             //
-            ComSchema schema = PrepareSampleSchema();
+            ComSchema schema = CreateSampleSchema();
 
             ComTable t1 = schema.FindTable("Table 1");
             ComTable t2 = schema.FindTable("Table 2");
@@ -189,7 +192,7 @@ namespace Test
             //
             // Prepare schema
             //
-            ComSchema schema = PrepareSampleSchema();
+            ComSchema schema = CreateSampleSchema();
 
             ComTable t1 = schema.FindTable("Table 1");
 
@@ -241,8 +244,8 @@ namespace Test
             //
             // Prepare schema
             //
-            ComSchema schema = PrepareSampleSchema();
-            PrepareSampleData(schema);
+            ComSchema schema = CreateSampleSchema();
+            CreateSampleData(schema);
 
             ComTable t1 = schema.FindTable("Table 1");
 
@@ -271,8 +274,8 @@ namespace Test
             //
             // Prepare schema and fill data
             //
-            ComSchema schema = PrepareSampleSchema();
-            PrepareSampleData(schema);
+            ComSchema schema = CreateSampleSchema();
+            CreateSampleData(schema);
 
             ComTable t1 = schema.FindTable("Table 1");
 
@@ -305,8 +308,8 @@ namespace Test
             //
             // Prepare schema and fill data
             //
-            ComSchema schema = PrepareSampleSchema();
-            PrepareSampleData(schema);
+            ComSchema schema = CreateSampleSchema();
+            CreateSampleData(schema);
 
             ComTable t1 = schema.FindTable("Table 1");
 
@@ -364,8 +367,8 @@ namespace Test
         [TestMethod]
         public void TableSubsetTest() // Define a filter to get a subset of record from one table
         {
-            ComSchema schema = PrepareSampleSchema();
-            PrepareSampleData(schema);
+            ComSchema schema = CreateSampleSchema();
+            CreateSampleData(schema);
 
             ComTable t2 = schema.FindTable("Table 2");
 
@@ -387,8 +390,8 @@ namespace Test
         [TestMethod]
         public void TableProductTest() // Define a new table and populate it
         {
-            ComSchema schema = PrepareSampleSchema();
-            PrepareSampleData(schema);
+            ComSchema schema = CreateSampleSchema();
+            CreateSampleData(schema);
 
             ComTable t1 = schema.FindTable("Table 1");
             ComTable t2 = schema.FindTable("Table 2");
@@ -428,8 +431,8 @@ namespace Test
         [TestMethod]
         public void ProjectionTest() // Defining new tables via function projection and populate them
         {
-            ComSchema schema = PrepareSampleSchema();
-            PrepareSampleData(schema);
+            ComSchema schema = CreateSampleSchema();
+            CreateSampleData(schema);
 
             ComTable t2 = schema.FindTable("Table 2");
 
@@ -610,57 +613,77 @@ namespace Test
         [TestMethod]
         public void JsonTest() // Serialize/deserialize schema elements
         {
-            // Deserialize: http://weblog.west-wind.com/posts/2012/Aug/30/Using-JSONNET-for-dynamic-JSON-parsing
-            string tableJson = @"{ aaa: { bbb: 111, name: 'My Name', ddd: [ {a: 1}, {a: 2} ] } }";
+            ComSchema sampleSchema = CreateSampleSchema();
 
-            //dynamic obj = Newtonsoft.Json.JsonConvert.DeserializeObject(tableJson);
-            dynamic obj = Newtonsoft.Json.Linq.JValue.Parse(tableJson); // JValue, JArray, JObject
-            string name = obj.aaa.name; // The value is of JToken type
-            //string firstDrive = (string)o["Drives"][0]; // indexers can be used for both fields and arrays
+            Workspace ws = new Workspace();
+            ws.Schemas.Add(sampleSchema);
 
-            Newtonsoft.Json.Linq.JArray ar = obj.aaa.ddd;
-            Func<Newtonsoft.Json.Linq.JToken, string> f = x => ((Newtonsoft.Json.Linq.JToken)x).SelectToken("a").ToString();
-            IList<string> list = ar.Select(f).ToList();
+            JObject workspace = ws.ToJson();
 
+            // Serialize into json string
+            string jsonWs = JsonConvert.SerializeObject(workspace, Newtonsoft.Json.Formatting.Indented, new Newtonsoft.Json.JsonSerializerSettings { });
 
+            // De-serialize from json string: http://weblog.west-wind.com/posts/2012/Aug/30/Using-JSONNET-for-dynamic-JSON-parsing
+            dynamic objWs = JsonConvert.DeserializeObject(jsonWs);
+            //dynamic obj = JObject/JValue/JArray.Parse(json);
 
-            /*
-            var o = Newtonsoft.Json.Linq.JObject.Parse(tableJson);
-            foreach (var x in o)
-            {
-                string n = x.Key;
-                Newtonsoft.Json.Linq.JToken value = x.Value;//jarray
-                var jt = Newtonsoft.Json.Linq.JToken.Parse(value.ToString());
-                //List<Video> vv = jt.ToObject<List<Video>>();
-            }
-            */
-            
-            
-            //IList<string> list = (obj.aaa).Where(t => t.bbb == "bbb").ToList();
-            //IList<string> propertyNames = TheJObject.Properties().Select(p => p.Name).ToList();
+            //
+            // Instantiate and initialize
+            //
+            ws = new Workspace();
+            ws.FromJson(objWs);
 
-            //Assert.AreEqual(name, "My Name");
-            //ComTable table = Set.CreateFomJson(tableJson); // Instantiate
-            //((Set)table).FromJson(tableJson); // Initialize
+            // BUG: Super is created two times (or maybe it is serialized already two times?)
+            Assert.AreEqual(5, ws.Schemas[0].FindTable("Table 1").GreaterDims.Count);
+            Assert.AreEqual(5, ws.Schemas[0].FindTable("Table 2").GreaterDims.Count);
 
+            Assert.AreEqual("Table 1", ws.Schemas[0].FindTable("Table 2").GetGreaterDim("Table 1").GreaterSet.Name);
 
+            // Another sample schema with several schemas and inter-schema columns
+            string jsonWs2 = @"{ 
+'mashup': 'My Schema', 
+'schemas': [ 
 
-            // Strategy:
-            // 1. Desirealize the whole workspace into dynamic object. 
-            // We need to know that it is a whole workspace object because other methods assume this. If it is a different object (say, a column) then other methods have to be used for creation like CreateColumn(json)
-            // 2. Reconstruct a complete workspace from the dynamic object by extracting objects from it. 
-            // We extract a workspace object (parameters etc.) First, we need to extract existing schema objects. Second, we need to extract tables. Third, we need to extract columns. Also we might extract other objects like views (visualizations) etc.It is important that next objects might depend on the existence of the previous objects (or we need to introduce new name-references). For example, import column assumes that two tables in different schemas already exist.
+{ 
+'name': 'My Schema', 'type': 'SetTop', 
+'tables': [
+  { 'name': 'My Table' }
+], 
+'columns': [
+  { 'name': 'My Column', 'lesser_set': 'My Table', 'greater_set': 'Double' }, 
+  { 'name': 'Import Column', 'lesser_schema': 'Rel Schema', 'lesser_set': 'Rel Table', 'greater_schema': 'My Schema', 'greater_set': 'My Table' }
+] 
+}, 
 
-            // We need an empty constructor for all classes, and possibility to change their properties individually. 
-            // Each serialized class should have an initiation procedure which sets its (empty) properties from dynamic object.
+{ 
+'name': 'Rel Schema', 'type': 'SetTopCsv', 
+'tables': [
+  { 'name': 'Rel Table', 'type': 'SetRel' }
+], 
+'columns': [
+  { 'name': 'My Column', 'lesser_set': 'Rel Table', 'greater_set': 'String' }, 
+] 
+} 
 
-            // Workspace contains a collection of schemas. 
-            // Schema contains a collection of tables, and a collection of columns. An inter-column is stored in both schemas or only once? How do we distinguish the mash-up schema from external schemas (role)?
-            // Table has a name and definition and flags. 
-            // Column has name, greater/lesser tables, definition and flags.
+] 
+}";
+
+            dynamic objWs2 = JsonConvert.DeserializeObject(jsonWs2);
+            Workspace ws2 = new Workspace();
+            ws2.FromJson(objWs2);
+
+            Assert.AreEqual(2, ws2.Schemas.Count);
+            Assert.AreEqual("My Schema", ws2.Mashup.Name);
+            Assert.AreEqual("My Table", ws2.Schemas[1].FindTable("Rel Table").GetGreaterDim("Import Column").GreaterSet.Name);
         }
     }
 
+
+
+    
+    
+    
+    
     // TODO:
     // - utility method to (quickly) check type of primitive set without comparing name (with case sensititivy). Maybe introduce enumerator. 
     // - also, find primitive type using enumerator instead of string comparison.
