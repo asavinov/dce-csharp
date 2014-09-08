@@ -55,7 +55,12 @@ namespace Com.Model
                         dynamic tableDef = new JObject();
 
                         tableDef.definition_type = comTable.Definition.DefinitionType;
-                        // TODO: Store formulas
+
+                        if (comTable.Definition.WhereExpression != null)
+                        {
+                            tableDef.where = comTable.Definition.WhereExpression.ToJson();
+                        }
+                        // TODO: Other constituents of table definition
 
                         table.definition = tableDef;
                     }
@@ -86,7 +91,12 @@ namespace Com.Model
                             columnDef.definition_type = comColumn.Definition.DefinitionType;
                             columnDef.generating = comColumn.Definition.IsGenerating ? "true" : "false";
 
-                            // TODO: Store formulas
+                            if (comColumn.Definition.Formula != null)
+                            {
+                                columnDef.formula = comColumn.Definition.Formula.ToJson();
+                            }
+
+                            // TODO: Other constituents of column definition (aggregation etc.)
 
                             column.definition = columnDef;
                         }
@@ -160,7 +170,11 @@ namespace Com.Model
                     {
                         comTable.Definition.DefinitionType = tableDef.definition_type;
 
-                        // TODO: Restore formulas
+                        if (tableDef.where != null)
+                        {
+                            ExprNode node = ExprNode.FromJson(tableDef.where);
+                            comTable.Definition.WhereExpression = node;
+                        }
                     }
                 }
             }
@@ -217,7 +231,13 @@ namespace Com.Model
                         comColumn.Definition.DefinitionType = columnDef.definition_type;
                         comColumn.Definition.IsGenerating = columnDef.generating != null ? StringSimilarity.JsonTrue(columnDef.generating) : false;
 
-                        // TODO: Restore formulas
+                        if (columnDef.formula != null)
+                        {
+                            ExprNode node = ExprNode.FromJson(columnDef.formula);
+                            comColumn.Definition.Formula = node;
+                        }
+
+                        // TODO: Other definition constituents
                     }
                 }
             }

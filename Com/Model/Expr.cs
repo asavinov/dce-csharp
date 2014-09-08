@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Data;
 using System.Diagnostics;
 
+using Newtonsoft.Json.Linq;
+
 using Offset = System.Int32;
-using System.Globalization;
 
 namespace Com.Model
 {
@@ -828,11 +830,123 @@ namespace Com.Model
             return coel;
         }
 
-        public virtual string ToJson()
+        public virtual JObject ToJson()
         {
-            string json = "coel: " + ToCoel();
+            dynamic expr = new JObject();
 
-            return json;
+            expr.operation = Operation;
+            expr.name = Name;
+            expr.action = Action;
+
+            // Result
+            if (Result  != null)
+            {
+                dynamic result = new JObject();
+
+                result.name = Result.Name;
+                result.type_name = Result.TypeName;
+
+                expr.result = result;
+            }
+
+            //
+            // Child expression nodes
+            //
+            expr.children = new JArray() as dynamic;
+            foreach (var node in Children)
+            {
+                dynamic child = ((ExprNode)node).ToJson();
+                expr.children.Add(child);
+            }
+            
+            return expr;
+        }
+
+        public static ExprNode FromJson(JObject expr)
+        {
+            if (expr == null) return null;
+
+            // Instantiate correct class
+            string exprType = ((dynamic)expr).type != null ? ((dynamic)expr).type : "ExprNode";
+            ExprNode node = null;
+            if (exprType == "ExprNode")
+            {
+                node = new ExprNode();
+            }
+            else if (exprType == "CsvExprNode")
+            {
+                node = new CsvExprNode();
+            }
+            else
+            {
+                throw new NotImplementedException("Unknown expression node type");
+            }
+
+            // Set its parameters
+            node.Operation = ((dynamic)expr).operation;
+            node.Name = ((dynamic)expr).name;
+            node.Action = ((dynamic)expr).action;
+
+            // Result
+            dynamic resultDef = ((dynamic)expr).result;
+            if (resultDef != null)
+            {
+                string resultName = resultDef.name;
+                string resultType = resultDef.type_name;
+
+                node.Result = new Variable(resultName, resultType);
+            }
+
+            //
+            // Children
+            //
+            foreach (dynamic child in ((dynamic)expr).children)
+            {
+                ExprNode childNode = FromJson(child); // Recursion
+                if (childNode != null) node.AddChild(childNode);
+            }
+
+            return node;
+        }
+
+        public virtual void FromJson_OLD(JObject expr)
+        {
+            Operation = ((dynamic)expr).operation;
+            Name = ((dynamic)expr).name;
+            Action = ((dynamic)expr).action;
+
+            // Result
+            dynamic resultDef = ((dynamic)expr).result;
+            if (resultDef != null)
+            {
+                string resultName = resultDef.name;
+                string resultType = resultDef.type_name;
+
+                Result = new Variable(resultName, resultType);
+            }
+
+            foreach (dynamic child in ((dynamic)expr).children)
+            {
+                string nodeType = child.type != null ? child.type : "ExprNode";
+
+                ExprNode node = null;
+                if (nodeType == "ExprNode")
+                {
+                    node = new ExprNode();
+                }
+                else if (nodeType == "CsvExprNode")
+                {
+                    node = new CsvExprNode();
+                }
+                else
+                {
+                    throw new NotImplementedException("Unknown expression node type");
+                }
+
+                node.FromJson_OLD(child); // Recursion
+
+                this.AddChild(node);
+            }
         }
 
         public override string ToString()

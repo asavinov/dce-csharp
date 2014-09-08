@@ -615,6 +615,17 @@ namespace Test
         {
             ComSchema sampleSchema = CreateSampleSchema();
 
+            // Add table definition 
+            ExprNode ast = BuildExpr("[Column 22] > 20.0 && this.Super.[Column 23] < 50");
+            ComTable t = sampleSchema.FindTable("Table 2");
+            t.Definition.DefinitionType = TableDefinitionType.PRODUCT;
+            t.Definition.WhereExpression = ast;
+
+            // Add column definition 
+            ComColumn c = t.GetGreaterDim("Column 22");
+            c.Definition.DefinitionType = ColumnDefinitionType.ARITHMETIC;
+            c.Definition.Formula = BuildExpr("([Column 11]+10.0) * this.[Column 13]");
+
             Workspace ws = new Workspace();
             ws.Schemas.Add(sampleSchema);
 
@@ -639,7 +650,17 @@ namespace Test
 
             Assert.AreEqual("Table 1", ws.Schemas[0].FindTable("Table 2").GetGreaterDim("Table 1").GreaterSet.Name);
 
-            // Another sample schema with several schemas and inter-schema columns
+            t = ws.Schemas[0].FindTable("Table 2");
+            Assert.AreEqual(TableDefinitionType.PRODUCT, t.Definition.DefinitionType);
+            Assert.AreEqual(2, t.Definition.WhereExpression.Children.Count);
+
+            c = t.GetGreaterDim("Column 22");
+            Assert.AreEqual(ColumnDefinitionType.ARITHMETIC, c.Definition.DefinitionType);
+            Assert.AreEqual(2, c.Definition.Formula.Children.Count);
+
+            //
+            // 2. Another sample schema with several schemas and inter-schema columns
+            //
             string jsonWs2 = @"{ 
 'mashup': 'My Schema', 
 'schemas': [ 
