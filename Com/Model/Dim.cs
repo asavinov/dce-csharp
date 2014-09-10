@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Diagnostics;
 
+using Newtonsoft.Json.Linq;
+
 using Offset = System.Int32;
 
 namespace Com.Model
@@ -115,6 +117,166 @@ namespace Com.Model
 
         protected ComColumnDefinition columnDefinition;
         public virtual ComColumnDefinition Definition { get { return columnDefinition; } }
+
+        #endregion
+
+        #region ComJson serialization
+
+        public virtual void ToJson(JObject json) // Write fields to the json object
+        {
+            // No super-object
+
+            dynamic column = json;
+
+            column.name = Name;
+            column.key = IsIdentity ? "true" : "false";
+            column.super = IsSuper ? "true" : "false";
+
+            column.lesser_table = Utils.CreateJsonRef(LesserSet);
+            column.greater_table = Utils.CreateJsonRef(GreaterSet);
+
+            // Column definition
+            if (Definition != null)
+            {
+                dynamic columnDef = new JObject();
+
+                columnDef.generating = Definition.IsGenerating ? "true" : "false";
+                columnDef.definition_type = Definition.DefinitionType;
+
+                if (Definition.Formula != null)
+                {
+                    columnDef.formula = Utils.CreateJsonFromObject(Definition.Formula);
+                    Definition.Formula.ToJson(columnDef.formula);
+                }
+
+                if (Definition.Mapping != null)
+                {
+                    columnDef.mapping = Utils.CreateJsonFromObject(Definition.Mapping);
+                    Definition.Mapping.ToJson(columnDef.mapping);
+                }
+
+                if (Definition.FactTable != null)
+                {
+                    columnDef.fact_table = Utils.CreateJsonRef(Definition.FactTable);
+                }
+
+                if (Definition.GroupPaths != null)
+                {
+                    columnDef.group_paths = new JArray() as dynamic;
+                    foreach (var path in Definition.GroupPaths)
+                    {
+                        dynamic group_path = Utils.CreateJsonFromObject(path);
+                        path.ToJson(group_path);
+                        columnDef.group_paths.Add(group_path);
+                    }
+                }
+
+                if (Definition.MeasurePaths != null)
+                {
+                    columnDef.measure_paths = new JArray() as dynamic;
+                    foreach (var path in Definition.MeasurePaths)
+                    {
+                        dynamic measure_path = Utils.CreateJsonFromObject(path);
+                        path.ToJson(measure_path);
+                        columnDef.measure_paths.Add(measure_path);
+                    }
+                }
+
+                column.definition = columnDef;
+            }
+
+        }
+        public virtual void FromJson(JObject json, Workspace ws) // Init this object fields by using json object
+        {
+            // No super-object
+
+            dynamic column = json;
+
+            Name = column.name;
+            IsIdentity = column.key != null ? StringSimilarity.JsonTrue(column.key) : false;
+            IsSuper = column.super != null ? StringSimilarity.JsonTrue(column.super) : false;
+
+            lesserSet = Utils.ResolveJsonRef(column.lesser_table, ws);
+            greaterSet = Utils.ResolveJsonRef(column.greater_table, ws);
+
+            // Column definition
+            dynamic columnDef = column.definition;
+            if (columnDef != null && Definition != null)
+            {
+                Definition.IsGenerating = columnDef.generating != null ? StringSimilarity.JsonTrue(columnDef.generating) : false;
+                Definition.DefinitionType = columnDef.definition_type;
+
+                if (columnDef.formula != null)
+                {
+                    ExprNode node = Utils.CreateObjectFromJson(columnDef.formula);
+                    if (node != null)
+                    {
+                        node.FromJson(columnDef.formula, ws);
+                        Definition.Formula = node;
+                    }
+                }
+
+                if (columnDef.mapping != null)
+                {
+                    Mapping map = Utils.CreateObjectFromJson(columnDef.mapping);
+                    if (map != null)
+                    {
+                        map.FromJson(columnDef.mapping, ws);
+                        Definition.Mapping = map;
+                    }
+                }
+
+                if (columnDef.fact_table != null)
+                {
+                    ComTable facts = Utils.CreateObjectFromJson(columnDef.fact_table);
+                    if (facts != null)
+                    {
+                        ((Set)facts).FromJson(columnDef.fact_table, ws);
+                        Definition.FactTable = facts;
+                    }
+                }
+
+                if (columnDef.fact_table != null)
+                {
+                    ComTable facts = Utils.CreateObjectFromJson(columnDef.fact_table);
+                    if (facts != null)
+                    {
+                        ((Set)facts).FromJson(columnDef.fact_table, ws);
+                        Definition.FactTable = facts;
+                    }
+                }
+
+                if (columnDef.group_paths != null)
+                {
+                    if (Definition.GroupPaths == null) Definition.GroupPaths = new List<DimPath>();
+                    foreach (dynamic group_path in columnDef.group_paths)
+                    {
+                        DimPath path = Utils.CreateObjectFromJson(group_path);
+                        if (path != null)
+                        {
+                            path.FromJson(group_path, ws);
+                            Definition.GroupPaths.Add(path);
+                        }
+                    }
+                }
+
+                if (columnDef.measure_paths != null)
+                {
+                    if (Definition.MeasurePaths == null) Definition.MeasurePaths = new List<DimPath>();
+                    foreach (dynamic measure_path in columnDef.measure_paths)
+                    {
+                        DimPath path = Utils.CreateObjectFromJson(measure_path);
+                        if (path != null)
+                        {
+                            path.FromJson(measure_path, ws);
+                            Definition.MeasurePaths.Add(path);
+                        }
+                    }
+                }
+
+            }
+        
+        }
 
         #endregion
 
@@ -284,6 +446,33 @@ namespace Com.Model
         /// </summary>
         public string RelationalFkName { get; set; } // The original FK name this dimension was created from
 
+        #region ComJson serialization
+
+        public override void ToJson(JObject json)
+        {
+            base.ToJson(json); // Dim
+
+            dynamic column = json;
+
+            column.RelationalFkName = RelationalFkName;
+        }
+
+        public override void FromJson(JObject json, Workspace ws)
+        {
+            base.FromJson(json, ws); // Dim
+
+            dynamic column = json;
+
+            RelationalFkName = column.RelationalFkName;
+        }
+
+        #endregion
+
+        public DimRel()
+            : base(null, null, null)
+        {
+        }
+
         public DimRel(string name)
             : this(name, null, null)
         {
@@ -311,6 +500,11 @@ namespace Com.Model
         public List<string> SampleValues { get; set; }
 
         public int ColumnIndex { get; set; }
+
+        public DimCsv()
+            : base(null, null, null)
+        {
+        }
 
         public DimCsv(string name)
             : this(name, null, null)

@@ -629,7 +629,8 @@ namespace Test
             Workspace ws = new Workspace();
             ws.Schemas.Add(sampleSchema);
 
-            JObject workspace = ws.ToJson();
+            JObject workspace = Utils.CreateJsonFromObject(ws);
+            ws.ToJson(workspace);
 
             // Serialize into json string
             string jsonWs = JsonConvert.SerializeObject(workspace, Newtonsoft.Json.Formatting.Indented, new Newtonsoft.Json.JsonSerializerSettings { });
@@ -641,10 +642,9 @@ namespace Test
             //
             // Instantiate and initialize
             //
-            ws = new Workspace();
-            ws.FromJson(objWs);
+            ws = Utils.CreateObjectFromJson(objWs);
+            ws.FromJson(objWs, ws);
 
-            // BUG: Super is created two times (or maybe it is serialized already two times?)
             Assert.AreEqual(5, ws.Schemas[0].FindTable("Table 1").GreaterDims.Count);
             Assert.AreEqual(5, ws.Schemas[0].FindTable("Table 2").GreaterDims.Count);
 
@@ -690,12 +690,15 @@ namespace Test
 }";
 
             dynamic objWs2 = JsonConvert.DeserializeObject(jsonWs2);
-            Workspace ws2 = new Workspace();
-            ws2.FromJson(objWs2);
+
+            Workspace ws2 = Utils.CreateObjectFromJson(objWs2);
+            ws2.FromJson(objWs2, ws2);
 
             Assert.AreEqual(2, ws2.Schemas.Count);
             Assert.AreEqual("My Schema", ws2.Mashup.Name);
             Assert.AreEqual("My Table", ws2.Schemas[1].FindTable("Rel Table").GetGreaterDim("Import Column").GreaterSet.Name);
+
+            // TODO: Rel schema has to store also all attributes (as paths) --> Implement ComJson
         }
     }
 

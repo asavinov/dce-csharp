@@ -6,6 +6,8 @@ using System.Text;
 using System.Diagnostics;
 using Offset = System.Int32;
 
+using Newtonsoft.Json.Linq;
+
 namespace Com.Model
 {
     /// <summary>
@@ -356,6 +358,45 @@ namespace Com.Model
             return null;
         }
 
+        #region ComJson Serialization
+
+        public override void ToJson(JObject json) // Write fields to the json object
+        {
+            base.ToJson(json); // Dim
+
+            dynamic path = json;
+
+            if (path.segments == null)
+            {
+                path.segments = new JArray();
+            }
+
+            for (int i = 0; i < Size; i++)
+            {
+                dynamic segRef = Utils.CreateJsonRef(Path[i]);
+                path.segments.Add(segRef);
+            }
+        }
+        public override void FromJson(JObject json, Workspace ws) // Init this object fields by using json object
+        {
+            base.FromJson(json, ws); // Dim
+
+            dynamic path = json;
+
+            if (path.segments != null)
+            {
+                JArray segments = path.segments;
+                for (int i = 0; i < segments.Count; i++)
+                {
+                    dynamic segRef = segments[i];
+                    ComColumn column = Utils.ResolveJsonRef(segRef, ws);
+                    InsertLast(column);
+                }
+            }
+        }
+
+        #endregion
+
         #region Overriding System.Object and interfaces
 
         public override string ToString()
@@ -613,6 +654,40 @@ namespace Com.Model
             {
                 Path[0].Name = Name; // FK-name is overwritten and lost - attribute name is used instead
             }
+        }
+
+        #region ComJson Serialization
+
+        public override void ToJson(JObject json) // Write fields to the json object
+        {
+            base.ToJson(json); // DimPath
+
+            dynamic path = json;
+
+            path.RelationalColumnName = RelationalColumnName;
+            path.RelationalPkName = RelationalPkName;
+            path.RelationalFkName = RelationalFkName;
+            path.RelationalTargetTableName = RelationalTargetTableName;
+            path.RelationalTargetColumnName = RelationalTargetColumnName;
+        }
+        public override void FromJson(JObject json, Workspace ws) // Init this object fields by using json object
+        {
+            base.FromJson(json, ws); // DimPath
+
+            dynamic path = json;
+
+            RelationalColumnName = path.RelationalColumnName;
+            RelationalPkName = path.RelationalPkName;
+            RelationalFkName = path.RelationalFkName;
+            RelationalTargetTableName = path.RelationalTargetTableName;
+            RelationalTargetColumnName = path.RelationalTargetColumnName;
+        }
+
+        #endregion
+
+        public DimAttribute()
+            : base()
+        {
         }
 
         public DimAttribute(string name)

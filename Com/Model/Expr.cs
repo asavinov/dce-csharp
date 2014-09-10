@@ -14,7 +14,7 @@ namespace Com.Model
 {
     // Represents a function definition in terms of other functions and provides its run-time interface.
     // Main unit of the representation is a triple: (Type) Name = Value. 
-    public class ExprNode : TreeNode<ExprNode>
+    public class ExprNode : TreeNode<ExprNode>, ComJson
     {
         public ExprNode GetChild(int child) { return (ExprNode)Children[child]; }
         public ExprNode GetChild(string name)
@@ -819,27 +819,19 @@ namespace Com.Model
             return expr;
         }
 
-        //
-        // Serialization
-        //
+        #region ComJson serialization
 
-        public virtual string ToCoel()
+        public virtual void ToJson(JObject json)
         {
-            string coel = "";
-
-            return coel;
-        }
-
-        public virtual JObject ToJson()
-        {
-            dynamic expr = new JObject();
+            // We do not use the base TreeNode serialization
+            dynamic expr = json;
 
             expr.operation = Operation;
             expr.name = Name;
             expr.action = Action;
 
             // Result
-            if (Result  != null)
+            if (Result  != null) // Manually serialize
             {
                 dynamic result = new JObject();
 
@@ -849,74 +841,29 @@ namespace Com.Model
                 expr.result = result;
             }
 
-            //
-            // Child expression nodes
-            //
+            // List of children
             expr.children = new JArray() as dynamic;
             foreach (var node in Children)
             {
-                dynamic child = ((ExprNode)node).ToJson();
+                dynamic child = Utils.CreateJsonFromObject(node);
+                ((ExprNode)node).ToJson(child);
                 expr.children.Add(child);
             }
-            
-            return expr;
         }
 
-        public static ExprNode FromJson(JObject expr)
+        public virtual void FromJson(JObject json, Workspace ws)
         {
-            if (expr == null) return null;
+            // We do not use the base TreeNode serialization
 
-            // Instantiate correct class
-            string exprType = ((dynamic)expr).type != null ? ((dynamic)expr).type : "ExprNode";
-            ExprNode node = null;
-            if (exprType == "ExprNode")
-            {
-                node = new ExprNode();
-            }
-            else if (exprType == "CsvExprNode")
-            {
-                node = new CsvExprNode();
-            }
-            else
-            {
-                throw new NotImplementedException("Unknown expression node type");
-            }
+            dynamic expr = json;
 
             // Set its parameters
-            node.Operation = ((dynamic)expr).operation;
-            node.Name = ((dynamic)expr).name;
-            node.Action = ((dynamic)expr).action;
+            Operation = expr.operation;
+            Name = expr.name;
+            Action = expr.action;
 
             // Result
-            dynamic resultDef = ((dynamic)expr).result;
-            if (resultDef != null)
-            {
-                string resultName = resultDef.name;
-                string resultType = resultDef.type_name;
-
-                node.Result = new Variable(resultName, resultType);
-            }
-
-            //
-            // Children
-            //
-            foreach (dynamic child in ((dynamic)expr).children)
-            {
-                ExprNode childNode = FromJson(child); // Recursion
-                if (childNode != null) node.AddChild(childNode);
-            }
-
-            return node;
-        }
-
-        public virtual void FromJson_OLD(JObject expr)
-        {
-            Operation = ((dynamic)expr).operation;
-            Name = ((dynamic)expr).name;
-            Action = ((dynamic)expr).action;
-
-            // Result
-            dynamic resultDef = ((dynamic)expr).result;
+            dynamic resultDef = expr.result;
             if (resultDef != null)
             {
                 string resultName = resultDef.name;
@@ -925,29 +872,19 @@ namespace Com.Model
                 Result = new Variable(resultName, resultType);
             }
 
-            foreach (dynamic child in ((dynamic)expr).children)
+            // List of children
+            foreach (dynamic child in expr.children)
             {
-                string nodeType = child.type != null ? child.type : "ExprNode";
-
-                ExprNode node = null;
-                if (nodeType == "ExprNode")
+                ExprNode childNode = Utils.CreateObjectFromJson(child);
+                if (childNode != null)
                 {
-                    node = new ExprNode();
+                    this.AddChild(childNode);
+                    childNode.FromJson(child, ws); // Recursion
                 }
-                else if (nodeType == "CsvExprNode")
-                {
-                    node = new CsvExprNode();
-                }
-                else
-                {
-                    throw new NotImplementedException("Unknown expression node type");
-                }
-
-                node.FromJson_OLD(child); // Recursion
-
-                this.AddChild(node);
             }
         }
+
+        #endregion
 
         public override string ToString()
         {

@@ -10,6 +10,8 @@ using System.Text;
 using System.Data;
 using System.Diagnostics;
 
+using Newtonsoft.Json.Linq;
+
 using Offset = System.Int32;
 
 namespace Com.Model
@@ -807,6 +809,61 @@ namespace Com.Model
         
         #endregion
 
+        #region ComJson serialization
+
+        public virtual void ToJson(JObject json)
+        {
+            // No super-object
+
+            dynamic table = json;
+
+            table.name = Name;
+
+            // Table definition
+            if (Definition != null)
+            {
+                dynamic tableDef = new JObject();
+
+                tableDef.definition_type = Definition.DefinitionType;
+
+                if (Definition.WhereExpression != null)
+                {
+                    tableDef.where = Utils.CreateJsonFromObject(Definition.WhereExpression);
+                    Definition.WhereExpression.ToJson(tableDef.where);
+                }
+
+                table.definition = tableDef;
+            }
+        }
+
+        public virtual void FromJson(JObject json, Workspace ws)
+        {
+            // No super-object
+
+            dynamic table = json;
+
+            Name = table.name;
+
+            // Table definition
+            dynamic tableDef = table.definition;
+            if (tableDef != null && Definition != null)
+            {
+                Definition.DefinitionType = tableDef.definition_type;
+
+                if (tableDef.where != null)
+                {
+                    ExprNode node = Utils.CreateObjectFromJson(tableDef.where);
+                    if (node != null)
+                    {
+                        node.FromJson(tableDef.where, ws);
+                        Definition.WhereExpression = node;
+                    }
+                }
+            }
+        }
+
+        #endregion
+
         #region System interfaces
 
         public event NotifyCollectionChangedEventHandler CollectionChanged; // Operations with dimensions (of any kind)
@@ -838,75 +895,6 @@ namespace Com.Model
             {
                 PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
             }
-        }
-
-        //
-        // Serialization
-        //
-
-        public virtual string ToJson()
-        {
-            string json = "";
-
-            //
-            // This (set) object
-            //
-
-            // Name
-            json += "name: " + Name;
-
-            //
-            // Data object
-            //
-            string jsonData = "";
-
-            jsonData = "data: { " + jsonData + "}";
-
-            //
-            // Definition object
-            //
-            string jsonDefinition = "";
-
-            jsonDefinition += "definition_type: " + DefinitionType + "\n";
-            jsonDefinition += "where_expression: " + WhereExpression.ToJson() + "\n";
-            jsonDefinition += "orderby_expression: " + OrderbyExpression.ToJson() + "\n";
-
-            jsonDefinition = "definition: { " + jsonDefinition + "}";
-
-            json = json + jsonDefinition + jsonData; // We return only content without header because extensions should be able to attach their own additional fields
-
-            return json;
-        }
-
-        public virtual ComTable FromJson(string json) // Initialize this object by using parameters from the json string
-        {
-            // Extended properties also have to be called
-
-            // Note that here we need to be able to set all properties even private and which can correlated with other properties. So we might need to change API.
-
-            Name = "Name";
-
-            return null;
-        }
-
-        public static ComTable CreateFomJson(string json) // Determine the class (subclass of Set) that represents this json object this json object and instantiate it
-        {
-            // Problem: object class is determined by analyzing the json and then it is instantiated followed by initialization
-
-            // So we need a method like GetClass(string json) which returns a class (say, by using a lookup table for getting a C# class for various well-known field values).
-            // It is done once and does not depend on this class or any other class actually - so it is a kind of global utility method (can either one method for all classes or one method for one class branch in the hierarchy)
-            // By using this method we can create a new object. Note that for that purpose we need an empty constructor (which is not always available).
-            // Alternative: method GetClass takes json which can be: 1. assignment like field:value (so we can use other field name or value for getting the class), 2. only the value with fields so we use only the field, say, 'klass' field
-            // Issue: in some cases, it is important to know the context where the field or object are used because both the assigned field name and the klass field value can contain the same type for various objects/contexts. Say, definition is used in both tables and columns, so we have to know what kind of definition we have.
-            // One solution is to pass a context object and its internal object the type of which we want to get.
-
-            Type type = typeof(Set); // Find the class of the json element
-
-            Set instance = (Set)Activator.CreateInstance(type);
-            //Set instance = (Set)Activator.CreateInstance("MyNamespace.ObjectType, MyAssembly");
-            //SetRel instance = (SetRel)Activator.CreateInstance(klass).Unwrap();
-
-            return instance;
         }
 
         public override string ToString()
@@ -947,6 +935,11 @@ namespace Com.Model
         }
 
         #region Constructors and initializers.
+
+        public Set()
+            : this("")
+        {
+        }
 
         public Set(string name)
         {
@@ -1092,7 +1085,36 @@ namespace Com.Model
 
         #endregion
 
+        #region ComJson serialization
+
+        public override void ToJson(JObject json)
+        {
+            base.ToJson(json); // Set
+
+            dynamic table = json;
+
+            table.RelationalTableName = RelationalTableName;
+            table.RelationalPkName = RelationalPkName;
+        }
+
+        public override void FromJson(JObject json, Workspace ws)
+        {
+            base.FromJson(json, ws); // Set
+
+            dynamic table = json;
+
+            RelationalTableName = table.RelationalTableName;
+            RelationalPkName = table.RelationalPkName;
+        }
+
+        #endregion
+
         #region Constructors and initializers.
+
+        public SetRel()
+            : this("")
+        {
+        }
 
         public SetRel(string name) 
             : base(name)
@@ -1126,8 +1148,44 @@ namespace Com.Model
         public CultureInfo CultureInfo { get; set; }
         public Encoding Encoding { get; set; }
 
+        #region ComJson serialization
+
+        public override void ToJson(JObject json)
+        {
+            base.ToJson(json); // Set
+
+            dynamic table = json;
+
+            table.file_path = FilePath;
+
+            table.HasHeaderRecord = HasHeaderRecord;
+            table.Delimiter = Delimiter;
+            table.CultureInfo = CultureInfo;
+            table.Encoding = Encoding;
+        }
+
+        public override void FromJson(JObject json, Workspace ws)
+        {
+            base.FromJson(json, ws); // Set
+
+            dynamic table = json;
+
+            FilePath = table.file_path;
+
+            HasHeaderRecord = table.HasHeaderRecord;
+            Delimiter = table.Delimiter;
+            CultureInfo = table.CultureInfo;
+            Encoding = table.Encoding;
+        }
+
+        #endregion
 
         #region Constructors and initializers.
+
+        public SetCsv()
+            : this("")
+        {
+        }
 
         public SetCsv(string name)
             : base(name)

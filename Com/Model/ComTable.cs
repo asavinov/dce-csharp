@@ -7,7 +7,7 @@ using Offset = System.Int32;
 
 namespace Com.Model
 {
-    public interface ComTable // One table object
+    public interface ComTable : ComJson // One table object
     {
         string Name { get; set; }
 

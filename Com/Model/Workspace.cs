@@ -1,4 +1,4 @@
-﻿using System;
+﻿using System; 
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,7 +10,7 @@ namespace Com.Model
     /// <summary>
     /// Workspace is a number of schemas as well as parameters for their management. 
     /// </summary>
-    public class Workspace
+    public class Workspace : ComJson
     {
         public List<ComSchema> Schemas { get; set; }
         public ComSchema GetSchema(string name)
@@ -20,233 +20,76 @@ namespace Com.Model
 
         public ComSchema Mashup { get; set; }
 
-        public JObject ToJson()
+        #region Json serialization
+
+        public virtual void ToJson(JObject json)
         {
-            dynamic workspace = new JObject();
+            dynamic workspace = json;
 
             if(Mashup != null) workspace.mashup =  Mashup.Name;
 
-            //
-            // Schemas
-            //
+            // List of schemas
             workspace.schemas = new JArray() as dynamic;
             foreach (ComSchema comSchema in Schemas)
             {
-                dynamic schema = new JObject();
-
-                schema.name = comSchema.Name;
-
-                //
-                // Tables
-                //
-                schema.tables = new JArray() as dynamic;
-                schema.columns = new JArray() as dynamic;
-                foreach (ComTable comTable in comSchema.GetAllSubsets())
-                {
-                    if (comTable.IsPrimitive) continue;
-                    dynamic table = new JObject();
-
-                    table.name = comTable.Name;
-                    table.type = comTable.GetType().Name;
-
-                    // Table definition
-                    if (comTable.Definition != null)
-                    {
-                        dynamic tableDef = new JObject();
-
-                        tableDef.definition_type = comTable.Definition.DefinitionType;
-
-                        if (comTable.Definition.WhereExpression != null)
-                        {
-                            tableDef.where = comTable.Definition.WhereExpression.ToJson();
-                        }
-                        // TODO: Other constituents of table definition
-
-                        table.definition = tableDef;
-                    }
-
-                    //
-                    // Columns
-                    //
-                    foreach (ComColumn comColumn in comTable.GreaterDims)
-                    {
-                        dynamic column = new JObject();
-
-                        column.name = comColumn.Name;
-                        column.type = comColumn.GetType().Name;
-                        column.key = comColumn.IsIdentity ? "true" : "false";
-                        column.super = comColumn.IsSuper ? "true" : "false";
-
-                        column.lesser_set = comColumn.LesserSet.Name;
-                        column.lesser_schema = comColumn.LesserSet.Top.Name;
-
-                        column.greater_set = comColumn.GreaterSet.Name;
-                        column.greater_schema = comColumn.GreaterSet.Top.Name;
-
-                        // Column definition
-                        if (comColumn.Definition != null)
-                        {
-                            dynamic columnDef = new JObject();
-
-                            columnDef.definition_type = comColumn.Definition.DefinitionType;
-                            columnDef.generating = comColumn.Definition.IsGenerating ? "true" : "false";
-
-                            if (comColumn.Definition.Formula != null)
-                            {
-                                columnDef.formula = comColumn.Definition.Formula.ToJson();
-                            }
-
-                            // TODO: Other constituents of column definition (aggregation etc.)
-
-                            column.definition = columnDef;
-                        }
-
-                        schema.columns.Add(column);
-                    }
-
-                    schema.tables.Add(table);
-                }
-
+                dynamic schema = Utils.CreateJsonFromObject(comSchema);
+                ((SetTop)comSchema).ToJson(schema);
                 workspace.schemas.Add(schema);
             }
-
-            return workspace;
         }
 
-        public void FromJson(JObject workspace)
+        public virtual void FromJson(JObject json, Workspace ws)
         {
-            //
-            // Schemas and their tables
-            //
+            dynamic workspace = json;
+
+            Mashup = this.GetSchema(workspace.mashup); // Resolve
+
+            // List of schemas
             foreach (dynamic schema in ((dynamic)workspace).schemas)
             {
-                string schemaName = schema.name;
-                string schemaType = schema.type != null ? schema.type : "SetTop";
-
-                ComSchema comSchema = null;
-                if (schemaType == "SetTop")
+                ComSchema comSchema = Utils.CreateObjectFromJson(schema);
+                if (comSchema != null)
                 {
-                    comSchema = new SetTop(schemaName);
-                }
-                else if (schemaType == "SetTopCsv")
-                {
-                    comSchema = new SetTopCsv(schemaName);
-                }
-                else
-                {
-                    throw new NotImplementedException("Unknown schema type");
-                }
-                this.Schemas.Add(comSchema);
-
-                //
-                // Tables
-                //
-                foreach (dynamic table in schema.tables)
-                {
-                    string tableName = table.name;
-                    string tableType = table.type != null ? table.type : "Set";
-                    // TODO: definition
-
-                    ComTable comTable = null;
-                    if (tableType == "Set")
-                    {
-                        comTable = new Set(tableName);
-                    }
-                    else if (tableType == "SetRel") 
-                    {
-                        comTable = new SetRel(tableName);
-                    }
-                    else
-                    {
-                        throw new NotImplementedException("Unknown table type");
-                    }
-                    comSchema.AddTable(comTable, null, null);
-
-                    //
-                    // Table definition
-                    //
-                    dynamic tableDef = table.definition;
-                    if (tableDef != null)
-                    {
-                        comTable.Definition.DefinitionType = tableDef.definition_type;
-
-                        if (tableDef.where != null)
-                        {
-                            ExprNode node = ExprNode.FromJson(tableDef.where);
-                            comTable.Definition.WhereExpression = node;
-                        }
-                    }
+                    ((SetTop)comSchema).FromJson(schema, this);
+                    this.Schemas.Add(comSchema);
                 }
             }
 
-            //
-            // Columns
-            //
+            // List of columns
+            // Load them manually, not as part of schema method
             foreach (dynamic schema in ((dynamic)workspace).schemas)
             {
-                string schemaName = schema.name;
-
+                // List of columns
                 foreach (dynamic column in schema.columns)
                 {
-                    string columnName = column.name;
-                    string columnType = column.type != null ? column.type : "Dim";
-                    bool isKey = column.key != null ? StringSimilarity.JsonTrue(column.key) : false;
-                    bool isSuper = column.super != null ? StringSimilarity.JsonTrue(column.super) : false;
-
-                    string lesserSetName = column.lesser_set;
-                    string lesserSchemaName = column.lesser_schema != null ? column.lesser_schema : schemaName;
-
-                    string greaterSetName = column.greater_set;
-                    string greaterSchemaName = column.greater_schema != null ? column.greater_schema : schemaName;
-
-                    // Resolve
-                    ComSchema lesserSchema = this.GetSchema(lesserSchemaName);
-                    ComTable lesserTable = lesserSchema.FindTable(lesserSetName);
-
-                    ComSchema greaterSchema = this.GetSchema(greaterSchemaName);
-                    ComTable greaterTable = greaterSchema.FindTable(greaterSetName);
-
-                    ComColumn comColumn; 
-                    if (columnType == "Dim")
+                    ComColumn comColumn = Utils.CreateObjectFromJson(column);
+                    if (comColumn != null)
                     {
-                        comColumn = new Dim(columnName, lesserTable, greaterTable, isKey, isSuper);
-                    }
-                    else if (columnType == "DimRel") 
-                    {
-                        comColumn = new DimRel(columnName, lesserTable, greaterTable, isKey, isSuper);
-                    }
-                    else
-                    {
-                        throw new NotImplementedException("Unknown column type");
-                    }
-
-                    comColumn.Add();
-
-                    //
-                    // Column definition
-                    //
-                    dynamic columnDef = column.definition;
-                    if (columnDef != null)
-                    {
-                        comColumn.Definition.DefinitionType = columnDef.definition_type;
-                        comColumn.Definition.IsGenerating = columnDef.generating != null ? StringSimilarity.JsonTrue(columnDef.generating) : false;
-
-                        if (columnDef.formula != null)
-                        {
-                            ExprNode node = ExprNode.FromJson(columnDef.formula);
-                            comColumn.Definition.Formula = node;
-                        }
-
-                        // TODO: Other definition constituents
+                        ((Dim)comColumn).FromJson(column, this);
+                        comColumn.Add();
                     }
                 }
             }
 
-            string mashupName = ((dynamic)workspace).mashup;
-            if (mashupName != null)
-            {
-                Mashup = this.GetSchema(mashupName);
-            }
+
+            // Issues:
+            // ToJson:
+            // - we want to automatically deal with extended objects
+            // - only extension adds its 'type' field, so a ToJson method has to know whether it is the last one
+            // - either an instance of JObject is produced with ToJson or it is provided as a parameter
+            // Solution:
+            // - JObject CreateJson() creates a JObject with a type field from this object (implemented once)
+            // - virtual InitJson(JObject) calls the super-method and then writes all extension (this) fields to the same json object passed as parameter
+
+            // FromJson:
+            // - either it is an initializer (so an instance created outside), or it is a factory (and it creates an instance)
+            // - to create an instance, we must know the type which is read from Json string
+            // - json string can contain extended and base fields which should be processed (initialized) by different methods in the hierarchy
+            // Solution: 
+            // - static CreateFromJson(json) is implemented once as a switch on all types either for all possible classes or for each branch in the hierarchy
+            // - virtual InitFromJson(string, Workspace) calls first its super-method and then initializes its own extended fields (with possible resolution) from the same json string
+            
+
 
             // Notes:
             // It is important that next objects might depend on the existence of the previous objects (or we need to introduce new name-references). For example, import column assumes that two tables in different schemas already exist.
@@ -284,10 +127,19 @@ namespace Com.Model
 
         }
 
+        #endregion
+
         public Workspace()
         {
             Schemas = new List<ComSchema>();
         }
+    }
+
+    // TODO: Add to all necessary classes. Remove casting To/FromJson methods
+    public interface ComJson
+    {
+        void ToJson(JObject json);
+        void FromJson(JObject json, Workspace ws);
     }
 
 }

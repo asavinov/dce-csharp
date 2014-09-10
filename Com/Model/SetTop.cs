@@ -6,6 +6,8 @@ using System.Data;
 using System.Diagnostics;
 using Offset = System.Int32;
 
+using Newtonsoft.Json.Linq;
+
 namespace Com.Model
 {
     /// <summary>
@@ -227,6 +229,62 @@ namespace Com.Model
 
         public DataSourceType DataSourceType { get; protected set; } // Where data is stored and processed (engine). Replace class name
 
+        #region ComJson serialization
+
+        public override void ToJson(JObject json)
+        {
+            base.ToJson(json); // Set
+
+            dynamic schema = json;
+
+            schema.DataSourceType = DataSourceType;
+
+            // List of all tables
+            schema.tables = new JArray() as dynamic;
+            foreach (ComTable comTable in this.GetAllSubsets())
+            {
+                if (comTable.IsPrimitive) continue;
+
+                dynamic table = Utils.CreateJsonFromObject(comTable);
+                ((Set)comTable).ToJson(table);
+                schema.tables.Add(table);
+
+                // List of columns
+                schema.columns = new JArray() as dynamic;
+                foreach (ComColumn comColumn in comTable.GreaterDims)
+                {
+                    dynamic column = Utils.CreateJsonFromObject(comColumn);
+                    ((Dim)comColumn).ToJson(column);
+                    schema.columns.Add(column);
+                }
+            }
+        }
+
+        public override void FromJson(JObject json, Workspace ws)
+        {
+            base.FromJson(json, ws); // Set
+
+            dynamic schema = json;
+
+            DataSourceType = schema.DataSourceType;
+
+            // List of tables
+            foreach (dynamic table in schema.tables)
+            {
+                ComTable comTable = Utils.CreateObjectFromJson(table);
+                if (comTable != null)
+                {
+                    ((Set)comTable).FromJson(table, ws);
+                    this.AddTable(comTable, null, null);
+                }
+            }
+
+            // List of columns
+            // Columns cannot be loaded because not all schemas might have been loaded (so it is a problem with import columns)
+        }
+
+        #endregion
+
         protected virtual void CreateDataTypes() // Create all primitive data types from some specification like Enum, List or XML
         {
             Set set;
@@ -259,6 +317,11 @@ namespace Com.Model
             set = new Set("DateTime");
             dim = new Dim("Top", set, this, true, true);
             dim.Add();
+        }
+
+        public SetTop()
+            : this("")
+        {
         }
 
         public SetTop(string name)

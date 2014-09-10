@@ -5,12 +5,14 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
+using Newtonsoft.Json.Linq;
+
 namespace Com.Model
 {
     /// <summary>
     /// The class describes one mapping between two concrete sets as a collection of path pairs. 
     /// </summary>
-    public class Mapping
+    public class Mapping : ComJson
     {
         public List<PathMatch> Matches { get; private set; }
 
@@ -429,6 +431,54 @@ namespace Com.Model
             tree.AddToSchema(schema);
         }
 
+        #region ComJson serialization
+
+        public virtual void ToJson(JObject json)
+        {
+            // No super-object
+
+            dynamic map = json;
+
+            map.similarity = Similarity;
+
+            map.source_table = Utils.CreateJsonRef(_sourceSet);
+            map.target_table = Utils.CreateJsonRef(_targetSet);
+
+            // List of all matches
+            map.matches = new JArray() as dynamic;
+            foreach (PathMatch comMatch in this.Matches)
+            {
+                dynamic match = Utils.CreateJsonFromObject(comMatch);
+                comMatch.ToJson(match);
+                map.matches.Add(match);
+            }
+        }
+
+        public virtual void FromJson(JObject json, Workspace ws)
+        {
+            // No super-object
+
+            dynamic map = json;
+
+            Similarity = map.similarity;
+
+            _sourceSet = Utils.ResolveJsonRef(map.source_table, ws);
+            _targetSet = Utils.ResolveJsonRef(map.target_table, ws);
+
+            // List of matches
+            foreach (dynamic match in map.matches)
+            {
+                PathMatch comMatch = Utils.CreateObjectFromJson(match);
+                if (comMatch != null)
+                {
+                    comMatch.FromJson(match, ws);
+                    this.Matches.Add(comMatch);
+                }
+            }
+        }
+
+        #endregion
+
         public override string ToString()
         {
             return String.Format("{0} -> {1}. Similarity={2}. Matches={3}", SourceSet.Name, TargetSet.Name, Similarity, Matches.Count);
@@ -450,7 +500,7 @@ namespace Com.Model
     /// <summary>
     /// A pair of matching paths.
     /// </summary>
-    public class PathMatch
+    public class PathMatch : ComJson
     {
         public DimPath SourcePath { get; private set; }
         public DimPath TargetPath { get; private set; }
@@ -511,6 +561,40 @@ namespace Com.Model
 
             return true;
         }
+
+        #region ComJson serialization
+
+        public virtual void ToJson(JObject json)
+        {
+            // No super-object
+
+            dynamic map = json;
+
+            map.similarity = Similarity;
+
+            map.source_path = Utils.CreateJsonFromObject(SourcePath);
+            SourcePath.ToJson(map.source_path);
+
+            map.target_path = Utils.CreateJsonFromObject(TargetPath);
+            SourcePath.ToJson(map.target_path);
+        }
+
+        public virtual void FromJson(JObject json, Workspace ws)
+        {
+            // No super-object
+
+            dynamic map = json;
+
+            Similarity = map.similarity;
+
+            SourcePath = Utils.CreateObjectFromJson(map.source_path);
+            SourcePath.FromJson(map.source_path, ws);
+
+            TargetPath = Utils.CreateObjectFromJson(map.target_path);
+            TargetPath.FromJson(map.target_path, ws);
+        }
+
+        #endregion
 
         public PathMatch(PathMatch m)
         {
