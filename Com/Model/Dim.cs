@@ -204,7 +204,7 @@ namespace Com.Model
             if (columnDef != null && Definition != null)
             {
                 Definition.IsGenerating = columnDef.generating != null ? StringSimilarity.JsonTrue(columnDef.generating) : false;
-                Definition.DefinitionType = columnDef.definition_type;
+                Definition.DefinitionType = columnDef.definition_type != null ? columnDef.definition_type : ColumnDefinitionType.NONE;
 
                 if (columnDef.formula != null)
                 {
@@ -231,7 +231,7 @@ namespace Com.Model
                     ComTable facts = Utils.CreateObjectFromJson(columnDef.fact_table);
                     if (facts != null)
                     {
-                        ((Set)facts).FromJson(columnDef.fact_table, ws);
+                        facts.FromJson(columnDef.fact_table, ws);
                         Definition.FactTable = facts;
                     }
                 }
@@ -241,7 +241,7 @@ namespace Com.Model
                     ComTable facts = Utils.CreateObjectFromJson(columnDef.fact_table);
                     if (facts != null)
                     {
-                        ((Set)facts).FromJson(columnDef.fact_table, ws);
+                        facts.FromJson(columnDef.fact_table, ws);
                         Definition.FactTable = facts;
                     }
                 }
@@ -249,9 +249,9 @@ namespace Com.Model
                 if (columnDef.group_paths != null)
                 {
                     if (Definition.GroupPaths == null) Definition.GroupPaths = new List<DimPath>();
-                    foreach (dynamic group_path in columnDef.group_paths)
+                    foreach (JObject group_path in columnDef.group_paths)
                     {
-                        DimPath path = Utils.CreateObjectFromJson(group_path);
+                        DimPath path = (DimPath)Utils.CreateObjectFromJson(group_path);
                         if (path != null)
                         {
                             path.FromJson(group_path, ws);
@@ -263,9 +263,9 @@ namespace Com.Model
                 if (columnDef.measure_paths != null)
                 {
                     if (Definition.MeasurePaths == null) Definition.MeasurePaths = new List<DimPath>();
-                    foreach (dynamic measure_path in columnDef.measure_paths)
+                    foreach (JObject measure_path in columnDef.measure_paths)
                     {
-                        DimPath path = Utils.CreateObjectFromJson(measure_path);
+                        DimPath path = (DimPath)Utils.CreateObjectFromJson(measure_path);
                         if (path != null)
                         {
                             path.FromJson(measure_path, ws);
@@ -372,16 +372,6 @@ namespace Com.Model
             return colData;
         }
 
-        public Dim()
-        {
-            Id = Guid.NewGuid();
-        }
-
-        public Dim(ComTable set) // Empty dimension
-            : this("", set, set)
-        {
-        }
-
         public Dim(Dim dim)
             : this()
         {
@@ -391,22 +381,33 @@ namespace Com.Model
 
             LesserSet = dim.LesserSet;
             GreaterSet = dim.GreaterSet;
-        }
 
-        public Dim(string name)
-            : this(name, null, null)
-        {
+            columnData = CreateColumnData(greaterSet, this);
+            columnDefinition = new ColumnDefinition(this);
+            // TODO: Copy definition
         }
 
         public Dim(Mapping mapping)
             : this(mapping.SourceSet.Name, mapping.SourceSet, mapping.TargetSet, false, false)
         {
-            if (Definition != null)
-            {
-                Definition.Mapping = mapping;
-                columnDefinition.IsGenerating = true;
-                if (GreaterSet != null) GreaterSet.Definition.DefinitionType = TableDefinitionType.PROJECTION;
-            }
+            Definition.Mapping = mapping;
+            columnDefinition.IsGenerating = true;
+            if (GreaterSet != null) GreaterSet.Definition.DefinitionType = TableDefinitionType.PROJECTION;
+        }
+
+        public Dim(ComTable set) // Empty dimension
+            : this("", set, set)
+        {
+        }
+
+        public Dim()
+            : this("")
+        {
+        }
+
+        public Dim(string name)
+            : this(name, null, null)
+        {
         }
 
         public Dim(string name, ComTable lesserSet, ComTable greaterSet)
@@ -415,8 +416,9 @@ namespace Com.Model
         }
 
         public Dim(string name, ComTable lesserSet, ComTable greaterSet, bool isIdentity, bool isSuper)
-            : this()
         {
+            Id = Guid.NewGuid();
+
             Name = name;
 
             IsIdentity = isIdentity;

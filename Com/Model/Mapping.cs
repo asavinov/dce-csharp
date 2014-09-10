@@ -466,9 +466,9 @@ namespace Com.Model
             _targetSet = Utils.ResolveJsonRef(map.target_table, ws);
 
             // List of matches
-            foreach (dynamic match in map.matches)
+            foreach (JObject match in map.matches)
             {
-                PathMatch comMatch = Utils.CreateObjectFromJson(match);
+                PathMatch comMatch = (PathMatch)Utils.CreateObjectFromJson(match);
                 if (comMatch != null)
                 {
                     comMatch.FromJson(match, ws);

@@ -241,20 +241,20 @@ namespace Com.Model
 
             // List of all tables
             schema.tables = new JArray() as dynamic;
+            schema.columns = new JArray() as dynamic; // One array for all columns of all tables (not within each tabel)
             foreach (ComTable comTable in this.GetAllSubsets())
             {
                 if (comTable.IsPrimitive) continue;
 
-                dynamic table = Utils.CreateJsonFromObject(comTable);
-                ((Set)comTable).ToJson(table);
+                JObject table = Utils.CreateJsonFromObject(comTable);
+                comTable.ToJson(table);
                 schema.tables.Add(table);
 
                 // List of columns
-                schema.columns = new JArray() as dynamic;
                 foreach (ComColumn comColumn in comTable.GreaterDims)
                 {
-                    dynamic column = Utils.CreateJsonFromObject(comColumn);
-                    ((Dim)comColumn).ToJson(column);
+                    JObject column = Utils.CreateJsonFromObject(comColumn);
+                    comColumn.ToJson(column);
                     schema.columns.Add(column);
                 }
             }
@@ -266,15 +266,15 @@ namespace Com.Model
 
             dynamic schema = json;
 
-            DataSourceType = schema.DataSourceType;
+            DataSourceType = schema.DataSourceType != null ? schema.DataSourceType : DataSourceType.LOCAL;
 
             // List of tables
-            foreach (dynamic table in schema.tables)
+            foreach (JObject table in schema.tables)
             {
-                ComTable comTable = Utils.CreateObjectFromJson(table);
+                ComTable comTable = (ComTable)Utils.CreateObjectFromJson(table);
                 if (comTable != null)
                 {
-                    ((Set)comTable).FromJson(table, ws);
+                    comTable.FromJson(table, ws);
                     this.AddTable(comTable, null, null);
                 }
             }

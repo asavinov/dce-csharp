@@ -848,7 +848,7 @@ namespace Com.Model
             dynamic tableDef = table.definition;
             if (tableDef != null && Definition != null)
             {
-                Definition.DefinitionType = tableDef.definition_type;
+                Definition.DefinitionType = tableDef.definition_type != null ? tableDef.definition_type : TableDefinitionType.NONE;
 
                 if (tableDef.where != null)
                 {
@@ -1095,6 +1095,19 @@ namespace Com.Model
 
             table.RelationalTableName = RelationalTableName;
             table.RelationalPkName = RelationalPkName;
+
+            // List of greater paths (relational attributes)
+            if (GreaterPaths != null)
+            {
+                table.greater_paths = new JArray() as dynamic;
+                foreach (var path in GreaterPaths)
+                {
+                    dynamic greater_path = Utils.CreateJsonFromObject(path);
+                    path.ToJson(greater_path);
+                    table.greater_paths.Add(greater_path);
+                }
+            }
+
         }
 
         public override void FromJson(JObject json, Workspace ws)
@@ -1105,6 +1118,21 @@ namespace Com.Model
 
             RelationalTableName = table.RelationalTableName;
             RelationalPkName = table.RelationalPkName;
+
+            // List of greater paths (relational attributes)
+            if (table.greater_paths != null)
+            {
+                if (GreaterPaths == null) GreaterPaths = new List<DimAttribute>();
+                foreach (dynamic greater_path in table.greater_paths)
+                {
+                    DimAttribute path = Utils.CreateObjectFromJson(greater_path);
+                    if (path != null)
+                    {
+                        path.FromJson(greater_path, ws);
+                        GreaterPaths.Add(path);
+                    }
+                }
+            }
         }
 
         #endregion

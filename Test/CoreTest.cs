@@ -662,27 +662,30 @@ namespace Test
             // 2. Another sample schema with several schemas and inter-schema columns
             //
             string jsonWs2 = @"{ 
-'mashup': 'My Schema', 
+'type': 'Workspace', 
+'mashup': {schema_name:'My Schema'}, 
 'schemas': [ 
 
 { 
-'name': 'My Schema', 'type': 'SetTop', 
+'type': 'SetTop', 
+'name': 'My Schema', 
 'tables': [
-  { 'name': 'My Table' }
+  { 'type': 'Set', 'name': 'My Table' }
 ], 
 'columns': [
-  { 'name': 'My Column', 'lesser_set': 'My Table', 'greater_set': 'Double' }, 
-  { 'name': 'Import Column', 'lesser_schema': 'Rel Schema', 'lesser_set': 'Rel Table', 'greater_schema': 'My Schema', 'greater_set': 'My Table' }
+  { 'type': 'Dim', 'name': 'My Column', 'lesser_table': {schema_name:'My Schema', table_name:'My Table'}, 'greater_table': {schema_name:'My Schema', table_name:'Double'} }, 
+  { 'type': 'Dim', 'name': 'Import Column', 'lesser_table': {schema_name: 'Rel Schema', table_name:'Rel Table'}, 'greater_table': {schema_name: 'My Schema', table_name: 'My Table'} }
 ] 
 }, 
 
 { 
-'name': 'Rel Schema', 'type': 'SetTopCsv', 
+'type': 'SetTopCsv', 
+'name': 'Rel Schema', 
 'tables': [
-  { 'name': 'Rel Table', 'type': 'SetRel' }
+  { 'type': 'SetRel', 'name': 'Rel Table' }
 ], 
 'columns': [
-  { 'name': 'My Column', 'lesser_set': 'Rel Table', 'greater_set': 'String' }, 
+  { 'type': 'DimRel', 'name': 'My Column', 'lesser_table': {schema_name:'Rel Schema', table_name:'Rel Table'}, 'greater_table': {schema_name:'Rel Schema', table_name:'String'} }, 
 ] 
 } 
 
@@ -698,7 +701,7 @@ namespace Test
             Assert.AreEqual("My Schema", ws2.Mashup.Name);
             Assert.AreEqual("My Table", ws2.Schemas[1].FindTable("Rel Table").GetGreaterDim("Import Column").GreaterSet.Name);
 
-            // TODO: Rel schema has to store also all attributes (as paths) --> Implement ComJson
+            // Remove casting ComColumn, ComTable, ComSchema in To/FromJson
         }
     }
 

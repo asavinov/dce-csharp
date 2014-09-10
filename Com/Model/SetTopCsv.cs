@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text;
 using System.Diagnostics;
 
+using Newtonsoft.Json.Linq;
+
 using Offset = System.Int32;
 
 namespace Com.Model
@@ -87,6 +89,26 @@ namespace Com.Model
 
         #endregion
 
+        #region ComJson serialization
+
+        public override void ToJson(JObject json)
+        {
+            base.ToJson(json); // SetTop
+
+            dynamic schema = json;
+
+        }
+
+        public override void FromJson(JObject json, Workspace ws)
+        {
+            base.FromJson(json, ws); // SetTop
+
+            dynamic schema = json;
+
+        }
+
+        #endregion
+
         protected override void CreateDataTypes() // Create all primitive data types from some specification like Enum, List or XML
         {
             Set set;
@@ -100,6 +122,11 @@ namespace Com.Model
             set = new Set("String");
             dim = new Dim("Top", set, this, true, true);
             dim.Add();
+        }
+
+        public SetTopCsv()
+            : this("")
+        {
         }
 
         public SetTopCsv(string name)

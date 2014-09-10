@@ -13,6 +13,8 @@ namespace Com.Model
     {
         public static JObject CreateJsonRef(object obj) // Represent an existing object as a reference
         {
+            if (obj == null) return null;
+
             dynamic jsonObj = new JObject();
             jsonObj.type = obj.GetType().Name;
 
@@ -46,8 +48,16 @@ namespace Com.Model
         }
         public static object ResolveJsonRef(JObject json, Workspace ws) // Resolve a json reference to a real object
         {
+            if (json == null) return null;
+
             string element_type = ((dynamic)json).element_type;
-            if (element_type == null) return null;
+            if (element_type == null)
+            {
+                if (((dynamic)json).schema_name == null) return null;
+                else if (((dynamic)json).table_name == null) element_type = "schema";
+                else if (((dynamic)json).column_name == null) element_type = "table";
+                else element_type = "column";
+            }
 
             if (element_type == "schema") // Find schema
             {
@@ -120,8 +130,8 @@ namespace Com.Model
         public static object CreateObjectFromJson(JObject jsonObj)
         {
             string type = ((dynamic)jsonObj).type;
-            string full_type = ((dynamic)jsonObj).full_type;
             if (type == null) return null;
+            string full_type = ((dynamic)jsonObj).full_type;
 
             var assembly = Assembly.GetExecutingAssembly();
             var klass = assembly.GetTypes().First(t => t.Name == type);

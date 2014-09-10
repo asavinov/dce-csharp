@@ -30,8 +30,4 @@ namespace Com.Model
         void RenameColumn(ComColumn column, string newName);
     }
 
-    public interface ComConnection : ComSchema
-    {
-    }
-
 }

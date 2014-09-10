@@ -643,6 +643,11 @@ namespace Com.Model
             }
         }
 
+        public SetTopOledb()
+            : this("")
+        {
+        }
+
         public SetTopOledb(string name)
             : base(name)
         {
