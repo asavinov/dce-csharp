@@ -565,12 +565,8 @@ namespace Test
         [TestMethod]
         public void CsvTest() // Load Csv schema and data
         {
-            // Connection object
-            ConnectionCsv conn = new ConnectionCsv();
-
             // Create schema for a remote db
             SetTopCsv top = new SetTopCsv("My Files");
-            top.connection = conn;
 
             // Load schema
             SetCsv table = (SetCsv)top.CreateTable("Products");

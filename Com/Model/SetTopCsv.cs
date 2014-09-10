@@ -133,6 +133,7 @@ namespace Com.Model
             : base(name)
         {
             DataSourceType = DataSourceType.CSV;
+            connection = new ConnectionCsv();
         }
 
     }

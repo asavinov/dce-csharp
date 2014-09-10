@@ -133,10 +133,39 @@ namespace Com.Model
             if (type == null) return null;
             string full_type = ((dynamic)jsonObj).full_type;
 
-            var assembly = Assembly.GetExecutingAssembly();
-            var klass = assembly.GetTypes().First(t => t.Name == type);
+            IEnumerable<Type> comTypes = null;
+            try
+            {
+                //var assembly = Assembly.GetExecutingAssembly();
+                var comAssembly = System.Reflection.Assembly.Load("Com");
+                comTypes = ((Assembly)comAssembly).GetTypes(); // If at least one type cannot be loaded then there will be an exception
+            }
+            catch (ReflectionTypeLoadException ex) 
+            {
+                comTypes = ex.Types.Where(t => t != null);
 
+                // Just to learn which other assembly could not be loaded
+                StringBuilder sb = new StringBuilder();
+                foreach (Exception exSub in ex.LoaderExceptions)
+                {
+                    sb.AppendLine(exSub.Message);
+                    System.IO.FileNotFoundException exFileNotFound = exSub as System.IO.FileNotFoundException;
+                    if (exFileNotFound != null)
+                    {
+                        if (!string.IsNullOrEmpty(exFileNotFound.FusionLog))
+                        {
+                            sb.AppendLine("Fusion Log:");
+                            sb.AppendLine(exFileNotFound.FusionLog);
+                        }
+                    }
+                    sb.AppendLine();
+                }
+                string errorMessage = sb.ToString();
+            }
+
+            var klass = comTypes.First(t => t != null && t.Name == type);
             object obj = Activator.CreateInstance(klass);
+
             // Alternatives:
             //object obj = Activator.CreateInstance(Type.GetType(full_type));
             //object obj = Activator.CreateInstance(null, full_type).Unwrap();
