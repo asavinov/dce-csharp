@@ -382,15 +382,23 @@ namespace Com.Model
         {
             base.FromJson(json, ws); // Dim
 
-            if (json["segments"] != null)
+            var segs = new List<ComColumn>();
+            JArray segments = (JArray)json["segments"];
+            for (int i = 0; i < segments.Count; i++)
             {
-                JArray segments = (JArray)json["segments"];
-                for (int i = 0; i < segments.Count; i++)
+                JObject segRef = (JObject)segments[i];
+                ComColumn column = (ComColumn)Utils.ResolveJsonRef(segRef, ws);
+                if (column == null) // Failed to resolve the segment
                 {
-                    JObject segRef = (JObject)segments[i];
-                    ComColumn column = (ComColumn)Utils.ResolveJsonRef(segRef, ws);
-                    InsertLast(column);
+                    segs.Clear(); // Empty path because some segment is absent
+                    break;
                 }
+                segs.Add(column);
+            }
+
+            for (int i = 0; i < segs.Count; i++)
+            {
+                InsertLast(segs[i]);
             }
         }
 

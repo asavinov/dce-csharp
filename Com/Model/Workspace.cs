@@ -24,26 +24,23 @@ namespace Com.Model
 
         public virtual void ToJson(JObject json)
         {
-            dynamic workspace = json;
-
-            if (Mashup != null) workspace.mashup = Utils.CreateJsonRef(Mashup);
+            if (Mashup != null) json["mashup"] = Utils.CreateJsonRef(Mashup);
 
             // List of schemas
-            workspace.schemas = new JArray() as dynamic;
+            JArray schemas = new JArray();
             foreach (ComSchema comSchema in Schemas)
             {
                 JObject schema = Utils.CreateJsonFromObject(comSchema);
                 comSchema.ToJson(schema);
-                workspace.schemas.Add(schema);
+                schemas.Add(schema);
             }
+            json["schemas"] = schemas;
         }
 
         public virtual void FromJson(JObject json, Workspace ws)
         {
-            dynamic workspace = json;
-
             // List of schemas
-            foreach (JObject schema in ((dynamic)workspace).schemas)
+            foreach (JObject schema in json["schemas"])
             {
                 ComSchema comSchema = (ComSchema)Utils.CreateObjectFromJson(schema);
                 if (comSchema != null)
@@ -53,12 +50,10 @@ namespace Com.Model
                 }
             }
 
-            // List of columns
-            // Load them manually, not as part of schema method
-            foreach (JObject schema in ((dynamic)workspace).schemas)
+            // Load all columns from all schema (now all tables are present)
+            foreach (JObject schema in json["schemas"])
             {
-                // List of columns
-                foreach (JObject column in schema["columns"])
+                foreach (JObject column in schema["columns"]) // List of columns
                 {
                     ComColumn comColumn = (ComColumn)Utils.CreateObjectFromJson(column);
                     if (comColumn != null)
@@ -69,7 +64,26 @@ namespace Com.Model
                 }
             }
 
-            Mashup = Utils.ResolveJsonRef(workspace.mashup, this);
+            // Second pass on all columns with the purpose to load their definitions (now all columns are present)
+            foreach (JObject schema in json["schemas"])
+            {
+                foreach (JObject column in schema["columns"]) // List of columns
+                {
+                    ComColumn comColumn = (ComColumn)Utils.CreateObjectFromJson(column);
+                    if (comColumn != null)
+                    {
+                        comColumn.FromJson(column, this);
+
+                        // Find the same existing column (possibly without a definition)
+                        ComColumn existing = comColumn.LesserSet.GetGreaterDim(comColumn.Name);
+
+                        // Copy the definition
+                        existing.FromJson(column, this);
+                    }
+                }
+            }
+
+            Mashup = (ComSchema)Utils.ResolveJsonRef((JObject)json["mashup"], this);
         }
 
         #endregion

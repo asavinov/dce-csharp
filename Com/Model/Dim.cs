@@ -194,8 +194,8 @@ namespace Com.Model
             IsIdentity = json["key"] != null ? StringSimilarity.JsonTrue((string)json["key"]) : false;
             IsSuper = json["super"] != null ? StringSimilarity.JsonTrue((string)json["super"]) : false;
 
-            lesserSet = (ComTable)Utils.ResolveJsonRef((JObject)json["lesser_table"], ws);
-            greaterSet = (ComTable)Utils.ResolveJsonRef((JObject)json["greater_table"], ws);
+            LesserSet = (ComTable)Utils.ResolveJsonRef((JObject)json["lesser_table"], ws);
+            GreaterSet = (ComTable)Utils.ResolveJsonRef((JObject)json["greater_table"], ws);
 
             // Column definition
             JObject columnDef = (JObject)json["definition"];
@@ -486,6 +486,24 @@ namespace Com.Model
         public List<string> SampleValues { get; set; }
 
         public int ColumnIndex { get; set; }
+
+        #region ComJson serialization
+
+        public override void ToJson(JObject json)
+        {
+            base.ToJson(json); // Dim
+
+            json["ColumnIndex"] = ColumnIndex;
+        }
+
+        public override void FromJson(JObject json, Workspace ws)
+        {
+            base.FromJson(json, ws); // Dim
+
+            ColumnIndex = (int)json["ColumnIndex"];
+        }
+
+        #endregion
 
         public DimCsv()
             : base(null, null, null)

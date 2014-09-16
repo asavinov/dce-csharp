@@ -235,41 +235,40 @@ namespace Com.Model
         {
             base.ToJson(json); // Set
 
-            dynamic schema = json;
-
-            schema.DataSourceType = DataSourceType;
+            json["DataSourceType"] = (int)DataSourceType;
 
             // List of all tables
-            schema.tables = new JArray() as dynamic;
-            schema.columns = new JArray() as dynamic; // One array for all columns of all tables (not within each tabel)
+            JArray tables = new JArray();
+            JArray columns = new JArray(); // One array for all columns of all tables (not within each tabel)
             foreach (ComTable comTable in this.GetAllSubsets())
             {
                 if (comTable.IsPrimitive) continue;
 
                 JObject table = Utils.CreateJsonFromObject(comTable);
                 comTable.ToJson(table);
-                schema.tables.Add(table);
+                tables.Add(table);
 
                 // List of columns
                 foreach (ComColumn comColumn in comTable.GreaterDims)
                 {
                     JObject column = Utils.CreateJsonFromObject(comColumn);
                     comColumn.ToJson(column);
-                    schema.columns.Add(column);
+                    columns.Add(column);
                 }
             }
+            json["tables"] = tables;
+            json["columns"] = columns;
         }
 
         public override void FromJson(JObject json, Workspace ws)
         {
             base.FromJson(json, ws); // Set
 
-            dynamic schema = json;
-
-            DataSourceType = schema.DataSourceType != null ? schema.DataSourceType : DataSourceType.LOCAL;
+            DataSourceType = json["DataSourceType"] != null ? (DataSourceType)(int)json["DataSourceType"] : DataSourceType.LOCAL;
 
             // List of tables
-            foreach (JObject table in schema.tables)
+            JArray tables = (JArray)json["tables"];
+            foreach (JObject table in tables)
             {
                 ComTable comTable = (ComTable)Utils.CreateObjectFromJson(table);
                 if (comTable != null)

@@ -95,15 +95,11 @@ namespace Com.Model
         {
             base.ToJson(json); // SetTop
 
-            dynamic schema = json;
-
         }
 
         public override void FromJson(JObject json, Workspace ws)
         {
             base.FromJson(json, ws); // SetTop
-
-            dynamic schema = json;
 
         }
 

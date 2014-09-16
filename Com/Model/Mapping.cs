@@ -576,7 +576,7 @@ namespace Com.Model
             SourcePath.ToJson((JObject)json["source_path"]);
 
             json["target_path"] = Utils.CreateJsonFromObject(TargetPath);
-            SourcePath.ToJson((JObject)json["target_path"]);
+            TargetPath.ToJson((JObject)json["target_path"]);
         }
 
         public virtual void FromJson(JObject json, Workspace ws)
