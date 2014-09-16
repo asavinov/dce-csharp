@@ -687,7 +687,7 @@ namespace Test
 
 ] 
 }";
-
+            /*
             dynamic objWs2 = JsonConvert.DeserializeObject(jsonWs2);
 
             Workspace ws2 = Utils.CreateObjectFromJson(objWs2);
@@ -696,16 +696,12 @@ namespace Test
             Assert.AreEqual(2, ws2.Schemas.Count);
             Assert.AreEqual("My Schema", ws2.Mashup.Name);
             Assert.AreEqual("My Table", ws2.Schemas[1].FindTable("Rel Table").GetGreaterDim("Import Column").GreaterSet.Name);
-
-            // Remove casting ComColumn, ComTable, ComSchema in To/FromJson
+            */
         }
+    
     }
 
 
-
-    
-    
-    
     
     // TODO:
     // - utility method to (quickly) check type of primitive set without comparing name (with case sensititivy). Maybe introduce enumerator. 
@@ -748,7 +744,5 @@ namespace Test
     //   - so we should NOT use column Evaluator for populating a set 
     //      --> column evaluator of generating dims is never used from the colum population procedure (but can be if called explicitly) 
     //      --> all column evaluators NEVER change (influence) their sets (neither greater nor lesser) - it computes only this function
-
-
 
 }

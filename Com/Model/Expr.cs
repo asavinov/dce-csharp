@@ -855,27 +855,25 @@ namespace Com.Model
         {
             // We do not use the base TreeNode serialization
 
-            dynamic expr = json;
-
             // Set its parameters
-            Operation = expr.operation;
-            Name = expr.name;
-            Action = expr.action;
+            Operation = (OperationType)(int)json["operation"];
+            Name = (string)json["name"];
+            Action = (ActionType)(int)json["action"];
 
             // Result
-            dynamic resultDef = expr.result;
+            JObject resultDef = (JObject)json["result"];
             if (resultDef != null)
             {
-                string resultName = resultDef.name;
-                string resultType = resultDef.type_name;
+                string resultName = (string)resultDef["name"];
+                string resultType = (string)resultDef["type_name"];
 
                 Result = new Variable(resultName, resultType);
             }
 
             // List of children
-            foreach (dynamic child in expr.children)
+            foreach (JObject child in json["children"])
             {
-                ExprNode childNode = Utils.CreateObjectFromJson(child);
+                ExprNode childNode = (ExprNode)Utils.CreateObjectFromJson(child);
                 if (childNode != null)
                 {
                     this.AddChild(childNode);

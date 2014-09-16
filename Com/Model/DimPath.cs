@@ -364,32 +364,31 @@ namespace Com.Model
         {
             base.ToJson(json); // Dim
 
-            dynamic path = json;
-
-            if (path.segments == null)
+            JArray segments = (JArray)json["segments"];
+            if (segments == null)
             {
-                path.segments = new JArray();
+                segments = new JArray();
             }
 
             for (int i = 0; i < Size; i++)
             {
-                dynamic segRef = Utils.CreateJsonRef(Path[i]);
-                path.segments.Add(segRef);
+                JObject segRef = Utils.CreateJsonRef(Path[i]);
+                segments.Add(segRef);
             }
+
+            json["segments"] = segments;
         }
         public override void FromJson(JObject json, Workspace ws) // Init this object fields by using json object
         {
             base.FromJson(json, ws); // Dim
 
-            dynamic path = json;
-
-            if (path.segments != null)
+            if (json["segments"] != null)
             {
-                JArray segments = path.segments;
+                JArray segments = (JArray)json["segments"];
                 for (int i = 0; i < segments.Count; i++)
                 {
-                    dynamic segRef = segments[i];
-                    ComColumn column = Utils.ResolveJsonRef(segRef, ws);
+                    JObject segRef = (JObject)segments[i];
+                    ComColumn column = (ComColumn)Utils.ResolveJsonRef(segRef, ws);
                     InsertLast(column);
                 }
             }
@@ -662,25 +661,21 @@ namespace Com.Model
         {
             base.ToJson(json); // DimPath
 
-            dynamic path = json;
-
-            path.RelationalColumnName = RelationalColumnName;
-            path.RelationalPkName = RelationalPkName;
-            path.RelationalFkName = RelationalFkName;
-            path.RelationalTargetTableName = RelationalTargetTableName;
-            path.RelationalTargetColumnName = RelationalTargetColumnName;
+            json["RelationalColumnName"] = RelationalColumnName;
+            json["RelationalPkName"] = RelationalPkName;
+            json["RelationalFkName"] = RelationalFkName;
+            json["RelationalTargetTableName"] = RelationalTargetTableName;
+            json["RelationalTargetColumnName"] = RelationalTargetColumnName;
         }
         public override void FromJson(JObject json, Workspace ws) // Init this object fields by using json object
         {
             base.FromJson(json, ws); // DimPath
 
-            dynamic path = json;
-
-            RelationalColumnName = path.RelationalColumnName;
-            RelationalPkName = path.RelationalPkName;
-            RelationalFkName = path.RelationalFkName;
-            RelationalTargetTableName = path.RelationalTargetTableName;
-            RelationalTargetColumnName = path.RelationalTargetColumnName;
+            RelationalColumnName = (string)json["RelationalColumnName"];
+            RelationalPkName = (string)json["RelationalPkName"];
+            RelationalFkName = (string)json["RelationalFkName"];
+            RelationalTargetTableName = (string)json["RelationalTargetTableName"];
+            RelationalTargetColumnName = (string)json["RelationalTargetColumnName"];
         }
 
         #endregion

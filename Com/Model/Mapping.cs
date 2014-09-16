@@ -437,36 +437,33 @@ namespace Com.Model
         {
             // No super-object
 
-            dynamic map = json;
+            json["similarity"] = Similarity;
 
-            map.similarity = Similarity;
-
-            map.source_table = Utils.CreateJsonRef(_sourceSet);
-            map.target_table = Utils.CreateJsonRef(_targetSet);
+            json["source_table"] = Utils.CreateJsonRef(_sourceSet);
+            json["target_table"] = Utils.CreateJsonRef(_targetSet);
 
             // List of all matches
-            map.matches = new JArray() as dynamic;
+            JArray matches = new JArray();
             foreach (PathMatch comMatch in this.Matches)
             {
-                dynamic match = Utils.CreateJsonFromObject(comMatch);
+                JObject match = (JObject)Utils.CreateJsonFromObject(comMatch);
                 comMatch.ToJson(match);
-                map.matches.Add(match);
+                matches.Add(match);
             }
+            json["matches"] = matches;
         }
 
         public virtual void FromJson(JObject json, Workspace ws)
         {
             // No super-object
 
-            dynamic map = json;
+            Similarity = (double)json["similarity"];
 
-            Similarity = map.similarity;
-
-            _sourceSet = Utils.ResolveJsonRef(map.source_table, ws);
-            _targetSet = Utils.ResolveJsonRef(map.target_table, ws);
+            _sourceSet = (ComTable)Utils.ResolveJsonRef((JObject)json["source_table"], ws);
+            _targetSet = (ComTable)Utils.ResolveJsonRef((JObject)json["target_table"], ws);
 
             // List of matches
-            foreach (JObject match in map.matches)
+            foreach (JObject match in json["matches"])
             {
                 PathMatch comMatch = (PathMatch)Utils.CreateObjectFromJson(match);
                 if (comMatch != null)
@@ -482,6 +479,11 @@ namespace Com.Model
         public override string ToString()
         {
             return String.Format("{0} -> {1}. Similarity={2}. Matches={3}", SourceSet.Name, TargetSet.Name, Similarity, Matches.Count);
+        }
+
+        public Mapping()
+        {
+            Matches = new List<PathMatch>();
         }
 
         public Mapping(ComTable sourceSet, ComTable targetSet)
@@ -568,52 +570,52 @@ namespace Com.Model
         {
             // No super-object
 
-            dynamic map = json;
+            json["similarity"] = Similarity;
 
-            map.similarity = Similarity;
+            json["source_path"] = Utils.CreateJsonFromObject(SourcePath);
+            SourcePath.ToJson((JObject)json["source_path"]);
 
-            map.source_path = Utils.CreateJsonFromObject(SourcePath);
-            SourcePath.ToJson(map.source_path);
-
-            map.target_path = Utils.CreateJsonFromObject(TargetPath);
-            SourcePath.ToJson(map.target_path);
+            json["target_path"] = Utils.CreateJsonFromObject(TargetPath);
+            SourcePath.ToJson((JObject)json["target_path"]);
         }
 
         public virtual void FromJson(JObject json, Workspace ws)
         {
             // No super-object
 
-            dynamic map = json;
+            Similarity = (double)json["similarity"];
 
-            Similarity = map.similarity;
+            SourcePath = (DimPath)Utils.CreateObjectFromJson((JObject)json["source_path"]);
+            SourcePath.FromJson((JObject)json["source_path"], ws);
 
-            SourcePath = Utils.CreateObjectFromJson(map.source_path);
-            SourcePath.FromJson(map.source_path, ws);
-
-            TargetPath = Utils.CreateObjectFromJson(map.target_path);
-            TargetPath.FromJson(map.target_path, ws);
+            TargetPath = (DimPath)Utils.CreateObjectFromJson((JObject)json["target_path"]);
+            TargetPath.FromJson((JObject)json["target_path"], ws);
         }
 
         #endregion
+
+        public PathMatch()
+            : this(null, null, 1.0)
+        {
+        }
+
+        public PathMatch(DimPath sourcePath, DimPath targetPath)
+            : this(sourcePath, targetPath, 1.0)
+        {
+        }
+
+        public PathMatch(DimPath sourcePath, DimPath targetPath, double similarity)
+        {
+            SourcePath = sourcePath;
+            TargetPath = targetPath;
+            Similarity = similarity;
+        }
 
         public PathMatch(PathMatch m)
         {
             SourcePath = new DimPath(m.SourcePath);
             TargetPath = new DimPath(m.TargetPath);
             Similarity = m.Similarity;
-        }
-
-        public PathMatch(DimPath sourcePath, DimPath targetPath)
-        {
-            SourcePath = sourcePath;
-            TargetPath = targetPath;
-            Similarity = 1.0;
-        }
-
-        public PathMatch(DimPath sourcePath, DimPath targetPath, double similarity)
-            : this(sourcePath, targetPath)
-        {
-            Similarity = 1.0;
         }
     }
 

@@ -815,24 +815,22 @@ namespace Com.Model
         {
             // No super-object
 
-            dynamic table = json;
-
-            table.name = Name;
+            json["name"] = Name;
 
             // Table definition
             if (Definition != null)
             {
-                dynamic tableDef = new JObject();
+                JObject tableDef = new JObject();
 
-                tableDef.definition_type = Definition.DefinitionType;
+                tableDef["definition_type"] = (int)Definition.DefinitionType;
 
                 if (Definition.WhereExpression != null)
                 {
-                    tableDef.where = Utils.CreateJsonFromObject(Definition.WhereExpression);
-                    Definition.WhereExpression.ToJson(tableDef.where);
+                    tableDef["where"] = Utils.CreateJsonFromObject(Definition.WhereExpression);
+                    Definition.WhereExpression.ToJson((JObject)tableDef["where"]);
                 }
 
-                table.definition = tableDef;
+                json["definition"] = tableDef;
             }
         }
 
@@ -840,22 +838,20 @@ namespace Com.Model
         {
             // No super-object
 
-            dynamic table = json;
-
-            Name = table.name;
+            Name = (string)json["name"];
 
             // Table definition
-            dynamic tableDef = table.definition;
+            JObject tableDef = (JObject)json["definition"];
             if (tableDef != null && Definition != null)
             {
-                Definition.DefinitionType = tableDef.definition_type != null ? tableDef.definition_type : TableDefinitionType.NONE;
+                Definition.DefinitionType = tableDef["definition_type"] != null ? (TableDefinitionType)(int)tableDef["definition_type"] : TableDefinitionType.NONE;
 
-                if (tableDef.where != null)
+                if (tableDef["where"] != null)
                 {
-                    ExprNode node = Utils.CreateObjectFromJson(tableDef.where);
+                    ExprNode node = (ExprNode)Utils.CreateObjectFromJson((JObject)tableDef["where"]);
                     if (node != null)
                     {
-                        node.FromJson(tableDef.where, ws);
+                        node.FromJson((JObject)tableDef["where"], ws);
                         Definition.WhereExpression = node;
                     }
                 }
@@ -1091,21 +1087,20 @@ namespace Com.Model
         {
             base.ToJson(json); // Set
 
-            dynamic table = json;
-
-            table.RelationalTableName = RelationalTableName;
-            table.RelationalPkName = RelationalPkName;
+            json["RelationalTableName"] = RelationalTableName;
+            json["RelationalPkName"] = RelationalPkName;
 
             // List of greater paths (relational attributes)
             if (GreaterPaths != null)
             {
-                table.greater_paths = new JArray() as dynamic;
+                JArray greater_paths = new JArray();
                 foreach (var path in GreaterPaths)
                 {
-                    dynamic greater_path = Utils.CreateJsonFromObject(path);
+                    JObject greater_path = Utils.CreateJsonFromObject(path);
                     path.ToJson(greater_path);
-                    table.greater_paths.Add(greater_path);
+                    greater_paths.Add(greater_path);
                 }
+                json["greater_paths"] = greater_paths;
             }
 
         }
@@ -1114,18 +1109,16 @@ namespace Com.Model
         {
             base.FromJson(json, ws); // Set
 
-            dynamic table = json;
-
-            RelationalTableName = table.RelationalTableName;
-            RelationalPkName = table.RelationalPkName;
+            RelationalTableName = (string)json["RelationalTableName"];
+            RelationalPkName = (string)json["RelationalPkName"];
 
             // List of greater paths (relational attributes)
-            if (table.greater_paths != null)
+            if (json["greater_paths"] != null)
             {
                 if (GreaterPaths == null) GreaterPaths = new List<DimAttribute>();
-                foreach (dynamic greater_path in table.greater_paths)
+                foreach (JObject greater_path in json["greater_paths"])
                 {
-                    DimAttribute path = Utils.CreateObjectFromJson(greater_path);
+                    DimAttribute path = (DimAttribute)Utils.CreateObjectFromJson(greater_path);
                     if (path != null)
                     {
                         path.FromJson(greater_path, ws);
@@ -1182,28 +1175,32 @@ namespace Com.Model
         {
             base.ToJson(json); // Set
 
-            dynamic table = json;
+            json["file_path"] = FilePath;
 
-            table.file_path = FilePath;
-
-            table.HasHeaderRecord = HasHeaderRecord;
-            table.Delimiter = Delimiter;
-            table.CultureInfo = CultureInfo;
-            table.Encoding = Encoding;
+            json["HasHeaderRecord"] = this.HasHeaderRecord;
+            json["Delimiter"] = this.Delimiter;
+            json["CultureInfo"] = this.CultureInfo.Name;
+            json["Encoding"] = this.Encoding.EncodingName;
         }
 
         public override void FromJson(JObject json, Workspace ws)
         {
             base.FromJson(json, ws); // Set
 
-            dynamic table = json;
+            FilePath = (string)json["file_path"];
 
-            FilePath = table.file_path;
+            HasHeaderRecord = (bool)json["HasHeaderRecord"];
+            Delimiter = (string)json["Delimiter"];
+            CultureInfo = new CultureInfo((string)json["CultureInfo"]);
 
-            HasHeaderRecord = table.HasHeaderRecord;
-            Delimiter = table.Delimiter;
-            CultureInfo = table.CultureInfo;
-            Encoding = table.Encoding;
+            string encodingName = (string)json["Encoding"];
+            if (string.IsNullOrEmpty(encodingName)) Encoding = System.Text.Encoding.Default;
+            else if (encodingName.Contains("ASCII")) Encoding = System.Text.Encoding.ASCII;
+            else if (encodingName == "Unicode") Encoding = System.Text.Encoding.Unicode;
+            else if (encodingName.Contains("UTF-32")) Encoding = System.Text.Encoding.UTF32; // "Unicode (UTF-32)"
+            else if (encodingName.Contains("UTF-7")) Encoding = System.Text.Encoding.UTF7; // "Unicode (UTF-7)"
+            else if (encodingName.Contains("UTF-8")) Encoding = System.Text.Encoding.UTF8; // "Unicode (UTF-8)"
+            else Encoding = System.Text.Encoding.Default;
         }
 
         #endregion

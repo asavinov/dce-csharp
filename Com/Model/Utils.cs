@@ -15,67 +15,67 @@ namespace Com.Model
         {
             if (obj == null) return null;
 
-            dynamic jsonObj = new JObject();
-            jsonObj.type = obj.GetType().Name;
+            JObject json = new JObject();
+            json["type"] = obj.GetType().Name;
 
             if (obj is ComSchema)
             {
-                jsonObj.element_type = "schema";
+                json["element_type"] = "schema";
 
-                jsonObj.schema_name = ((ComSchema)obj).Name;
+                json["schema_name"] = ((ComSchema)obj).Name;
             }
             else if (obj is ComTable)
             {
-                jsonObj.element_type = "table";
+                json["element_type"] = "table";
 
-                jsonObj.schema_name = ((ComTable)obj).Top.Name;
-                jsonObj.table_name = ((ComTable)obj).Name;
+                json["schema_name"] = ((ComTable)obj).Top.Name;
+                json["table_name"] = ((ComTable)obj).Name;
             }
             else if (obj is ComColumn)
             {
-                jsonObj.element_type = "column";
+                json["element_type"] = "column";
 
-                jsonObj.schema_name = ((ComColumn)obj).LesserSet.Top.Name;
-                jsonObj.table_name = ((ComColumn)obj).LesserSet.Name;
+                json["schema_name"] = ((ComColumn)obj).LesserSet.Top.Name;
+                json["table_name"] = ((ComColumn)obj).LesserSet.Name;
 
-                jsonObj.type_schema_name = ((ComColumn)obj).GreaterSet.Top.Name;
-                jsonObj.type_table_name = ((ComColumn)obj).GreaterSet.Name;
+                json["type_schema_name"] = ((ComColumn)obj).GreaterSet.Top.Name;
+                json["type_table_name"] = ((ComColumn)obj).GreaterSet.Name;
 
-                jsonObj.column_name = ((ComColumn)obj).Name;
+                json["column_name"] = ((ComColumn)obj).Name;
             }
 
-            return jsonObj;
+            return json;
         }
         public static object ResolveJsonRef(JObject json, Workspace ws) // Resolve a json reference to a real object
         {
             if (json == null) return null;
 
-            string element_type = ((dynamic)json).element_type;
+            string element_type = (string)json["element_type"];
             if (element_type == null)
             {
-                if (((dynamic)json).schema_name == null) return null;
-                else if (((dynamic)json).table_name == null) element_type = "schema";
-                else if (((dynamic)json).column_name == null) element_type = "table";
+                if (json["schema_name"] == null) return null;
+                else if (json["table_name"] == null) element_type = "schema";
+                else if (json["column_name"] == null) element_type = "table";
                 else element_type = "column";
             }
 
             if (element_type == "schema") // Find schema
             {
-                return ws.GetSchema((string)((dynamic)json).schema_name);
+                return ws.GetSchema((string)json["schema_name"]);
             }
             else if (element_type == "table") // Find table
             {
-                ComSchema schema = ws.GetSchema((string)((dynamic)json).schema_name);
+                ComSchema schema = ws.GetSchema((string)json["schema_name"]);
                 if (schema == null) return null;
-                return schema.FindTable((string)((dynamic)json).table_name);
+                return schema.FindTable((string)json["table_name"]);
             }
             else if (element_type == "column") // Find column
             {
-                ComSchema schema = ws.GetSchema((string)((dynamic)json).schema_name);
+                ComSchema schema = ws.GetSchema((string)json["schema_name"]);
                 if (schema == null) return null;
-                ComTable table = schema.FindTable((string)((dynamic)json).table_name);
+                ComTable table = schema.FindTable((string)json["table_name"]);
                 if (table == null) return null;
-                return table.GetGreaterDim((string)((dynamic)json).column_name);
+                return table.GetGreaterDim((string)json["column_name"]);
             }
             else
             {
@@ -88,40 +88,40 @@ namespace Com.Model
         /// </summary>
         public static JObject CreateJsonFromObject(object obj)
         {
-            dynamic jsonObj = new JObject();
-            jsonObj.type = obj.GetType().Name;
-            jsonObj.full_type = obj.GetType().FullName;
+            JObject json = new JObject();
+            json["type"] = obj.GetType().Name;
+            json["full_type"] = obj.GetType().FullName;
 
             if (obj is ComSchema)
             {
-                jsonObj.element_type = "schema";
+                json["element_type"] = "schema";
             }
             else if (obj is ComTable)
             {
-                jsonObj.element_type = "table";
+                json["element_type"] = "table";
+            }
+            else if (obj is DimPath)
+            {
+                json["element_type"] = "path";
             }
             else if (obj is ComColumn)
             {
-                jsonObj.element_type = "column";
+                json["element_type"] = "column";
             }
             else if (obj is ExprNode)
             {
-                jsonObj.element_type = "expression";
+                json["element_type"] = "expression";
             }
             else if (obj is Mapping)
             {
-                jsonObj.element_type = "path";
-            }
-            else if (obj is Mapping)
-            {
-                jsonObj.element_type = "mapping";
+                json["element_type"] = "mapping";
             }
             else if (obj is PathMatch)
             {
-                jsonObj.element_type = "match";
+                json["element_type"] = "match";
             }
 
-            return jsonObj;
+            return json;
         }
 
         /// <summary>
@@ -129,9 +129,31 @@ namespace Com.Model
         /// </summary>
         public static object CreateObjectFromJson(JObject jsonObj)
         {
-            string type = ((dynamic)jsonObj).type;
+            string type = (string)jsonObj["type"];
             if (type == null) return null;
-            string full_type = ((dynamic)jsonObj).full_type;
+            string full_type = (string)jsonObj["full_type"];
+
+            object obj = CreateInstanceFromFullType(full_type);
+
+            return obj;
+        }
+
+        protected static object CreateInstanceFromFullType(string typeName)
+        {
+            object obj = Activator.CreateInstance(Type.GetType(typeName));
+            //object obj = Activator.CreateInstance(null, full_type).Unwrap();
+
+            if (obj == null)
+            {
+                throw new NotImplementedException("Cannot instantiate this object type");
+            }
+
+            return obj;
+        }
+
+        protected static object CreateInstanceFromType(string typeName)
+        {
+            string type = typeName;
 
             IEnumerable<Type> comTypes = null;
             try
@@ -140,7 +162,7 @@ namespace Com.Model
                 var comAssembly = System.Reflection.Assembly.Load("Com");
                 comTypes = ((Assembly)comAssembly).GetTypes(); // If at least one type cannot be loaded then there will be an exception
             }
-            catch (ReflectionTypeLoadException ex) 
+            catch (ReflectionTypeLoadException ex)
             {
                 comTypes = ex.Types.Where(t => t != null);
 
@@ -179,6 +201,7 @@ namespace Com.Model
 
             return obj;
         }
+
     }
     
     // Check this: "fuzzy string comparisons using trigram cosine similarity"
