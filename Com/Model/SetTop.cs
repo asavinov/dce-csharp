@@ -23,8 +23,8 @@ namespace Com.Model
 
         public ComTable GetPrimitive(string name)
         {
-            ComColumn dim = SubColumns.FirstOrDefault(x => StringSimilarity.SameTableName(x.LesserSet.Name, name));
-            return dim != null ? dim.LesserSet : null;
+            ComColumn dim = SubColumns.FirstOrDefault(x => StringSimilarity.SameTableName(x.Input.Name, name));
+            return dim != null ? dim.Input : null;
         }
 
         public ComTable Root { get { return GetPrimitive("Root"); } }
@@ -88,7 +88,7 @@ namespace Com.Model
 
         public virtual void DeleteColumn(ComColumn column)
         {
-            Debug.Assert(!column.LesserSet.IsPrimitive, "Wrong use: top columns cannot be created/deleted.");
+            Debug.Assert(!column.Input.IsPrimitive, "Wrong use: top columns cannot be created/deleted.");
 
             ComSchema schema = this;
 

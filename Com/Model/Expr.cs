@@ -117,8 +117,8 @@ namespace Com.Model
                         {
                             ComColumn col = parent.Result.TypeTable.GetColumn(Name);
                             Column = col;
-                            Result.TypeTable = col.GreaterSet;
-                            Result.TypeName = col.GreaterSet.Name;
+                            Result.TypeTable = col.Output;
+                            Result.TypeName = col.Output.Name;
                         }
                     }
                     else // Tuple in some other node, e.g, argument or value
@@ -127,8 +127,8 @@ namespace Com.Model
                         {
                             ComColumn col = parent.Result.TypeTable.GetColumn(Name);
                             Column = col;
-                            Result.TypeTable = col.GreaterSet;
-                            Result.TypeName = col.GreaterSet.Name;
+                            Result.TypeTable = col.Output;
+                            Result.TypeName = col.Output.Name;
                         }
                     }
                 }
@@ -240,8 +240,8 @@ namespace Com.Model
                         {
                             Column = col;
 
-                            Result.TypeName = col.GreaterSet.Name;
-                            Result.TypeTable = col.GreaterSet;
+                            Result.TypeName = col.Output.Name;
+                            Result.TypeTable = col.Output;
 
                             AddChild(path);
                         }
@@ -266,8 +266,8 @@ namespace Com.Model
                     ComColumn col = outputChild.Result.TypeTable.GetColumn(methodName);
                     Column = col;
 
-                    Result.TypeName = col.GreaterSet.Name;
-                    Result.TypeTable = col.GreaterSet;
+                    Result.TypeName = col.Output.Name;
+                    Result.TypeTable = col.Output;
                 }
                 else // System procedure or operator (arithmetic, logical etc.)
                 {
@@ -631,7 +631,7 @@ namespace Com.Model
         {
             // Question: what operation whould be in the leaf: TUPLE, VALUE or whatever
 
-            Debug.Assert(path != null && path.LesserSet == Result.TypeTable, "Wrong use: path must start from the node (output set) it is applied to.");
+            Debug.Assert(path != null && path.Input == Result.TypeTable, "Wrong use: path must start from the node (output set) it is applied to.");
 
             if (path.Path == null || path.Path.Count == 0) return this;
 
@@ -647,8 +647,8 @@ namespace Com.Model
                     child.Operation = OperationType.TUPLE;
                     child.Action = this.Action; // We inherit the action from the tuple root
                     child.Name = seg.Name;
-                    child.Result.TypeTable = seg.GreaterSet;
-                    child.Result.TypeName = seg.GreaterSet.Name;
+                    child.Result.TypeTable = seg.Output;
+                    child.Result.TypeName = seg.Output.Name;
 
                     node.AddChild(child);
                 }
@@ -668,8 +668,8 @@ namespace Com.Model
                 thisNode.Operation = OperationType.CALL;
                 thisNode.Action = ActionType.READ;
 
-                thisNode.Result.TypeTable = path.LesserSet;
-                thisNode.Result.TypeName = path.LesserSet.Name;
+                thisNode.Result.TypeTable = path.Input;
+                thisNode.Result.TypeName = path.Input.Name;
 
                 node.AddChild(thisNode);
                 node = thisNode;
@@ -686,7 +686,7 @@ namespace Com.Model
         {
             ExprNode expr = null;
 
-            if (path.LesserSet.Schema is SetTopCsv) // Access via column index
+            if (path.Input.Schema is SetTopCsv) // Access via column index
             {
                 DimCsv seg = (DimCsv)path.FirstSegment;
 
@@ -694,17 +694,17 @@ namespace Com.Model
                 expr.Operation = OperationType.CALL;
                 expr.Action = ActionType.READ;
                 expr.Name = seg.Name;
-                expr.Result.TypeTable = seg.GreaterSet;
-                expr.Result.TypeName = seg.GreaterSet.Name;
+                expr.Result.TypeTable = seg.Output;
+                expr.Result.TypeName = seg.Output.Name;
             }
-            else if (path.LesserSet.Schema is SetTopOledb) // Access via relational attribute
+            else if (path.Input.Schema is SetTopOledb) // Access via relational attribute
             {
                 expr = new OledbExprNode();
                 expr.Operation = OperationType.CALL;
                 expr.Action = ActionType.READ;
                 expr.Name = path.Name;
-                expr.Result.TypeTable = path.LesserSet;
-                expr.Result.TypeName = path.LesserSet.Name;
+                expr.Result.TypeTable = path.Input;
+                expr.Result.TypeName = path.Input.Name;
             }
             else // Access via function/column composition
             {
@@ -716,8 +716,8 @@ namespace Com.Model
                     node.Operation = OperationType.CALL;
                     node.Action = ActionType.READ;
                     node.Name = seg.Name;
-                    node.Result.TypeTable = seg.GreaterSet;
-                    node.Result.TypeName = seg.GreaterSet.Name;
+                    node.Result.TypeTable = seg.Output;
+                    node.Result.TypeName = seg.Output.Name;
 
                     if (expr != null)
                     {
@@ -739,8 +739,8 @@ namespace Com.Model
                 thisNode.Operation = OperationType.CALL;
                 thisNode.Action = ActionType.READ;
 
-                thisNode.Result.TypeTable = path.LesserSet;
-                thisNode.Result.TypeName = path.LesserSet.Name;
+                thisNode.Result.TypeTable = path.Input;
+                thisNode.Result.TypeName = path.Input.Name;
 
                 if (expr != null)
                 {
@@ -798,8 +798,8 @@ namespace Com.Model
             valueNode.Operation = OperationType.CALL;
             valueNode.Action = ActionType.READ;
 
-            valueNode.Result.TypeTable = column.GreaterSet;
-            valueNode.Result.TypeName = column.GreaterSet.Name;
+            valueNode.Result.TypeTable = column.Output;
+            valueNode.Result.TypeName = column.Output.Name;
 
             //
             // A node for computing a result (updated) function value from the current value and new value
@@ -809,8 +809,8 @@ namespace Com.Model
             expr.Action = aggregation; // SUM etc.
             expr.Name = column.Name;
 
-            expr.Result.TypeTable = column.GreaterSet;
-            expr.Result.TypeName = column.GreaterSet.Name;
+            expr.Result.TypeTable = column.Output;
+            expr.Result.TypeName = column.Output.Name;
 
             // Two arguments in child nodes
             expr.AddChild(currentValueNode);

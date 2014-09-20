@@ -24,12 +24,12 @@ namespace Com.Model
         /// </summary>
         public ComTable Set
         {
-            get { return Dim != null ? Dim.GreaterSet : null; }
+            get { return Dim != null ? Dim.Output : null; }
         }
 
         public bool IsEmpty
         {
-            get { return Dim == null || Dim.GreaterSet == null || Dim.LesserSet == null || Dim.GreaterSet == Dim.LesserSet; }
+            get { return Dim == null || Dim.Output == null || Dim.Input == null || Dim.Output == Dim.Input; }
         }
 
         //
@@ -43,7 +43,7 @@ namespace Com.Model
         public void AddChild(DimTree child)
         {
             Debug.Assert(!Children.Contains(child), "Wrong use: this child node already exists in the tree.");
-            Debug.Assert(Set == null || child.IsEmpty || child.Dim.LesserSet == Set, "Wrong use: a new dimension must start from this set.");
+            Debug.Assert(Set == null || child.IsEmpty || child.Dim.Input == Set, "Wrong use: a new dimension must start from this set.");
             Children.Add(child);
             child.Parent = this;
 
@@ -217,7 +217,7 @@ namespace Com.Model
 
         public DimTree FindPath(DimPath path) // Find a node corresponding to the path.
         {
-            Debug.Assert(path != null && path.LesserSet == Set, "Wrong use: path must start from the node it is added to.");
+            Debug.Assert(path != null && path.Input == Set, "Wrong use: path must start from the node it is added to.");
 
             if (path.Path == null || path.Path.Count == 0) return null;
 
@@ -241,7 +241,7 @@ namespace Com.Model
 
         public DimTree AddPath(DimPath path) // Find or create nodes corresponding to the path.
         {
-            Debug.Assert(path != null && path.LesserSet == Set, "Wrong use: path must start from the node it is added to.");
+            Debug.Assert(path != null && path.Input == Set, "Wrong use: path must start from the node it is added to.");
 
             if (path.Path == null || path.Path.Count == 0) return null;
 
@@ -312,7 +312,7 @@ namespace Com.Model
         /// </summary>
         public bool IsInSchema()
         {
-            bool isAdded = Dim.GreaterSet.InputColumns.Contains(Dim) && Dim.LesserSet.Columns.Contains(Dim);
+            bool isAdded = Dim.Output.InputColumns.Contains(Dim) && Dim.Input.Columns.Contains(Dim);
             return !IsEmpty ? !isAdded : true;
         }
 
@@ -334,7 +334,7 @@ namespace Com.Model
                 }
             }
 
-            if (Dim != null && Dim.LesserSet != Dim.GreaterSet)
+            if (Dim != null && Dim.Input != Dim.Output)
             {
                 Dim.Add();
             }
@@ -469,8 +469,8 @@ namespace Com.Model
         private ComColumn _dim;
         public ComColumn Dim { get { return _dim; } protected set { _dim = value; } }
 
-        public ComTable GreaterSet { get { return Dim != null ? Dim.GreaterSet : null; } }
-        public ComTable LesserSet { get { return Dim != null ? Dim.LesserSet : null; } }
+        public ComTable Output { get { return Dim != null ? Dim.Output : null; } }
+        public ComTable Input { get { return Dim != null ? Dim.Input : null; } }
 
         //
         // Tree methods
@@ -540,18 +540,18 @@ namespace Com.Model
             }
         }
 
-        protected virtual void LesserSet_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e) // Changes in our lesser set
+        protected virtual void Input_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e) // Changes in our lesser set
         {
         }
 
-        protected virtual void GreaterSet_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e) // Changes in our greater set
+        protected virtual void Output_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e) // Changes in our greater set
         {
         }
 
         public void UnregisterListeners()
         {
-            if (Dim.LesserSet != null) ((Set)Dim.LesserSet).CollectionChanged -= LesserSet_CollectionChanged;
-            if (Dim.GreaterSet != null) ((Set)Dim.GreaterSet).CollectionChanged -= GreaterSet_CollectionChanged;
+            if (Dim.Input != null) ((Set)Dim.Input).CollectionChanged -= Input_CollectionChanged;
+            if (Dim.Output != null) ((Set)Dim.Output).CollectionChanged -= Output_CollectionChanged;
         }
 
         public void NotifyAllOnPropertyChanged(string propertyName)
@@ -566,8 +566,8 @@ namespace Com.Model
             if (parent != null) parent.AddChild(this);
             if (Dim != null)
             {
-                if (Dim.LesserSet != null) ((Set)Dim.LesserSet).CollectionChanged += LesserSet_CollectionChanged;
-                if (Dim.GreaterSet != null) ((Set)Dim.GreaterSet).CollectionChanged += GreaterSet_CollectionChanged;
+                if (Dim.Input != null) ((Set)Dim.Input).CollectionChanged += Input_CollectionChanged;
+                if (Dim.Output != null) ((Set)Dim.Output).CollectionChanged += Output_CollectionChanged;
             }
         }
 
@@ -608,11 +608,11 @@ namespace Com.Model
         {
             get
             {
-                return !IsSubsetNode && LesserSet.Schema == GreaterSet.Schema;
+                return !IsSubsetNode && Input.Schema == Output.Schema;
             }
         }
 
-        protected override void LesserSet_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e) // Changes in our lesser set
+        protected override void Input_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e) // Changes in our lesser set
         {
             if (!IsSubsetNode) return; // Child nodes are added/deleted for only super-dimensions (for subset trees)
 
@@ -624,7 +624,7 @@ namespace Com.Model
 
                 if (dim.IsSuper) // Inclusion
                 {
-                    if (dim.GreaterSet == Dim.LesserSet) // Add a subset child node (recursively)
+                    if (dim.Output == Dim.Input) // Add a subset child node (recursively)
                     {
                         if (!ExistsChild(dim))
                         {
@@ -638,7 +638,7 @@ namespace Com.Model
                 }
                 else // Poset
                 {
-                    if (dim.LesserSet == Dim.LesserSet) // Add an attribute child node (non-recursively)
+                    if (dim.Input == Dim.Input) // Add an attribute child node (non-recursively)
                     {
                         if (!ExistsChild(dim))
                         {
@@ -656,7 +656,7 @@ namespace Com.Model
 
                 if (dim.IsSuper) // Inclusion
                 {
-                    if (dim.GreaterSet == Dim.LesserSet) // Remove a subset child node (recursively)
+                    if (dim.Output == Dim.Input) // Remove a subset child node (recursively)
                     {
                         DimNode child = GetChild(dim);
                         if (child != null)
@@ -667,7 +667,7 @@ namespace Com.Model
                 }
                 else // Poset
                 {
-                    if (dim.LesserSet == Dim.LesserSet) // Add an attribute child node (non-recursively)
+                    if (dim.Input == Dim.Input) // Add an attribute child node (non-recursively)
                     {
                         DimNode child = GetChild(dim);
                         if (child != null)
@@ -679,7 +679,7 @@ namespace Com.Model
             }
         }
 
-        protected override void GreaterSet_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e) // Changes in our greater set
+        protected override void Output_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e) // Changes in our greater set
         {
         }
 
@@ -688,7 +688,7 @@ namespace Com.Model
         /// </summary>
         public void ExpandTree(bool recursively = true)
         {
-            if (LesserSet == null) // We cannot expand the set but try to expand the existing children
+            if (Input == null) // We cannot expand the set but try to expand the existing children
             {
                 if (!recursively) return;
                 foreach (DimNode c in this)
@@ -699,7 +699,7 @@ namespace Com.Model
                 return;
             }
 
-            foreach (ComColumn sd in LesserSet.SubColumns)
+            foreach (ComColumn sd in Input.SubColumns)
             {
                 if (ExistsChild(sd)) continue;
 
@@ -711,7 +711,7 @@ namespace Com.Model
             }
 
             // Add child nodes for greater dimension (no recursion)
-            foreach (ComColumn gd in LesserSet.Columns)
+            foreach (ComColumn gd in Input.Columns)
             {
                 if (gd.IsSuper) continue;
                 if (ExistsChild(gd)) continue;

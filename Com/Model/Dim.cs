@@ -45,34 +45,34 @@ namespace Com.Model
         /// <summary>
         /// Whether this function is has a primitive range (greater set). 
         /// </summary>
-        public bool IsPrimitive { get { return GreaterSet == null ? false : GreaterSet.IsPrimitive; } }
+        public bool IsPrimitive { get { return Output == null ? false : Output.IsPrimitive; } }
 
         /// <summary>
         /// Lesser (input) set. 
         /// </summary>
-        protected ComTable lesserSet;
-        public ComTable LesserSet 
+        protected ComTable _input;
+        public ComTable Input 
         {
-            get { return lesserSet; }
+            get { return _input; }
             set 
             {
-                if (lesserSet == value) return;
-                lesserSet = value; 
+                if (_input == value) return;
+                _input = value; 
             }
         }
 
         /// <summary>
         /// Greater (output) set.
         /// </summary>
-        protected ComTable greaterSet;
-        public ComTable GreaterSet
+        protected ComTable _output;
+        public ComTable Output
         {
-            get { return greaterSet; }
+            get { return _output; }
             set
             {
-                if (greaterSet == value) return;
-                greaterSet = value;
-                columnData = CreateColumnData(greaterSet, this);
+                if (_output == value) return;
+                _output = value;
+                columnData = CreateColumnData(_output, this);
             }
         }
 
@@ -84,18 +84,18 @@ namespace Com.Model
         {
             if (IsSuper) // Only one super-dim per table can exist
             {
-                if (LesserSet != null && LesserSet.SuperColumn != null)
+                if (Input != null && Input.SuperColumn != null)
                 {
-                    LesserSet.SuperColumn.Remove(); // Replace the existing column by the new one
+                    Input.SuperColumn.Remove(); // Replace the existing column by the new one
                 }
             }
 
-            if (GreaterSet != null) GreaterSet.InputColumns.Add(this);
-            if (LesserSet != null) LesserSet.Columns.Add(this);
+            if (Output != null) Output.InputColumns.Add(this);
+            if (Input != null) Input.Columns.Add(this);
 
             // Notify that a new child has been added
-            if (LesserSet != null) ((Set)LesserSet).NotifyAdd(this);
-            if (GreaterSet != null) ((Set)GreaterSet).NotifyAdd(this);
+            if (Input != null) ((Set)Input).NotifyAdd(this);
+            if (Output != null) ((Set)Output).NotifyAdd(this);
         }
 
         /// <summary>
@@ -103,12 +103,12 @@ namespace Com.Model
         /// </summary>
         public virtual void Remove()
         {
-            if (GreaterSet != null) GreaterSet.InputColumns.Remove(this);
-            if (LesserSet != null) LesserSet.Columns.Remove(this);
+            if (Output != null) Output.InputColumns.Remove(this);
+            if (Input != null) Input.Columns.Remove(this);
 
             // Notify that a new child has been removed
-            if (LesserSet != null) ((Set)LesserSet).NotifyRemove(this);
-            if (GreaterSet != null) ((Set)GreaterSet).NotifyRemove(this);
+            if (Input != null) ((Set)Input).NotifyRemove(this);
+            if (Output != null) ((Set)Output).NotifyRemove(this);
         }
 
 
@@ -130,8 +130,8 @@ namespace Com.Model
             json["key"] = IsIdentity ? "true" : "false";
             json["super"] = IsSuper ? "true" : "false";
 
-            json["lesser_table"] = Utils.CreateJsonRef(LesserSet);
-            json["greater_table"] = Utils.CreateJsonRef(GreaterSet);
+            json["lesser_table"] = Utils.CreateJsonRef(Input);
+            json["greater_table"] = Utils.CreateJsonRef(Output);
 
             // Column definition
             if (Definition != null)
@@ -194,8 +194,8 @@ namespace Com.Model
             IsIdentity = json["key"] != null ? StringSimilarity.JsonTrue((string)json["key"]) : false;
             IsSuper = json["super"] != null ? StringSimilarity.JsonTrue((string)json["super"]) : false;
 
-            LesserSet = (ComTable)Utils.ResolveJsonRef((JObject)json["lesser_table"], ws);
-            GreaterSet = (ComTable)Utils.ResolveJsonRef((JObject)json["greater_table"], ws);
+            Input = (ComTable)Utils.ResolveJsonRef((JObject)json["lesser_table"], ws);
+            Output = (ComTable)Utils.ResolveJsonRef((JObject)json["greater_table"], ws);
 
             // Column definition
             JObject columnDef = (JObject)json["definition"];
@@ -272,7 +272,7 @@ namespace Com.Model
 
         public override string ToString()
         {
-            return String.Format("{0}: {1} -> {2}", Name, LesserSet.Name, GreaterSet.Name);
+            return String.Format("{0}: {1} -> {2}", Name, Input.Name, Output.Name);
         }
 
         public override bool Equals(object obj)
@@ -367,10 +367,10 @@ namespace Com.Model
 
             IsIdentity = dim.IsIdentity;
 
-            LesserSet = dim.LesserSet;
-            GreaterSet = dim.GreaterSet;
+            Input = dim.Input;
+            Output = dim.Output;
 
-            columnData = CreateColumnData(greaterSet, this);
+            columnData = CreateColumnData(_output, this);
             columnDefinition = new ColumnDefinition(this);
             // TODO: Copy definition
         }
@@ -380,7 +380,7 @@ namespace Com.Model
         {
             Definition.Mapping = mapping;
             columnDefinition.IsGenerating = true;
-            if (GreaterSet != null) GreaterSet.Definition.DefinitionType = TableDefinitionType.PROJECTION;
+            if (Output != null) Output.Definition.DefinitionType = TableDefinitionType.PROJECTION;
         }
 
         public Dim(ComTable set) // Empty dimension
@@ -398,12 +398,12 @@ namespace Com.Model
         {
         }
 
-        public Dim(string name, ComTable lesserSet, ComTable greaterSet)
-            : this(name, lesserSet, greaterSet, false, false)
+        public Dim(string name, ComTable input, ComTable output)
+            : this(name, input, output, false, false)
         {
         }
 
-        public Dim(string name, ComTable lesserSet, ComTable greaterSet, bool isIdentity, bool isSuper)
+        public Dim(string name, ComTable input, ComTable output, bool isIdentity, bool isSuper)
         {
             Id = Guid.NewGuid();
 
@@ -412,13 +412,13 @@ namespace Com.Model
             IsIdentity = isIdentity;
             IsSuper = isSuper;
 
-            LesserSet = lesserSet;
-            GreaterSet = greaterSet;
+            Input = input;
+            Output = output;
 
             //
             // Creae storage for the function and its definition depending on the output set type
             //
-            columnData = CreateColumnData(greaterSet, this);
+            columnData = CreateColumnData(output, this);
             columnDefinition = new ColumnDefinition(this);
         }
 
@@ -464,13 +464,13 @@ namespace Com.Model
         {
         }
 
-        public DimRel(string name, ComTable lesserSet, ComTable greaterSet)
-            : this(name, lesserSet, greaterSet, false, false)
+        public DimRel(string name, ComTable input, ComTable output)
+            : this(name, input, output, false, false)
         {
         }
 
-        public DimRel(string name, ComTable lesserSet, ComTable greaterSet, bool isIdentity, bool isSuper)
-            : base(name, lesserSet, greaterSet, isIdentity, isSuper)
+        public DimRel(string name, ComTable input, ComTable output, bool isIdentity, bool isSuper)
+            : base(name, input, output, isIdentity, isSuper)
         {
         }
     }
@@ -515,13 +515,13 @@ namespace Com.Model
         {
         }
 
-        public DimCsv(string name, ComTable lesserSet, ComTable greaterSet)
-            : this(name, lesserSet, greaterSet, false, false)
+        public DimCsv(string name, ComTable input, ComTable output)
+            : this(name, input, output, false, false)
         {
         }
 
-        public DimCsv(string name, ComTable lesserSet, ComTable greaterSet, bool isIdentity, bool isSuper)
-            : base(name, lesserSet, greaterSet, isIdentity, isSuper)
+        public DimCsv(string name, ComTable input, ComTable output, bool isIdentity, bool isSuper)
+            : base(name, input, output, isIdentity, isSuper)
         {
             SampleValues = new List<string>();
             ColumnIndex = -1;

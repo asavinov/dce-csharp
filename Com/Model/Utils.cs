@@ -35,11 +35,11 @@ namespace Com.Model
             {
                 json["element_type"] = "column";
 
-                json["schema_name"] = ((ComColumn)obj).LesserSet.Schema.Name;
-                json["table_name"] = ((ComColumn)obj).LesserSet.Name;
+                json["schema_name"] = ((ComColumn)obj).Input.Schema.Name;
+                json["table_name"] = ((ComColumn)obj).Input.Name;
 
-                json["type_schema_name"] = ((ComColumn)obj).GreaterSet.Schema.Name;
-                json["type_table_name"] = ((ComColumn)obj).GreaterSet.Name;
+                json["type_schema_name"] = ((ComColumn)obj).Output.Schema.Name;
+                json["type_table_name"] = ((ComColumn)obj).Output.Name;
 
                 json["column_name"] = ((ComColumn)obj).Name;
             }
@@ -309,13 +309,13 @@ namespace Com.Model
             for (int i = source.Path.Count - 1; i >= 0; i--)
             {
                 string d1 = source.Path[i].Name;
-                string s1 = source.Path[i].GreaterSet.Name;
+                string s1 = source.Path[i].Output.Name;
 
                 double w2 = 1.0;
                 for (int j = target.Path.Count - 1; j >= 0; j--)
                 {
                     string d2 = target.Path[j].Name;
-                    string s2 = target.Path[j].GreaterSet.Name;
+                    string s2 = target.Path[j].Output.Name;
 
                     double simDim = ComputeStringSimilarity(d1, d2, 3);
                     simDim *= (w1 * w2);

@@ -96,7 +96,7 @@ namespace Com.Model
         {
             for (int i = 0; i < Path.Count; i++)
             {
-                if (Path[i].GreaterSet == set) return i;
+                if (Path[i].Output == set) return i;
             }
             return -1;
         }
@@ -104,7 +104,7 @@ namespace Com.Model
         {
             for (int i = 0; i < Path.Count; i++)
             {
-                if (Path[i].LesserSet == set) return i;
+                if (Path[i].Input == set) return i;
             }
             return -1;
         }
@@ -164,8 +164,8 @@ namespace Com.Model
                 ret.Path.Add(Path[index + i]);
             }
 
-            ret.GreaterSet = ret.Path[0].LesserSet;
-            ret.LesserSet = ret.Path[ret.Path.Count - 1].GreaterSet;
+            ret.Output = ret.Path[0].Input;
+            ret.Input = ret.Path[ret.Path.Count - 1].Output;
 
             return ret;
         }
@@ -183,32 +183,32 @@ namespace Com.Model
 
         public void InsertFirst(ComColumn dim) // Insert a new segment at the beginning of the path
         {
-            Debug.Assert(Size == 0 || dim.GreaterSet == LesserSet, "A path must continue the first segment inserted in the beginning.");
+            Debug.Assert(Size == 0 || dim.Output == Input, "A path must continue the first segment inserted in the beginning.");
 
             Path.Insert(0, dim);
-            LesserSet = dim.LesserSet;
-            if (GreaterSet == null) GreaterSet = dim.GreaterSet;
+            Input = dim.Input;
+            if (Output == null) Output = dim.Output;
         }
         public void InsertFirst(DimPath path) // Insert new segments from the specified path at the beginning of the path
         {
-            Debug.Assert(Size == 0 || path.GreaterSet == LesserSet, "A path must continue the first segment inserted in the beginning.");
+            Debug.Assert(Size == 0 || path.Output == Input, "A path must continue the first segment inserted in the beginning.");
 
             Path.InsertRange(0, path.Path);
-            LesserSet = path.LesserSet;
-            if (GreaterSet == null) GreaterSet = path.GreaterSet;
+            Input = path.Input;
+            if (Output == null) Output = path.Output;
         }
 
         public void InsertLast(ComColumn dim) // Append a new segment to the end of the path
         {
-            Debug.Assert(Size == 0 || dim.LesserSet == GreaterSet, "A new segment appended to a path must continue the previous segments");
+            Debug.Assert(Size == 0 || dim.Input == Output, "A new segment appended to a path must continue the previous segments");
 
             Path.Add(dim);
-            GreaterSet = dim.GreaterSet;
-            if (LesserSet == null) LesserSet = dim.LesserSet;
+            Output = dim.Output;
+            if (Input == null) Input = dim.Input;
         }
         public void InsertLast(DimPath path) // Append all segments of the specified path to the end of this path
         {
-            Debug.Assert(Size == 0 || path.LesserSet == GreaterSet, "A an appended path must continue this path.");
+            Debug.Assert(Size == 0 || path.Input == Output, "A an appended path must continue this path.");
 
             if (path == null || path.Size == 0) return;
 
@@ -217,8 +217,8 @@ namespace Com.Model
                 Path.Add(path.Path[i]);
             }
 
-            GreaterSet = path.GreaterSet;
-            if (LesserSet == null) LesserSet = path.LesserSet;
+            Output = path.Output;
+            if (Input == null) Input = path.Input;
         }
 
         #endregion // Add segments
@@ -235,12 +235,12 @@ namespace Com.Model
 
             if (Path.Count != 0)
             {
-                LesserSet = Path[0].LesserSet;
-                GreaterSet = Path[Path.Count - 1].GreaterSet;
+                Input = Path[0].Input;
+                Output = Path[Path.Count - 1].Output;
             }
             else
             {
-                // Note: LesserSet and GreaterSets are not set - this must be done in public methods and depends on whether it is removed as first or last segment (it is important for some algorithms)
+                // Note: Input table and Output table are not set - this must be done in public methods and depends on whether it is removed as first or last segment (it is important for some algorithms)
             }
 
             return result;
@@ -257,8 +257,8 @@ namespace Com.Model
 
             if (Path.Count == 0) // This where removal of the first and the last segments is different
             {
-                LesserSet = result.GreaterSet;
-                GreaterSet = result.GreaterSet;
+                Input = result.Output;
+                Output = result.Output;
             }
 
             return result;
@@ -270,12 +270,12 @@ namespace Com.Model
 
             Path.RemoveRange(0, path.Path.Count);
 
-            if (Path.Count > 0) LesserSet = Path[0].LesserSet;
-            else LesserSet = GreaterSet;
+            if (Path.Count > 0) Input = Path[0].Input;
+            else Input = Output;
         }
         public void RemoveFirst(ComTable set) // Remove first segments till this set (the new path will start from the specified set if trimmed)
         {
-            if (LesserSet == set) return; // Already here
+            if (Input == set) return; // Already here
 
             // Find a path to the specified set
             int index = this.IndexOfGreater(set);
@@ -283,8 +283,8 @@ namespace Com.Model
 
             Path.RemoveRange(0, index+1);
 
-            if (Path.Count > 0) LesserSet = Path[0].LesserSet;
-            else LesserSet = GreaterSet;
+            if (Path.Count > 0) Input = Path[0].Input;
+            else Input = Output;
         }
 
         public ComColumn RemoveLast() // Remove last segment
@@ -298,8 +298,8 @@ namespace Com.Model
 
             if (Path.Count == 0) // This where removal of the first and the last segments is different
             {
-                LesserSet = result.LesserSet;
-                GreaterSet = result.LesserSet;
+                Input = result.Input;
+                Output = result.Input;
             }
 
             return result;
@@ -415,7 +415,7 @@ namespace Com.Model
             }
             if (Size > 0) path = path.Substring(0, path.Length-1);
 
-            return String.Format("{0}: {1} -> {2}, {3}", Name, LesserSet.Name, GreaterSet.Name, path);
+            return String.Format("{0}: {1} -> {2}, {3}", Name, Input.Name, Output.Name, path);
         }
 
         public override bool Equals(object obj)
@@ -481,8 +481,8 @@ namespace Com.Model
         public DimPath(ComTable set)
             : this()
         {
-            LesserSet = set;
-            GreaterSet = set;
+            Input = set;
+            Output = set;
         }
 
         public DimPath(string name)
@@ -497,8 +497,8 @@ namespace Com.Model
             if (segment == null) return;
 
             Path.Add(segment);
-            LesserSet = Path[0].LesserSet;
-            GreaterSet = Path[Path.Count - 1].GreaterSet;
+            Input = Path[0].Input;
+            Output = Path[Path.Count - 1].Output;
         }
 
         public DimPath(List<ComColumn> segments)
@@ -507,8 +507,8 @@ namespace Com.Model
             if(segments == null && segments.Count == 0) return;
 
             Path.AddRange(segments);
-            LesserSet = Path[0].LesserSet;
-            GreaterSet = Path[Path.Count - 1].GreaterSet;
+            Input = Path[0].Input;
+            Output = Path[Path.Count - 1].Output;
         }
 
         public DimPath(DimPath path)
@@ -518,8 +518,8 @@ namespace Com.Model
             Path.AddRange(path.Path);
         }
 
-        public DimPath(string name, ComTable lesserSet, ComTable greaterSet)
-            : base(name, lesserSet, greaterSet)
+        public DimPath(string name, ComTable input, ComTable output)
+            : base(name, input, output)
         {
             Path = new List<ComColumn>();
         }
@@ -537,22 +537,22 @@ namespace Com.Model
 
         public override void Add()
         {
-            //if (GreaterSet != null) ((SetRel)GreaterSet).AddLesserPath(this);
-            if (LesserSet != null) ((SetRel)LesserSet).AddGreaterPath(this);
+            //if (Output != null) ((SetRel)Output).AddLesserPath(this);
+            if (Input != null) ((SetRel)Input).AddGreaterPath(this);
 
             // Notify that a new child has been added
-            //if (LesserSet != null) ((Set)LesserSet).NotifyAdd(this);
-            //if (GreaterSet != null) ((Set)GreaterSet).NotifyAdd(this);
+            //if (Input != null) ((Set)Input).NotifyAdd(this);
+            //if (Output != null) ((Set)Output).NotifyAdd(this);
         }
 
         public override void Remove()
         {
-            //if (GreaterSet != null) ((SetRel)GreaterSet).RemoveLesserPath(this);
-            if (LesserSet != null) ((SetRel)LesserSet).RemoveGreaterPath(this);
+            //if (Output != null) ((SetRel)Output).RemoveLesserPath(this);
+            if (Input != null) ((SetRel)Input).RemoveGreaterPath(this);
 
             // Notify that a new child has been removed
-            //if (LesserSet != null) ((Set)LesserSet).NotifyRemove(this);
-            //if (GreaterSet != null) ((Set)GreaterSet).NotifyRemove(this);
+            //if (Input != null) ((Set)Input).NotifyRemove(this);
+            //if (Output != null) ((Set)Output).NotifyRemove(this);
         }
 
         #endregion
@@ -582,10 +582,10 @@ namespace Com.Model
             if (string.IsNullOrEmpty(att.RelationalFkName)) // No FK - primitive column - end of recursion
             {
                 // Find or create a primitive dim segment
-                ComColumn seg = columns.FirstOrDefault(c => c.LesserSet == att.LesserSet && StringSimilarity.SameColumnName(((DimRel)c).RelationalFkName, att.RelationalFkName));
+                ComColumn seg = columns.FirstOrDefault(c => c.Input == att.Input && StringSimilarity.SameColumnName(((DimRel)c).RelationalFkName, att.RelationalFkName));
                 if (seg == null)
                 {
-                    seg = new DimRel(att.RelationalColumnName, att.LesserSet, att.GreaterSet, isKey, false); // Maybe copy constructor?
+                    seg = new DimRel(att.RelationalColumnName, att.Input, att.Output, isKey, false); // Maybe copy constructor?
                     ((DimRel)seg).RelationalFkName = att.RelationalFkName;
                     columns.Add(seg);
                 }
@@ -594,14 +594,14 @@ namespace Com.Model
             }
             else { // There is FK - non-primitive column
                 // Find target set and target attribute (name resolution)
-                DimAttribute tailAtt = attributes.FirstOrDefault(a => StringSimilarity.SameTableName(a.LesserSet.Name, att.RelationalTargetTableName) && StringSimilarity.SameColumnName(a.Name, att.RelationalTargetColumnName));
-                ComTable gSet = tailAtt.LesserSet;
+                DimAttribute tailAtt = attributes.FirstOrDefault(a => StringSimilarity.SameTableName(a.Input.Name, att.RelationalTargetTableName) && StringSimilarity.SameColumnName(a.Name, att.RelationalTargetColumnName));
+                ComTable gSet = tailAtt.Input;
 
                 // Find or create a dim segment
-                ComColumn seg = columns.FirstOrDefault(c => c.LesserSet == att.LesserSet && StringSimilarity.SameColumnName(((DimRel)c).RelationalFkName, att.RelationalFkName));
+                ComColumn seg = columns.FirstOrDefault(c => c.Input == att.Input && StringSimilarity.SameColumnName(((DimRel)c).RelationalFkName, att.RelationalFkName));
                 if (seg == null)
                 {
-                    seg = new DimRel(att.RelationalFkName, att.LesserSet, gSet, isKey, false);
+                    seg = new DimRel(att.RelationalFkName, att.Input, gSet, isKey, false);
                     ((DimRel)seg).RelationalFkName = att.RelationalFkName;
                     columns.Add(seg);
                 }
@@ -615,7 +615,7 @@ namespace Com.Model
                 att.InsertLast(tailAtt);
 
                 // Adjust name. How many attributes belong to the same FK as this attribute (FK composition)
-                List<DimAttribute> fkAtts = attributes.Where(a => a.LesserSet == att.LesserSet && StringSimilarity.SameColumnName(att.RelationalFkName, a.RelationalFkName)).ToList();
+                List<DimAttribute> fkAtts = attributes.Where(a => a.Input == att.Input && StringSimilarity.SameColumnName(att.RelationalFkName, a.RelationalFkName)).ToList();
                 if(fkAtts.Count == 1) 
                 {
                     seg.Name = att.RelationalColumnName; // Adjust name. For 1-column FK, name of the FK-dim is the column name (not the FK name)
@@ -649,7 +649,7 @@ namespace Com.Model
             //
             // Adding missing paths. Particularly, non-stored paths (paths returning values which are stored only in the greater sets but not in this set).
             //
-            if (!String.IsNullOrEmpty(RelationalFkName) /*&& GreaterSet.IdentityPrimitiveArity == 1*/)
+            if (!String.IsNullOrEmpty(RelationalFkName) /*&& Output.IdentityPrimitiveArity == 1*/)
             {
                 Path[0].Name = Name; // FK-name is overwritten and lost - attribute name is used instead
             }
@@ -657,7 +657,7 @@ namespace Com.Model
             //
             // Dim name adjustment: for 1-column FK dimensions, we prefer to use its only column name instead of the FK-name (fkName is not used)
             //
-            if (!String.IsNullOrEmpty(RelationalFkName) /*&& GreaterSet.IdentityPrimitiveArity == 1*/)
+            if (!String.IsNullOrEmpty(RelationalFkName) /*&& Output.IdentityPrimitiveArity == 1*/)
             {
                 Path[0].Name = Name; // FK-name is overwritten and lost - attribute name is used instead
             }
@@ -703,8 +703,8 @@ namespace Com.Model
         {
         }
 
-        public DimAttribute(string name, ComTable lesserSet, ComTable greaterSet)
-            : base(name, lesserSet, greaterSet)
+        public DimAttribute(string name, ComTable input, ComTable output)
+            : base(name, input, output)
         {
         }
     }
@@ -744,8 +744,8 @@ namespace Com.Model
         // Dispose the object.
         public void Dispose()
         {
-            LesserSet = null;
-            GreaterSet = null;
+            Input = null;
+            Output = null;
 
             Path.Clear();
             Path = null;
@@ -775,8 +775,8 @@ namespace Com.Model
     /// </summary>
     public abstract class DimComplexEnumerator : DimEnumerator
     {
-        protected List<ComTable> lesserSets;
-        protected List<ComTable> greaterSets;
+        protected List<ComTable> _inputs;
+        protected List<ComTable> _outputs;
         protected bool isInverse;
         protected DimensionType dimType; // The path will be composed of only these types of segments
         protected bool allowIntermediateSets = false; // Not implemented. lesser and greater sets only as source and destination - not in the middle of the path (default). Otherwise, they can appear in the middle of the path (say, one greater set and then the final greater set).
@@ -786,24 +786,24 @@ namespace Com.Model
         // Whether the current set is valid or not. If it is valid then all parents/previous are invalid in the case of coverage condition.
         protected bool[] isValidSet = new bool[1024];
 
-        public DimComplexEnumerator(List<ComTable> _lesserSets, List<ComTable> _greaterSets, bool _isInverse, DimensionType _dimType)
+        public DimComplexEnumerator(List<ComTable> inputs, List<ComTable> outputs, bool _isInverse, DimensionType _dimType)
             : base(null)
         {
-            lesserSets = _lesserSets;
-            greaterSets = _greaterSets;
+            _inputs = inputs;
+            _outputs = outputs;
 
             isInverse = _isInverse;
             dimType = _dimType;
 
             if (!isInverse)
             {
-                LesserSet = lesserSets[0];
-                GreaterSet = lesserSets[0];
+                Input = _inputs[0];
+                Output = _inputs[0];
             }
             else
             {
-                LesserSet = greaterSets[0];
-                GreaterSet = greaterSets[0];
+                Input = _outputs[0];
+                Output = _outputs[0];
             }
 
             childNumber = Enumerable.Repeat(-1, 1024).ToArray();
@@ -813,8 +813,8 @@ namespace Com.Model
         public DimComplexEnumerator(ComTable set)
             : base(set)
         {
-            lesserSets = new List<ComTable>(new ComTable[] { set }); // One source set
-            greaterSets = new List<ComTable>(new ComTable[] { set.Schema.Root }); // All destination sets from this schema
+            _inputs = new List<ComTable>(new ComTable[] { set }); // One source set
+            _outputs = new List<ComTable>(new ComTable[] { set.Schema.Root }); // All destination sets from this schema
 
             isInverse = false;
 
@@ -832,18 +832,18 @@ namespace Com.Model
     /// </summary>
     public class PathEnumerator : DimComplexEnumerator
     {
-        public PathEnumerator(ComTable set, DimensionType _dimType) // All primitive paths
-            : this(new List<ComTable>(new ComTable[] { set }), null, false, _dimType)
+        public PathEnumerator(ComTable set, DimensionType dimType) // All primitive paths
+            : this(new List<ComTable>(new ComTable[] { set }), null, false, dimType)
         {
         }
 
-        public PathEnumerator(ComTable lesserSet, ComTable greaterSet, DimensionType _dimType) // Between two sets
-            : this(new List<ComTable>(new ComTable[] { lesserSet }), new List<ComTable>(new ComTable[] { greaterSet }), false, _dimType)
+        public PathEnumerator(ComTable input, ComTable output, DimensionType dimType) // Between two sets
+            : this(new List<ComTable>(new ComTable[] { input }), new List<ComTable>(new ComTable[] { output }), false, dimType)
         {
         }
 
-        public PathEnumerator(List<ComTable> _lesserSets, List<ComTable> _greaterSets, bool _isInverse, DimensionType _dimType)
-            : base(_lesserSets, _greaterSets, _isInverse, _dimType)
+        public PathEnumerator(List<ComTable> inputs, List<ComTable> outputs, bool isInverse, DimensionType dimType)
+            : base(inputs, outputs, isInverse, dimType)
         {
         }
 
@@ -947,25 +947,25 @@ namespace Com.Model
         {
             if (!isInverse) // Move up from lesser to greater
             {
-                if (GreaterSet.IsPrimitive) return new List<ComColumn>(); // We exclude the top element
+                if (Output.IsPrimitive) return new List<ComColumn>(); // We exclude the top element
                 switch (dimType)
                 {
-                    case DimensionType.IDENTITY_ENTITY: return GreaterSet.Columns.Where(x => x.LesserSet.Schema == x.GreaterSet.Schema).ToList();
-                    case DimensionType.IDENTITY: return GreaterSet.Columns.Where(x => x.IsIdentity && x.LesserSet.Schema == x.GreaterSet.Schema).ToList();
-                    case DimensionType.ENTITY: return GreaterSet.Columns.Where(x => !x.IsIdentity && x.LesserSet.Schema == x.GreaterSet.Schema).ToList();
+                    case DimensionType.IDENTITY_ENTITY: return Output.Columns.Where(x => x.Input.Schema == x.Output.Schema).ToList();
+                    case DimensionType.IDENTITY: return Output.Columns.Where(x => x.IsIdentity && x.Input.Schema == x.Output.Schema).ToList();
+                    case DimensionType.ENTITY: return Output.Columns.Where(x => !x.IsIdentity && x.Input.Schema == x.Output.Schema).ToList();
 
-                    case DimensionType.GENERATING: return GreaterSet.Columns.Where(x => (x.Definition != null && x.Definition.IsGenerating) && x.LesserSet.Schema == x.GreaterSet.Schema).ToList();
+                    case DimensionType.GENERATING: return Output.Columns.Where(x => (x.Definition != null && x.Definition.IsGenerating) && x.Input.Schema == x.Output.Schema).ToList();
                 }
             }
             else
             {
                 switch (dimType)
                 {
-                    case DimensionType.IDENTITY_ENTITY: return LesserSet.InputColumns.Where(x => x.LesserSet.Schema == x.GreaterSet.Schema).ToList();
-                    case DimensionType.IDENTITY: return LesserSet.InputColumns.Where(x => x.IsIdentity && x.LesserSet.Schema == x.GreaterSet.Schema).ToList();
-                    case DimensionType.ENTITY: return LesserSet.InputColumns.Where(x => !x.IsIdentity && x.LesserSet.Schema == x.GreaterSet.Schema).ToList();
+                    case DimensionType.IDENTITY_ENTITY: return Input.InputColumns.Where(x => x.Input.Schema == x.Output.Schema).ToList();
+                    case DimensionType.IDENTITY: return Input.InputColumns.Where(x => x.IsIdentity && x.Input.Schema == x.Output.Schema).ToList();
+                    case DimensionType.ENTITY: return Input.InputColumns.Where(x => !x.IsIdentity && x.Input.Schema == x.Output.Schema).ToList();
 
-                    case DimensionType.GENERATING: return LesserSet.InputColumns.Where(x => (x.Definition != null && x.Definition.IsGenerating) && x.LesserSet.Schema == x.GreaterSet.Schema).ToList();
+                    case DimensionType.GENERATING: return Input.InputColumns.Where(x => (x.Definition != null && x.Definition.IsGenerating) && x.Input.Schema == x.Output.Schema).ToList();
                 }
             }
 
@@ -999,20 +999,20 @@ namespace Com.Model
         }
         private bool TargetSetValid() // Here we determined of the set satisfy our criteria on tables
         {
-            List<ComTable> destinations = !isInverse ? greaterSets : lesserSets;
-            ComTable dest = !isInverse ? GreaterSet : LesserSet;
+            List<ComTable> destinations = !isInverse ? _outputs : _inputs;
+            ComTable dest = !isInverse ? Output : Input;
 
             if (destinations == null) // Destinations are primitive and only primitive sets
             {
-                if (!isInverse) return GreaterSet.IsPrimitive;
-                else return LesserSet.IsLeast; // Just least set because primitive sets do not exist for least sets
+                if (!isInverse) return Output.IsPrimitive;
+                else return Input.IsLeast; // Just least set because primitive sets do not exist for least sets
             }
             else if (destinations.Count == 0) // Destinations are terminal sets (greatest or least). Check possibility to continue.
             {
                 return true;
 /*
-                if (!isInverse) return GreaterSet.IsGreatest;
-                else return LesserSet.IsLeast;
+                if (!isInverse) return Output.IsGreatest;
+                else return Input.IsLeast;
 */
             }
             else // Concrete destinations are specified
@@ -1036,7 +1036,7 @@ namespace Com.Model
 
             public override bool MoveNext()
             {
-                if (!GreaterSet.IsPrimitive)
+                if (!Output.IsPrimitive)
                 {
                     bool primitiveFound = MoveForward();
                     if (primitiveFound) return true;
@@ -1051,14 +1051,14 @@ namespace Com.Model
             }
             private bool MoveForward() // true - found primitive, false - found non-primitive leaf
             {
-                while (!GreaterSet.IsPrimitive) // Not a leaf - go up deeper and search for the first primitive set
+                while (!Output.IsPrimitive) // Not a leaf - go up deeper and search for the first primitive set
                 {
                     List<Dim> dims = GetContinuations();
 
                     if (dims.Count != 0)
                     {
                         Path.Add(dims[0]); // Continue depth-first by adding the very first dimension
-                        GreaterSet = LastSegment.GreaterSet;
+                        Output = LastSegment.Output;
                     }
                     else
                     {
@@ -1079,7 +1079,7 @@ namespace Com.Model
 
                     child = LastSegment;
                     Path.RemoveAt(Path.Count - 1);
-                    GreaterSet = Path.Count == 0 ? LesserSet : LastSegment.GreaterSet;
+                    Output = Path.Count == 0 ? Input : LastSegment.Output;
 
                     List<Dim> children = GetContinuations();
 
@@ -1088,7 +1088,7 @@ namespace Com.Model
                     {
                         child = children[childIndex + 1];
                         Path.Add(child);
-                        GreaterSet = LastSegment.GreaterSet;
+                        Output = LastSegment.Output;
                         return true;
                     }
                     else // Bad child. Continue removing.
@@ -1104,9 +1104,9 @@ namespace Com.Model
             {
                 switch (dimType)
                 {
-                    case DimensionType.IDENTITY: return GreaterSet.GetIdentityDims();
-                    case DimensionType.ENTITY: return GreaterSet.GetEntityDims();
-                    case DimensionType.IDENTITY_ENTITY: return GreaterSet.GreaterDims;
+                    case DimensionType.IDENTITY: return Output.GetIdentityDims();
+                    case DimensionType.ENTITY: return Output.GetEntityDims();
+                    case DimensionType.IDENTITY_ENTITY: return Output.GreaterDims;
                 }
                 return null;
             }

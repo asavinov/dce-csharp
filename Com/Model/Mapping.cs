@@ -27,21 +27,21 @@ namespace Com.Model
                 if (_sourceSet == null) { _sourceSet = value; return; }
                 if (_sourceSet == value) return;
 
-                List<DimPath> lesserSegs = ((Set)value).GetGreaterPaths((Set)_sourceSet);
-                List<DimPath> greaterSegs = ((Set)_sourceSet).GetGreaterPaths((Set)value);
+                List<DimPath> inputSegs = ((Set)value).GetGreaterPaths((Set)_sourceSet);
+                List<DimPath> outputSegs = ((Set)_sourceSet).GetGreaterPaths((Set)value);
 
-                if (lesserSegs != null && lesserSegs.Count > 0) // New set is a lesser set for the current
+                if (inputSegs != null && inputSegs.Count > 0) // New set is a lesser set for the current
                 {
                     foreach (PathMatch m in Matches) // Insert new segments
                     {
-                        m.SourcePath.InsertFirst(lesserSegs[0]);
+                        m.SourcePath.InsertFirst(inputSegs[0]);
                     }
                 }
-                else if (greaterSegs != null && greaterSegs.Count > 0) // New set is a greater set for the current
+                else if (outputSegs != null && outputSegs.Count > 0) // New set is a greater set for the current
                 {
                     foreach (PathMatch m in Matches) // Remove segments
                     {
-                        m.SourcePath.RemoveFirst(greaterSegs[0].GreaterSet);
+                        m.SourcePath.RemoveFirst(outputSegs[0].Output);
                     }
                 }
                 else // Otherwise
@@ -76,7 +76,7 @@ namespace Com.Model
                 {
                     foreach (PathMatch m in Matches) // Remove segments
                     {
-                        m.TargetPath.RemoveFirst(greaterSegs[0].GreaterSet);
+                        m.TargetPath.RemoveFirst(greaterSegs[0].Output);
                     }
                 }
                 else // Otherwise
@@ -90,12 +90,12 @@ namespace Com.Model
 
         public bool IsSourcePathValid(DimPath path)
         {
-            if (path.LesserSet != SourceSet && !SourceSet.IsInput(path.LesserSet)) return false;
+            if (path.Input != SourceSet && !SourceSet.IsInput(path.Input)) return false;
             return true;
         }
         public bool IsTargetPathValid(DimPath path)
         {
-            if (path.LesserSet != TargetSet && !TargetSet.IsInput(path.LesserSet)) return false;
+            if (path.Input != TargetSet && !TargetSet.IsInput(path.Input)) return false;
             return true;
         }
 
@@ -152,11 +152,11 @@ namespace Com.Model
 
         public void AddPaths(ComColumn sd, ComColumn td, Mapping gMapping) // Add this pair by expanding it using the mapping
         {
-            Debug.Assert(sd != null && sd.LesserSet == SourceSet, "Wrong use: source path must start from the source set.");
-            Debug.Assert(td != null && td.LesserSet == TargetSet, "Wrong use: target path must start from the target set.");
+            Debug.Assert(sd != null && sd.Input == SourceSet, "Wrong use: source path must start from the source set.");
+            Debug.Assert(td != null && td.Input == TargetSet, "Wrong use: target path must start from the target set.");
 
-            Debug.Assert(sd != null && sd.GreaterSet == gMapping.SourceSet, "Wrong use: source path must end where the mapping starts.");
-            Debug.Assert(td != null && td.GreaterSet == gMapping.TargetSet, "Wrong use: target path must end where the mapping starts.");
+            Debug.Assert(sd != null && sd.Output == gMapping.SourceSet, "Wrong use: source path must end where the mapping starts.");
+            Debug.Assert(td != null && td.Output == gMapping.TargetSet, "Wrong use: target path must end where the mapping starts.");
 
             if (gMapping.Matches.Count == 0) // If there are no continuations then add only the starting segments (for example, for mappings between primitive sets)
             {
@@ -220,8 +220,8 @@ namespace Com.Model
 
         public void RemoveMatch(DimPath sourcePath, DimPath targetPath) // Remove the specified and all more specific matches (continuations)
         {
-            Debug.Assert(sourcePath.LesserSet == SourceSet, "Wrong use: source path must start from the source set.");
-            Debug.Assert(targetPath.LesserSet == TargetSet, "Wrong use: target path must start from the target set.");
+            Debug.Assert(sourcePath.Input == SourceSet, "Wrong use: source path must start from the source set.");
+            Debug.Assert(targetPath.Input == TargetSet, "Wrong use: target path must start from the target set.");
 
             List<PathMatch> toRemove = new List<PathMatch>();
             foreach (PathMatch m in Matches)
@@ -240,12 +240,12 @@ namespace Com.Model
         {
             if (sourcePath != null)
             {
-                _sourceSet = sourcePath.LesserSet;
+                _sourceSet = sourcePath.Input;
                 Matches.ForEach(m => m.SourcePath.InsertFirst(sourcePath));
             }
             if (targetPath != null)
             {
-                _targetSet = targetPath.LesserSet;
+                _targetSet = targetPath.Input;
                 Matches.ForEach(m => m.TargetPath.InsertFirst(targetPath));
             }
         }
@@ -253,12 +253,12 @@ namespace Com.Model
         {
             if (sourcePath != null)
             {
-                _sourceSet = sourcePath.GreaterSet;
+                _sourceSet = sourcePath.Output;
                 Matches.ForEach(m => m.SourcePath.RemoveFirst(sourcePath));
             }
             if (targetPath != null)
             {
-                _targetSet = targetPath.GreaterSet;
+                _targetSet = targetPath.Output;
                 Matches.ForEach(m => m.TargetPath.RemoveFirst(targetPath));
             }
         }
@@ -283,7 +283,7 @@ namespace Com.Model
             DimTree tree = new DimTree(set);
             foreach (PathMatch m in Matches)
             {
-                // if(m.SourcePath.LesserSet != set) continue; // Use this if we want to take into account only paths *starting* from this set (rather than crossing this set)
+                // if(m.SourcePath.Input != set) continue; // Use this if we want to take into account only paths *starting* from this set (rather than crossing this set)
                 int index = m.SourcePath.IndexOfLesser(set);
                 if (index < 0) continue; // The path does not cross this set
 
@@ -304,7 +304,7 @@ namespace Com.Model
             DimTree tree = new DimTree(set);
             foreach (PathMatch m in Matches)
             {
-                // if(m.TargetPath.LesserSet != set) continue; // Use this if we want to take into account only paths *starting* from this set (rather than crossing this set)
+                // if(m.TargetPath.Input != set) continue; // Use this if we want to take into account only paths *starting* from this set (rather than crossing this set)
                 int index = m.TargetPath.IndexOfLesser(set);
                 if (index < 0) continue; // The path does not cross this set
 
@@ -374,9 +374,9 @@ namespace Com.Model
         [System.Obsolete("Use BuildExpression()", true)]
         public ExprNode GetTargetExpression(ComColumn dim) // Build tuple expression for the specified mapped dimension
         {
-            // It is mapping from LesserSet to GreaterSet of the dimension
-            Debug.Assert(dim == null || dim.LesserSet == SourceSet, "Wrong use: lesser set of the mapped dimension corresponds to the source set of the mapping.");
-            Debug.Assert(dim == null || dim.GreaterSet == TargetSet, "Wrong use: greater set of the mapped dimension corresponds to the target set of the mapping.");
+            // It is mapping from Input to Output of the dimension
+            Debug.Assert(dim == null || dim.Input == SourceSet, "Wrong use: lesser set of the mapped dimension corresponds to the source set of the mapping.");
+            Debug.Assert(dim == null || dim.Output == TargetSet, "Wrong use: greater set of the mapped dimension corresponds to the target set of the mapping.");
 
             /*
             Expression tupleExpr = new Expression(null, Operation.TUPLE, TargetSet);
@@ -399,7 +399,7 @@ namespace Com.Model
                 }
                 else // There is a direct path (relation attribute in a relational data source). Use attribute name as function name
                 {
-                    srcExpr = new Expression(srcPath.Name, Operation.DOT, match.TargetPath.GreaterSet);
+                    srcExpr = new Expression(srcPath.Name, Operation.DOT, match.TargetPath.Output);
                 }
                 srcExpr.GetInputLeaf().Input = thisExpr;
 
@@ -423,8 +423,8 @@ namespace Com.Model
 
             if (schema == null) // Find the schema from the mapping elements
             {
-                PathMatch match = Matches.FirstOrDefault(m => m.TargetPath.GreaterSet.IsPrimitive);
-                schema = match != null ? match.TargetPath.GreaterSet.Schema : null; // We assume that primitive sets always have root defined (other sets might not have been added yet).
+                PathMatch match = Matches.FirstOrDefault(m => m.TargetPath.Output.IsPrimitive);
+                schema = match != null ? match.TargetPath.Output.Schema : null; // We assume that primitive sets always have root defined (other sets might not have been added yet).
             }
 
             DimTree tree = GetTargetTree();
@@ -508,8 +508,8 @@ namespace Com.Model
         public DimPath TargetPath { get; private set; }
         public double Similarity { get; set; }
 
-        public ComTable SourceSet { get { return SourcePath == null ? null : SourcePath.LesserSet; } }
-        public ComTable TargetSet { get { return TargetPath == null ? null : TargetPath.LesserSet; } }
+        public ComTable SourceSet { get { return SourcePath == null ? null : SourcePath.Input; } }
+        public ComTable TargetSet { get { return TargetPath == null ? null : TargetPath.Input; } }
 
         public bool MatchesSource(DimPath path) // This is more specific (longer) than argument
         {

@@ -128,14 +128,14 @@ namespace Com.Model
             }
 
             currentElement = -1;
-            loopTable = column.LesserSet;
+            loopTable = column.Input;
             isUpdate = false;
             thisVariable = new Variable("this", loopTable.Name);
             thisVariable.TypeTable = loopTable;
             columnData = column.Data;
 
             // Resolve names in the expresion by storing direct references to storage objects which will be used during valuation (names will not be used
-            exprNode.Resolve(column.LesserSet.Schema, new List<ComVariable>() { thisVariable });
+            exprNode.Resolve(column.Input.Schema, new List<ComVariable>() { thisVariable });
         }
 
         public ExprEvaluator(ComTable table)
@@ -332,11 +332,11 @@ namespace Com.Model
 
             columnData = column.Data;
 
-            groupVariable = new Variable("this", column.LesserSet.Name);
-            groupVariable.TypeTable = column.LesserSet;
+            groupVariable = new Variable("this", column.Input.Name);
+            groupVariable.TypeTable = column.Input;
 
-            measureVariable = new Variable("value", column.GreaterSet.Name);
-            measureVariable.TypeTable = column.GreaterSet;
+            measureVariable = new Variable("value", column.Output.Name);
+            measureVariable.TypeTable = column.Output;
 
             groupExpr = ExprNode.CreateReader(column.Definition.GroupPaths[0], true); // Currently only one path is used
             measureExpr = ExprNode.CreateReader(column.Definition.MeasurePaths[0], true);
@@ -346,7 +346,7 @@ namespace Com.Model
             exprNode = ExprNode.CreateUpdater(column, column.Definition.Updater);
 
             // Resolve names in the expresions using appropriate variables
-            exprNode.Resolve(column.LesserSet.Schema, new List<ComVariable>() { groupVariable, measureVariable });
+            exprNode.Resolve(column.Input.Schema, new List<ComVariable>() { groupVariable, measureVariable });
 
             groupExpr.Resolve(loopTable.Schema, new List<ComVariable>() { thisVariable });
             measureExpr.Resolve(loopTable.Schema, new List<ComVariable>() { thisVariable });

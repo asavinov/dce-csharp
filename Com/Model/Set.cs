@@ -42,7 +42,7 @@ namespace Com.Model
         public List<ComColumn> Columns { get { return greaterDims; } } // Outgoing up arrows. Outputs
 
         public ComColumn SuperColumn { get { return Columns.FirstOrDefault(x => x.IsSuper); } }
-        public ComTable SuperTable { get { return SuperColumn != null ? SuperColumn.GreaterSet : null; } }
+        public ComTable SuperTable { get { return SuperColumn != null ? SuperColumn.Output : null; } }
         public ComSchema Schema
         {
             get
@@ -61,7 +61,7 @@ namespace Com.Model
         public List<ComColumn> InputColumns { get { return lesserDims; } } // Incoming arrows. Inputs
 
         public List<ComColumn> SubColumns { get { return InputColumns.Where(x => x.IsSuper).ToList(); } }
-        public List<ComTable> SubTables { get { return SubColumns.Select(x => x.LesserSet).ToList(); } }
+        public List<ComTable> SubTables { get { return SubColumns.Select(x => x.Input).ToList(); } }
         public List<ComTable> AllSubTables // Should be solved using general enumerator? Other: get all lesser, get all greater
         {
             get 
@@ -105,13 +105,13 @@ namespace Com.Model
             return paths.Count() > 0;
         }
 
-        public bool IsLeast { get { return InputColumns.Count(x => x.LesserSet.Schema == x.GreaterSet.Schema) == 0; } } // Direct to bottom
+        public bool IsLeast { get { return InputColumns.Count(x => x.Input.Schema == x.Output.Schema) == 0; } } // Direct to bottom
 
         public bool IsGreatest // TODO: Direct to top
         {
             get
             {
-                return IsPrimitive || Columns.Count(x => x.LesserSet.Schema == x.GreaterSet.Schema) == 0; // All primitive sets are greatest by definition
+                return IsPrimitive || Columns.Count(x => x.Input.Schema == x.Output.Schema) == 0; // All primitive sets are greatest by definition
             }
         }
 
@@ -126,8 +126,8 @@ namespace Com.Model
 
         public ComTable GetTable(string name) 
         { 
-            ComColumn col = Columns.FirstOrDefault(d => StringSimilarity.SameColumnName(d.GreaterSet.Name, name));
-            return col == null ? null : col.LesserSet; 
+            ComColumn col = Columns.FirstOrDefault(d => StringSimilarity.SameColumnName(d.Output.Name, name));
+            return col == null ? null : col.Input; 
         }
 
         public ComTable GetSubTable(string name)
@@ -141,7 +141,7 @@ namespace Com.Model
             foreach (Dim d in SubColumns)
             {
                 if (set != null) break;
-                set = d.LesserSet.GetSubTable(name);
+                set = d.Input.GetSubTable(name);
             }
 
             return set;
@@ -338,7 +338,7 @@ namespace Com.Model
                 // First, find or append the value recursively. It will be in Output
                 Expression childExpr = expr.GetOperand(dim);
                 if (childExpr == null) continue;
-                dim.GreaterSet.TableData.Find(childExpr);
+                dim.Output.TableData.Find(childExpr);
                 object childOffset = childExpr.Output; 
 
                 // Second, use this value to analyze a combination of values for uniqueness - only for identity dimensions
@@ -489,7 +489,7 @@ namespace Com.Model
                 {
                     if (childExpr.Output == null)
                     {
-                        dim.GreaterSet.TableData.Append(childExpr); // Recursive insertion
+                        dim.Output.TableData.Append(childExpr); // Recursive insertion
                     }
                     val = childExpr.Output;
                 }
@@ -556,7 +556,7 @@ namespace Com.Model
 
                 // For building all combinations
                 Offset[] lengths = new Offset[dimCount];
-                for (int i = 0; i < dimCount; i++) lengths[i] = dims[i].GreaterSet.Data.Length;
+                for (int i = 0; i < dimCount; i++) lengths[i] = dims[i].Output.Data.Length;
 
                 Offset[] offsets = new Offset[dimCount]; // Here we store the current state of choices for each dimensions
                 for (int i = 0; i < dimCount; i++) offsets[i] = -1;
@@ -632,8 +632,8 @@ namespace Com.Model
                 // If cannot be added (does not satisfy constraints) then set values of the greater generating dimensions to null
 
                 ComColumn projectDim = Definition.GeneratingDimensions[0];
-                ComTable sourceSet = projectDim.LesserSet;
-                ComTable targetSet = projectDim.GreaterSet; // this set
+                ComTable sourceSet = projectDim.Input;
+                ComTable targetSet = projectDim.Output; // this set
 
                 // Prepare the expression from the mapping
                 ComColumnEvaluator evaluator = projectDim.Definition.GetColumnEvaluator();
@@ -677,13 +677,13 @@ namespace Com.Model
             foreach (ComColumn col in Columns) // If a greater (key) set has changed then this set has to be populated
             {
                 if (!col.IsIdentity) continue;
-                res.Add(col.GreaterSet);
+                res.Add(col.Output);
             }
 
             foreach (ComColumn col in InputColumns) // If a generating source set has changed then this set has to be populated
             {
                 if (!col.Definition.IsGenerating) continue;
-                res.Add(col.LesserSet);
+                res.Add(col.Input);
             }
 
             // TODO: Add tables used in the Where expression
@@ -711,13 +711,13 @@ namespace Com.Model
             foreach (ComColumn col in InputColumns) // If this set has changed then all its lesser (key) sets have to be populated
             {
                 if (!col.IsIdentity) continue;
-                res.Add(col.LesserSet);
+                res.Add(col.Input);
             }
 
             foreach (ComColumn col in Columns) // If this table has changed then output tables of generating dimensions have to be populated
             {
                 if (!col.Definition.IsGenerating) continue;
-                res.Add(col.GreaterSet);
+                res.Add(col.Output);
             }
 
             // Recursion
@@ -912,10 +912,10 @@ namespace Com.Model
 
         #endregion
 
-        public List<DimPath> GetGreaterPaths(Set greaterSet) // Differences between this set and the specified set
+        public List<DimPath> GetGreaterPaths(Set output) // Differences between this set and the specified set
         {
-            if (greaterSet == null) return null;
-            var paths = new PathEnumerator(this, greaterSet, DimensionType.IDENTITY_ENTITY);
+            if (output == null) return null;
+            var paths = new PathEnumerator(this, output, DimensionType.IDENTITY_ENTITY);
             var ret = new List<DimPath>();
             foreach (var p in paths)
             {
@@ -973,16 +973,16 @@ namespace Com.Model
 
         public void AddGreaterPath(DimAttribute path)
         {
-            Debug.Assert(path.GreaterSet != null && path.LesserSet != null, "Wrong use: path must specify a lesser and greater sets before it can be added to a set.");
+            Debug.Assert(path.Output != null && path.Input != null, "Wrong use: path must specify a lesser and greater sets before it can be added to a set.");
             RemoveGreaterPath(path);
-            if (path.GreaterSet is SetRel) ((SetRel)path.GreaterSet).LesserPaths.Add(path);
-            if (path.LesserSet is SetRel) ((SetRel)path.LesserSet).GreaterPaths.Add(path);
+            if (path.Output is SetRel) ((SetRel)path.Output).LesserPaths.Add(path);
+            if (path.Input is SetRel) ((SetRel)path.Input).GreaterPaths.Add(path);
         }
         public void RemoveGreaterPath(DimAttribute path)
         {
-            Debug.Assert(path.GreaterSet != null && path.LesserSet != null, "Wrong use: path must specify a lesser and greater sets before it can be removed from a set.");
-            if (path.GreaterSet is SetRel) ((SetRel)path.GreaterSet).LesserPaths.Remove(path);
-            if (path.LesserSet is SetRel) ((SetRel)path.LesserSet).GreaterPaths.Remove(path);
+            Debug.Assert(path.Output != null && path.Input != null, "Wrong use: path must specify a lesser and greater sets before it can be removed from a set.");
+            if (path.Output is SetRel) ((SetRel)path.Output).LesserPaths.Remove(path);
+            if (path.Input is SetRel) ((SetRel)path.Input).GreaterPaths.Remove(path);
         }
         public void RemoveGreaterPath(string name)
         {
@@ -1067,8 +1067,8 @@ namespace Com.Model
                 newPath.RelationalColumnName = newPath.Name; // It actually will be used for relational queries
                 newPath.RelationalFkName = path.RelationalFkName; // Belongs to the same FK
                 newPath.RelationalPkName = null;
-                //newPath.LesserSet = this;
-                //newPath.GreaterSet = p.Path[p.Length - 1].GreaterSet;
+                //newPath.Input = this;
+                //newPath.Output = p.Path[p.Length - 1].Output;
 
                 AddGreaterPath(newPath);
             }

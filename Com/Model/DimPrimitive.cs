@@ -491,7 +491,7 @@ namespace Com.Model
 
             _nullCount = Length;
 
-            Length = dim.LesserSet.Data.Length;
+            Length = dim.Input.Data.Length;
 
             // Initialize what representative value will be used instead of nulls
             _nullValue = default(T); // Check if type is nullable: http://stackoverflow.com/questions/374651/how-to-check-if-an-object-is-nullable
@@ -626,11 +626,11 @@ namespace Com.Model
             {
                 ; // Nothing to do
             }
-            else if (Dim.LesserSet.Schema != Dim.GreaterSet.Schema && Dim.LesserSet.Schema is SetTopCsv) // Import data from a remote source
+            else if (Dim.Input.Schema != Dim.Output.Schema && Dim.Input.Schema is SetTopCsv) // Import data from a remote source
             {
                 evaluator = ExprEvaluator.CreateCsvEvaluator(Dim);
             }
-            else if (Dim.LesserSet.Schema != Dim.GreaterSet.Schema && Dim.LesserSet.Schema is SetTopOledb) // Import data from a remote source
+            else if (Dim.Input.Schema != Dim.Output.Schema && Dim.Input.Schema is SetTopOledb) // Import data from a remote source
             {
                 evaluator = ExprEvaluator.CreateOledbEvaluator(Dim);
             }
@@ -699,7 +699,7 @@ namespace Com.Model
                     {
                         foreach (var seg in path.Path)
                         {
-                            if (!res.Contains(seg.GreaterSet)) res.Add(seg.GreaterSet);
+                            if (!res.Contains(seg.Output)) res.Add(seg.Output);
                         }
                     }
                 }
@@ -709,7 +709,7 @@ namespace Com.Model
                     {
                         foreach (var seg in path.Path)
                         {
-                            if (!res.Contains(seg.GreaterSet)) res.Add(seg.GreaterSet);
+                            if (!res.Contains(seg.Output)) res.Add(seg.Output);
                         }
                     }
                 }

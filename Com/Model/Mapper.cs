@@ -217,21 +217,21 @@ namespace Com.Model
             //
             // 1. Find target greater sets. They are found among mappings and hence can contain both existing (in the schema) and new sets. 
             //
-            List<ComTable> targetGreaterSets = new List<ComTable>();
+            List<ComTable> targetOutputSets = new List<ComTable>();
 
             foreach (ComColumn sd in sourceSet.Columns)
             {
-                Mapping gMapping = GetBestMapping(sd.GreaterSet, targetSchema);
+                Mapping gMapping = GetBestMapping(sd.Output, targetSchema);
 
                 if (gMapping == null) // Either does not exist or cannot be built (for example, formally not possible or meaningless)
                 {
-                    MapSet(sd.GreaterSet, targetSchema); // Recursion up to primitive sets if not computed and stored earlier
-                    gMapping = GetBestMapping(sd.GreaterSet, targetSchema); // Try again after generation
+                    MapSet(sd.Output, targetSchema); // Recursion up to primitive sets if not computed and stored earlier
+                    gMapping = GetBestMapping(sd.Output, targetSchema); // Try again after generation
                 }
 
                 greaterMappings.Add(sd, gMapping);
 
-                targetGreaterSets.Add(gMapping != null ? gMapping.TargetSet : null);
+                targetOutputSets.Add(gMapping != null ? gMapping.TargetSet : null);
             }
 
             //
@@ -248,13 +248,13 @@ namespace Com.Model
                 coverage[i] = 0;
                 foreach (ComColumn tgc in allTargetSets[i].Columns)
                 {
-                    ComTable tgs = tgc.GreaterSet;
-                    if (!targetGreaterSets.Contains(tgs)) continue;
+                    ComTable tgs = tgc.Output;
+                    if (!targetOutputSets.Contains(tgs)) continue;
 
                     // TODO: Compare dimension names and then use it as a weight [0,1] instead of simply incrementing
                     coverage[i] += 1;
                 }
-                coverage[i] /= targetGreaterSets.Count; // Normalize to [0,1]
+                coverage[i] /= targetOutputSets.Count; // Normalize to [0,1]
                 if (coverage[i] > 1) coverage[i] = 1; // A lesser set can use (reference, cover) a greater set more than once
 
                 // Take into account individual similarity of the target set with the source set
@@ -306,7 +306,7 @@ namespace Com.Model
 
                     // Find an existing dimension from ts to gts with the best similarity to source dim sd
                     ComColumn td = null;
-                    var tDims = ts.Columns.Where(d => d.GreaterSet == gts); // All target dimensions from ts to gts
+                    var tDims = ts.Columns.Where(d => d.Output == gts); // All target dimensions from ts to gts
                     if (tDims != null && tDims.Count() > 0)
                     {
                         // TODO: In fact, we need to choose the best dimension, for example, by comparing their names, usages, ranks and other semantic factors
@@ -435,11 +435,11 @@ namespace Com.Model
         public List<Mapping> MapDim(DimPath sourcePath, DimPath targetPath)
         {
             // We analyze all continuations of the specified prefix paths
-            List<DimPath> sourcePaths = (new PathEnumerator(sourcePath.GreaterSet, DimensionType.IDENTITY_ENTITY)).ToList();
+            List<DimPath> sourcePaths = (new PathEnumerator(sourcePath.Output, DimensionType.IDENTITY_ENTITY)).ToList();
             sourcePaths.ForEach(p => p.InsertFirst(sourcePath));
             if (sourcePaths.Count == 0) sourcePaths.Add(sourcePath);
 
-            List<DimPath> targetPaths = (new PathEnumerator(targetPath.GreaterSet, DimensionType.IDENTITY_ENTITY)).ToList();
+            List<DimPath> targetPaths = (new PathEnumerator(targetPath.Output, DimensionType.IDENTITY_ENTITY)).ToList();
             targetPaths.ForEach(p => p.InsertFirst(targetPath));
             if (targetPaths.Count == 0) targetPaths.Add(targetPath);
 
@@ -482,11 +482,11 @@ namespace Com.Model
                 Mapping mapping;
                 if (withPrefix)
                 {
-                    mapping = new Mapping(sourcePath.LesserSet, targetPath.LesserSet);
+                    mapping = new Mapping(sourcePath.Input, targetPath.Input);
                 }
                 else
                 {
-                    mapping = new Mapping(sourcePath.GreaterSet, targetPath.GreaterSet);
+                    mapping = new Mapping(sourcePath.Output, targetPath.Output);
                 }
 
                 for (int i = 0; i < sourcePathCount; i++)
@@ -620,7 +620,7 @@ namespace Com.Model
             dimImport.Add();
 
             // Define the table
-            dimImport.GreaterSet.Definition.DefinitionType = TableDefinitionType.PROJECTION;
+            dimImport.Output.Definition.DefinitionType = TableDefinitionType.PROJECTION;
 
             return mapping.TargetSet;
         }
@@ -656,8 +656,8 @@ namespace Com.Model
                     sp = new DimAttribute(att);
 
                     // Recommend matching target type (mapping primitive types)
-                    this.MapPrimitiveSet(att.GreaterSet, targetSchema);
-                    ComTable targetType = this.GetBestTargetSet(att.GreaterSet, targetSchema);
+                    this.MapPrimitiveSet(att.Output, targetSchema);
+                    ComTable targetType = this.GetBestTargetSet(att.Output, targetSchema);
 
                     td = new Dim(att.RelationalColumnName, map.TargetSet, targetType, att.IsIdentity, false);
                     tp = new DimPath(td);
@@ -677,7 +677,7 @@ namespace Com.Model
 
                     // Recommend matching target type (mapping primitive types)
                     //this.MapPrimitiveSet(sd, targetSchema);
-                    //CsTable targetType = this.GetBestTargetSet(sd.GreaterSet, targetSchema);
+                    //CsTable targetType = this.GetBestTargetSet(sd.Output, targetSchema);
 
                     //
                     // Analyze sample values of sd and choose the most specific target type

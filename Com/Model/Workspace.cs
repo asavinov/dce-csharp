@@ -75,7 +75,7 @@ namespace Com.Model
                         comColumn.FromJson(column, this);
 
                         // Find the same existing column (possibly without a definition)
-                        ComColumn existing = comColumn.LesserSet.GetColumn(comColumn.Name);
+                        ComColumn existing = comColumn.Input.GetColumn(comColumn.Name);
 
                         // Copy the definition
                         existing.FromJson(column, this);

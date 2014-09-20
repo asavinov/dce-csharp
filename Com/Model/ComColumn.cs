@@ -13,12 +13,12 @@ namespace Com.Model
 
         bool IsIdentity { get; }
         bool IsSuper { get; } // Changing this property may influence storage type
-        // Other properties: isNullable, isPrimitive, IsInstantiable (is supposed/able to have instances = lesser set instantiable), isTemporary
         bool IsPrimitive { get; }
+        // Other properties: isNullable, isTemporary, IsInstantiable (is supposed/able to have instances = lesser set instantiable)
 
         // Note: Set property works only for handing dims. For connected dims, a dim has to be disconnected first, then change its lesser/greater set and finally added again.
-        ComTable LesserSet { get; set; }
-        ComTable GreaterSet { get; set; }
+        ComTable Input { get; set; }
+        ComTable Output { get; set; }
 
         void Add(); // Add to schema
         void Remove(); // Remove from schema

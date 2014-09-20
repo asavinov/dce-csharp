@@ -178,8 +178,8 @@ namespace Test
             Assert.AreEqual(t2.GetColumn("Column 21").Name, "Column 21");
 
             Assert.AreEqual(t2.GetColumn("Super").IsSuper, true);
-            Assert.AreEqual(t2.SuperColumn.LesserSet, t2);
-            Assert.AreEqual(t2.SuperColumn.GreaterSet, schema.Root);
+            Assert.AreEqual(t2.SuperColumn.Input, t2);
+            Assert.AreEqual(t2.SuperColumn.Output, schema.Root);
 
             // Test path enumerator
             var pathEnum = new PathEnumerator(t2, t1, DimensionType.IDENTITY_ENTITY);
@@ -447,7 +447,7 @@ namespace Test
             t3.Definition.DefinitionType = TableDefinitionType.PROJECTION;
             schema.AddTable(t3, null, null);
 
-            ComColumn c31 = schema.CreateColumn(c21.Name, t3, c21.GreaterSet, true);
+            ComColumn c31 = schema.CreateColumn(c21.Name, t3, c21.Output, true);
             c31.Add();
 
             // Manually define a mapping as the generating column definition by using one column only. And create a generating dimension with this mapping.
@@ -477,9 +477,9 @@ namespace Test
             t4.Definition.DefinitionType = TableDefinitionType.PROJECTION;
             schema.AddTable(t4, null, null);
 
-            ComColumn c41 = schema.CreateColumn(c21.Name, t4, c21.GreaterSet, true);
+            ComColumn c41 = schema.CreateColumn(c21.Name, t4, c21.Output, true);
             c41.Add();
-            ComColumn c42 = schema.CreateColumn(c22.Name, t4, c22.GreaterSet, true);
+            ComColumn c42 = schema.CreateColumn(c22.Name, t4, c22.Output, true);
             c42.Add();
 
             // Manually define a mapping as the generating column definition by using one column only. And create a generating dimension with this mapping.
@@ -528,7 +528,7 @@ namespace Test
             Assert.AreEqual(20, top.Root.SubTables.Count);
             Assert.AreEqual(11, top.GetSubTable("Order Details").Columns.Count);
 
-            Assert.AreEqual("Orders", top.GetSubTable("Order Details").GetColumn("Order ID").GreaterSet.Name);
+            Assert.AreEqual("Orders", top.GetSubTable("Order Details").GetColumn("Order ID").Output.Name);
 
             // Load data manually
             DataTable dataTable = top.LoadTable((SetRel)top.GetSubTable("Order Details"));
@@ -576,7 +576,7 @@ namespace Test
             Assert.AreEqual(1, top.Root.SubTables.Count);
             Assert.AreEqual(15, top.GetSubTable("Products").Columns.Count);
 
-            Assert.AreEqual("String", top.GetSubTable("Products").GetColumn("Product Name").GreaterSet.Name);
+            Assert.AreEqual("String", top.GetSubTable("Products").GetColumn("Product Name").Output.Name);
             Assert.AreEqual("3", ((DimCsv)top.GetSubTable("Products").GetColumn("ID")).SampleValues[1]);
 
             //
@@ -644,7 +644,7 @@ namespace Test
             Assert.AreEqual(5, ws.Schemas[0].GetSubTable("Table 1").Columns.Count);
             Assert.AreEqual(5, ws.Schemas[0].GetSubTable("Table 2").Columns.Count);
 
-            Assert.AreEqual("Table 1", ws.Schemas[0].GetSubTable("Table 2").GetColumn("Table 1").GreaterSet.Name);
+            Assert.AreEqual("Table 1", ws.Schemas[0].GetSubTable("Table 2").GetColumn("Table 1").Output.Name);
 
             t = ws.Schemas[0].GetSubTable("Table 2");
             Assert.AreEqual(TableDefinitionType.PRODUCT, t.Definition.DefinitionType);
@@ -695,7 +695,7 @@ namespace Test
 
             Assert.AreEqual(2, ws2.Schemas.Count);
             Assert.AreEqual("My Schema", ws2.Mashup.Name);
-            Assert.AreEqual("My Table", ws2.Schemas[1].FindTable("Rel Table").GetGreaterDim("Import Column").GreaterSet.Name);
+            Assert.AreEqual("My Table", ws2.Schemas[1].FindTable("Rel Table").GetGreaterDim("Import Column").Output.Name);
             */
         }
     
