@@ -180,7 +180,7 @@ namespace Com.Query
                         else { break; } // ERROR: parameter wrong or not found
 
                         // TOD: Really add a new function with this definition
-                        Set typeSet = (Set) top.FindTable(type);
+                        Set typeSet = (Set) top.GetSubTable(type);
                         Dim dim = (Dim)((ComSchema)top).CreateColumn(name, set, typeSet, true);
                         //dim.FormulaAst = formula;
                         dim.Add();

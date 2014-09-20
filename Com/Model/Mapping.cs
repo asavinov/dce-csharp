@@ -90,12 +90,12 @@ namespace Com.Model
 
         public bool IsSourcePathValid(DimPath path)
         {
-            if (path.LesserSet != SourceSet && !SourceSet.IsLesser(path.LesserSet)) return false;
+            if (path.LesserSet != SourceSet && !SourceSet.IsInput(path.LesserSet)) return false;
             return true;
         }
         public bool IsTargetPathValid(DimPath path)
         {
-            if (path.LesserSet != TargetSet && !TargetSet.IsLesser(path.LesserSet)) return false;
+            if (path.LesserSet != TargetSet && !TargetSet.IsInput(path.LesserSet)) return false;
             return true;
         }
 
@@ -424,7 +424,7 @@ namespace Com.Model
             if (schema == null) // Find the schema from the mapping elements
             {
                 PathMatch match = Matches.FirstOrDefault(m => m.TargetPath.GreaterSet.IsPrimitive);
-                schema = match != null ? match.TargetPath.GreaterSet.Top : null; // We assume that primitive sets always have root defined (other sets might not have been added yet).
+                schema = match != null ? match.TargetPath.GreaterSet.Schema : null; // We assume that primitive sets always have root defined (other sets might not have been added yet).
             }
 
             DimTree tree = GetTargetTree();

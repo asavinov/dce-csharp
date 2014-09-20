@@ -9,45 +9,50 @@ namespace Com.Model
 {
     public interface ComTable : ComJson // One table object
     {
+        /// <summary>
+        /// A set name. Note that in the general case a set has an associated structure (concept, type) which may have its own name. 
+        /// </summary>
         string Name { get; set; }
 
+        /// <summary>
+        /// Whether it is a primitive set. Primitive sets do not have greater dimensions.
+        /// It can depend on other propoerties (it should be clarified) like instantiable, autopopulated, virtual etc.
+        /// </summary>
         bool IsPrimitive { get; }
 
         //
         // Outputs
         //
-        List<ComColumn> GreaterDims { get; }
-        ComColumn SuperDim { get; }
-        List<ComColumn> KeyColumns { get; }
-        List<ComColumn> NonkeyColumns { get; }
-        ComSchema Top { get; }
-        List<ComTable> GetGreaterSets();
-        ComTable SuperSet { get; }
+        List<ComColumn> Columns { get; }
+
+        ComColumn SuperColumn { get; }
+        ComTable SuperTable { get; }
+        ComSchema Schema { get; }
 
         //
         // Inputs
         //
+        List<ComColumn> InputColumns { get; }
 
-        List<ComColumn> LesserDims { get; }
-        List<ComColumn> SubDims { get; }
-        List<ComTable> SubSets { get; }
-        List<ComTable> GetAllSubsets();
+        List<ComColumn> SubColumns { get; }
+        List<ComTable> SubTables { get; }
+        List<ComTable> AllSubTables { get; }
 
         //
         // Poset relation
         //
 
-        bool IsIn(ComTable parent);
-        bool IsLesser(ComTable set);
-        bool IsLeast { get; }
-        bool IsGreatest { get; }
+        bool IsSubTable(ComTable parent); // Is subset of the specified table
+        bool IsInput(ComTable set); // Is lesser than the specified table
+        bool IsLeast { get; } // Has no inputs
+        bool IsGreatest { get; } // Has no outputs
 
         //
         // Names
         //
-        ComColumn GetGreaterDim(string name);
-        ComTable GetTable(string name);
-        ComTable FindTable(string name);
+        ComColumn GetColumn(string name); // Greater column
+        ComTable GetTable(string name); // TODO: Greater table/type - not subtable
+        ComTable GetSubTable(string name); // Subtable
 
         ComTableData Data { get; }
         ComTableDefinition Definition { get; }

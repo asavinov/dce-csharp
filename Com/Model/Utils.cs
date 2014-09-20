@@ -28,17 +28,17 @@ namespace Com.Model
             {
                 json["element_type"] = "table";
 
-                json["schema_name"] = ((ComTable)obj).Top.Name;
+                json["schema_name"] = ((ComTable)obj).Schema.Name;
                 json["table_name"] = ((ComTable)obj).Name;
             }
             else if (obj is ComColumn)
             {
                 json["element_type"] = "column";
 
-                json["schema_name"] = ((ComColumn)obj).LesserSet.Top.Name;
+                json["schema_name"] = ((ComColumn)obj).LesserSet.Schema.Name;
                 json["table_name"] = ((ComColumn)obj).LesserSet.Name;
 
-                json["type_schema_name"] = ((ComColumn)obj).GreaterSet.Top.Name;
+                json["type_schema_name"] = ((ComColumn)obj).GreaterSet.Schema.Name;
                 json["type_table_name"] = ((ComColumn)obj).GreaterSet.Name;
 
                 json["column_name"] = ((ComColumn)obj).Name;
@@ -67,15 +67,15 @@ namespace Com.Model
             {
                 ComSchema schema = ws.GetSchema((string)json["schema_name"]);
                 if (schema == null) return null;
-                return schema.FindTable((string)json["table_name"]);
+                return schema.GetSubTable((string)json["table_name"]);
             }
             else if (element_type == "column") // Find column
             {
                 ComSchema schema = ws.GetSchema((string)json["schema_name"]);
                 if (schema == null) return null;
-                ComTable table = schema.FindTable((string)json["table_name"]);
+                ComTable table = schema.GetSubTable((string)json["table_name"]);
                 if (table == null) return null;
-                return table.GetGreaterDim((string)json["column_name"]);
+                return table.GetColumn((string)json["column_name"]);
             }
             else
             {

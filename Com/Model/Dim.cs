@@ -84,14 +84,14 @@ namespace Com.Model
         {
             if (IsSuper) // Only one super-dim per table can exist
             {
-                if (LesserSet != null && LesserSet.SuperDim != null)
+                if (LesserSet != null && LesserSet.SuperColumn != null)
                 {
-                    LesserSet.SuperDim.Remove(); // Replace the existing column by the new one
+                    LesserSet.SuperColumn.Remove(); // Replace the existing column by the new one
                 }
             }
 
-            if (GreaterSet != null) GreaterSet.LesserDims.Add(this);
-            if (LesserSet != null) LesserSet.GreaterDims.Add(this);
+            if (GreaterSet != null) GreaterSet.InputColumns.Add(this);
+            if (LesserSet != null) LesserSet.Columns.Add(this);
 
             // Notify that a new child has been added
             if (LesserSet != null) ((Set)LesserSet).NotifyAdd(this);
@@ -103,8 +103,8 @@ namespace Com.Model
         /// </summary>
         public virtual void Remove()
         {
-            if (GreaterSet != null) GreaterSet.LesserDims.Remove(this);
-            if (LesserSet != null) LesserSet.GreaterDims.Remove(this);
+            if (GreaterSet != null) GreaterSet.InputColumns.Remove(this);
+            if (LesserSet != null) LesserSet.Columns.Remove(this);
 
             // Notify that a new child has been removed
             if (LesserSet != null) ((Set)LesserSet).NotifyRemove(this);

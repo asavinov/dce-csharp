@@ -90,12 +90,12 @@ namespace Test
             //
             // Fill sample data in "Table 1"
             //
-            ComTable t1 = schema.FindTable("Table 1");
+            ComTable t1 = schema.GetSubTable("Table 1");
 
-            ComColumn c11 = t1.GetGreaterDim("Column 11");
-            ComColumn c12 = t1.GetGreaterDim("Column 12");
-            ComColumn c13 = t1.GetGreaterDim("Column 13");
-            ComColumn c14 = t1.GetGreaterDim("Column 14");
+            ComColumn c11 = t1.GetColumn("Column 11");
+            ComColumn c12 = t1.GetColumn("Column 12");
+            ComColumn c13 = t1.GetColumn("Column 13");
+            ComColumn c14 = t1.GetColumn("Column 14");
 
             ComColumn[] cols = new ComColumn[] { c11, c12, c13, c14 };
             object[] vals = new object[4];
@@ -121,12 +121,12 @@ namespace Test
             //
             // Fill sample data in "Table 2"
             //
-            ComTable t2 = schema.FindTable("Table 2");
+            ComTable t2 = schema.GetSubTable("Table 2");
 
-            ComColumn c21 = t2.GetGreaterDim("Column 21");
-            ComColumn c22 = t2.GetGreaterDim("Column 22");
-            ComColumn c23 = t2.GetGreaterDim("Column 23");
-            ComColumn c24 = t2.GetGreaterDim("Table 1");
+            ComColumn c21 = t2.GetColumn("Column 21");
+            ComColumn c22 = t2.GetColumn("Column 22");
+            ComColumn c23 = t2.GetColumn("Column 23");
+            ComColumn c24 = t2.GetColumn("Table 1");
 
             cols = new ComColumn[] { c21, c22, c23, c24 };
             vals = new object[4];
@@ -164,22 +164,22 @@ namespace Test
             //
             ComSchema schema = CreateSampleSchema();
 
-            ComTable t1 = schema.FindTable("Table 1");
-            ComTable t2 = schema.FindTable("Table 2");
+            ComTable t1 = schema.GetSubTable("Table 1");
+            ComTable t2 = schema.GetSubTable("Table 2");
 
             // Finding by name and check various properties provided by the schema
             Assert.AreEqual(schema.GetPrimitive("Decimal").Name, "Decimal");
 
             Assert.AreEqual(t1.Name, "Table 1");
             Assert.AreEqual(t2.Name, "Table 2");
-            Assert.AreEqual(schema.Root.GetTable("Table 2"), t2);
+            Assert.AreEqual(schema.GetSubTable("Table 2"), t2);
 
-            Assert.AreEqual(t1.GetGreaterDim("Column 11").Name, "Column 11");
-            Assert.AreEqual(t2.GetGreaterDim("Column 21").Name, "Column 21");
+            Assert.AreEqual(t1.GetColumn("Column 11").Name, "Column 11");
+            Assert.AreEqual(t2.GetColumn("Column 21").Name, "Column 21");
 
-            Assert.AreEqual(t2.GetGreaterDim("Super").IsSuper, true);
-            Assert.AreEqual(t2.SuperDim.LesserSet, t2);
-            Assert.AreEqual(t2.SuperDim.GreaterSet, schema.Root);
+            Assert.AreEqual(t2.GetColumn("Super").IsSuper, true);
+            Assert.AreEqual(t2.SuperColumn.LesserSet, t2);
+            Assert.AreEqual(t2.SuperColumn.GreaterSet, schema.Root);
 
             // Test path enumerator
             var pathEnum = new PathEnumerator(t2, t1, DimensionType.IDENTITY_ENTITY);
@@ -194,15 +194,15 @@ namespace Test
             //
             ComSchema schema = CreateSampleSchema();
 
-            ComTable t1 = schema.FindTable("Table 1");
+            ComTable t1 = schema.GetSubTable("Table 1");
 
-            ComColumn c11 = t1.GetGreaterDim("Column 11");
-            ComColumn c12 = t1.GetGreaterDim("Column 12");
-            ComColumn c13 = t1.GetGreaterDim("Column 13");
+            ComColumn c11 = t1.GetColumn("Column 11");
+            ComColumn c12 = t1.GetColumn("Column 12");
+            ComColumn c13 = t1.GetColumn("Column 13");
 
-            ComTable t2 = schema.FindTable("Table 2");
-            ComColumn c21 = t2.GetGreaterDim("Column 21");
-            ComColumn c22 = t2.GetGreaterDim("Column 22");
+            ComTable t2 = schema.GetSubTable("Table 2");
+            ComColumn c21 = t2.GetColumn("Column 21");
+            ComColumn c22 = t2.GetColumn("Column 22");
 
             //
             // Data
@@ -247,11 +247,11 @@ namespace Test
             ComSchema schema = CreateSampleSchema();
             CreateSampleData(schema);
 
-            ComTable t1 = schema.FindTable("Table 1");
+            ComTable t1 = schema.GetSubTable("Table 1");
 
-            ComColumn c11 = t1.GetGreaterDim("Column 11");
-            ComColumn c12 = t1.GetGreaterDim("Column 12");
-            ComColumn c13 = t1.GetGreaterDim("Column 13");
+            ComColumn c11 = t1.GetColumn("Column 11");
+            ComColumn c12 = t1.GetColumn("Column 12");
+            ComColumn c13 = t1.GetColumn("Column 13");
 
             //
             // Data manipulations
@@ -277,12 +277,12 @@ namespace Test
             ComSchema schema = CreateSampleSchema();
             CreateSampleData(schema);
 
-            ComTable t1 = schema.FindTable("Table 1");
+            ComTable t1 = schema.GetSubTable("Table 1");
 
-            ComColumn c11 = t1.GetGreaterDim("Column 11");
-            ComColumn c12 = t1.GetGreaterDim("Column 12");
-            ComColumn c13 = t1.GetGreaterDim("Column 13");
-            ComColumn c14 = t1.GetGreaterDim("Column 14");
+            ComColumn c11 = t1.GetColumn("Column 11");
+            ComColumn c12 = t1.GetColumn("Column 12");
+            ComColumn c13 = t1.GetColumn("Column 13");
+            ComColumn c14 = t1.GetColumn("Column 14");
 
             //
             // Define a derived column with a definition
@@ -311,12 +311,12 @@ namespace Test
             ComSchema schema = CreateSampleSchema();
             CreateSampleData(schema);
 
-            ComTable t1 = schema.FindTable("Table 1");
+            ComTable t1 = schema.GetSubTable("Table 1");
 
-            ComTable t2 = schema.FindTable("Table 2");
+            ComTable t2 = schema.GetSubTable("Table 2");
 
-            ComColumn c23 = t2.GetGreaterDim("Column 23");
-            ComColumn c24 = t2.GetGreaterDim("Table 1");
+            ComColumn c23 = t2.GetColumn("Column 23");
+            ComColumn c24 = t2.GetColumn("Table 1");
 
             //
             // Define aggregated column
@@ -370,7 +370,7 @@ namespace Test
             ComSchema schema = CreateSampleSchema();
             CreateSampleData(schema);
 
-            ComTable t2 = schema.FindTable("Table 2");
+            ComTable t2 = schema.GetSubTable("Table 2");
 
             //
             // Define a new filter-set
@@ -384,7 +384,7 @@ namespace Test
 
             t3.Definition.Populate();
             Assert.AreEqual(1, t3.Data.Length);
-            Assert.AreEqual(1, t3.SuperDim.Data.GetValue(0));
+            Assert.AreEqual(1, t3.SuperColumn.Data.GetValue(0));
         }
 
         [TestMethod]
@@ -393,8 +393,8 @@ namespace Test
             ComSchema schema = CreateSampleSchema();
             CreateSampleData(schema);
 
-            ComTable t1 = schema.FindTable("Table 1");
-            ComTable t2 = schema.FindTable("Table 2");
+            ComTable t1 = schema.GetSubTable("Table 1");
+            ComTable t2 = schema.GetSubTable("Table 2");
 
             //
             // Define a new product-set
@@ -434,11 +434,11 @@ namespace Test
             ComSchema schema = CreateSampleSchema();
             CreateSampleData(schema);
 
-            ComTable t2 = schema.FindTable("Table 2");
+            ComTable t2 = schema.GetSubTable("Table 2");
 
-            ComColumn c21 = t2.GetGreaterDim("Column 21");
-            ComColumn c22 = t2.GetGreaterDim("Column 22");
-            ComColumn c23 = t2.GetGreaterDim("Column 23");
+            ComColumn c21 = t2.GetColumn("Column 21");
+            ComColumn c22 = t2.GetColumn("Column 22");
+            ComColumn c23 = t2.GetColumn("Column 23");
 
             //
             // Project "Table 2" along "Column 21" and get 2 unique records in a new set "Value A" (3 references) and "Value B" (1 reference)
@@ -525,13 +525,13 @@ namespace Test
             //
             top.LoadSchema();
 
-            Assert.AreEqual(20, top.Root.SubSets.Count);
-            Assert.AreEqual(11, top.FindTable("Order Details").GreaterDims.Count);
+            Assert.AreEqual(20, top.Root.SubTables.Count);
+            Assert.AreEqual(11, top.GetSubTable("Order Details").Columns.Count);
 
-            Assert.AreEqual("Orders", top.FindTable("Order Details").GetGreaterDim("Order ID").GreaterSet.Name);
+            Assert.AreEqual("Orders", top.GetSubTable("Order Details").GetColumn("Order ID").GreaterSet.Name);
 
             // Load data manually
-            DataTable dataTable = top.LoadTable((SetRel)top.FindTable("Order Details"));
+            DataTable dataTable = top.LoadTable((SetRel)top.GetSubTable("Order Details"));
             Assert.AreEqual(58, dataTable.Rows.Count);
             Assert.AreEqual(37, dataTable.Rows[10][2]);
 
@@ -545,7 +545,7 @@ namespace Test
             
             // Create mapping
             Mapper mapper = new Mapper();
-            Mapping map = mapper.CreatePrimitive(top.FindTable("Order Details"), orderDetailsTable, schema);
+            Mapping map = mapper.CreatePrimitive(top.GetSubTable("Order Details"), orderDetailsTable, schema);
             map.Matches.ForEach(m => m.TargetPath.Path.ForEach(p => p.Add()));
 
             // Create generating/import column
@@ -573,11 +573,11 @@ namespace Test
             table.FilePath = CsvConnection;
             top.LoadSchema(table);
 
-            Assert.AreEqual(1, top.Root.SubSets.Count);
-            Assert.AreEqual(15, top.FindTable("Products").GreaterDims.Count);
+            Assert.AreEqual(1, top.Root.SubTables.Count);
+            Assert.AreEqual(15, top.GetSubTable("Products").Columns.Count);
 
-            Assert.AreEqual("String", top.FindTable("Products").GetGreaterDim("Product Name").GreaterSet.Name);
-            Assert.AreEqual("3", ((DimCsv)top.FindTable("Products").GetGreaterDim("ID")).SampleValues[1]);
+            Assert.AreEqual("String", top.GetSubTable("Products").GetColumn("Product Name").GreaterSet.Name);
+            Assert.AreEqual("3", ((DimCsv)top.GetSubTable("Products").GetColumn("ID")).SampleValues[1]);
 
             //
             // Configure import 
@@ -589,7 +589,7 @@ namespace Test
 
             // Create mapping. 
             Mapper mapper = new Mapper();
-            Mapping map = mapper.CreatePrimitive(top.FindTable("Products"), productsTable, schema); // It will map source String to different target types
+            Mapping map = mapper.CreatePrimitive(top.GetSubTable("Products"), productsTable, schema); // It will map source String to different target types
             map.Matches.ForEach(m => m.TargetPath.Path.ForEach(p => p.Add()));
 
             // Create generating/import column
@@ -613,12 +613,12 @@ namespace Test
 
             // Add table definition 
             ExprNode ast = BuildExpr("[Column 22] > 20.0 && this.Super.[Column 23] < 50");
-            ComTable t = sampleSchema.FindTable("Table 2");
+            ComTable t = sampleSchema.GetSubTable("Table 2");
             t.Definition.DefinitionType = TableDefinitionType.PRODUCT;
             t.Definition.WhereExpression = ast;
 
             // Add column definition 
-            ComColumn c = t.GetGreaterDim("Column 22");
+            ComColumn c = t.GetColumn("Column 22");
             c.Definition.DefinitionType = ColumnDefinitionType.ARITHMETIC;
             c.Definition.Formula = BuildExpr("([Column 11]+10.0) * this.[Column 13]");
 
@@ -641,16 +641,16 @@ namespace Test
             ws = Utils.CreateObjectFromJson(objWs);
             ws.FromJson(objWs, ws);
 
-            Assert.AreEqual(5, ws.Schemas[0].FindTable("Table 1").GreaterDims.Count);
-            Assert.AreEqual(5, ws.Schemas[0].FindTable("Table 2").GreaterDims.Count);
+            Assert.AreEqual(5, ws.Schemas[0].GetSubTable("Table 1").Columns.Count);
+            Assert.AreEqual(5, ws.Schemas[0].GetSubTable("Table 2").Columns.Count);
 
-            Assert.AreEqual("Table 1", ws.Schemas[0].FindTable("Table 2").GetGreaterDim("Table 1").GreaterSet.Name);
+            Assert.AreEqual("Table 1", ws.Schemas[0].GetSubTable("Table 2").GetColumn("Table 1").GreaterSet.Name);
 
-            t = ws.Schemas[0].FindTable("Table 2");
+            t = ws.Schemas[0].GetSubTable("Table 2");
             Assert.AreEqual(TableDefinitionType.PRODUCT, t.Definition.DefinitionType);
             Assert.AreEqual(2, t.Definition.WhereExpression.Children.Count);
 
-            c = t.GetGreaterDim("Column 22");
+            c = t.GetColumn("Column 22");
             Assert.AreEqual(ColumnDefinitionType.ARITHMETIC, c.Definition.DefinitionType);
             Assert.AreEqual(2, c.Definition.Formula.Children.Count);
 

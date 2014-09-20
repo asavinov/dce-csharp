@@ -626,11 +626,11 @@ namespace Com.Model
             {
                 ; // Nothing to do
             }
-            else if (Dim.LesserSet.Top != Dim.GreaterSet.Top && Dim.LesserSet.Top is SetTopCsv) // Import data from a remote source
+            else if (Dim.LesserSet.Schema != Dim.GreaterSet.Schema && Dim.LesserSet.Schema is SetTopCsv) // Import data from a remote source
             {
                 evaluator = ExprEvaluator.CreateCsvEvaluator(Dim);
             }
-            else if (Dim.LesserSet.Top != Dim.GreaterSet.Top && Dim.LesserSet.Top is SetTopOledb) // Import data from a remote source
+            else if (Dim.LesserSet.Schema != Dim.GreaterSet.Schema && Dim.LesserSet.Schema is SetTopOledb) // Import data from a remote source
             {
                 evaluator = ExprEvaluator.CreateOledbEvaluator(Dim);
             }

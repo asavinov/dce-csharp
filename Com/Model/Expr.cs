@@ -115,7 +115,7 @@ namespace Com.Model
                     {
                         if (parent.Result.TypeTable != null && !string.IsNullOrEmpty(Name))
                         {
-                            ComColumn col = parent.Result.TypeTable.GetGreaterDim(Name);
+                            ComColumn col = parent.Result.TypeTable.GetColumn(Name);
                             Column = col;
                             Result.TypeTable = col.GreaterSet;
                             Result.TypeName = col.GreaterSet.Name;
@@ -125,7 +125,7 @@ namespace Com.Model
                     {
                         if (parent.Result.TypeTable != null && !string.IsNullOrEmpty(Name))
                         {
-                            ComColumn col = parent.Result.TypeTable.GetGreaterDim(Name);
+                            ComColumn col = parent.Result.TypeTable.GetColumn(Name);
                             Column = col;
                             Result.TypeTable = col.GreaterSet;
                             Result.TypeName = col.GreaterSet.Name;
@@ -159,7 +159,7 @@ namespace Com.Model
                 // Resolve type name
                 if (!string.IsNullOrEmpty(Result.TypeName))
                 {
-                    Result.TypeTable = schema.FindTable(Result.TypeName);
+                    Result.TypeTable = schema.GetSubTable(Result.TypeName);
                 }
 
                 //
@@ -205,7 +205,7 @@ namespace Com.Model
                             //
                             // Try to resolve name
                             //
-                            col = contextTable.GetGreaterDim(Name);
+                            col = contextTable.GetColumn(Name);
 
                             if (col != null) // Resolved
                             {
@@ -215,10 +215,10 @@ namespace Com.Model
                             //
                             // Iterator. Find super-column in the current context (where we have just failed to resolve the name)
                             //
-                            ComColumn superColumn = contextTable.SuperDim;
-                            contextTable = contextTable.SuperSet;
+                            ComColumn superColumn = contextTable.SuperColumn;
+                            contextTable = contextTable.SuperTable;
 
-                            if (contextTable == null || contextTable == contextTable.Top.Root)
+                            if (contextTable == null || contextTable == contextTable.Schema.Root)
                             {
                                 break; // Root. No super dimensions anymore
                             }
@@ -263,7 +263,7 @@ namespace Com.Model
                     {
                         outputChild = GetChild(0);
                     }
-                    ComColumn col = outputChild.Result.TypeTable.GetGreaterDim(methodName);
+                    ComColumn col = outputChild.Result.TypeTable.GetColumn(methodName);
                     Column = col;
 
                     Result.TypeName = col.GreaterSet.Name;
@@ -686,7 +686,7 @@ namespace Com.Model
         {
             ExprNode expr = null;
 
-            if (path.LesserSet.Top is SetTopCsv) // Access via column index
+            if (path.LesserSet.Schema is SetTopCsv) // Access via column index
             {
                 DimCsv seg = (DimCsv)path.FirstSegment;
 
@@ -697,7 +697,7 @@ namespace Com.Model
                 expr.Result.TypeTable = seg.GreaterSet;
                 expr.Result.TypeName = seg.GreaterSet.Name;
             }
-            else if (path.LesserSet.Top is SetTopOledb) // Access via relational attribute
+            else if (path.LesserSet.Schema is SetTopOledb) // Access via relational attribute
             {
                 expr = new OledbExprNode();
                 expr.Operation = OperationType.CALL;

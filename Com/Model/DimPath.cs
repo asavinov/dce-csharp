@@ -814,7 +814,7 @@ namespace Com.Model
             : base(set)
         {
             lesserSets = new List<ComTable>(new ComTable[] { set }); // One source set
-            greaterSets = new List<ComTable>(new ComTable[] { set.Top.Root }); // All destination sets from this schema
+            greaterSets = new List<ComTable>(new ComTable[] { set.Schema.Root }); // All destination sets from this schema
 
             isInverse = false;
 
@@ -950,22 +950,22 @@ namespace Com.Model
                 if (GreaterSet.IsPrimitive) return new List<ComColumn>(); // We exclude the top element
                 switch (dimType)
                 {
-                    case DimensionType.IDENTITY_ENTITY: return GreaterSet.GreaterDims.Where(x => x.LesserSet.Top == x.GreaterSet.Top).ToList();
-                    case DimensionType.IDENTITY: return GreaterSet.GreaterDims.Where(x => x.IsIdentity && x.LesserSet.Top == x.GreaterSet.Top).ToList();
-                    case DimensionType.ENTITY: return GreaterSet.GreaterDims.Where(x => !x.IsIdentity && x.LesserSet.Top == x.GreaterSet.Top).ToList();
+                    case DimensionType.IDENTITY_ENTITY: return GreaterSet.Columns.Where(x => x.LesserSet.Schema == x.GreaterSet.Schema).ToList();
+                    case DimensionType.IDENTITY: return GreaterSet.Columns.Where(x => x.IsIdentity && x.LesserSet.Schema == x.GreaterSet.Schema).ToList();
+                    case DimensionType.ENTITY: return GreaterSet.Columns.Where(x => !x.IsIdentity && x.LesserSet.Schema == x.GreaterSet.Schema).ToList();
 
-                    case DimensionType.GENERATING: return GreaterSet.GreaterDims.Where(x => (x.Definition != null && x.Definition.IsGenerating) && x.LesserSet.Top == x.GreaterSet.Top).ToList();
+                    case DimensionType.GENERATING: return GreaterSet.Columns.Where(x => (x.Definition != null && x.Definition.IsGenerating) && x.LesserSet.Schema == x.GreaterSet.Schema).ToList();
                 }
             }
             else
             {
                 switch (dimType)
                 {
-                    case DimensionType.IDENTITY_ENTITY: return LesserSet.LesserDims.Where(x => x.LesserSet.Top == x.GreaterSet.Top).ToList();
-                    case DimensionType.IDENTITY: return LesserSet.LesserDims.Where(x => x.IsIdentity && x.LesserSet.Top == x.GreaterSet.Top).ToList();
-                    case DimensionType.ENTITY: return LesserSet.LesserDims.Where(x => !x.IsIdentity && x.LesserSet.Top == x.GreaterSet.Top).ToList();
+                    case DimensionType.IDENTITY_ENTITY: return LesserSet.InputColumns.Where(x => x.LesserSet.Schema == x.GreaterSet.Schema).ToList();
+                    case DimensionType.IDENTITY: return LesserSet.InputColumns.Where(x => x.IsIdentity && x.LesserSet.Schema == x.GreaterSet.Schema).ToList();
+                    case DimensionType.ENTITY: return LesserSet.InputColumns.Where(x => !x.IsIdentity && x.LesserSet.Schema == x.GreaterSet.Schema).ToList();
 
-                    case DimensionType.GENERATING: return LesserSet.LesserDims.Where(x => (x.Definition != null && x.Definition.IsGenerating) && x.LesserSet.Top == x.GreaterSet.Top).ToList();
+                    case DimensionType.GENERATING: return LesserSet.InputColumns.Where(x => (x.Definition != null && x.Definition.IsGenerating) && x.LesserSet.Schema == x.GreaterSet.Schema).ToList();
                 }
             }
 
@@ -1017,7 +1017,7 @@ namespace Com.Model
             }
             else // Concrete destinations are specified
             {
-                foreach (ComTable set in destinations) if (dest.IsIn(set)) return true;
+                foreach (ComTable set in destinations) if (dest.IsSubTable(set)) return true;
                 return false;
             }
         }

@@ -135,7 +135,7 @@ namespace Com.Model
             columnData = column.Data;
 
             // Resolve names in the expresion by storing direct references to storage objects which will be used during valuation (names will not be used
-            exprNode.Resolve(column.LesserSet.Top, new List<ComVariable>() { thisVariable });
+            exprNode.Resolve(column.LesserSet.Schema, new List<ComVariable>() { thisVariable });
         }
 
         public ExprEvaluator(ComTable table)
@@ -150,7 +150,7 @@ namespace Com.Model
             columnData = null;
 
             // Resolve names in the expresion by storing direct references to storage objects which will be used during valuation (names will not be used
-            exprNode.Resolve(loopTable.Top, new List<ComVariable>() { thisVariable });
+            exprNode.Resolve(loopTable.Schema, new List<ComVariable>() { thisVariable });
         }
 
         public ExprEvaluator()
@@ -202,7 +202,7 @@ namespace Com.Model
             : base(column)
         {
             // Produce a result set that can be iterated through
-            connectionCsv = ((SetTopCsv)loopTable.Top).connection;
+            connectionCsv = ((SetTopCsv)loopTable.Schema).connection;
             connectionCsv.Open((SetCsv)loopTable);
 
             currentElement = 0;
@@ -252,7 +252,7 @@ namespace Com.Model
             : base(column)
         {
             // Produce a result set from the remote database by executing a query on the source table
-            dataTable = ((SetTopOledb)loopTable.Top).LoadTable(loopTable);
+            dataTable = ((SetTopOledb)loopTable.Schema).LoadTable(loopTable);
             rows = dataTable.Rows.GetEnumerator();
         }
     }
@@ -346,10 +346,10 @@ namespace Com.Model
             exprNode = ExprNode.CreateUpdater(column, column.Definition.Updater);
 
             // Resolve names in the expresions using appropriate variables
-            exprNode.Resolve(column.LesserSet.Top, new List<ComVariable>() { groupVariable, measureVariable });
+            exprNode.Resolve(column.LesserSet.Schema, new List<ComVariable>() { groupVariable, measureVariable });
 
-            groupExpr.Resolve(loopTable.Top, new List<ComVariable>() { thisVariable });
-            measureExpr.Resolve(loopTable.Top, new List<ComVariable>() { thisVariable });
+            groupExpr.Resolve(loopTable.Schema, new List<ComVariable>() { thisVariable });
+            measureExpr.Resolve(loopTable.Schema, new List<ComVariable>() { thisVariable });
         }
     }
 

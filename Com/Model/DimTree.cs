@@ -290,11 +290,11 @@ namespace Com.Model
             if (Set.IsGreatest) return; // No greater sets - nothing to expand
 
             List<ComTable> sets = new List<ComTable>(new[] { Set });
-            sets.AddRange(Set.GetAllSubsets());
+            sets.AddRange(Set.AllSubTables);
 
             foreach (ComTable s in sets)
             {
-                foreach (ComColumn d in s.GreaterDims)
+                foreach (ComColumn d in s.Columns)
                 {
                     if (d.IsSuper) continue;
                     if (ExistsChild(d)) continue;
@@ -312,7 +312,7 @@ namespace Com.Model
         /// </summary>
         public bool IsInSchema()
         {
-            bool isAdded = Dim.GreaterSet.LesserDims.Contains(Dim) && Dim.LesserSet.GreaterDims.Contains(Dim);
+            bool isAdded = Dim.GreaterSet.InputColumns.Contains(Dim) && Dim.LesserSet.Columns.Contains(Dim);
             return !IsEmpty ? !isAdded : true;
         }
 
@@ -328,7 +328,7 @@ namespace Com.Model
             }
             else
             {
-                if (!Set.IsIn(top.Root))
+                if (!Set.IsSubTable(top.Root))
                 {
                     top.AddTable(Set, null, null);
                 }
@@ -608,7 +608,7 @@ namespace Com.Model
         {
             get
             {
-                return !IsSubsetNode && LesserSet.Top == GreaterSet.Top;
+                return !IsSubsetNode && LesserSet.Schema == GreaterSet.Schema;
             }
         }
 
@@ -699,7 +699,7 @@ namespace Com.Model
                 return;
             }
 
-            foreach (ComColumn sd in LesserSet.SubDims)
+            foreach (ComColumn sd in LesserSet.SubColumns)
             {
                 if (ExistsChild(sd)) continue;
 
@@ -711,7 +711,7 @@ namespace Com.Model
             }
 
             // Add child nodes for greater dimension (no recursion)
-            foreach (ComColumn gd in LesserSet.GreaterDims)
+            foreach (ComColumn gd in LesserSet.Columns)
             {
                 if (gd.IsSuper) continue;
                 if (ExistsChild(gd)) continue;

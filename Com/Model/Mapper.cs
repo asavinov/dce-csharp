@@ -45,7 +45,7 @@ namespace Com.Model
         public Mapping GetBestMapping(ComTable sourceSet, ComSchema targetSchema) // Find best mapping in the cache
         {
             Mapping bestMapping = null;
-            var setMappings = Mappings.Where(m => m.SourceSet == sourceSet && (m.TargetSet.Top == null || m.TargetSet.Top == targetSchema)); // Find available mappings
+            var setMappings = Mappings.Where(m => m.SourceSet == sourceSet && (m.TargetSet.Schema == null || m.TargetSet.Schema == targetSchema)); // Find available mappings
 
             if (setMappings.Count() > 0)
             {
@@ -64,7 +64,7 @@ namespace Com.Model
 
         public List<Mapping> MapPrimitiveSet(ComTable sourceSet, ComSchema targetSchema)
         {
-            ComSchema sourceSchema = sourceSet.Top;
+            ComSchema sourceSchema = sourceSet.Schema;
             List<Mapping> maps = new List<Mapping>();
             ComTable targetSet;
 
@@ -209,7 +209,7 @@ namespace Com.Model
         public List<Mapping> MapSet(ComTable sourceSet, ComSchema targetSchema)
         {
             if (sourceSet.IsPrimitive) return MapPrimitiveSet((Set)sourceSet, targetSchema);
-            ComSchema sourceSchema = sourceSet.Top;
+            ComSchema sourceSchema = sourceSet.Schema;
             List<Mapping> maps = new List<Mapping>();
 
             Dictionary<ComColumn, Mapping> greaterMappings = new Dictionary<ComColumn, Mapping>();
@@ -219,7 +219,7 @@ namespace Com.Model
             //
             List<ComTable> targetGreaterSets = new List<ComTable>();
 
-            foreach (ComColumn sd in sourceSet.GreaterDims)
+            foreach (ComColumn sd in sourceSet.Columns)
             {
                 Mapping gMapping = GetBestMapping(sd.GreaterSet, targetSchema);
 
@@ -237,7 +237,7 @@ namespace Com.Model
             //
             // 2. Now find the best (existing) lesser set for the target greater sets. The best set should cover most of them by its greater dimensions
             //
-            List<ComTable> allTargetSets = targetSchema.GetAllSubsets();
+            List<ComTable> allTargetSets = targetSchema.AllSubTables;
             double[] coverage = new double[allTargetSets.Count];
             double maxCoverage = 0;
             int maxCoverageIndex = -1;
@@ -246,8 +246,9 @@ namespace Com.Model
             {
                 // Find coverage of this target set (how many best greater target sets it covers)
                 coverage[i] = 0;
-                foreach (ComTable tgs in allTargetSets[i].GetGreaterSets())
+                foreach (ComColumn tgc in allTargetSets[i].Columns)
                 {
+                    ComTable tgs = tgc.GreaterSet;
                     if (!targetGreaterSets.Contains(tgs)) continue;
 
                     // TODO: Compare dimension names and then use it as a weight [0,1] instead of simply incrementing
@@ -279,7 +280,7 @@ namespace Com.Model
 
                 newMapping = new Mapping(sourceSet, ts);
 
-                foreach (ComColumn sd in sourceSet.GreaterDims) // For each source dimension, create one new target dimension 
+                foreach (ComColumn sd in sourceSet.Columns) // For each source dimension, create one new target dimension 
                 {
                     Mapping gMapping = greaterMappings[sd];
                     ComTable gts = gMapping.TargetSet;
@@ -298,14 +299,14 @@ namespace Com.Model
 
                 newMapping = new Mapping(sourceSet, ts);
 
-                foreach (ComColumn sd in sourceSet.GreaterDims) // For each source dimension, find best target dimension 
+                foreach (ComColumn sd in sourceSet.Columns) // For each source dimension, find best target dimension 
                 {
                     Mapping gMapping = greaterMappings[sd];
                     ComTable gts = gMapping.TargetSet;
 
                     // Find an existing dimension from ts to gts with the best similarity to source dim sd
                     ComColumn td = null;
-                    var tDims = ts.GreaterDims.Where(d => d.GreaterSet == gts); // All target dimensions from ts to gts
+                    var tDims = ts.Columns.Where(d => d.GreaterSet == gts); // All target dimensions from ts to gts
                     if (tDims != null && tDims.Count() > 0)
                     {
                         // TODO: In fact, we need to choose the best dimension, for example, by comparing their names, usages, ranks and other semantic factors
@@ -348,8 +349,8 @@ namespace Com.Model
         {
             // For the first simplest version, we generate only column mappings for relational source sets
 
-            ComSchema sourceSchema = sourceSet.Top;
-            ComSchema targetSchema = targetSet.Top;
+            ComSchema sourceSchema = sourceSet.Schema;
+            ComSchema targetSchema = targetSet.Schema;
             List<Mapping> maps = new List<Mapping>();
 
             if (sourceSet.IsPrimitive)
@@ -633,12 +634,12 @@ namespace Com.Model
         public Mapping CreatePrimitive(ComTable sourceSet, ComTable targetSet, ComSchema targetSchema)
         {
             Debug.Assert(!sourceSet.IsPrimitive && !targetSet.IsPrimitive, "Wrong use: copy mapping can be created for only non-primitive sets.");
-            Debug.Assert(targetSchema != null || targetSet.Top != null, "Wrong use: target schema must be specified.");
+            Debug.Assert(targetSchema != null || targetSet.Schema != null, "Wrong use: target schema must be specified.");
 
             Mapping map = new Mapping(sourceSet, targetSet);
 
-            ComSchema sourceSchema = map.SourceSet.Top;
-            if (targetSchema == null) targetSchema = targetSet.Top;
+            ComSchema sourceSchema = map.SourceSet.Schema;
+            if (targetSchema == null) targetSchema = targetSet.Schema;
 
             DimPath sp;
             DimPath tp;
@@ -670,7 +671,7 @@ namespace Com.Model
             else if (sourceSchema is SetTopCsv)
             {
                 ComTable set = (ComTable)map.SourceSet;
-                foreach (ComColumn sd in set.GreaterDims)
+                foreach (ComColumn sd in set.Columns)
                 {
                     if (sd.IsSuper) continue;
 

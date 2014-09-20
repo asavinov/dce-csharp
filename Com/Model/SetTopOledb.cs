@@ -141,7 +141,7 @@ namespace Com.Model
             {
                 string columnName = col["COLUMN_NAME"].ToString();
                 string columnType = ((OleDbType)col["DATA_TYPE"]).ToString();
-                ComTable typeTable = Top.GetPrimitive(columnType);
+                ComTable typeTable = Schema.GetPrimitive(columnType);
 
                 //
                 // Create an attribute object representing this column

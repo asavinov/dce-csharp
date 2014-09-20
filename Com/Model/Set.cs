@@ -31,60 +31,55 @@ namespace Com.Model
 
         #region CsTable interface
 
-        /// <summary>
-        /// A set name. Note that in the general case a set has an associated structure (concept, type) which may have its own name. 
-        /// </summary>
         public string Name { get; set; }
 
-        /// <summary>
-        /// Whether it is a primitive set. Primitive sets do not have greater dimensions.
-        /// It can depend on other propoerties (it should be clarified) like instantiable, autopopulated, virtual etc.
-        /// </summary>
-        public bool IsPrimitive { get { return SuperSet is ComSchema; } } // If its super-set is Top
+        public bool IsPrimitive { get { return SuperTable is ComSchema; } } // If its super-set is Top
 
         //
         // Outputs
         //
         protected List<ComColumn> greaterDims;
-        public List<ComColumn> GreaterDims { get { return greaterDims; } } // Outgoing up arrows. Outputs
-        public ComColumn SuperDim { get { return GreaterDims.FirstOrDefault(x => x.IsSuper); } }
-        public List<ComColumn> KeyColumns { get { return GreaterDims.Where(x => x.IsIdentity).ToList(); } }
-        public List<ComColumn> NonkeyColumns { get { return GreaterDims.Where(x => !x.IsIdentity).ToList(); } }
-        public ComSchema Top
+        public List<ComColumn> Columns { get { return greaterDims; } } // Outgoing up arrows. Outputs
+
+        public ComColumn SuperColumn { get { return Columns.FirstOrDefault(x => x.IsSuper); } }
+        public ComTable SuperTable { get { return SuperColumn != null ? SuperColumn.GreaterSet : null; } }
+        public ComSchema Schema
         {
             get
             {
                 ComTable set = this;
-                while (set.SuperSet != null) set = set.SuperSet;
+                while (set.SuperTable != null) set = set.SuperTable;
                 return set is SetTop ? (SetTop)set : null; // A set which is not integrated in the schema does not have top
             }
         }
-        public List<ComTable> GetGreaterSets() { return GreaterDims.Select(x => x.GreaterSet).ToList(); }
-        public ComTable SuperSet { get { return SuperDim != null ? SuperDim.GreaterSet : null; } }
 
         //
         // Inputs
         //
 
         protected List<ComColumn> lesserDims;
-        public List<ComColumn> LesserDims { get { return lesserDims; } } // Incoming arrows. Inputs
-        public List<ComColumn> SubDims { get { return LesserDims.Where(x => x.IsSuper).ToList(); } }
-        public List<ComTable> SubSets { get { return SubDims.Select(x => x.LesserSet).ToList(); } }
-        public List<ComTable> GetAllSubsets() // Should be solved using general enumerator? Other: get all lesser, get all greater
-        {
-            int count = SubSets.Count;
-            List<ComTable> result = new List<ComTable>(SubSets);
-            for (int i = 0; i < count; i++)
-            {
-                List<ComTable> subsets = ((Set)result[i]).GetAllSubsets();
-                if (subsets == null || subsets.Count == 0)
-                {
-                    continue;
-                }
-                result.AddRange(subsets);
-            }
+        public List<ComColumn> InputColumns { get { return lesserDims; } } // Incoming arrows. Inputs
 
-            return result;
+        public List<ComColumn> SubColumns { get { return InputColumns.Where(x => x.IsSuper).ToList(); } }
+        public List<ComTable> SubTables { get { return SubColumns.Select(x => x.LesserSet).ToList(); } }
+        public List<ComTable> AllSubTables // Should be solved using general enumerator? Other: get all lesser, get all greater
+        {
+            get 
+            {
+                int count = SubTables.Count;
+                List<ComTable> result = new List<ComTable>(SubTables);
+                for (int i = 0; i < count; i++)
+                {
+                    List<ComTable> subsets = ((Set)result[i]).AllSubTables;
+                    if (subsets == null || subsets.Count == 0)
+                    {
+                        continue;
+                    }
+                    result.AddRange(subsets);
+                }
+
+                return result;
+            }
         }
 
         //
@@ -95,28 +90,28 @@ namespace Com.Model
         // And then define shortcut methods via this general methods. In fact, IsLess *is* already defined via enumeator
 
         // Return true if this set is included in the specified set, that is, the specified set is a direct or indirect super-set of this set
-        public bool IsIn(ComTable parent) // IsSub
+        public bool IsSubTable(ComTable parent) // IsSub
         {
-            for (ComTable set = this; set != null; set = set.SuperSet)
+            for (ComTable set = this; set != null; set = set.SuperTable)
             {
                 if (set == parent) return true;
             }
             return false;
         }
 
-        public bool IsLesser(ComTable set) // IsLess
+        public bool IsInput(ComTable set) // IsLess
         {
             var paths = new PathEnumerator(this, set, DimensionType.IDENTITY_ENTITY);
             return paths.Count() > 0;
         }
 
-        public bool IsLeast { get { return LesserDims.Count(x => x.LesserSet.Top == x.GreaterSet.Top) == 0; } } // Direct to bottom
+        public bool IsLeast { get { return InputColumns.Count(x => x.LesserSet.Schema == x.GreaterSet.Schema) == 0; } } // Direct to bottom
 
         public bool IsGreatest // TODO: Direct to top
         {
             get
             {
-                return IsPrimitive || GreaterDims.Count(x => x.LesserSet.Top == x.GreaterSet.Top) == 0; // All primitive sets are greatest by definition
+                return IsPrimitive || Columns.Count(x => x.LesserSet.Schema == x.GreaterSet.Schema) == 0; // All primitive sets are greatest by definition
             }
         }
 
@@ -124,18 +119,18 @@ namespace Com.Model
         // Name methods
         //
 
-        public ComColumn GetGreaterDim(string name)
+        public ComColumn GetColumn(string name)
         {
-            return GreaterDims.FirstOrDefault(d => StringSimilarity.SameColumnName(d.Name, name));
+            return Columns.FirstOrDefault(d => StringSimilarity.SameColumnName(d.Name, name));
         }
 
         public ComTable GetTable(string name) 
         { 
-            ComColumn col = LesserDims.FirstOrDefault(d => StringSimilarity.SameColumnName(d.LesserSet.Name, name));
+            ComColumn col = Columns.FirstOrDefault(d => StringSimilarity.SameColumnName(d.GreaterSet.Name, name));
             return col == null ? null : col.LesserSet; 
         }
 
-        public ComTable FindTable(string name)
+        public ComTable GetSubTable(string name)
         {
             ComTable set = null;
             if (StringSimilarity.SameTableName(Name, name))
@@ -143,10 +138,10 @@ namespace Com.Model
                 set = this;
             }
 
-            foreach (Dim d in SubDims)
+            foreach (Dim d in SubColumns)
             {
                 if (set != null) break;
-                set = d.LesserSet.FindTable(name);
+                set = d.LesserSet.GetSubTable(name);
             }
 
             return set;
@@ -170,7 +165,7 @@ namespace Com.Model
             set // Uniqueness of keys is not (and cannot be) checked and can be broken
             {
                 length = value;
-                foreach (ComColumn col in GreaterDims)
+                foreach (ComColumn col in Columns)
                 {
                     col.Data.Length = value;
                 }
@@ -180,14 +175,14 @@ namespace Com.Model
         public object GetValue(string name, int offset)
         {
             Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
-            ComColumn dim = GetGreaterDim(name);
+            ComColumn dim = GetColumn(name);
             return dim.Data.GetValue(offset);
         }
 
         public void SetValue(string name, int offset, object value)
         {
             Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
-            ComColumn dim = GetGreaterDim(name);
+            ComColumn dim = GetColumn(name);
             dim.Data.SetValue(offset, value);
         }
 
@@ -240,9 +235,9 @@ namespace Com.Model
 
         public void Remove(Offset input) // Propagation to lesser (referencing) sets is not checked - it is done by removal/nullifying by de-projection (all records that store some value in some function are removed)
         {
-            for (int i = 0; i < GreaterDims.Count; i++)
+            for (int i = 0; i < Columns.Count; i++)
             {
-                GreaterDims[i].Data.Remove(input);
+                Columns[i].Data.Remove(input);
             }
 
             length--;
@@ -260,8 +255,8 @@ namespace Com.Model
             bool hasBeenRestricted = false; // For the case where the Length==1, and no key columns are really provided, so we get at the end result.Length==1 which is misleading. Also, this fixes the problem of having no key dimensions.
 
             List<ComColumn> dims = new List<ComColumn>();
-            dims.AddRange(KeyColumns);
-            dims.AddRange(NonkeyColumns);
+            dims.AddRange(Columns.Where(x => x.IsIdentity));
+            dims.AddRange(Columns.Where(x => !x.IsIdentity));
 
             foreach (Dim dim in dims) // OPTIMIZE: the order of dimensions matters (use statistics, first dimensins with better filtering). Also, first identity dimensions.
             {
@@ -433,7 +428,7 @@ namespace Com.Model
             //
             // Really append a new element to the set
             //
-            foreach (Dim dim in GreaterDims) // We must append one value to ALL greater dimensions (possibly null)
+            foreach (Dim dim in Columns) // We must append one value to ALL greater dimensions (possibly null)
             {
                 ExprNode childExpr = expr.GetChild(dim.Name); // TODO: replace by accessor by dimension reference (has to be resolved in the tuple)
                 object val = null;
@@ -519,7 +514,7 @@ namespace Com.Model
 
         public List<ComColumn> GeneratingDimensions // Output tuples of these dimensions are appended to this set (other tuples are excluded). Alternatively, this element must be referenced by at one lesser element COUNT(this<-proj_dim<-(Set)) > 0
         {
-            get { return LesserDims.Where(d => d.Definition.IsGenerating).ToList(); }
+            get { return InputColumns.Where(d => d.Definition.IsGenerating).ToList(); }
         }
 
         public ExprNode OrderbyExpression { get; set; }
@@ -548,7 +543,7 @@ namespace Com.Model
                 //   - greater dims are populated simultaniously without evaluation (they do not have defs.)
 
                 // Find all local greater key dimensions including the super-dim.
-                ComColumn[] dims = KeyColumns.ToArray();
+                ComColumn[] dims = Columns.Where(x => x.IsIdentity).ToArray();
                 int dimCount = dims.Length;
                 object[] vals = new object[dimCount];
 
@@ -659,7 +654,7 @@ namespace Com.Model
         {
             // TODO: SuperDim.Length = 0;
 
-            foreach(Dim d in GreaterDims) 
+            foreach(Dim d in Columns) 
             {
                 // TODO: d.Length = 0;
             }
@@ -679,13 +674,13 @@ namespace Com.Model
 
             List<ComTable> res = new List<ComTable>();
 
-            foreach (ComColumn col in GreaterDims) // If a greater (key) set has changed then this set has to be populated
+            foreach (ComColumn col in Columns) // If a greater (key) set has changed then this set has to be populated
             {
                 if (!col.IsIdentity) continue;
                 res.Add(col.GreaterSet);
             }
 
-            foreach (ComColumn col in LesserDims) // If a generating source set has changed then this set has to be populated
+            foreach (ComColumn col in InputColumns) // If a generating source set has changed then this set has to be populated
             {
                 if (!col.Definition.IsGenerating) continue;
                 res.Add(col.LesserSet);
@@ -713,13 +708,13 @@ namespace Com.Model
         {
             List<ComTable> res = new List<ComTable>();
 
-            foreach (ComColumn col in LesserDims) // If this set has changed then all its lesser (key) sets have to be populated
+            foreach (ComColumn col in InputColumns) // If this set has changed then all its lesser (key) sets have to be populated
             {
                 if (!col.IsIdentity) continue;
                 res.Add(col.LesserSet);
             }
 
-            foreach (ComColumn col in GreaterDims) // If this table has changed then output tables of generating dimensions have to be populated
+            foreach (ComColumn col in Columns) // If this table has changed then output tables of generating dimensions have to be populated
             {
                 if (!col.Definition.IsGenerating) continue;
                 res.Add(col.GreaterSet);
@@ -749,7 +744,7 @@ namespace Com.Model
 
             List<ComColumn> res = new List<ComColumn>();
 
-            foreach (ComColumn col in LesserDims) // If a generating source column (definition) has changed then this set has to be updated
+            foreach (ComColumn col in InputColumns) // If a generating source column (definition) has changed then this set has to be updated
             {
                 if (!col.Definition.IsGenerating) continue;
                 res.Add(col);
@@ -777,12 +772,12 @@ namespace Com.Model
         {
             List<ComColumn> res = new List<ComColumn>();
 
-            foreach (ComColumn col in LesserDims) // If this set has changed then all lesser columns have to be updated
+            foreach (ComColumn col in InputColumns) // If this set has changed then all lesser columns have to be updated
             {
                 res.Add(col);
             }
 
-            foreach (ComColumn col in GreaterDims) // If this set has changed then all greater generating columns have to be updated
+            foreach (ComColumn col in Columns) // If this set has changed then all greater generating columns have to be updated
             {
                 if (!col.Definition.IsGenerating) continue;
                 res.Add(col);
@@ -895,7 +890,7 @@ namespace Com.Model
 
         public override string ToString()
         {
-            return String.Format("{0} gDims: {1}, IdArity: {2}", Name, GreaterDims.Count, KeyColumns.Count);
+            return String.Format("{0} gDims: {1}, IdArity: {2}", Name, Columns.Count);
         }
 
         public override bool Equals(object obj)
@@ -966,7 +961,7 @@ namespace Com.Model
 
         public ComColumn GetGreaterDimByFkName(string name)
         {
-            return GreaterDims.FirstOrDefault(d => StringSimilarity.SameColumnName(((DimRel)d).RelationalFkName, name));
+            return Columns.FirstOrDefault(d => StringSimilarity.SameColumnName(((DimRel)d).RelationalFkName, name));
         }
 
         #region Paths = relational attributes

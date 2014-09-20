@@ -23,7 +23,7 @@ namespace Com.Model
 
         public ComTable GetPrimitive(string name)
         {
-            ComColumn dim = SubDims.FirstOrDefault(x => StringSimilarity.SameTableName(x.LesserSet.Name, name));
+            ComColumn dim = SubColumns.FirstOrDefault(x => StringSimilarity.SameTableName(x.LesserSet.Name, name));
             return dim != null ? dim.LesserSet : null;
         }
 
@@ -62,11 +62,11 @@ namespace Com.Model
         {
             Debug.Assert(!table.IsPrimitive, "Wrong use: users do not create/delete primitive sets - they are part of the schema.");
 
-            foreach (ComColumn col in table.LesserDims.ToList()) 
+            foreach (ComColumn col in table.InputColumns.ToList()) 
             {
                 col.Remove();
             }
-            foreach (ComColumn col in table.GreaterDims.ToList())
+            foreach (ComColumn col in table.Columns.ToList())
             {
                 col.Remove();
             }
@@ -95,13 +95,13 @@ namespace Com.Model
             //
             // Delete all expression nodes that use the deleted column and all references to this column from other objects
             //
-            List<ComTable> tables = schema.GetAllSubsets();
+            List<ComTable> tables = schema.AllSubTables;
             var nodes = new List<ExprNode>();
             foreach (var tab in tables)
             {
                 if (tab.IsPrimitive) continue;
 
-                foreach (var col in tab.GreaterDims)
+                foreach (var col in tab.Columns)
                 {
                     if (col.Definition == null) continue;
 
@@ -180,13 +180,13 @@ namespace Com.Model
             // Check all elements of the schema that can store column or table name (tables, columns etc.)
             // Update their definition so that it uses the new name of the specified element
             //
-            List<ComTable> tables = schema.GetAllSubsets();
+            List<ComTable> tables = schema.AllSubTables;
             var nodes = new List<ExprNode>();
             foreach (var tab in tables)
             {
                 if (tab.IsPrimitive) continue;
 
-                foreach (var col in tab.GreaterDims)
+                foreach (var col in tab.Columns)
                 {
                     if (col.Definition == null) continue;
 
@@ -240,7 +240,7 @@ namespace Com.Model
             // List of all tables
             JArray tables = new JArray();
             JArray columns = new JArray(); // One array for all columns of all tables (not within each tabel)
-            foreach (ComTable comTable in this.GetAllSubsets())
+            foreach (ComTable comTable in this.AllSubTables)
             {
                 if (comTable.IsPrimitive) continue;
 
@@ -249,7 +249,7 @@ namespace Com.Model
                 tables.Add(table);
 
                 // List of columns
-                foreach (ComColumn comColumn in comTable.GreaterDims)
+                foreach (ComColumn comColumn in comTable.Columns)
                 {
                     JObject column = Utils.CreateJsonFromObject(comColumn);
                     comColumn.ToJson(column);
