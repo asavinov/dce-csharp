@@ -153,6 +153,19 @@ namespace Com.Model
 
         #endregion
 
+        public List<DimPath> GetOutputPaths(Set output) // Differences between this set and the specified set
+        {
+            if (output == null) return null;
+            var paths = new PathEnumerator(this, output, DimensionType.IDENTITY_ENTITY);
+            var ret = new List<DimPath>();
+            foreach (var p in paths)
+            {
+                ret.Add(new DimPath(p)); // Create a path for each list of dimensions
+            }
+
+            return ret;
+        }
+
         #region CsTableData interface
 
         /// <summary>
@@ -911,19 +924,6 @@ namespace Com.Model
         }
 
         #endregion
-
-        public List<DimPath> GetGreaterPaths(Set output) // Differences between this set and the specified set
-        {
-            if (output == null) return null;
-            var paths = new PathEnumerator(this, output, DimensionType.IDENTITY_ENTITY);
-            var ret = new List<DimPath>();
-            foreach (var p in paths)
-            {
-                ret.Add(new DimPath(p)); // Create a path for each list of dimensions
-            }
-
-            return ret;
-        }
 
         #region Constructors and initializers.
 

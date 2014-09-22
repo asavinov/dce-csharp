@@ -27,8 +27,8 @@ namespace Com.Model
                 if (_sourceSet == null) { _sourceSet = value; return; }
                 if (_sourceSet == value) return;
 
-                List<DimPath> inputSegs = ((Set)value).GetGreaterPaths((Set)_sourceSet);
-                List<DimPath> outputSegs = ((Set)_sourceSet).GetGreaterPaths((Set)value);
+                List<DimPath> inputSegs = ((Set)value).GetOutputPaths((Set)_sourceSet);
+                List<DimPath> outputSegs = ((Set)_sourceSet).GetOutputPaths((Set)value);
 
                 if (inputSegs != null && inputSegs.Count > 0) // New set is a lesser set for the current
                 {
@@ -62,8 +62,8 @@ namespace Com.Model
                 if (_targetSet == null) { _targetSet = value; return; }
                 if (_targetSet == value) return;
 
-                List<DimPath> lesserSegs = ((Set)value).GetGreaterPaths((Set)_targetSet);
-                List<DimPath> greaterSegs = ((Set)_targetSet).GetGreaterPaths((Set)value);
+                List<DimPath> lesserSegs = ((Set)value).GetOutputPaths((Set)_targetSet);
+                List<DimPath> greaterSegs = ((Set)_targetSet).GetOutputPaths((Set)value);
 
                 if (lesserSegs != null && lesserSegs.Count > 0) // New set is a lesser set for the current
                 {
