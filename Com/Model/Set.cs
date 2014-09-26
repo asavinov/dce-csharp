@@ -903,7 +903,7 @@ namespace Com.Model
 
         public override string ToString()
         {
-            return String.Format("{0} gDims: {1}, IdArity: {2}", Name, Columns.Count);
+            return String.Format("{0} Columns: {1}", Name, Columns.Count);
         }
 
         public override bool Equals(object obj)
