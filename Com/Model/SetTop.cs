@@ -152,14 +152,14 @@ namespace Com.Model
                 if (tab.Definition == null) continue;
 
                 // Update table definitions by finding the uses of the specified column
-                if (tab.Definition.WhereExpression != null)
+                if (tab.Definition.WhereExpr != null)
                 {
-                    nodes = tab.Definition.WhereExpression.Find(column);
+                    nodes = tab.Definition.WhereExpr.Find(column);
                     foreach (var node in nodes) if (node.Parent != null) node.Parent.RemoveChild(node);
                 }
-                if (tab.Definition.OrderbyExpression != null)
+                if (tab.Definition.OrderbyExpr != null)
                 {
-                    nodes = tab.Definition.OrderbyExpression.Find(column);
+                    nodes = tab.Definition.OrderbyExpr.Find(column);
                     foreach (var node in nodes) if (node.Parent != null) node.Parent.RemoveChild(node);
                 }
             }
@@ -207,16 +207,16 @@ namespace Com.Model
                 if (tab.Definition == null) continue;
 
                 // Update table definitions by finding the uses of the specified column
-                if (tab.Definition.WhereExpression != null)
+                if (tab.Definition.WhereExpr != null)
                 {
-                    if (element is ComTable) nodes = tab.Definition.WhereExpression.Find((ComTable)element);
-                    else if (element is ComColumn) nodes = tab.Definition.WhereExpression.Find((ComColumn)element);
+                    if (element is ComTable) nodes = tab.Definition.WhereExpr.Find((ComTable)element);
+                    else if (element is ComColumn) nodes = tab.Definition.WhereExpr.Find((ComColumn)element);
                     nodes.ForEach(x => x.Name = newName);
                 }
-                if (tab.Definition.OrderbyExpression != null)
+                if (tab.Definition.OrderbyExpr != null)
                 {
-                    if (element is ComTable) nodes = tab.Definition.OrderbyExpression.Find((ComTable)element);
-                    else if (element is ComColumn) nodes = tab.Definition.OrderbyExpression.Find((ComColumn)element);
+                    if (element is ComTable) nodes = tab.Definition.OrderbyExpr.Find((ComTable)element);
+                    else if (element is ComColumn) nodes = tab.Definition.OrderbyExpr.Find((ComColumn)element);
                     nodes.ForEach(x => x.Name = newName);
                 }
             }
@@ -329,26 +329,6 @@ namespace Com.Model
             CreateDataTypes(); // Generate all predefined primitive sets as subsets
         }
 
-    }
-
-    /// <summary>
-    /// Primitive data types used in our local database system. 
-    /// We need to enumerate data types for each kind of database along with the primitive mappings to other databases.
-    /// </summary>
-    public enum CsDataType
-    {
-        // Built-in types in C#: http://msdn.microsoft.com/en-us/library/vstudio/ya5y69ds.aspx
-        Void, // Null, Nothing, Empty no value. Can be equivalent to Top or Top.
-        Top,
-        Bottom,
-        Root, // It is surrogate or reference
-        Integer,
-        Double,
-        Decimal,
-        String,
-        Boolean,
-        DateTime,
-        Set, // It is any set that is not root (non-primititve type). Arbitrary user-defined name.
     }
 
     public enum DataSourceType // Essentially, it a marker for a subclass of SetTop (Schema)

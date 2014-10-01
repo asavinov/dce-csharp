@@ -133,7 +133,7 @@ namespace Com.Model
             _cells[input] = val;
         }
 
-        public void NullifyValues() // Reset values and index to initial state (all nulls)
+        public void Nullify() // Reset values and index to initial state (all nulls)
         {
             throw new NotImplementedException();
         }
@@ -193,9 +193,9 @@ namespace Com.Model
             _length = _length - 1;
         }
 
-        public object ProjectValues(Offset[] offsets)
+        public object Project(Offset[] offsets)
         {
-            return project(offsets);
+            return projectOffsets(offsets);
             // Returns an array but we delcare it as object (rather than array of objects) because we cannot case between array types (that is, int[] is not object[]) and therefore we return object.
             // Alternatives for changing type and using array type:
             // Cast return array type T[] -> object[]
@@ -203,11 +203,11 @@ namespace Com.Model
             // return project(offsets).Cast<object>().ToArray();
         }
 
-        public Offset[] DeprojectValue(object value)
+        public Offset[] Deproject(object value)
         {
             if (value == null || !value.GetType().IsArray)
             {
-                return deproject(ObjectToGeneric(value));
+                return deprojectValue(ObjectToGeneric(value));
             }
             else
             {
@@ -319,7 +319,7 @@ namespace Com.Model
             Array.Sort(_offsets, /* 0, _count, */ (a, b) => comparer.Compare(_cells[a], _cells[b]));
         }
 
-        protected T[] project(int[] offsets)
+        protected T[] projectOffsets(int[] offsets)
         {
             // Question: possible sorting of output: ascending, according to input offsets specified, preserve the original order of offsets or do not guarantee anything
             // Question: will it be easier to compute if input offsets are somehow sorted?
@@ -356,7 +356,7 @@ namespace Com.Model
             return result;
         }
 
-        protected int[] deproject(T value)
+        protected int[] deprojectValue(T value)
         {
             Tuple<int, int> indexes;
 
@@ -553,7 +553,7 @@ namespace Com.Model
 
         public void SetValue(Offset input, object value) { }
 
-        public void NullifyValues() { }
+        public void Nullify() { }
 
         public void Append(object value) { }
 
@@ -561,9 +561,9 @@ namespace Com.Model
 
         public void Remove(Offset input) { }
 
-        public object ProjectValues(Offset[] offsets) { return null; }
+        public object Project(Offset[] offsets) { return null; }
 
-        public Offset[] DeprojectValue(object value) { return null; } // Or empty array 
+        public Offset[] Deproject(object value) { return null; } // Or empty array 
 
         #endregion
     }
@@ -602,13 +602,10 @@ namespace Com.Model
         // Aassert: if LoopSet == ThisSet then GroupCode = null, ThisFunc = MeasureCode
 
         //
-        // Dependencies
+        // Compute
         //
 
-        public List<Dim> Dependencies { get; set; } // Other functions this function directly depends upon. Computed from the definition of this function.
-        // Find and store all outputs of this function by evaluating (executing) its definition in a loop for all input elements of the fact set (not necessarily this set)
-
-        public ComColumnEvaluator GetColumnEvaluator()
+        public ComEvaluator GetColumnEvaluator()
         {
             // Principle: population methods are unaware of Definition type (expressions etc.) - they use only evaluator (no dependency on the definition details)
 
@@ -620,7 +617,7 @@ namespace Com.Model
             // Based on library - load lib, instantiate via factory, initialize (say, resolve names), return object
             // Based on source code - compile class, instantiate, initialize (say, resolve), return instance
 
-            ComColumnEvaluator evaluator = null;
+            ComEvaluator evaluator = null;
 
             if (DefinitionType == ColumnDefinitionType.FREE) 
             {
@@ -650,15 +647,11 @@ namespace Com.Model
             return evaluator;
         }
 
-        //
-        // Compute
-        //
-
         public void Initialize() { }
 
         public void Evaluate()
         {
-            ComColumnEvaluator evaluator = GetColumnEvaluator();
+            ComEvaluator evaluator = GetColumnEvaluator();
             if (evaluator == null) return;
 
             while (evaluator.Next())
@@ -672,6 +665,9 @@ namespace Com.Model
         //
         // Dependencies
         //
+
+        public List<Dim> Dependencies { get; set; } // Other functions this function directly depends upon. Computed from the definition of this function.
+        // Find and store all outputs of this function by evaluating (executing) its definition in a loop for all input elements of the fact set (not necessarily this set)
 
         public List<ComTable> UsesTables(bool recursive) // This element depends upon
         {
@@ -695,9 +691,9 @@ namespace Com.Model
                 // Grouping and measure paths are used in this column
                 if (GroupPaths != null)
                 {
-                    foreach (var path in GroupPaths)
+                    foreach (DimPath path in GroupPaths)
                     {
-                        foreach (var seg in path.Path)
+                        foreach (ComColumn seg in path.Segments)
                         {
                             if (!res.Contains(seg.Output)) res.Add(seg.Output);
                         }
@@ -705,9 +701,9 @@ namespace Com.Model
                 }
                 if (MeasurePaths != null)
                 {
-                    foreach (var path in MeasurePaths)
+                    foreach (DimPath path in MeasurePaths)
                     {
-                        foreach (var seg in path.Path)
+                        foreach (ComColumn seg in path.Segments)
                         {
                             if (!res.Contains(seg.Output)) res.Add(seg.Output);
                         }
@@ -725,7 +721,7 @@ namespace Com.Model
             // Analyze other function definitions and check if this function is used there directly. 
             // If such a function has been found, then make the same call for it, that is find other functins where it is used.
 
-            // A functino can be used in Filter expression and Sort expression
+            // A function can be used in Filter expression and Sort expression
 
             return res;
         }
@@ -752,7 +748,7 @@ namespace Com.Model
                 {
                     foreach (var path in GroupPaths)
                     {
-                        foreach (var seg in path.Path)
+                        foreach (var seg in path.Segments)
                         {
                             if (!res.Contains(seg)) res.Add(seg);
                         }
@@ -762,7 +758,7 @@ namespace Com.Model
                 {
                     foreach (var path in MeasurePaths)
                     {
-                        foreach (var seg in path.Path)
+                        foreach (var seg in path.Segments)
                         {
                             if (!res.Contains(seg)) res.Add(seg);
                         }

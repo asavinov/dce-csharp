@@ -378,7 +378,7 @@ namespace Test
             ComTable t3 = schema.CreateTable("Table 3");
 
             ExprNode ast = BuildExpr("[Column 22] > 20.0 && this.Super.[Column 23] < 50");
-            t3.Definition.WhereExpression = ast;
+            t3.Definition.WhereExpr = ast;
             t3.Definition.DefinitionType = TableDefinitionType.PRODUCT;
             schema.AddTable(t3, t2, null);
 
@@ -416,7 +416,7 @@ namespace Test
             //
 
             ExprNode ast = BuildExpr("([Table 1].[Column 11] > 10) && this.[Table 2].[Column 23] == 50.0");
-            t3.Definition.WhereExpression = ast;
+            t3.Definition.WhereExpr = ast;
 
             t3.Definition.Populate();
             Assert.AreEqual(4, t3.Data.Length);
@@ -546,7 +546,7 @@ namespace Test
             // Create mapping
             Mapper mapper = new Mapper();
             Mapping map = mapper.CreatePrimitive(top.GetSubTable("Order Details"), orderDetailsTable, schema);
-            map.Matches.ForEach(m => m.TargetPath.Path.ForEach(p => p.Add()));
+            map.Matches.ForEach(m => m.TargetPath.Segments.ForEach(p => p.Add()));
 
             // Create generating/import column
             ComColumn dim = schema.CreateColumn(map.SourceSet.Name, map.SourceSet, map.TargetSet, false);
@@ -590,7 +590,7 @@ namespace Test
             // Create mapping. 
             Mapper mapper = new Mapper();
             Mapping map = mapper.CreatePrimitive(top.GetSubTable("Products"), productsTable, schema); // It will map source String to different target types
-            map.Matches.ForEach(m => m.TargetPath.Path.ForEach(p => p.Add()));
+            map.Matches.ForEach(m => m.TargetPath.Segments.ForEach(p => p.Add()));
 
             // Create generating/import column
             ComColumn dim = schema.CreateColumn(map.SourceSet.Name, map.SourceSet, map.TargetSet, false);
@@ -615,7 +615,7 @@ namespace Test
             ExprNode ast = BuildExpr("[Column 22] > 20.0 && this.Super.[Column 23] < 50");
             ComTable t = sampleSchema.GetSubTable("Table 2");
             t.Definition.DefinitionType = TableDefinitionType.PRODUCT;
-            t.Definition.WhereExpression = ast;
+            t.Definition.WhereExpr = ast;
 
             // Add column definition 
             ComColumn c = t.GetColumn("Column 22");
@@ -648,7 +648,7 @@ namespace Test
 
             t = ws.Schemas[0].GetSubTable("Table 2");
             Assert.AreEqual(TableDefinitionType.PRODUCT, t.Definition.DefinitionType);
-            Assert.AreEqual(2, t.Definition.WhereExpression.Children.Count);
+            Assert.AreEqual(2, t.Definition.WhereExpr.Children.Count);
 
             c = t.GetColumn("Column 22");
             Assert.AreEqual(ColumnDefinitionType.ARITHMETIC, c.Definition.DefinitionType);

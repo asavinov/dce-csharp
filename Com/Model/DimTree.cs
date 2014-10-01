@@ -219,13 +219,13 @@ namespace Com.Model
         {
             Debug.Assert(path != null && path.Input == Set, "Wrong use: path must start from the node it is added to.");
 
-            if (path.Path == null || path.Path.Count == 0) return null;
+            if (path.Segments == null || path.Segments.Count == 0) return null;
 
             ComColumn seg;
             DimTree node = this;
-            for (int i = 0; i < path.Path.Count; i++) // We try to find segments sequentially
+            for (int i = 0; i < path.Segments.Count; i++) // We try to find segments sequentially
             {
-                seg = path.Path[i];
+                seg = path.Segments[i];
                 DimTree child = node.GetChild(seg); // Find a child corresponding to this segment
 
                 if (child == null) // Add a new child corresponding to this segment
@@ -243,13 +243,13 @@ namespace Com.Model
         {
             Debug.Assert(path != null && path.Input == Set, "Wrong use: path must start from the node it is added to.");
 
-            if (path.Path == null || path.Path.Count == 0) return null;
+            if (path.Segments == null || path.Segments.Count == 0) return null;
 
             ComColumn seg;
             DimTree node = this;
-            for (int i = 0; i < path.Path.Count; i++) // We add all segments sequentially
+            for (int i = 0; i < path.Segments.Count; i++) // We add all segments sequentially
             {
-                seg = path.Path[i];
+                seg = path.Segments[i];
                 DimTree child = node.GetChild(seg); // Find a child corresponding to this segment
 
                 if (child == null) // Add a new child corresponding to this segment

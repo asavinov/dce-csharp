@@ -340,16 +340,16 @@ namespace Com.Model
             double sumDim = 0.0;
             double sumSet = 0.0;
             double w1 = 1.0;
-            for (int i = source.Path.Count - 1; i >= 0; i--)
+            for (int i = source.Segments.Count - 1; i >= 0; i--)
             {
-                string d1 = source.Path[i].Name;
-                string s1 = source.Path[i].Output.Name;
+                string d1 = source.Segments[i].Name;
+                string s1 = source.Segments[i].Output.Name;
 
                 double w2 = 1.0;
-                for (int j = target.Path.Count - 1; j >= 0; j--)
+                for (int j = target.Segments.Count - 1; j >= 0; j--)
                 {
-                    string d2 = target.Path[j].Name;
-                    string s2 = target.Path[j].Output.Name;
+                    string d2 = target.Segments[j].Name;
+                    string s2 = target.Segments[j].Output.Name;
 
                     double simDim = ComputeStringSimilarity(d1, d2, 3);
                     simDim *= (w1 * w2);
@@ -365,8 +365,8 @@ namespace Com.Model
                 w1 *= rankFactor2; // Decrease the weight
             }
 
-            sumDim /= (source.Path.Count * target.Path.Count);
-            sumSet /= (source.Path.Count * target.Path.Count);
+            sumDim /= (source.Segments.Count * target.Segments.Count);
+            sumSet /= (source.Segments.Count * target.Segments.Count);
 
             return (sumDim + sumSet) / 2;
         }

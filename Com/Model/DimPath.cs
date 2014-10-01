@@ -22,7 +22,7 @@ namespace Com.Model
             {
                 if (Size == 0) return "";
                 string complexName = "";
-                foreach (ComColumn seg in Path) complexName += "[" + seg.Name + "].";
+                foreach (ComColumn seg in Segments) complexName += "[" + seg.Name + "].";
                 complexName = complexName.Substring(0, complexName.Length-1); // Remove last dot
                 return complexName;
             }
@@ -33,7 +33,7 @@ namespace Com.Model
             {
                 if (Size == 0) return "0";
                 int hash = 0;
-                foreach (ComColumn seg in Path) hash += ((Dim)seg).Id.GetHashCode();
+                foreach (ComColumn seg in Segments) hash += ((Dim)seg).Id.GetHashCode();
 
                 hash = Math.Abs(hash);
                 string hashName = hash.ToString("X"); // unique hash representing this path
@@ -44,13 +44,13 @@ namespace Com.Model
         /// <summary>
         /// A dimension can be defined as a sequence of other dimensions. For simple dimensions the path is empty.
         /// </summary>
-        public List<ComColumn> Path { get; set; }
+        public List<ComColumn> Segments { get; set; }
 
         public int Size
         {
             get
             {
-                return Path.Count;
+                return Segments.Count;
             }
         }
 
@@ -58,7 +58,7 @@ namespace Com.Model
         {
             get
             {
-                return Size == 0 ? null : Path[0];
+                return Size == 0 ? null : Segments[0];
             }
         }
 
@@ -66,7 +66,7 @@ namespace Com.Model
         {
             get
             {
-                return Size == 0 ? null : Path[Path.Count - 1];
+                return Size == 0 ? null : Segments[Segments.Count - 1];
             }
         }
 
@@ -76,7 +76,7 @@ namespace Com.Model
             {
                 if (Size == 0) return 1; // Simple dimension
                 int r = 0;
-                foreach (ComColumn dim in Path)
+                foreach (ComColumn dim in Segments)
                 {
                     r += 1; // dim.Rank;
                 }
@@ -88,29 +88,29 @@ namespace Com.Model
         {
             get
             {
-                return Path != null && Path.Count > 0;
+                return Segments != null && Segments.Count > 0;
             }
         }
 
         public int IndexOfGreater(ComTable set) // Return index of the dimension with this greater set
         {
-            for (int i = 0; i < Path.Count; i++)
+            for (int i = 0; i < Segments.Count; i++)
             {
-                if (Path[i].Output == set) return i;
+                if (Segments[i].Output == set) return i;
             }
             return -1;
         }
         public int IndexOfLesser(ComTable set) // Return index of the dimension with this lesser set
         {
-            for (int i = 0; i < Path.Count; i++)
+            for (int i = 0; i < Segments.Count; i++)
             {
-                if (Path[i].Input == set) return i;
+                if (Segments[i].Input == set) return i;
             }
             return -1;
         }
         public int IndexOf(ComColumn dim) // Return index of the specified dimension in this path
         {
-            return Path.IndexOf(dim);
+            return Segments.IndexOf(dim);
         }
         public int IndexOf(DimPath path) // Return index of the beginning of the specified path in this path
         {
@@ -120,35 +120,35 @@ namespace Com.Model
         public bool StartsWith(ComColumn dim)
         {
             if(Size == 0) return false;
-            return Path[0] == dim;
+            return Segments[0] == dim;
         }
         public bool StartsWith(DimPath path)
         {
-            return StartsWith(path.Path);
+            return StartsWith(path.Segments);
         }
         public bool StartsWith(List<ComColumn> path)
         {
-            if (Path.Count < path.Count) return false;
+            if (Segments.Count < path.Count) return false;
             for (int i = 0; i < path.Count; i++)
             {
-                if (path[i] != Path[i]) return false;
+                if (path[i] != Segments[i]) return false;
             }
             return true;
         }
 
         public bool SamePath(DimPath path) // Equals (the same segments)
         {
-            return SamePath(path.Path);
+            return SamePath(path.Segments);
         }
         public bool SamePath(List<ComColumn> path) // Equals (the same segments)
         {
             if (path == null) return false;
 
-            if (Path.Count != path.Count) return false;
+            if (Segments.Count != path.Count) return false;
 
             for (int i = 0; i < path.Count; i++)
             {
-                if (!path[i].Equals(Path[i])) return false;
+                if (!path[i].Equals(Segments[i])) return false;
             }
             return true;
         }
@@ -157,15 +157,15 @@ namespace Com.Model
         {
             DimPath ret = new DimPath();
 
-            if (count == 0) count = Path.Count - index;
+            if (count == 0) count = Segments.Count - index;
 
             for (int i = 0; i < count; i++)
             {
-                ret.Path.Add(Path[index + i]);
+                ret.Segments.Add(Segments[index + i]);
             }
 
-            ret.Output = ret.Path[0].Input;
-            ret.Input = ret.Path[ret.Path.Count - 1].Output;
+            ret.Output = ret.Segments[0].Input;
+            ret.Input = ret.Segments[ret.Segments.Count - 1].Output;
 
             return ret;
         }
@@ -185,7 +185,7 @@ namespace Com.Model
         {
             Debug.Assert(Size == 0 || dim.Output == Input, "A path must continue the first segment inserted in the beginning.");
 
-            Path.Insert(0, dim);
+            Segments.Insert(0, dim);
             Input = dim.Input;
             if (Output == null) Output = dim.Output;
         }
@@ -193,7 +193,7 @@ namespace Com.Model
         {
             Debug.Assert(Size == 0 || path.Output == Input, "A path must continue the first segment inserted in the beginning.");
 
-            Path.InsertRange(0, path.Path);
+            Segments.InsertRange(0, path.Segments);
             Input = path.Input;
             if (Output == null) Output = path.Output;
         }
@@ -202,7 +202,7 @@ namespace Com.Model
         {
             Debug.Assert(Size == 0 || dim.Input == Output, "A new segment appended to a path must continue the previous segments");
 
-            Path.Add(dim);
+            Segments.Add(dim);
             Output = dim.Output;
             if (Input == null) Input = dim.Input;
         }
@@ -212,9 +212,9 @@ namespace Com.Model
 
             if (path == null || path.Size == 0) return;
 
-            for (int i = 0; i < path.Path.Count; i++)
+            for (int i = 0; i < path.Segments.Count; i++)
             {
-                Path.Add(path.Path[i]);
+                Segments.Add(path.Segments[i]);
             }
 
             Output = path.Output;
@@ -228,15 +228,15 @@ namespace Com.Model
         private ComColumn RemoveAt(int index)
         {
             if (Size == 0) return null; // Nothing to remove
-            if (index < 0 || index >= Path.Count) return null; // Bad index
+            if (index < 0 || index >= Segments.Count) return null; // Bad index
 
-            ComColumn result = Path[index];
-            Path.RemoveAt(index);
+            ComColumn result = Segments[index];
+            Segments.RemoveAt(index);
 
-            if (Path.Count != 0)
+            if (Segments.Count != 0)
             {
-                Input = Path[0].Input;
-                Output = Path[Path.Count - 1].Output;
+                Input = Segments[0].Input;
+                Output = Segments[Segments.Count - 1].Output;
             }
             else
             {
@@ -255,7 +255,7 @@ namespace Com.Model
             ComColumn result = RemoveAt(index);
             if (result == null) return result;
 
-            if (Path.Count == 0) // This where removal of the first and the last segments is different
+            if (Segments.Count == 0) // This where removal of the first and the last segments is different
             {
                 Input = result.Output;
                 Output = result.Output;
@@ -265,12 +265,12 @@ namespace Com.Model
         }
         public void RemoveFirst(DimPath path) // Remove first segments
         {
-            if (Path.Count < path.Path.Count) return; // Nothing to remove
+            if (Segments.Count < path.Segments.Count) return; // Nothing to remove
             if (!this.StartsWith(path)) return;
 
-            Path.RemoveRange(0, path.Path.Count);
+            Segments.RemoveRange(0, path.Segments.Count);
 
-            if (Path.Count > 0) Input = Path[0].Input;
+            if (Segments.Count > 0) Input = Segments[0].Input;
             else Input = Output;
         }
         public void RemoveFirst(ComTable set) // Remove first segments till this set (the new path will start from the specified set if trimmed)
@@ -281,22 +281,22 @@ namespace Com.Model
             int index = this.IndexOfGreater(set);
             if (index < 0) return;
 
-            Path.RemoveRange(0, index+1);
+            Segments.RemoveRange(0, index+1);
 
-            if (Path.Count > 0) Input = Path[0].Input;
+            if (Segments.Count > 0) Input = Segments[0].Input;
             else Input = Output;
         }
 
         public ComColumn RemoveLast() // Remove last segment
         {
-            return RemoveLastAt(Path.Count - 1);
+            return RemoveLastAt(Segments.Count - 1);
         }
         public ComColumn RemoveLastAt(int index) // TODO: Implement an additional argument with the number of segments to remove
         {
             ComColumn result = RemoveAt(index);
             if (result == null) return result;
 
-            if (Path.Count == 0) // This where removal of the first and the last segments is different
+            if (Segments.Count == 0) // This where removal of the first and the last segments is different
             {
                 Input = result.Input;
                 Output = result.Input;
@@ -318,15 +318,15 @@ namespace Com.Model
         protected List<ComColumn> GetAllSegments()
         {
             List<ComColumn> result = new List<ComColumn>();
-            for (int i = 0; i < Path.Count; i++)
+            for (int i = 0; i < Segments.Count; i++)
             {
-                if (Path[i] is DimPath && ((DimPath)Path[i]).IsComplex)
+                if (Segments[i] is DimPath && ((DimPath)Segments[i]).IsComplex)
                 {
-                    result.AddRange(((DimPath)Path[i]).GetAllSegments());
+                    result.AddRange(((DimPath)Segments[i]).GetAllSegments());
                 }
                 else // Simple segment - nothing to expand
                 {
-                    result.Add(Path[i]);
+                    result.Add(Segments[i]);
                 }
             }
 
@@ -345,7 +345,7 @@ namespace Com.Model
         public ComColumn GetSegment(int rank)
         {
             Debug.Assert(rank >= 0, "Wrong use of method parameter. Rank cannot be negative.");
-            return rank < Path.Count ? Path[rank] : null; // TODO: take into account the nested structure of complex dimensions
+            return rank < Segments.Count ? Segments[rank] : null; // TODO: take into account the nested structure of complex dimensions
         }
 
         /// <summary>
@@ -372,7 +372,7 @@ namespace Com.Model
 
             for (int i = 0; i < Size; i++)
             {
-                JObject segRef = Utils.CreateJsonRef(Path[i]);
+                JObject segRef = Utils.CreateJsonRef(Segments[i]);
                 segments.Add(segRef);
             }
 
@@ -411,7 +411,7 @@ namespace Com.Model
             string path = "";
             for (int i = 0; i < Size; i++)
             {
-                path += "[" + Path[i].Name + "].";
+                path += "[" + Segments[i].Name + "].";
             }
             if (Size > 0) path = path.Substring(0, path.Length-1);
 
@@ -426,10 +426,10 @@ namespace Com.Model
 
             if (obj is DimPath)
             {
-                List<ComColumn> objSegs = ((DimPath)obj).Path;
+                List<ComColumn> objSegs = ((DimPath)obj).Segments;
 
                 if (Size != objSegs.Count) return false;
-                for (int i = 0; i < Size; i++) if (Path[i] != objSegs[i]) return false;
+                for (int i = 0; i < Size; i++) if (Segments[i] != objSegs[i]) return false;
                 return true;
             }
             else if (obj is ComColumn)
@@ -445,7 +445,7 @@ namespace Com.Model
                 var objSegs = (IList)obj;
 
                 if (Size != objSegs.Count) return false;
-                for (int i = 0; i < Size; i++) if (Path[i] != objSegs[i]) return false;
+                for (int i = 0; i < Size; i++) if (Segments[i] != objSegs[i]) return false;
                 return true;
             }
             else if(obj.GetType().IsGenericType && obj.GetType().GetGenericTypeDefinition() == typeof(IList<>)) 
@@ -454,7 +454,7 @@ namespace Com.Model
                 //List<object> objSegs = (obj as IEnumerable).OfType<object>().ToList();
 
                 if (Size != objSegs.Count) return false;
-                for (int i = 0; i < Size; i++) if (Path[i] != objSegs[i]) return false;
+                for (int i = 0; i < Size; i++) if (Segments[i] != objSegs[i]) return false;
                 return true;
 
                 // Alternatively, we can get the generic type and check if it is a column object
@@ -475,7 +475,7 @@ namespace Com.Model
 
         public DimPath()
         {
-            Path = new List<ComColumn>();
+            Segments = new List<ComColumn>();
         }
 
         public DimPath(ComTable set)
@@ -488,7 +488,7 @@ namespace Com.Model
         public DimPath(string name)
             : base(name)
         {
-            Path = new List<ComColumn>();
+            Segments = new List<ComColumn>();
         }
 
         public DimPath(ComColumn segment)
@@ -496,9 +496,9 @@ namespace Com.Model
         {
             if (segment == null) return;
 
-            Path.Add(segment);
-            Input = Path[0].Input;
-            Output = Path[Path.Count - 1].Output;
+            Segments.Add(segment);
+            Input = Segments[0].Input;
+            Output = Segments[Segments.Count - 1].Output;
         }
 
         public DimPath(List<ComColumn> segments)
@@ -506,22 +506,22 @@ namespace Com.Model
         {
             if(segments == null && segments.Count == 0) return;
 
-            Path.AddRange(segments);
-            Input = Path[0].Input;
-            Output = Path[Path.Count - 1].Output;
+            Segments.AddRange(segments);
+            Input = Segments[0].Input;
+            Output = Segments[Segments.Count - 1].Output;
         }
 
         public DimPath(DimPath path)
             : base(path)
         {
-            Path = new List<ComColumn>();
-            Path.AddRange(path.Path);
+            Segments = new List<ComColumn>();
+            Segments.AddRange(path.Segments);
         }
 
         public DimPath(string name, ComTable input, ComTable output)
             : base(name, input, output)
         {
-            Path = new List<ComColumn>();
+            Segments = new List<ComColumn>();
         }
 
         #endregion
@@ -575,7 +575,7 @@ namespace Com.Model
         {
             DimAttribute att = this;
 
-            if(att.Path.Count > 0) return; // Already expanded (because of recursion)
+            if(att.Segments.Count > 0) return; // Already expanded (because of recursion)
 
             bool isKey = !string.IsNullOrEmpty(att.RelationalPkName) || att.IsKey;
 
@@ -636,10 +636,10 @@ namespace Com.Model
             // Flatten all paths by converting <dim, greater-path> pairs by sequences of dimensions <dim, dim2, dim3,...>
             //
             List<ComColumn> allSegments = GetAllSegments();
-            Path.Clear();
+            Segments.Clear();
             if (allSegments != null && allSegments.Count != 0)
             {
-                Path.AddRange(allSegments);
+                Segments.AddRange(allSegments);
             }
             else
             {
@@ -651,7 +651,7 @@ namespace Com.Model
             //
             if (!String.IsNullOrEmpty(RelationalFkName) /*&& Output.IdentityPrimitiveArity == 1*/)
             {
-                Path[0].Name = Name; // FK-name is overwritten and lost - attribute name is used instead
+                Segments[0].Name = Name; // FK-name is overwritten and lost - attribute name is used instead
             }
 
             //
@@ -659,7 +659,7 @@ namespace Com.Model
             //
             if (!String.IsNullOrEmpty(RelationalFkName) /*&& Output.IdentityPrimitiveArity == 1*/)
             {
-                Path[0].Name = Name; // FK-name is overwritten and lost - attribute name is used instead
+                Segments[0].Name = Name; // FK-name is overwritten and lost - attribute name is used instead
             }
         }
 
@@ -726,11 +726,11 @@ namespace Com.Model
         public DimEnumerator(ComTable set)
             : base(set)
         {
-            Path = new List<ComColumn>();
+            Segments = new List<ComColumn>();
         }
 
         // Get the explicit current node.
-        public DimPath Current { get { return new DimPath(Path); } }
+        public DimPath Current { get { return new DimPath(Segments); } }
 
         // Get the implicit current node.
         object System.Collections.IEnumerator.Current
@@ -747,14 +747,14 @@ namespace Com.Model
             Input = null;
             Output = null;
 
-            Path.Clear();
-            Path = null;
+            Segments.Clear();
+            Segments = null;
         }
 
         // Reset the iterator.
         public void Reset()
         {
-            if (Path != null) Path.Clear();
+            if (Segments != null) Segments.Clear();
         }
 
         // Get the underlying enumerator.

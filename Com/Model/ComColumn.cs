@@ -39,7 +39,7 @@ namespace Com.Model
         object GetValue(Offset input);
         void SetValue(Offset input, object value);
 
-        void NullifyValues();
+        void Nullify();
 
         void Append(object value);
 
@@ -53,8 +53,8 @@ namespace Com.Model
         //
         // Project/de-project
         //
-        object ProjectValues(Offset[] offsets);
-        Offset[] DeprojectValue(object value);
+        object Project(Offset[] offsets);
+        Offset[] Deproject(object value);
 
         //
         // Typed methods for each primitive type like GetInteger(). No NULL management since we use real values including NULL.
@@ -156,7 +156,7 @@ namespace Com.Model
         // Compute
         //
 
-        ComColumnEvaluator GetColumnEvaluator(); // Get an object which is used to compute the function values according to the formula
+        ComEvaluator GetColumnEvaluator(); // Get an object which is used to compute the function values according to the formula
 
         void Initialize();
         void Evaluate();
@@ -181,56 +181,6 @@ namespace Com.Model
         LINK, // Column is defined via a mapping represented as a tuple with paths as leaves
         AGGREGATION, // Column is defined via an updater (accumulator) function which is fed by facts using grouping and measure paths
         CASE,
-    }
-
-    // This class is used only by the column evaluation procedure. 
-    public interface ComColumnEvaluator // Compute output for one input based on some column definition and other already computed columns
-    {
-        // Never changes any set - neither lesser nor greater - just compute output given input
-
-        bool Next(); // True if there exists a next element
-        bool First(); // True if there exists a first element (if the set is not empty)
-        bool Last(); // True if there exists a last element (if the set is not empty)
-
-        bool IsUpdate { get; }
-
-        object Evaluate(); // Compute output for the specified intput and write it
-        object EvaluateUpdate(); // Read group and measure for the specified input and compute update according to the aggregation formula. It may also increment another function if necessary.
-        bool EvaluateJoin(object output); // Called for all pairs of input and output *if* the definition is a join predicate.
-
-        object GetResult();
-    }
-
-    public interface ComVariable // It is a storage element like function or table
-    {
-        //
-        // Variable name (strictly speaking, it should belong to a different interface)
-        //
-
-        string Name { get; set; }
-
-        //
-        // Type info
-        //
-
-        string TypeName { get; set; }
-        ComTable TypeTable { get; set; } // Resolved table name
-
-        //
-        // Variable data. Analogous to the column data interface but without input argument
-        //
-
-        bool IsNull();
-
-        object GetValue();
-        void SetValue(object value);
-
-        void NullifyValue();
-
-        //
-        // Typed methods
-        //
-
     }
 
 }

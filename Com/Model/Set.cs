@@ -185,14 +185,14 @@ namespace Com.Model
             }
         }
 
-        public object GetValue(string name, int offset)
+        public object GetValue(string name, Offset offset)
         {
             Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
             ComColumn dim = GetColumn(name);
             return dim.Data.GetValue(offset);
         }
 
-        public void SetValue(string name, int offset, object value)
+        public void SetValue(string name, Offset offset, object value)
         {
             Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
             ComColumn dim = GetColumn(name);
@@ -208,7 +208,7 @@ namespace Com.Model
             for (int i = 0; i < dims.Length; i++)
             {
                 hasBeenRestricted = true;
-                Offset[] range = dims[i].Data.DeprojectValue(values[i]); // Deproject one value
+                Offset[] range = dims[i].Data.Deproject(values[i]); // Deproject one value
                 result = result.Intersect(range).ToArray(); 
                 // OPTIMIZE: Write our own implementation for various operations (intersection etc.). Use the fact that they are ordered.
                 // OPTIMIZE: Use statistics for column distribution to choose best order of de-projections. Alternatively, the order of dimensions can be set by the external procedure taking into account statistics. Say, there could be a special utility method like SortDimensionsAccordingDiscriminationFactor or SortDimsForFinding tuples.
@@ -280,7 +280,7 @@ namespace Com.Model
                     val = childExpr.Result.GetValue();
 
                     hasBeenRestricted = true;
-                    Offset[] range = dim.Data.DeprojectValue(val); // Deproject the value
+                    Offset[] range = dim.Data.Deproject(val); // Deproject the value
                     result = result.Intersect(range).ToArray(); // Intersect with previous de-projections
                     // OPTIMIZE: Write our own implementation for intersection and other operations. Assume that they are ordered.
                     // OPTIMIZE: Remember the position for the case this value will have to be inserted so we do not have again search for this positin during insertion (optimization)
@@ -523,25 +523,20 @@ namespace Com.Model
 
         public TableDefinitionType DefinitionType { get; set; }
 
-        public ExprNode WhereExpression { get; set; }
+        public ExprNode WhereExpr { get; set; }
 
-        public List<ComColumn> GeneratingDimensions // Output tuples of these dimensions are appended to this set (other tuples are excluded). Alternatively, this element must be referenced by at one lesser element COUNT(this<-proj_dim<-(Set)) > 0
+        public ExprNode OrderbyExpr { get; set; }
+
+        public ComEvaluator GetWhereEvaluator()
         {
-            get { return InputColumns.Where(d => d.Definition.IsGenerating).ToList(); }
-        }
-
-        public ExprNode OrderbyExpression { get; set; }
-
-        public ComColumnEvaluator GetWhereEvaluator()
-        {
-            ComColumnEvaluator evaluator;
+            ComEvaluator evaluator;
             evaluator = ExprEvaluator.CreateWhereEvaluator(this);
             return evaluator;
         }
 
         public void Populate() 
         {
-            if (DefinitionType == TableDefinitionType.NONE)
+            if (DefinitionType == TableDefinitionType.FREE)
             {
                 return; // Nothing to do
             }
@@ -561,8 +556,8 @@ namespace Com.Model
                 object[] vals = new object[dimCount];
 
                 // Evaluator for where expression
-                ComColumnEvaluator eval = null;
-                if (Definition.WhereExpression != null)
+                ComEvaluator eval = null;
+                if (Definition.WhereExpr != null)
                 {
                     eval = GetWhereEvaluator();
                 }
@@ -644,12 +639,13 @@ namespace Com.Model
                 // If appended or found, then set values of the greater generating dimensions
                 // If cannot be added (does not satisfy constraints) then set values of the greater generating dimensions to null
 
-                ComColumn projectDim = Definition.GeneratingDimensions[0];
+
+                ComColumn projectDim = InputColumns.Where(d => d.Definition.IsGenerating).ToList()[0];
                 ComTable sourceSet = projectDim.Input;
                 ComTable targetSet = projectDim.Output; // this set
 
                 // Prepare the expression from the mapping
-                ComColumnEvaluator evaluator = projectDim.Definition.GetColumnEvaluator();
+                ComEvaluator evaluator = projectDim.Definition.GetColumnEvaluator();
 
                 while (evaluator.Next()) 
                 {
@@ -832,10 +828,10 @@ namespace Com.Model
 
                 tableDef["definition_type"] = (int)Definition.DefinitionType;
 
-                if (Definition.WhereExpression != null)
+                if (Definition.WhereExpr != null)
                 {
-                    tableDef["where"] = Utils.CreateJsonFromObject(Definition.WhereExpression);
-                    Definition.WhereExpression.ToJson((JObject)tableDef["where"]);
+                    tableDef["where"] = Utils.CreateJsonFromObject(Definition.WhereExpr);
+                    Definition.WhereExpr.ToJson((JObject)tableDef["where"]);
                 }
 
                 json["definition"] = tableDef;
@@ -852,7 +848,7 @@ namespace Com.Model
             JObject tableDef = (JObject)json["definition"];
             if (tableDef != null && Definition != null)
             {
-                Definition.DefinitionType = tableDef["definition_type"] != null ? (TableDefinitionType)(int)tableDef["definition_type"] : TableDefinitionType.NONE;
+                Definition.DefinitionType = tableDef["definition_type"] != null ? (TableDefinitionType)(int)tableDef["definition_type"] : TableDefinitionType.FREE;
 
                 if (tableDef["where"] != null)
                 {
@@ -860,7 +856,7 @@ namespace Com.Model
                     if (node != null)
                     {
                         node.FromJson((JObject)tableDef["where"], ws);
-                        Definition.WhereExpression = node;
+                        Definition.WhereExpr = node;
                     }
                 }
             }
@@ -941,7 +937,7 @@ namespace Com.Model
             greaterDims = new List<ComColumn>(); // Up arrows
             lesserDims = new List<ComColumn>();
 
-            DefinitionType = TableDefinitionType.NONE;
+            DefinitionType = TableDefinitionType.FREE;
         }
 
         #endregion
@@ -1002,21 +998,21 @@ namespace Com.Model
         }
         public DimAttribute GetGreaterPath(DimAttribute path)
         {
-            if (path == null || path.Path == null) return null;
-            return GetGreaterPath(path.Path);
+            if (path == null || path.Segments == null) return null;
+            return GetGreaterPath(path.Segments);
         }
         public DimAttribute GetGreaterPath(List<ComColumn> path)
         {
             if (path == null) return null;
             foreach (DimAttribute p in GreaterPaths)
             {
-                if (p.Path == null) continue;
-                if (p.Path.Count != path.Count) continue; // Different lengths => not equal
+                if (p.Segments == null) continue;
+                if (p.Segments.Count != path.Count) continue; // Different lengths => not equal
 
                 bool equal = true;
-                for (int seg = 0; seg < p.Path.Count && equal; seg++)
+                for (int seg = 0; seg < p.Segments.Count && equal; seg++)
                 {
-                    if (!StringSimilarity.SameColumnName(p.Path[seg].Name, path[seg].Name)) equal = false;
+                    if (!StringSimilarity.SameColumnName(p.Segments[seg].Name, path[seg].Name)) equal = false;
                     // if (p.Path[seg] != path[seg]) equal = false; // Compare strings as objects
                 }
                 if (equal) return p;
@@ -1025,16 +1021,16 @@ namespace Com.Model
         }
         public List<DimAttribute> GetGreaterPathsStartingWith(DimAttribute path)
         {
-            if (path == null || path.Path == null) return new List<DimAttribute>();
-            return GetGreaterPathsStartingWith(path.Path);
+            if (path == null || path.Segments == null) return new List<DimAttribute>();
+            return GetGreaterPathsStartingWith(path.Segments);
         }
         public List<DimAttribute> GetGreaterPathsStartingWith(List<ComColumn> path)
         {
             var result = new List<DimAttribute>();
             foreach (DimAttribute p in GreaterPaths)
             {
-                if (p.Path == null) continue;
-                if (p.Path.Count < path.Count) continue; // Too short path (cannot include the input path)
+                if (p.Segments == null) continue;
+                if (p.Segments.Count < path.Count) continue; // Too short path (cannot include the input path)
                 if (p.StartsWith(path))
                 {
                     result.Add(p);
@@ -1056,13 +1052,13 @@ namespace Com.Model
                 if (p.Size < 2) continue; // All primitive paths are stored in this set. We need at least 2 segments.
 
                 // Check if this path already exists
-                path.Path = p.Path;
+                path.Segments = p.Segments;
                 if (GetGreaterPath(path) != null) continue; // Already exists
 
                 string pathName = "__inherited__" + ++pathCounter;
 
                 DimAttribute newPath = new DimAttribute(pathName);
-                newPath.Path = new List<ComColumn>(p.Path);
+                newPath.Segments = new List<ComColumn>(p.Segments);
                 newPath.Name = newPath.ColumnNamePath; // Overwrite previous pathName (so previous is not needed actually)
                 newPath.RelationalColumnName = newPath.Name; // It actually will be used for relational queries
                 newPath.RelationalFkName = path.RelationalFkName; // Belongs to the same FK

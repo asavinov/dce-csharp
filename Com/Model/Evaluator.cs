@@ -15,7 +15,7 @@ using Offset = System.Int32;
 namespace Com.Model
 {
 
-    public class ExprEvaluator : ComColumnEvaluator
+    public class ExprEvaluator : ComEvaluator
     {
         protected ExprNode exprNode; // Can contain more specific nodes OledbExprNode to access attributes in DataRow
 
@@ -79,31 +79,31 @@ namespace Com.Model
 
         public virtual object GetResult() { return exprNode.Result.GetValue(); }
 
-        public static ComColumnEvaluator CreateColumnEvaluator(ComColumn column)
+        public static ComEvaluator CreateColumnEvaluator(ComColumn column)
         {
             ExprEvaluator eval = new ExprEvaluator(column);
             return eval;
         }
 
-        public static ComColumnEvaluator CreateCsvEvaluator(ComColumn column)
+        public static ComEvaluator CreateCsvEvaluator(ComColumn column)
         {
             CsvEvaluator eval = new CsvEvaluator(column);
             return eval;
         }
 
-        public static ComColumnEvaluator CreateOledbEvaluator(ComColumn column)
+        public static ComEvaluator CreateOledbEvaluator(ComColumn column)
         {
             OledbEvaluator eval = new OledbEvaluator(column);
             return eval;
         }
 
-        public static ComColumnEvaluator CreateWhereEvaluator(ComTable table)
+        public static ComEvaluator CreateWhereEvaluator(ComTable table)
         {
             ExprEvaluator eval = new ExprEvaluator(table);
             return eval;
         }
 
-        public static ComColumnEvaluator CreateAggrEvaluator(ComColumn column)
+        public static ComEvaluator CreateAggrEvaluator(ComColumn column)
         {
             AggrEvaluator eval = new AggrEvaluator(column);
             return eval;
@@ -140,7 +140,7 @@ namespace Com.Model
 
         public ExprEvaluator(ComTable table)
         {
-            exprNode = table.Definition.WhereExpression;
+            exprNode = table.Definition.WhereExpr;
 
             currentElement = -1;
             loopTable = table;

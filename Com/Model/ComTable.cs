@@ -66,8 +66,8 @@ namespace Com.Model
         // Value methods (convenience, probably should be removed and replaced by manual access to dimensions)
         //
 
-        object GetValue(string name, int offset);
-        void SetValue(string name, int offset, object value);
+        object GetValue(string name, Offset offset);
+        void SetValue(string name, Offset offset, object value);
 
         //
         // Tuple methods: append, insert, remove, read, write.
@@ -108,17 +108,15 @@ namespace Com.Model
         /// Currently, it is written in terms of and is applied to source (already existing) instances - not instances of this set. Only instances satisfying these constraints are used for populating this set. 
         /// In future, we should probabyl apply these constraints to this set elements while the source set has its own constraints.
         /// </summary>
-        ExprNode WhereExpression { get; set; } // May store ComColumn which stores a boolean function definition
-
-        List<ComColumn> GeneratingDimensions { get; }
+        ExprNode WhereExpr { get; set; } // May store ComColumn which stores a boolean function definition
 
         /// <summary>
         /// Ordering of the instances. 
         /// Here again we have a choice: it is how source elements are sorted or it is how elements of this set have to be sorted. 
         /// </summary>
-        ExprNode OrderbyExpression { get; set; } // Here we should store something like Comparator
+        ExprNode OrderbyExpr { get; set; } // Here we should store something like Comparator
 
-        ComColumnEvaluator GetWhereEvaluator(); // Get an object which is used to compute the where expression according to the formula
+        ComEvaluator GetWhereEvaluator(); // Get an object which is used to compute the where expression according to the formula
 
         /// <summary>
         /// Create all instances of this set. 
@@ -132,7 +130,7 @@ namespace Com.Model
         /// <summary>
         /// Remove all instances.
         /// </summary>
-        void Unpopulate(); // Is not it Length=0?
+        void Unpopulate(); // Is not it Length=0? Or nullify all columns?
 
         //
         // Dependencies. The order is important and corresponds to dependency chain
@@ -146,7 +144,7 @@ namespace Com.Model
 
     public enum TableDefinitionType // Specific types of table formula
     {
-        NONE, // No definition for the table (and cannot be defined). Example: manually created table with primitive dimensions.
+        FREE, // No definition for the table (and cannot be defined). Example: manually created table with primitive dimensions.
         ANY, // Arbitrary formula without constraints can be provided with a mix of various expression types
         PROJECTION, // Table gets its elements from (unique) outputs of some function
         PRODUCT, // Table contains all combinations of its greater (key) sets satsifying the constraints

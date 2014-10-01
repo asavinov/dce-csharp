@@ -633,12 +633,12 @@ namespace Com.Model
 
             Debug.Assert(path != null && path.Input == Result.TypeTable, "Wrong use: path must start from the node (output set) it is applied to.");
 
-            if (path.Path == null || path.Path.Count == 0) return this;
+            if (path.Segments == null || path.Segments.Count == 0) return this;
 
             ExprNode node = this;
-            for (int i = 0; i < path.Path.Count; i++) // We add all segments sequentially
+            for (int i = 0; i < path.Segments.Count; i++) // We add all segments sequentially
             {
-                ComColumn seg = path.Path[i];
+                ComColumn seg = path.Segments[i];
                 ExprNode child = node.GetChild(seg.Name); // Try to find a child corresponding to this segment
 
                 if (child == null) // Not found. Add a new child corresponding to this segment
@@ -708,9 +708,9 @@ namespace Com.Model
             }
             else // Access via function/column composition
             {
-                for (int i = path.Path.Count() - 1; i >= 0; i--)
+                for (int i = path.Segments.Count() - 1; i >= 0; i--)
                 {
-                    ComColumn seg = path.Path[i];
+                    ComColumn seg = path.Segments[i];
 
                     ExprNode node = new ExprNode();
                     node.Operation = OperationType.CALL;
@@ -1036,70 +1036,6 @@ namespace Com.Model
         COUNT,
         // ADD ("SUM")
         // MUL ("MUL")
-    }
-
-    public class Variable : ComVariable
-    {
-        protected bool isNull;
-        object Value;
-
-
-        //
-        // CsVariable interface
-        //
-
-        public string TypeName { get; set; }
-        public ComTable TypeTable { get; set; }
-
-        public string Name { get; set; }
-
-        public bool IsNull()
-        {
-            return isNull;
-        }
-
-        public object GetValue()
-        {
-            return isNull ? null : Value;
-        }
-
-        public void SetValue(object value)
-        {
-            if (value == null)
-            {
-                Value = null;
-                isNull = true;
-            }
-            else
-            {
-                Value = value;
-                isNull = false;
-            }
-        }
-
-        public void NullifyValue()
-        {
-            isNull = true;
-        }
-
-        public Variable(string name, string type)
-        {
-            Name = name;
-            TypeName = type;
-
-            isNull = true;
-            Value = null;
-        }
-
-        public Variable(string name, ComTable type)
-        {
-            Name = name;
-            TypeName = type.Name;
-            TypeTable = type;
-
-            isNull = true;
-            Value = null;
-        }
     }
 
 }
