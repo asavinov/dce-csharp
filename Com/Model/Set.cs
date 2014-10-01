@@ -29,7 +29,7 @@ namespace Com.Model
         /// </summary>
         public Guid Id { get; private set; }
 
-        #region CsTable interface
+        #region ComTable interface
 
         public string Name { get; set; }
 
@@ -166,7 +166,7 @@ namespace Com.Model
             return ret;
         }
 
-        #region CsTableData interface
+        #region ComTableData interface
 
         /// <summary>
         /// How many instances this set has. Cardinality. Set power. Length (height) of instance set.
@@ -268,8 +268,8 @@ namespace Com.Model
             bool hasBeenRestricted = false; // For the case where the Length==1, and no key columns are really provided, so we get at the end result.Length==1 which is misleading. Also, this fixes the problem of having no key dimensions.
 
             List<ComColumn> dims = new List<ComColumn>();
-            dims.AddRange(Columns.Where(x => x.IsIdentity));
-            dims.AddRange(Columns.Where(x => !x.IsIdentity));
+            dims.AddRange(Columns.Where(x => x.IsKey));
+            dims.AddRange(Columns.Where(x => !x.IsKey));
 
             foreach (Dim dim in dims) // OPTIMIZE: the order of dimensions matters (use statistics, first dimensins with better filtering). Also, first identity dimensions.
             {
@@ -519,7 +519,7 @@ namespace Com.Model
 
         #endregion
 
-        #region CsTableDefinition
+        #region ComTableDefinition
 
         public TableDefinitionType DefinitionType { get; set; }
 
@@ -556,7 +556,7 @@ namespace Com.Model
                 //   - greater dims are populated simultaniously without evaluation (they do not have defs.)
 
                 // Find all local greater key dimensions including the super-dim.
-                ComColumn[] dims = Columns.Where(x => x.IsIdentity).ToArray();
+                ComColumn[] dims = Columns.Where(x => x.IsKey).ToArray();
                 int dimCount = dims.Length;
                 object[] vals = new object[dimCount];
 
@@ -689,7 +689,7 @@ namespace Com.Model
 
             foreach (ComColumn col in Columns) // If a greater (key) set has changed then this set has to be populated
             {
-                if (!col.IsIdentity) continue;
+                if (!col.IsKey) continue;
                 res.Add(col.Output);
             }
 
@@ -723,7 +723,7 @@ namespace Com.Model
 
             foreach (ComColumn col in InputColumns) // If this set has changed then all its lesser (key) sets have to be populated
             {
-                if (!col.IsIdentity) continue;
+                if (!col.IsKey) continue;
                 res.Add(col.Input);
             }
 

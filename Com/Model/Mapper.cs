@@ -285,7 +285,7 @@ namespace Com.Model
                     Mapping gMapping = greaterMappings[sd];
                     ComTable gts = gMapping.TargetSet;
 
-                    ComColumn td = targetSchema.CreateColumn(sd.Name, ts, gts, sd.IsIdentity); // Create a clone for the source dimension
+                    ComColumn td = targetSchema.CreateColumn(sd.Name, ts, gts, sd.IsKey); // Create a clone for the source dimension
 
                     newMapping.AddPaths(sd, td, gMapping); // Add a pair of dimensions as a match (with expansion using the specified greater mapping)
                 }
@@ -659,7 +659,7 @@ namespace Com.Model
                     this.MapPrimitiveSet(att.Output, targetSchema);
                     ComTable targetType = this.GetBestTargetSet(att.Output, targetSchema);
 
-                    td = new Dim(att.RelationalColumnName, map.TargetSet, targetType, att.IsIdentity, false);
+                    td = new Dim(att.RelationalColumnName, map.TargetSet, targetType, att.IsKey, false);
                     tp = new DimPath(td);
                     tp.Name = sp.Name;
 
@@ -677,7 +677,7 @@ namespace Com.Model
 
                     // Recommend matching target type (mapping primitive types)
                     //this.MapPrimitiveSet(sd, targetSchema);
-                    //CsTable targetType = this.GetBestTargetSet(sd.Output, targetSchema);
+                    //ComTable targetType = this.GetBestTargetSet(sd.Output, targetSchema);
 
                     //
                     // Analyze sample values of sd and choose the most specific target type
@@ -722,7 +722,7 @@ namespace Com.Model
 
                     ComTable targetType = targetSchema.GetPrimitive(targetTypeName);
 
-                    td = targetSchema.CreateColumn(sd.Name, map.TargetSet, targetType, sd.IsIdentity);
+                    td = targetSchema.CreateColumn(sd.Name, map.TargetSet, targetType, sd.IsKey);
 
                     sp = new DimPath(sd);
                     tp = new DimPath(td);

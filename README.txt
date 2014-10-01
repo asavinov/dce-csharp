@@ -33,6 +33,26 @@ ANTLR
   - Install "ANTLR Language Support"
   - Restart of VS is required
 
+
+C# target for ANTLR 4: https://github.com/sharwell/antlr4cs
+
+Grammar articles:
+http://www.codeproject.com/Articles/18880/State-of-the-Art-Expression-Evaluation
+
+NCalc grammar (see also VS project configuration):
+http://ncalc.codeplex.com/SourceControl/changeset/view/914d819f2865#Grammar/NCalc.g
+
+
+steps & code to walk AST in C#: 
+http://stackoverflow.com/questions/887205/tutorial-for-walking-antlr-asts-in-c
+
+C# and Antlr: 
+http://www.manuelabadia.com/blog/PermaLink,guid,6e509f70-3db8-46f4-b451-1ef9dd80740b.aspx
+
+How do I make ANTLRWorks and Visual Studio work together? (CSharp as target language)
+http://www.antlr.org/wiki/pages/viewpage.action?pageId=557075
+  
+  
 GIT
 ---
 

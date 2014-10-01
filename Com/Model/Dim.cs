@@ -35,7 +35,7 @@ namespace Com.Model
         /// <summary>
         /// Whether it is an identity dimension.
         /// </summary>
-        public bool IsIdentity { get; protected set; }
+        public bool IsKey { get; protected set; }
 
         /// <summary>
         /// This dimension belongs to the inclusion hierarchy (super-dimension).
@@ -72,7 +72,7 @@ namespace Com.Model
             {
                 if (_output == value) return;
                 _output = value;
-                columnData = CreateColumnData(_output, this);
+                _data = CreateColumnData(value, this);
             }
         }
 
@@ -112,11 +112,11 @@ namespace Com.Model
         }
 
 
-        protected ComColumnData columnData;
-        public virtual ComColumnData Data { get { return columnData; } }
+        protected ComColumnData _data;
+        public virtual ComColumnData Data { get { return _data; } }
 
-        protected ComColumnDefinition columnDefinition;
-        public virtual ComColumnDefinition Definition { get { return columnDefinition; } }
+        protected ComColumnDefinition _definition;
+        public virtual ComColumnDefinition Definition { get { return _definition; } }
 
         #endregion
 
@@ -127,7 +127,7 @@ namespace Com.Model
             // No super-object
 
             json["name"] = Name;
-            json["key"] = IsIdentity ? "true" : "false";
+            json["key"] = IsKey ? "true" : "false";
             json["super"] = IsSuper ? "true" : "false";
 
             json["lesser_table"] = Utils.CreateJsonRef(Input);
@@ -191,7 +191,7 @@ namespace Com.Model
             // No super-object
 
             Name = (string)json["name"];
-            IsIdentity = json["key"] != null ? StringSimilarity.JsonTrue((string)json["key"]) : false;
+            IsKey = json["key"] != null ? StringSimilarity.JsonTrue((string)json["key"]) : false;
             IsSuper = json["super"] != null ? StringSimilarity.JsonTrue((string)json["super"]) : false;
 
             Input = (ComTable)Utils.ResolveJsonRef((JObject)json["lesser_table"], ws);
@@ -202,7 +202,7 @@ namespace Com.Model
             if (columnDef != null && Definition != null)
             {
                 Definition.IsGenerating = columnDef["generating"] != null ? StringSimilarity.JsonTrue(columnDef["generating"]) : false;
-                Definition.DefinitionType = columnDef["definition_type"] != null ? (ColumnDefinitionType)(int)columnDef["definition_type"] : ColumnDefinitionType.NONE;
+                Definition.DefinitionType = columnDef["definition_type"] != null ? (ColumnDefinitionType)(int)columnDef["definition_type"] : ColumnDefinitionType.FREE;
 
                 if (columnDef["formula"] != null)
                 {
@@ -365,13 +365,13 @@ namespace Com.Model
         {
             Name = dim.Name;
 
-            IsIdentity = dim.IsIdentity;
+            IsKey = dim.IsKey;
 
             Input = dim.Input;
             Output = dim.Output;
 
-            columnData = CreateColumnData(_output, this);
-            columnDefinition = new ColumnDefinition(this);
+            _data = CreateColumnData(_output, this);
+            _definition = new ColumnDefinition(this);
             // TODO: Copy definition
         }
 
@@ -379,7 +379,7 @@ namespace Com.Model
             : this(mapping.SourceSet.Name, mapping.SourceSet, mapping.TargetSet, false, false)
         {
             Definition.Mapping = mapping;
-            columnDefinition.IsGenerating = true;
+            _definition.IsGenerating = true;
             if (Output != null) Output.Definition.DefinitionType = TableDefinitionType.PROJECTION;
         }
 
@@ -409,7 +409,7 @@ namespace Com.Model
 
             Name = name;
 
-            IsIdentity = isIdentity;
+            IsKey = isIdentity;
             IsSuper = isSuper;
 
             Input = input;
@@ -418,8 +418,8 @@ namespace Com.Model
             //
             // Creae storage for the function and its definition depending on the output set type
             //
-            columnData = CreateColumnData(output, this);
-            columnDefinition = new ColumnDefinition(this);
+            _data = CreateColumnData(output, this);
+            _definition = new ColumnDefinition(this);
         }
 
         #endregion

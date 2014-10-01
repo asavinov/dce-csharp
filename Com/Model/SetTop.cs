@@ -19,7 +19,7 @@ namespace Com.Model
     public class SetTop : Set, ComSchema
     {
 
-        #region CsSchema interface
+        #region ComSchema interface
 
         public ComTable GetPrimitive(string name)
         {
@@ -110,9 +110,9 @@ namespace Com.Model
                         nodes = col.Definition.Formula.Find(column);
                         foreach (var node in nodes) if (node.Parent != null) node.Parent.RemoveChild(node);
                     }
-                    if (col.Definition.WhereExpression != null)
+                    if (col.Definition.WhereExpr != null)
                     {
-                        nodes = col.Definition.WhereExpression.Find(column);
+                        nodes = col.Definition.WhereExpr.Find(column);
                         foreach (var node in nodes) if (node.Parent != null) node.Parent.RemoveChild(node);
                     }
 
@@ -196,10 +196,10 @@ namespace Com.Model
                         else if (element is ComColumn) nodes = col.Definition.Formula.Find((ComColumn)element);
                         nodes.ForEach(x => x.Name = newName);
                     }
-                    if (col.Definition.WhereExpression != null)
+                    if (col.Definition.WhereExpr != null)
                     {
-                        if (element is ComTable) nodes = col.Definition.WhereExpression.Find((ComTable)element);
-                        else if (element is ComColumn) nodes = col.Definition.WhereExpression.Find((ComColumn)element);
+                        if (element is ComTable) nodes = col.Definition.WhereExpr.Find((ComTable)element);
+                        else if (element is ComColumn) nodes = col.Definition.WhereExpr.Find((ComColumn)element);
                         nodes.ForEach(x => x.Name = newName);
                     }
                 }

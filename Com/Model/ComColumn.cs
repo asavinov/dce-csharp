@@ -11,7 +11,7 @@ namespace Com.Model
     {
         string Name { get; set; }
 
-        bool IsIdentity { get; }
+        bool IsKey { get; }
         bool IsSuper { get; } // Changing this property may influence storage type
         bool IsPrimitive { get; }
         // Other properties: isNullable, isTemporary, IsInstantiable (is supposed/able to have instances = lesser set instantiable)
@@ -35,11 +35,16 @@ namespace Com.Model
         // Untyped methods. Default conversion will be done according to the function type.
         //
         bool IsNull(Offset input);
+
         object GetValue(Offset input);
         void SetValue(Offset input, object value);
+
         void NullifyValues();
+
         void Append(object value);
+
         void Insert(Offset input, object value);
+
         void Remove(Offset input);
 
         //void WriteValue(object value); // Convenience, performance method: set all outputs to the specified value
@@ -48,7 +53,6 @@ namespace Com.Model
         //
         // Project/de-project
         //
-
         object ProjectValues(Offset[] offsets);
         Offset[] DeprojectValue(object value);
 
@@ -66,6 +70,20 @@ namespace Com.Model
 
     public interface ComColumnDefinition // How a function is represented and evaluated. It uses API of the column storage like read, write (typed or untyped).
     {
+        // The form of representation:
+        // Our own v-expr or its parsed AST: 
+        // Native source code: Java, C# etc.
+        // Native library class: Java, C#, Python etc.
+        // OS script (e.g., using pipes): Bash, Python etc.
+
+        // Type of formula:
+        // Primitive (direct computations returning a primitive value): = [col 1]+this.[col 2] / SYS_FUNC([col 3].[col 4] - 1.0)
+        // Complex (mapping, tuple): ([Set 1] [s 1] = this.[a1], [Set 2] [s 2] = (...), [Double] [amount] = [col1]+[col2] )
+        // A sequence of statements with return (primitive or tuple).
+        // Aggregation/accumulation (loop over another set): standard (sum, mul etc. - separate class), user-defined like this+value/2 - 1.
+        // Join predicate (two loops over input and output sets)
+
+
         /// <summary>
         /// Whether output values are appended to the output set. 
         /// </summary>
@@ -98,7 +116,7 @@ namespace Com.Model
         /// <summary>
         /// It describes the domain of the function or where the function returns null independent of other definitions
         /// </summary>
-        ExprNode WhereExpression { get; set; }
+        ExprNode WhereExpr { get; set; }
 
         //
         // Aggregation
@@ -157,7 +175,7 @@ namespace Com.Model
 
     public enum ColumnDefinitionType // Specific types of column formula
     {
-        NONE, // No definition for the column (and cannot be defined). Example: key columns of a product table
+        FREE, // No definition for the column (and cannot be defined). Example: key columns of a product table
         ANY, // Arbitrary formula without constraints which can mix many other types of expressions
         ARITHMETIC, // Column uses only other columns or paths of this same table as well as operations
         LINK, // Column is defined via a mapping represented as a tuple with paths as leaves
@@ -186,25 +204,27 @@ namespace Com.Model
     public interface ComVariable // It is a storage element like function or table
     {
         //
-        // Type infor
-        //
-
-        string TypeName { get; set; }
-        ComTable TypeTable { get; set; } // Resolved table name
-
-        //
         // Variable name (strictly speaking, it should belong to a different interface)
         //
 
         string Name { get; set; }
 
         //
+        // Type info
+        //
+
+        string TypeName { get; set; }
+        ComTable TypeTable { get; set; } // Resolved table name
+
+        //
         // Variable data. Analogous to the column data interface but without input argument
         //
 
         bool IsNull();
+
         object GetValue();
         void SetValue(object value);
+
         void NullifyValue();
 
         //

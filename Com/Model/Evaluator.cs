@@ -28,7 +28,7 @@ namespace Com.Model
         protected ComTable loopTable;
 
         //
-        // CsColumnEvaluator interface
+        // ComColumnEvaluator interface
         //
 
         protected bool isUpdate;
@@ -164,7 +164,7 @@ namespace Com.Model
         protected ConnectionCsv connectionCsv;
 
         //
-        // CsColumnEvaluator interface
+        // ComColumnEvaluator interface
         //
 
         protected bool isUpdate;
@@ -217,7 +217,7 @@ namespace Com.Model
         protected DataTable dataTable;
 
         //
-        // CsColumnEvaluator interface
+        // ComColumnEvaluator interface
         //
 
         protected bool isUpdate;
@@ -288,7 +288,7 @@ namespace Com.Model
         // base::columnData is the aggregated function to be computed
 
         //
-        // CsColumnEvaluator interface
+        // ComColumnEvaluator interface
         //
 
         public override object Evaluate()

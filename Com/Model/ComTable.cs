@@ -108,7 +108,7 @@ namespace Com.Model
         /// Currently, it is written in terms of and is applied to source (already existing) instances - not instances of this set. Only instances satisfying these constraints are used for populating this set. 
         /// In future, we should probabyl apply these constraints to this set elements while the source set has its own constraints.
         /// </summary>
-        ExprNode WhereExpression { get; set; } // May store CsColumn which stores a boolean function definition
+        ExprNode WhereExpression { get; set; } // May store ComColumn which stores a boolean function definition
 
         List<ComColumn> GeneratingDimensions { get; }
 

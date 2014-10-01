@@ -533,7 +533,7 @@ namespace Com.Model
     /// </summary>
     public class DimAttribute : DimPath
     {
-        #region CsColumn interface
+        #region ComColumn interface
 
         public override void Add()
         {
@@ -577,7 +577,7 @@ namespace Com.Model
 
             if(att.Path.Count > 0) return; // Already expanded (because of recursion)
 
-            bool isKey = !string.IsNullOrEmpty(att.RelationalPkName) || att.IsIdentity;
+            bool isKey = !string.IsNullOrEmpty(att.RelationalPkName) || att.IsKey;
 
             if (string.IsNullOrEmpty(att.RelationalFkName)) // No FK - primitive column - end of recursion
             {
@@ -951,8 +951,8 @@ namespace Com.Model
                 switch (dimType)
                 {
                     case DimensionType.IDENTITY_ENTITY: return Output.Columns.Where(x => x.Input.Schema == x.Output.Schema).ToList();
-                    case DimensionType.IDENTITY: return Output.Columns.Where(x => x.IsIdentity && x.Input.Schema == x.Output.Schema).ToList();
-                    case DimensionType.ENTITY: return Output.Columns.Where(x => !x.IsIdentity && x.Input.Schema == x.Output.Schema).ToList();
+                    case DimensionType.IDENTITY: return Output.Columns.Where(x => x.IsKey && x.Input.Schema == x.Output.Schema).ToList();
+                    case DimensionType.ENTITY: return Output.Columns.Where(x => !x.IsKey && x.Input.Schema == x.Output.Schema).ToList();
 
                     case DimensionType.GENERATING: return Output.Columns.Where(x => (x.Definition != null && x.Definition.IsGenerating) && x.Input.Schema == x.Output.Schema).ToList();
                 }
@@ -962,8 +962,8 @@ namespace Com.Model
                 switch (dimType)
                 {
                     case DimensionType.IDENTITY_ENTITY: return Input.InputColumns.Where(x => x.Input.Schema == x.Output.Schema).ToList();
-                    case DimensionType.IDENTITY: return Input.InputColumns.Where(x => x.IsIdentity && x.Input.Schema == x.Output.Schema).ToList();
-                    case DimensionType.ENTITY: return Input.InputColumns.Where(x => !x.IsIdentity && x.Input.Schema == x.Output.Schema).ToList();
+                    case DimensionType.IDENTITY: return Input.InputColumns.Where(x => x.IsKey && x.Input.Schema == x.Output.Schema).ToList();
+                    case DimensionType.ENTITY: return Input.InputColumns.Where(x => !x.IsKey && x.Input.Schema == x.Output.Schema).ToList();
 
                     case DimensionType.GENERATING: return Input.InputColumns.Where(x => (x.Definition != null && x.Definition.IsGenerating) && x.Input.Schema == x.Output.Schema).ToList();
                 }

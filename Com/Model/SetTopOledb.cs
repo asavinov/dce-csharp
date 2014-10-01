@@ -107,8 +107,8 @@ namespace Com.Model
                 ImportPaths(tableName);
             }
 
-            List<CsTable> sets = Root.GetAllSubsets();
-            foreach (CsTable set in sets)
+            List<ComTable> sets = Root.GetAllSubsets();
+            foreach (ComTable set in sets)
             {
                 foreach (DimPath path in set.GreaterPaths)
                 {
@@ -203,7 +203,7 @@ namespace Com.Model
                 private void ImportPaths(string tableName)
                 {
                     // Find set corresonding to this table
-                    CsTable tableSet = Root.FindSubset(tableName);
+                    ComTable tableSet = Root.FindSubset(tableName);
 
                     Debug.Assert(!tableSet.IsPrimitive, "Wrong use: cannot load paths into a primitive set.");
 
@@ -605,7 +605,7 @@ namespace Com.Model
         */
         #endregion
 
-        #region CsSchema interface
+        #region ComSchema interface
 
         public override ComTable CreateTable(String name)
         {

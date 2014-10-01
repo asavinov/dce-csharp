@@ -42,7 +42,7 @@ namespace Com.Model
 
         // It is a reference to a dimension, variable or another kind of callable storage run-time object
         // Is resolved from name at compile-time if the name represents a method (dimension, function etc.)
-        // It could be CsColumnEvaluator (at least for Dim storage) so that we directly access values at run-time. 
+        // It could be ComColumnEvaluator (at least for Dim storage) so that we directly access values at run-time. 
         // Alternatively, the whole node implements this interface
         public ComColumn Column { get; set; }
         public ComVariable Variable { get; set; }

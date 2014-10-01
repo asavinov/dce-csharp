@@ -157,7 +157,7 @@ namespace Test
         }
 
         [TestMethod]
-        public void SchemaTest() // CsColumn. Manually add/remove tables/columns
+        public void SchemaTest() // ComColumn. Manually add/remove tables/columns
         {
             //
             // Prepare schema
@@ -187,7 +187,7 @@ namespace Test
         }
 
         [TestMethod]
-        public void ColumnDataTest() // CsColumnData. Manually read/write data
+        public void ColumnDataTest() // ComColumnData. Manually read/write data
         {
             //
             // Prepare schema
@@ -239,7 +239,7 @@ namespace Test
         }
 
         [TestMethod]
-        public void TableDataTest() // CsTableData. Manually read/write data to/from tables
+        public void TableDataTest() // ComTableData. Manually read/write data to/from tables
         {
             //
             // Prepare schema
@@ -269,7 +269,7 @@ namespace Test
         }
         
         [TestMethod]
-        public void ColumnDefinitionTest() // CsColumnDefinition. Defining new columns and evaluate them
+        public void ColumnDefinitionTest() // ComColumnDefinition. Defining new columns and evaluate them
         {
             //
             // Prepare schema and fill data

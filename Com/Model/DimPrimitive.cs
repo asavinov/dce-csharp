@@ -44,7 +44,7 @@ namespace Com.Model
             }
         }
 
-        #region CsColumnData interface
+        #region ComColumnData interface
 
         protected Offset _length; // It is only used if lesser set is not set, that is, for hanging dimension (theoretically, we should not use hanging dimensions and do not need then this field)
         public Offset Length
@@ -532,7 +532,7 @@ namespace Com.Model
     public class DimEmpty : ComColumnData
     {
 
-        #region CsColumnData interface
+        #region ComColumnData interface
 
         protected Offset _length;
         public Offset Length
@@ -572,7 +572,7 @@ namespace Com.Model
     {
         protected ComColumn Dim { get; set; }
 
-        #region CsColumnDefinition interface
+        #region ComColumnDefinition interface
 
         public bool IsGenerating { get; set; }
 
@@ -584,7 +584,7 @@ namespace Com.Model
 
         public Mapping Mapping { get; set; }
 
-        public ExprNode WhereExpression { get; set; }
+        public ExprNode WhereExpr { get; set; }
 
         //
         // Aggregation
@@ -622,7 +622,7 @@ namespace Com.Model
 
             ComColumnEvaluator evaluator = null;
 
-            if (DefinitionType == ColumnDefinitionType.NONE) 
+            if (DefinitionType == ColumnDefinitionType.FREE) 
             {
                 ; // Nothing to do
             }
@@ -677,7 +677,7 @@ namespace Com.Model
         {
             List<ComTable> res = new List<ComTable>();
 
-            if (DefinitionType == ColumnDefinitionType.NONE)
+            if (DefinitionType == ColumnDefinitionType.FREE)
             {
                 ;
             }
@@ -734,7 +734,7 @@ namespace Com.Model
         {
             List<ComColumn> res = new List<ComColumn>();
 
-            if (DefinitionType == ColumnDefinitionType.NONE)
+            if (DefinitionType == ColumnDefinitionType.FREE)
             {
                 ;
             }
@@ -788,7 +788,7 @@ namespace Com.Model
             Dim = dim;
 
             IsGenerating = false;
-            DefinitionType = ColumnDefinitionType.NONE;
+            DefinitionType = ColumnDefinitionType.FREE;
             
             GroupPaths = new List<DimPath>();
             MeasurePaths = new List<DimPath>();

@@ -70,7 +70,7 @@ namespace Com.Model
 
         #endregion
 
-        #region CsSchema interface
+        #region ComSchema interface
 
         public override ComTable CreateTable(String name)
         {
