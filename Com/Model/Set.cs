@@ -896,6 +896,10 @@ namespace Com.Model
                 PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
             }
         }
+        public virtual void NotifyPropertyChanged(String propertyName = "") // Convenience method: notifying all about property change
+        {
+            OnPropertyChanged(propertyName);
+        }
 
         public override string ToString()
         {

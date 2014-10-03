@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Diagnostics;
@@ -16,7 +17,7 @@ namespace Com.Model
     /// Extensions also can define functions defined via a formula or a query to an external database.
     /// It is only important that a function somehow impplements a mapping from its lesser set to its greater set. 
     /// </summary>
-    public class Dim : ComColumn
+    public class Dim : INotifyPropertyChanged, ComColumn
     {
         private static int uniqueId;
 
@@ -25,7 +26,7 @@ namespace Com.Model
         /// </summary>
         public Guid Id { get; private set; }
 
-        #region CsColumn interface
+        #region ComColumn interface
 
         /// <summary>
         /// This name is unique within the lesser set.
@@ -270,6 +271,22 @@ namespace Com.Model
 
         #region Overriding System.Object and interfaces
 
+        //
+        // INotifyPropertyChanged Members
+        //
+        public event PropertyChangedEventHandler PropertyChanged;
+        private void OnPropertyChanged(String propertyName = "")
+        {
+            if (PropertyChanged != null)
+            {
+                PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
+            }
+        }
+        public virtual void NotifyPropertyChanged(String propertyName = "") // Convenience method: notifying all about property change
+        {
+            OnPropertyChanged(propertyName);
+        }
+        
         public override string ToString()
         {
             return String.Format("{0}: {1} -> {2}", Name, Input.Name, Output.Name);
