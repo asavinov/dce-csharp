@@ -325,8 +325,19 @@ namespace Com.Model
         /// <returns></returns>
         public static ComColumnData CreateColumnData(ComTable type, ComColumn column)
         {
-            ComColumnData colData = new DimEmpty();
+            ComColumnData colData = new DimDataEmpty();
 
+            /*
+            if (column.Input != null && column.Input.Schema != null && column.Input.Schema.GetType() != typeof(SetTop)) // Import dim
+            {
+            }
+            else if (column.Output != null && column.Output.Schema != null && column.Output.Schema.GetType() != typeof(SetTop)) // Output dim
+            {
+            }
+            */
+            if (column.Input == null || column.Output == null)
+            {
+            }
             if (type == null || string.IsNullOrEmpty(type.Name))
             {
             }
@@ -344,34 +355,34 @@ namespace Com.Model
             }
             else if (StringSimilarity.SameTableName(type.Name, "Integer"))
             {
-                colData = new DimPrimitive<int>(column);
+                colData = new DimData<int>(column);
             }
             else if (StringSimilarity.SameTableName(type.Name, "Double"))
             {
-                colData = new DimPrimitive<double>(column);
+                colData = new DimData<double>(column);
             }
             else if (StringSimilarity.SameTableName(type.Name, "Decimal"))
             {
-                colData = new DimPrimitive<decimal>(column);
+                colData = new DimData<decimal>(column);
             }
             else if (StringSimilarity.SameTableName(type.Name, "String"))
             {
-                colData = new DimPrimitive<string>(column);
+                colData = new DimData<string>(column);
             }
             else if (StringSimilarity.SameTableName(type.Name, "Boolean"))
             {
-                colData = new DimPrimitive<bool>(column);
+                colData = new DimData<bool>(column);
             }
             else if (StringSimilarity.SameTableName(type.Name, "DateTime"))
             {
-                colData = new DimPrimitive<DateTime>(column);
+                colData = new DimData<DateTime>(column);
             }
             else if (StringSimilarity.SameTableName(type.Name, "Set"))
             {
             }
             else // User (non-primitive) set
             {
-                colData = new DimPrimitive<int>(column);
+                colData = new DimData<int>(column);
             }
 
             return colData;

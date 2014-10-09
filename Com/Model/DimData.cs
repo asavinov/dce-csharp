@@ -15,7 +15,7 @@ namespace Com.Model
     /// One array of type T stores elements in their original order without sorting. 
     /// Second array stores indexes (offsets) of elements in the first array in sorted order.
     /// </summary>
-    public class DimPrimitive<T> : ComColumnData
+    public class DimData<T> : ComColumnData
     {
         protected ComColumn Dim { get; set; }
 
@@ -478,7 +478,7 @@ namespace Com.Model
 
         #region Constructors
 
-        public DimPrimitive(ComColumn dim)
+        public DimData(ComColumn dim)
         {
             // TODO: Check if output (greater) set is of correct type
 
@@ -491,7 +491,11 @@ namespace Com.Model
 
             _nullCount = Length;
 
-            Length = dim.Input.Data.Length;
+            Length = 0;
+            if (dim.Input != null && dim.Input.Data != null)
+            {
+                Length = dim.Input.Data.Length;
+            }
 
             // Initialize what representative value will be used instead of nulls
             _nullValue = default(T); // Check if type is nullable: http://stackoverflow.com/questions/374651/how-to-check-if-an-object-is-nullable
@@ -529,7 +533,7 @@ namespace Com.Model
     /// Empty data.
     /// 
     /// </summary>
-    public class DimEmpty : ComColumnData
+    public class DimDataEmpty : ComColumnData
     {
 
         #region ComColumnData interface

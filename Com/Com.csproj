@@ -64,8 +64,8 @@
     <Compile Include="Model\ComSchema.cs" />
     <Compile Include="Model\ComTable.cs" />
     <Compile Include="Model\Dim.cs" />
+    <Compile Include="Model\DimData.cs" />
     <Compile Include="Model\DimPath.cs" />
-    <Compile Include="Model\DimPrimitive.cs" />
     <Compile Include="Model\DimTree.cs" />
     <Compile Include="Model\Evaluator.cs" />
     <Compile Include="Model\Expr.cs" />

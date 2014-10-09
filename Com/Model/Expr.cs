@@ -443,7 +443,7 @@ namespace Com.Model
                         Result.SetValue(result);
                     }
                 }
-                if (Action == ActionType.UPDATE) // Compute new value for the specified offset using a new value in the variable
+                else if (Action == ActionType.UPDATE) // Compute new value for the specified offset using a new value in the variable
                 {
                 }
                 //
