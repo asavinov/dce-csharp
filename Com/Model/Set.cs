@@ -66,11 +66,11 @@ namespace Com.Model
         {
             get 
             {
-                int count = SubTables.Count;
                 List<ComTable> result = new List<ComTable>(SubTables);
+                int count = result.Count;
                 for (int i = 0; i < count; i++)
                 {
-                    List<ComTable> subsets = ((Set)result[i]).AllSubTables;
+                    List<ComTable> subsets = result[i].AllSubTables;
                     if (subsets == null || subsets.Count == 0)
                     {
                         continue;
@@ -188,15 +188,15 @@ namespace Com.Model
         public object GetValue(string name, Offset offset)
         {
             Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
-            ComColumn dim = GetColumn(name);
-            return dim.Data.GetValue(offset);
+            ComColumn col = GetColumn(name);
+            return col.Data.GetValue(offset);
         }
 
         public void SetValue(string name, Offset offset, object value)
         {
             Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
-            ComColumn dim = GetColumn(name);
-            dim.Data.SetValue(offset, value);
+            ComColumn col = GetColumn(name);
+            col.Data.SetValue(offset, value);
         }
 
         public Offset Find(ComColumn[] dims, object[] values) // Type of dimensions (super, id, non-id) is not important and is not used
@@ -204,6 +204,7 @@ namespace Com.Model
             Debug.Assert(dims != null && values != null && dims.Length == values.Length, "Wrong use: for each dimension, there has to be a value specified.");
 
             Offset[] result = Enumerable.Range(0, Length).ToArray(); // All elements of this set (can be quite long)
+
             bool hasBeenRestricted = false; // For the case where the Length==1, and no key columns are really provided, so we get at the end result.Length==1 which is misleading. Also, this fixes the problem of having no key dimensions.
             for (int i = 0; i < dims.Length; i++)
             {
@@ -243,14 +244,14 @@ namespace Com.Model
             }
 
             length++;
-            return Length-1;
+            return length - 1;
         }
 
         public void Remove(Offset input) // Propagation to lesser (referencing) sets is not checked - it is done by removal/nullifying by de-projection (all records that store some value in some function are removed)
         {
-            for (int i = 0; i < Columns.Count; i++)
+            foreach (ComColumn col in Columns)
             {
-                Columns[i].Data.Remove(input);
+                col.Data.Remove(input);
             }
 
             length--;
@@ -303,82 +304,6 @@ namespace Com.Model
                 return -result.Length;
             }
 
-           
-            // Find: Find the tuple and all nested tuples. Is applied only if the value is null - otherwise it assumed existing and no recursion is made. 
-            // Value: Output is set to offset for found tuples and (remains) null if not found.
-
-            /*
-            Debug.Assert(expr.OutputSet == this, "Wrong use: expression OutputSet must be equal to the set its value is appended/found.");
-
-            if (IsPrimitive)
-            {
-                Debug.Assert(expr.Output == null || expr.Output.GetType().IsPrimitive, "Wrong use: cannot find non-primitive type in a primitive set. Need a primitive value.");
-                Debug.Assert(expr.Output == null || !expr.Output.GetType().IsArray, "Wrong use: cannot find array type in a primitive set. Need a primitive value.");
-                return true; // It is assumed that the value (of correct type) exists and is found
-            }
-
-            if (expr.Operation != Operation.TUPLE) // End of recursion tuples
-            {
-                // Instead of finding an offset for a combination of values, we evaluate the offset as output of the expression (say, a variable or some function)
-                return true;
-            }
-
-            if (expr.Output != null) // Already found - not need to search
-            {
-                return true;
-            }
-
-            if (Length == 0) return false;
-
-            //
-            // Find a tuple in a non-primitive set recursively
-            //
-            Offset[] result = Enumerable.Range(0, Length).ToArray(); // All elements of this set (can be quite long)
-
-            // Super-dimension
-            if (SuperSet.TableData.Length > 0 && expr.Input != null)
-            {
-                SuperSet.TableData.Find(expr.Input);
-                object childOffset = expr.Input.Output;
-
-                Offset[] range = SuperDim.ColumnData.DeprojectValue(childOffset);
-                result = result.Intersect(range).ToArray();
-            }
-            
-            // Now all other dimensions
-            foreach (Dim dim in KeyColumns) // OPTIMIZE: the order of dimensions matters (use statistics, first dimensins with better filtering). Also, first identity dimensions.
-            {
-                // First, find or append the value recursively. It will be in Output
-                Expression childExpr = expr.GetOperand(dim);
-                if (childExpr == null) continue;
-                dim.Output.TableData.Find(childExpr);
-                object childOffset = childExpr.Output; 
-
-                // Second, use this value to analyze a combination of values for uniqueness - only for identity dimensions
-                Offset[] range = dim.ColumnData.DeprojectValue(childOffset); // Deproject the value
-                result = result.Intersect(range).ToArray(); // OPTIMIZE: Write our own implementation for various operations. Assume that they are ordered.
-                // OPTIMIZE: Remember the position for the case this value will have to be inserted so we do not have again search for this positin during insertion (optimization)
-
-                if (result.Length < 2) break; // Found or does not exist
-            }
-
-            if (result.Length == 0) // Not found
-            {
-                expr.Output = null;
-                return false;
-            }
-            else if (result.Length == 1) // Found single element - return its offset
-            {
-                expr.Output = result[0];
-                return true;
-            }
-            else // Many elements satisfy these properties (non-unique identities)
-            {
-                Debug.Fail("Wrong use: Many elements found although only one or no elmeents are supposed to be found. Use de-projection instead.");
-                expr.Output = result;
-                return true;
-            }
-            */
             return 0;
         }
 
@@ -458,61 +383,6 @@ namespace Com.Model
 
             length++;
             return Length - 1;
-
-            /*
-            Debug.Assert(expr.OutputSet == this, "Wrong use: expression OutputSet must be equal to the set its value is appended/found.");
-
-            if (IsPrimitive)
-            {
-                Debug.Assert(expr.Output == null || !expr.Output.GetType().IsArray, "Wrong use: cannot append array type to a primitive set. ");
-                return expr.Output; // Primitive sets are supposed to already contain all values (of correct type)
-            }
-
-            if (expr.Operation != Operation.TUPLE) // End of recursion tuples
-            {
-                // Instead of finding an offset for a combination of values, we evaluate the offset as output of the expression (say, a variable or some function)
-                return expr.Output;
-            }
-
-            if (expr.Output != null) // Already exists - no need to append
-            {
-                return expr.Output;
-            }
-
-            if (!CanAppend(expr)) // Cannot be appended (identity not defined completely, integrity constraints etc.)
-            {
-                return expr.Output; // It must be null in this case
-            }
-
-            //
-            // Append a complex value to a non-primitive set recursively
-            //
-
-            if (SuperSet.IsInstantiable && expr.Input != null) // Super-dimension
-            {
-                SuperDim.ColumnData.Append(expr.Input.Output);
-            }
-
-            foreach (Dim dim in GreaterDims) // All other dimensions
-            {
-                Expression childExpr = expr.GetOperand(dim);
-
-                object val = null;
-                if (childExpr != null)
-                {
-                    if (childExpr.Output == null)
-                    {
-                        dim.Output.TableData.Append(childExpr); // Recursive insertion
-                    }
-                    val = childExpr.Output;
-                }
-                dim.ColumnData.Append(val);
-            }
-
-            expr.Output = Length;
-            Length++;
-            return expr.Output;
-            */
 
             return 0;
         }

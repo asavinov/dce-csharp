@@ -62,7 +62,7 @@ namespace Com.Model
                 {
                     allocatedSize += incrementSize * ((value - allocatedSize) / incrementSize + 1);
                     System.Array.Resize<T>(ref _cells, allocatedSize); // Resize the storage for values
-                    System.Array.Resize(ref _offsets, allocatedSize); // Resize the indeex
+                    System.Array.Resize(ref _offsets, allocatedSize); // Resize the index
                 }
 
                 // Update data and index in the case of increase (append to last) and decrease (delete last)
@@ -145,7 +145,7 @@ namespace Com.Model
             {
                 allocatedSize += incrementSize;
                 System.Array.Resize<T>(ref _cells, allocatedSize); // Resize the storage for values
-                System.Array.Resize(ref _offsets, allocatedSize); // Resize the indeex
+                System.Array.Resize(ref _offsets, allocatedSize); // Resize the index
             }
 
             T val = default(T);

@@ -70,7 +70,7 @@ namespace Com.Model
         void SetValue(string name, Offset offset, object value);
 
         //
-        // Tuple methods: append, insert, remove, read, write.
+        // Tuple (flat record) methods: append, insert, remove, read, write.
         //
         // Here we use TUPLE and its constituents as primitive types: Reference etc.
         // Column names or references are important. Types (table references or names) are necessary and important. Maybe also flags like Super, Key would be useful. 
@@ -80,6 +80,10 @@ namespace Com.Model
         Offset Find(ComColumn[] dims, object[] values);
         Offset Append(ComColumn[] dims, object[] values);
         void Remove(int input);
+
+        //
+        // Expression (nested record) methods: append, insert, remove, read, write.
+        //
 
         Offset Find(ExprNode expr);
         bool CanAppend(ExprNode expr);
