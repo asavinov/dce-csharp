@@ -515,7 +515,7 @@ namespace Com.Model
                 ComTable targetSet = projectDim.Output; // this set
 
                 // Prepare the expression from the mapping
-                ComEvaluator evaluator = projectDim.Definition.GetColumnEvaluator();
+                ComEvaluator evaluator = projectDim.Definition.GetEvaluator();
 
                 while (evaluator.Next()) 
                 {

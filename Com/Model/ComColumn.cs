@@ -156,7 +156,7 @@ namespace Com.Model
         // Compute
         //
 
-        ComEvaluator GetColumnEvaluator(); // Get an object which is used to compute the function values according to the formula
+        ComEvaluator GetEvaluator(); // Get an object which is used to compute the function values according to the formula
 
         void Initialize();
         void Evaluate();

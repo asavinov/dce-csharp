@@ -609,7 +609,7 @@ namespace Com.Model
         // Compute
         //
 
-        public ComEvaluator GetColumnEvaluator()
+        public ComEvaluator GetEvaluator()
         {
             // Principle: population methods are unaware of Definition type (expressions etc.) - they use only evaluator (no dependency on the definition details)
 
@@ -655,7 +655,7 @@ namespace Com.Model
 
         public void Evaluate()
         {
-            ComEvaluator evaluator = GetColumnEvaluator();
+            ComEvaluator evaluator = GetEvaluator();
             if (evaluator == null) return;
 
             while (evaluator.Next())
