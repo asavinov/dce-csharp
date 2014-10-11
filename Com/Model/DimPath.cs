@@ -15,32 +15,6 @@ namespace Com.Model
     /// </summary>
     public class DimPath : Dim
     {
-
-        public string ColumnNamePath // A list of segment column names (dot separated)
-        {
-            get
-            {
-                if (Size == 0) return "";
-                string complexName = "";
-                foreach (ComColumn seg in Segments) complexName += "[" + seg.Name + "].";
-                complexName = complexName.Substring(0, complexName.Length-1); // Remove last dot
-                return complexName;
-            }
-        }
-        public string HashName
-        {
-            get
-            {
-                if (Size == 0) return "0";
-                int hash = 0;
-                foreach (ComColumn seg in Segments) hash += ((Dim)seg).Id.GetHashCode();
-
-                hash = Math.Abs(hash);
-                string hashName = hash.ToString("X"); // unique hash representing this path
-                return hashName.Length > 6 ? hashName.Substring(0, 6) : hashName;
-            }
-        }
-
         /// <summary>
         /// A dimension can be defined as a sequence of other dimensions. For simple dimensions the path is empty.
         /// </summary>

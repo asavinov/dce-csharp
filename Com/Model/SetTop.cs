@@ -62,11 +62,14 @@ namespace Com.Model
         {
             Debug.Assert(!table.IsPrimitive, "Wrong use: users do not create/delete primitive sets - they are part of the schema.");
 
-            foreach (ComColumn col in table.InputColumns.ToList()) 
+            List<ComColumn> toRemove;
+            toRemove = table.InputColumns.ToList();
+            foreach (ComColumn col in toRemove) 
             {
                 col.Remove();
             }
-            foreach (ComColumn col in table.Columns.ToList())
+            toRemove = table.Columns.ToList();
+            foreach (ComColumn col in toRemove)
             {
                 col.Remove();
             }
@@ -74,7 +77,8 @@ namespace Com.Model
 
         public void RenameTable(ComTable table, string newName)
         {
-            RenameElement(table, newName);
+            TableRenamed(table, newName); // Rename with propagation
+            table.Name = newName;
         }
 
         public virtual ComColumn CreateColumn(string name, ComTable input, ComTable output, bool isKey)
@@ -90,6 +94,116 @@ namespace Com.Model
         {
             Debug.Assert(!column.Input.IsPrimitive, "Wrong use: top columns cannot be created/deleted.");
 
+            ColumnDeleted(column);
+            column.Remove();
+        }
+
+        public void RenameColumn(ComColumn column, string newName)
+        {
+            ColumnRenamed(column, newName); // Rename with propagation
+            column.Name = newName;
+        }
+
+        #endregion
+
+        protected void TableRenamed(ComTable table, string newName)
+        {
+            ComSchema schema = this;
+
+            //
+            // Check all elements of the schema that can store table name (tables, columns etc.)
+            // Update their definition so that it uses the new name of the specified element
+            //
+            List<ComTable> tables = schema.AllSubTables;
+            var nodes = new List<ExprNode>();
+            foreach (var tab in tables)
+            {
+                if (tab.IsPrimitive) continue;
+
+                foreach (var col in tab.Columns)
+                {
+                    if (col.Definition == null) continue;
+
+                    if (col.Definition.Formula != null)
+                    {
+                        nodes = col.Definition.Formula.Find((ComTable)table);
+                        nodes.ForEach(x => x.Name = newName);
+                    }
+                    if (col.Definition.WhereExpr != null)
+                    {
+                        nodes = col.Definition.WhereExpr.Find((ComTable)table);
+                        nodes.ForEach(x => x.Name = newName);
+                    }
+                }
+
+                if (tab.Definition == null) continue;
+
+                // Update table definitions by finding the uses of the specified column
+                if (tab.Definition.WhereExpr != null)
+                {
+                    nodes = tab.Definition.WhereExpr.Find((ComTable)table);
+                    nodes.ForEach(x => x.Name = newName);
+                }
+                if (tab.Definition.OrderbyExpr != null)
+                {
+                    nodes = tab.Definition.OrderbyExpr.Find((ComTable)table);
+                    nodes.ForEach(x => x.Name = newName);
+                }
+            }
+
+            table.Name = newName;
+        }
+
+        protected void ColumnRenamed(ComColumn column, string newName)
+        {
+            ComSchema schema = this;
+
+            //
+            // Check all elements of the schema that can store column name (tables, columns etc.)
+            // Update their definition so that it uses the new name of the specified element
+            //
+            List<ComTable> tables = schema.AllSubTables;
+            var nodes = new List<ExprNode>();
+            foreach (var tab in tables)
+            {
+                if (tab.IsPrimitive) continue;
+
+                foreach (var col in tab.Columns)
+                {
+                    if (col.Definition == null) continue;
+
+                    if (col.Definition.Formula != null)
+                    {
+                        nodes = col.Definition.Formula.Find((ComColumn)column);
+                        nodes.ForEach(x => x.Name = newName);
+                    }
+                    if (col.Definition.WhereExpr != null)
+                    {
+                        nodes = col.Definition.WhereExpr.Find((ComColumn)column);
+                        nodes.ForEach(x => x.Name = newName);
+                    }
+                }
+
+                if (tab.Definition == null) continue;
+
+                // Update table definitions by finding the uses of the specified column
+                if (tab.Definition.WhereExpr != null)
+                {
+                    nodes = tab.Definition.WhereExpr.Find((ComColumn)column);
+                    nodes.ForEach(x => x.Name = newName);
+                }
+                if (tab.Definition.OrderbyExpr != null)
+                {
+                    nodes = tab.Definition.OrderbyExpr.Find((ComColumn)column);
+                    nodes.ForEach(x => x.Name = newName);
+                }
+            }
+
+            column.Name = newName;
+        }
+
+        protected void ColumnDeleted(ComColumn column)
+        {
             ComSchema schema = this;
 
             //
@@ -163,69 +277,7 @@ namespace Com.Model
                     foreach (var node in nodes) if (node.Parent != null) node.Parent.RemoveChild(node);
                 }
             }
-
-            column.Remove();
         }
-
-        public void RenameColumn(ComColumn column, string newName)
-        {
-            RenameElement(column, newName);
-        }
-
-        protected void RenameElement(object element, string newName)
-        {
-            ComSchema schema = this;
-
-            //
-            // Check all elements of the schema that can store column or table name (tables, columns etc.)
-            // Update their definition so that it uses the new name of the specified element
-            //
-            List<ComTable> tables = schema.AllSubTables;
-            var nodes = new List<ExprNode>();
-            foreach (var tab in tables)
-            {
-                if (tab.IsPrimitive) continue;
-
-                foreach (var col in tab.Columns)
-                {
-                    if (col.Definition == null) continue;
-
-                    if (col.Definition.Formula != null)
-                    {
-                        if(element is ComTable) nodes = col.Definition.Formula.Find((ComTable)element);
-                        else if (element is ComColumn) nodes = col.Definition.Formula.Find((ComColumn)element);
-                        nodes.ForEach(x => x.Name = newName);
-                    }
-                    if (col.Definition.WhereExpr != null)
-                    {
-                        if (element is ComTable) nodes = col.Definition.WhereExpr.Find((ComTable)element);
-                        else if (element is ComColumn) nodes = col.Definition.WhereExpr.Find((ComColumn)element);
-                        nodes.ForEach(x => x.Name = newName);
-                    }
-                }
-
-                if (tab.Definition == null) continue;
-
-                // Update table definitions by finding the uses of the specified column
-                if (tab.Definition.WhereExpr != null)
-                {
-                    if (element is ComTable) nodes = tab.Definition.WhereExpr.Find((ComTable)element);
-                    else if (element is ComColumn) nodes = tab.Definition.WhereExpr.Find((ComColumn)element);
-                    nodes.ForEach(x => x.Name = newName);
-                }
-                if (tab.Definition.OrderbyExpr != null)
-                {
-                    if (element is ComTable) nodes = tab.Definition.OrderbyExpr.Find((ComTable)element);
-                    else if (element is ComColumn) nodes = tab.Definition.OrderbyExpr.Find((ComColumn)element);
-                    nodes.ForEach(x => x.Name = newName);
-                }
-            }
-
-            if (element is ComTable) ((ComTable)element).Name = newName;
-            else if (element is ComColumn) ((ComColumn)element).Name = newName;
-        }
-
-        #endregion
 
         public DataSourceType DataSourceType { get; protected set; } // Where data is stored and processed (engine). Replace class name
 
