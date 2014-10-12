@@ -68,13 +68,14 @@
     <Compile Include="Model\DimPath.cs" />
     <Compile Include="Model\DimTree.cs" />
     <Compile Include="Model\Evaluator.cs" />
-    <Compile Include="Model\Expr.cs" />
+    <Compile Include="Model\ExprNode.cs" />
     <Compile Include="Model\Mapper.cs" />
     <Compile Include="Model\Mapping.cs" />
     <Compile Include="Model\Set.cs" />
     <Compile Include="Model\SetTop.cs" />
     <Compile Include="Model\SetTopCsv.cs" />
     <Compile Include="Model\SetTopOledb.cs" />
+    <Compile Include="Model\TreeNode.cs" />
     <Compile Include="Model\Utils.cs" />
     <Compile Include="Model\Workspace.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
