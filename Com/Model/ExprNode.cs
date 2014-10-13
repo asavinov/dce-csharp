@@ -76,18 +76,19 @@ namespace Com.Model
         {
             if (Operation == OperationType.VALUE)
             {
+                int intValue = 0;
+                double doubleValue = 0.0;
+
                 //
                 // Resolve string into object and store in the result. Derive the type from the format. 
                 //
-                int intValue;
                 // About conversion from string: http://stackoverflow.com/questions/3965871/c-sharp-generic-string-parse-to-any-object
                 if (int.TryParse(Name, NumberStyles.Integer, CultureInfo.InvariantCulture, out intValue))
                 {
                     Result.TypeName = "Integer";
                     Result.SetValue(intValue);
                 }
-                double doubleValue;
-                if (double.TryParse(Name, NumberStyles.Float, CultureInfo.InvariantCulture, out doubleValue))
+                else if (double.TryParse(Name, NumberStyles.Float, CultureInfo.InvariantCulture, out doubleValue))
                 {
                     Result.TypeName = "Double";
                     Result.SetValue(doubleValue);
@@ -106,16 +107,16 @@ namespace Com.Model
                 //
                 if (string.IsNullOrEmpty(Result.TypeName))
                 {
-                    ExprNode parent = (ExprNode)Parent;
-                    if (parent == null)
+                    ExprNode parentNode = (ExprNode)Parent;
+                    if (parentNode == null)
                     {
                         ;
                     }
-                    else if (parent.Operation == OperationType.TUPLE) // Tuple in another tuple
+                    else if (parentNode.Operation == OperationType.TUPLE) // Tuple in another tuple
                     {
-                        if (parent.Result.TypeTable != null && !string.IsNullOrEmpty(Name))
+                        if (parentNode.Result.TypeTable != null && !string.IsNullOrEmpty(Name))
                         {
-                            ComColumn col = parent.Result.TypeTable.GetColumn(Name);
+                            ComColumn col = parentNode.Result.TypeTable.GetColumn(Name);
                             Column = col;
                             Result.TypeTable = col.Output;
                             Result.TypeName = col.Output.Name;
@@ -123,9 +124,9 @@ namespace Com.Model
                     }
                     else // Tuple in some other node, e.g, argument or value
                     {
-                        if (parent.Result.TypeTable != null && !string.IsNullOrEmpty(Name))
+                        if (parentNode.Result.TypeTable != null && !string.IsNullOrEmpty(Name))
                         {
-                            ComColumn col = parent.Result.TypeTable.GetColumn(Name);
+                            ComColumn col = parentNode.Result.TypeTable.GetColumn(Name);
                             Column = col;
                             Result.TypeTable = col.Output;
                             Result.TypeName = col.Output.Name;
@@ -141,9 +142,9 @@ namespace Com.Model
                 //
                 // Resolve children (important: after the tuple itself, because this node will be used)
                 //
-                foreach (ExprNode childNode in Children)
+                foreach (TreeNode<ExprNode> childNode in Children)
                 {
-                    childNode.Resolve(schema, variables);
+                    childNode.Value.Resolve(schema, variables);
                 }
             }
             else if (Operation == OperationType.CALL)
@@ -151,9 +152,9 @@ namespace Com.Model
                 //
                 // Resolve children (important: before this node because this node uses children)
                 //
-                foreach (ExprNode childNode in Children)
+                foreach (TreeNode<ExprNode> childNode in Children)
                 {
-                    childNode.Resolve(schema, variables);
+                    childNode.Value.Resolve(schema, variables);
                 }
                 
                 // Resolve type name
@@ -309,9 +310,9 @@ namespace Com.Model
                 //
                 // Evaluate children
                 //
-                foreach (ExprNode childNode in Children)
+                foreach (TreeNode<ExprNode> childNode in Children)
                 {
-                    childNode.Evaluate();
+                    childNode.Value.Evaluate();
                 }
 
                 if (Result.TypeTable.IsPrimitive) // Primitive TUPLE nodes are processed differently
@@ -319,33 +320,38 @@ namespace Com.Model
                     Debug.Assert(Children.Count == 1, "Wrong use: a primitive TUPLE node must have one child expression providing its value.");
                     ExprNode childNode = GetChild(0);
                     object val = childNode.Result.GetValue();
+                    string targeTypeName = Result.TypeTable.Name;
 
                     // Copy result from the child expression and convert it to this node type
-                    if (val is DBNull || (val is string && string.IsNullOrWhiteSpace((string)val))) 
+                    if (val is DBNull)
                     {
                         Result.SetValue(null);
                     }
-                    else if (StringSimilarity.SameTableName(Result.TypeTable.Name, "Integer"))
+                    else if (val is string && string.IsNullOrWhiteSpace((string)val))
+                    {
+                        Result.SetValue(null);
+                    }
+                    else if (StringSimilarity.SameTableName(targeTypeName, "Integer"))
                     {
                         Result.SetValue(Convert.ToInt32(val));
                     }
-                    else if (StringSimilarity.SameTableName(Result.TypeTable.Name, "Double"))
+                    else if (StringSimilarity.SameTableName(targeTypeName, "Double"))
                     {
                         Result.SetValue(Convert.ToDouble(val));
                     }
-                    else if(StringSimilarity.SameTableName(Result.TypeTable.Name, "Decimal"))
+                    else if (StringSimilarity.SameTableName(targeTypeName, "Decimal"))
                     {
                         Result.SetValue(Convert.ToDecimal(val));
                     }
-                    else if (StringSimilarity.SameTableName(Result.TypeTable.Name, "String"))
+                    else if (StringSimilarity.SameTableName(targeTypeName, "String"))
                     {
                         Result.SetValue(Convert.ToString(val));
                     }
-                    else if (StringSimilarity.SameTableName(Result.TypeTable.Name, "Boolean"))
+                    else if (StringSimilarity.SameTableName(targeTypeName, "Boolean"))
                     {
                         Result.SetValue(Convert.ToBoolean(val));
                     }
-                    else if (StringSimilarity.SameTableName(Result.TypeTable.Name, "DateTime"))
+                    else if (StringSimilarity.SameTableName(targeTypeName, "DateTime"))
                     {
                         Result.SetValue(Convert.ToDateTime(val));
                     }
@@ -397,9 +403,9 @@ namespace Com.Model
                 //
                 // Evaluate children
                 //
-                foreach (ExprNode childNode in Children)
+                foreach (TreeNode<ExprNode> childNode in Children)
                 {
-                    childNode.Evaluate();
+                    childNode.Value.Evaluate();
                 }
 
                 int intRes;
@@ -452,9 +458,9 @@ namespace Com.Model
                 else if (Action == ActionType.MUL)
                 {
                     doubleRes = 1.0;
-                    foreach (ExprNode childNode in Children)
+                    foreach (TreeNode<ExprNode> childNode in Children)
                     {
-                        double arg = Convert.ToDouble(childNode.Result.GetValue());
+                        double arg = Convert.ToDouble(childNode.Value.Result.GetValue());
                         if (double.IsNaN(arg)) continue;
                         doubleRes *= arg;
                     }
@@ -504,7 +510,6 @@ namespace Com.Model
                 //
                 else if (Action == ActionType.LEQ)
                 {
-
                     double arg1 = Convert.ToDouble(((ExprNode)Children[0]).Result.GetValue());
                     double arg2 = Convert.ToDouble(((ExprNode)Children[1]).Result.GetValue());
                     boolRes = arg1 <= arg2;
@@ -512,7 +517,6 @@ namespace Com.Model
                 }
                 else if (Action == ActionType.GEQ)
                 {
-
                     double arg1 = Convert.ToDouble(((ExprNode)Children[0]).Result.GetValue());
                     double arg2 = Convert.ToDouble(((ExprNode)Children[1]).Result.GetValue());
                     boolRes = arg1 >= arg2;
@@ -520,7 +524,6 @@ namespace Com.Model
                 }
                 else if (Action == ActionType.GRE)
                 {
-
                     double arg1 = Convert.ToDouble(((ExprNode)Children[0]).Result.GetValue());
                     double arg2 = Convert.ToDouble(((ExprNode)Children[1]).Result.GetValue());
                     boolRes = arg1 > arg2;
@@ -528,7 +531,6 @@ namespace Com.Model
                 }
                 else if (Action == ActionType.LES)
                 {
-
                     double arg1 = Convert.ToDouble(((ExprNode)Children[0]).Result.GetValue());
                     double arg2 = Convert.ToDouble(((ExprNode)Children[1]).Result.GetValue());
                     boolRes = arg1 < arg2;
