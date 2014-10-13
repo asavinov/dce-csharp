@@ -360,59 +360,6 @@ namespace Com.Model
             return tupleExpr;
         }
 
-        [System.Obsolete("Use BuildExpression()", true)]
-        public ExprNode GetSourceExpression()
-        {
-            throw new NotImplementedException();
-        }
-
-        [System.Obsolete("Use BuildExpression()", true)]
-        public ExprNode GetTargetExpression() // Build tuple expression where target paths define a tuple and source paths are used leaf expressions in this tuple applied to the source set
-        {
-            return GetTargetExpression(null);
-        }
-        [System.Obsolete("Use BuildExpression()", true)]
-        public ExprNode GetTargetExpression(ComColumn dim) // Build tuple expression for the specified mapped dimension
-        {
-            // It is mapping from Input to Output of the dimension
-            Debug.Assert(dim == null || dim.Input == SourceSet, "Wrong use: lesser set of the mapped dimension corresponds to the source set of the mapping.");
-            Debug.Assert(dim == null || dim.Output == TargetSet, "Wrong use: greater set of the mapped dimension corresponds to the target set of the mapping.");
-
-            /*
-            Expression tupleExpr = new Expression(null, Operation.TUPLE, TargetSet);
-            if (dim != null)
-            {
-                tupleExpr.Name = dim.Name;
-                tupleExpr.Dimension = dim;
-            }
-
-            foreach (PathMatch match in Matches)
-            {
-                // Leaf expression for accessing a variable (parameter of the function)
-                Expression thisExpr = new Expression("this", Operation.DOT, match.SourceSet);
-
-                Expression srcExpr = null;
-                DimPath srcPath = match.SourceSet.GetGreaterPath(match.SourcePath.Path); // First, we try to find a direct path/function 
-                if (srcPath == null) // No direct path. Use a sequence of simple dimensions
-                {
-                    srcExpr = Expression.CreateProjectExpression(match.SourcePath.Path, Operation.DOT);
-                }
-                else // There is a direct path (relation attribute in a relational data source). Use attribute name as function name
-                {
-                    srcExpr = new Expression(srcPath.Name, Operation.DOT, match.TargetPath.Output);
-                }
-                srcExpr.GetInputLeaf().Input = thisExpr;
-
-                Expression leafTuple = tupleExpr.AddPath(match.TargetPath);
-                leafTuple.Input = srcExpr;
-            }
-
-            return tupleExpr;
-            */
-
-            return null;
-        }
-
         public void AddSourceToSchema(ComSchema schema = null)
         {
             throw new NotImplementedException();

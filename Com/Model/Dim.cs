@@ -142,10 +142,10 @@ namespace Com.Model
                 columnDef["generating"] = Definition.IsGenerating ? "true" : "false";
                 columnDef["definition_type"] = (int)Definition.DefinitionType;
 
-                if (Definition.Formula != null)
+                if (Definition.FormulaExpr != null)
                 {
-                    columnDef["formula"] = Utils.CreateJsonFromObject(Definition.Formula);
-                    Definition.Formula.ToJson((JObject)columnDef["formula"]);
+                    columnDef["formula"] = Utils.CreateJsonFromObject(Definition.FormulaExpr);
+                    Definition.FormulaExpr.ToJson((JObject)columnDef["formula"]);
                 }
 
                 if (Definition.Mapping != null)
@@ -211,7 +211,7 @@ namespace Com.Model
                     if (node != null)
                     {
                         node.FromJson((JObject)columnDef["formula"], ws);
-                        Definition.Formula = node;
+                        Definition.FormulaExpr = node;
                     }
                 }
 

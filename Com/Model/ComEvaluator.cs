@@ -10,11 +10,11 @@ namespace Com.Model
     {
         // Never changes any set - neither lesser nor greater - just compute output given input
 
+        bool IsUpdate { get; }
+
         bool Next(); // True if there exists a next element
         bool First(); // True if there exists a first element (if the set is not empty)
         bool Last(); // True if there exists a last element (if the set is not empty)
-
-        bool IsUpdate { get; }
 
         object Evaluate(); // Compute output for the specified intput and write it
         object EvaluateUpdate(); // Read group and measure for the specified input and compute update according to the aggregation formula. It may also increment another function if necessary.

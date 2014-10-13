@@ -124,9 +124,9 @@ namespace Com.Model
                 {
                     if (col.Definition == null) continue;
 
-                    if (col.Definition.Formula != null)
+                    if (col.Definition.FormulaExpr != null)
                     {
-                        nodes = col.Definition.Formula.Find((ComTable)table);
+                        nodes = col.Definition.FormulaExpr.Find((ComTable)table);
                         nodes.ForEach(x => x.Name = newName);
                     }
                     if (col.Definition.WhereExpr != null)
@@ -172,9 +172,9 @@ namespace Com.Model
                 {
                     if (col.Definition == null) continue;
 
-                    if (col.Definition.Formula != null)
+                    if (col.Definition.FormulaExpr != null)
                     {
-                        nodes = col.Definition.Formula.Find((ComColumn)column);
+                        nodes = col.Definition.FormulaExpr.Find((ComColumn)column);
                         nodes.ForEach(x => x.Name = newName);
                     }
                     if (col.Definition.WhereExpr != null)
@@ -219,9 +219,9 @@ namespace Com.Model
                 {
                     if (col.Definition == null) continue;
 
-                    if (col.Definition.Formula != null)
+                    if (col.Definition.FormulaExpr != null)
                     {
-                        nodes = col.Definition.Formula.Find(column);
+                        nodes = col.Definition.FormulaExpr.Find(column);
                         foreach (var node in nodes) if (node.Parent != null) node.Parent.RemoveChild(node);
                     }
                     if (col.Definition.WhereExpr != null)

@@ -23,7 +23,7 @@ namespace Com.Query
 
             // Determine the type of expression
 
-            if (context.op != null && context.op.Text == ".") // Composition (dot) operation
+            if (context.op != null && context.op.Text.Equals(".")) // Composition (dot) operation
             {
                 n.Operation = OperationType.CALL;
                 n.Action = ActionType.READ;
@@ -62,21 +62,21 @@ namespace Com.Query
                 string op = context.op.Text; // Alternatively, context.GetChild(1).GetText()
                 n.Name = op;
 
-                if (op == "*") n.Action = ActionType.MUL;
-                else if (op == "/") n.Action = ActionType.DIV;
-                else if (op == "+") n.Action = ActionType.ADD;
-                else if (op == "-") n.Action = ActionType.SUB;
+                if (op.Equals("*")) n.Action = ActionType.MUL;
+                else if (op.Equals("/")) n.Action = ActionType.DIV;
+                else if (op.Equals("+")) n.Action = ActionType.ADD;
+                else if (op.Equals("-")) n.Action = ActionType.SUB;
 
-                else if (op == "<=") n.Action = ActionType.LEQ;
-                else if (op == ">=") n.Action = ActionType.GEQ;
-                else if (op == ">") n.Action = ActionType.GRE;
-                else if (op == "<") n.Action = ActionType.LES;
+                else if (op.Equals("<=")) n.Action = ActionType.LEQ;
+                else if (op.Equals(">=")) n.Action = ActionType.GEQ;
+                else if (op.Equals(">")) n.Action = ActionType.GRE;
+                else if (op.Equals("<")) n.Action = ActionType.LES;
 
-                else if (op == "==") n.Action = ActionType.EQ;
-                else if (op == "!=") n.Action = ActionType.NEQ;
+                else if (op.Equals("==")) n.Action = ActionType.EQ;
+                else if (op.Equals("!=")) n.Action = ActionType.NEQ;
 
-                else if (op == "&&") n.Action = ActionType.AND;
-                else if (op == "||") n.Action = ActionType.OR;
+                else if (op.Equals("&&")) n.Action = ActionType.AND;
+                else if (op.Equals("||")) n.Action = ActionType.OR;
 
                 else ;
 
@@ -92,11 +92,11 @@ namespace Com.Query
                     n.AddChild(expr2);
                 }
             }
-            else if (context.expr() != null && context.GetChild(0).GetText() == "(") // Priority
+            else if (context.expr() != null && context.GetChild(0).GetText().Equals("(")) // Priority
             {
                 n = Visit(context.expr(0)); // Skip
             }
-            else if (context.GetChild(0).GetText() == "((" || context.GetChild(0).GetText() == "TUPLE") // Tuple
+            else if (context.GetChild(0).GetText().Equals("((") || context.GetChild(0).GetText().Equals("TUPLE")) // Tuple
             {
                 n.Operation = OperationType.TUPLE;
                 n.Action = ActionType.READ; // Find

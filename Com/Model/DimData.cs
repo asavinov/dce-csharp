@@ -584,7 +584,7 @@ namespace Com.Model
 
         public AstNode FormulaAst { get; set; }
 
-        public ExprNode Formula { get; set; }
+        public ExprNode FormulaExpr { get; set; }
 
         public Mapping Mapping { get; set; }
 
@@ -629,19 +629,19 @@ namespace Com.Model
             }
             else if (Dim.Input.Schema != Dim.Output.Schema && Dim.Input.Schema is SetTopCsv) // Import data from a remote source
             {
-                evaluator = ExprEvaluator.CreateCsvEvaluator(Dim);
+                evaluator = new CsvEvaluator(Dim);
             }
             else if (Dim.Input.Schema != Dim.Output.Schema && Dim.Input.Schema is SetTopOledb) // Import data from a remote source
             {
-                evaluator = ExprEvaluator.CreateOledbEvaluator(Dim);
+                evaluator = new OledbEvaluator(Dim);
             }
             else if (DefinitionType == ColumnDefinitionType.AGGREGATION)
             {
-                evaluator = ExprEvaluator.CreateAggrEvaluator(Dim);
+                evaluator = new AggrEvaluator(Dim);
             }
             else if (DefinitionType == ColumnDefinitionType.ARITHMETIC || DefinitionType == ColumnDefinitionType.LINK)
             {
-                evaluator = ExprEvaluator.CreateColumnEvaluator(Dim);
+                evaluator = new ExprEvaluator(Dim);
             }
             else
             {
@@ -683,9 +683,9 @@ namespace Com.Model
             }
             else if (DefinitionType == ColumnDefinitionType.ANY || DefinitionType == ColumnDefinitionType.ARITHMETIC || DefinitionType == ColumnDefinitionType.LINK)
             {
-                if (Formula != null) // Dependency information is stored in expression (formula)
+                if (FormulaExpr != null) // Dependency information is stored in expression (formula)
                 {
-                    res = Formula.Find((ComTable)null).Select(x => x.Result.TypeTable).ToList();
+                    res = FormulaExpr.Find((ComTable)null).Select(x => x.Result.TypeTable).ToList();
                 }
             }
             else if (DefinitionType == ColumnDefinitionType.AGGREGATION)
@@ -740,9 +740,9 @@ namespace Com.Model
             }
             else if (DefinitionType == ColumnDefinitionType.ANY || DefinitionType == ColumnDefinitionType.ARITHMETIC || DefinitionType == ColumnDefinitionType.LINK)
             {
-                if (Formula != null) // Dependency information is stored in expression (formula)
+                if (FormulaExpr != null) // Dependency information is stored in expression (formula)
                 {
-                    res = Formula.Find((ComColumn)null).Select(x => x.Column).ToList();
+                    res = FormulaExpr.Find((ComColumn)null).Select(x => x.Column).ToList();
                 }
             }
             else if (DefinitionType == ColumnDefinitionType.AGGREGATION)

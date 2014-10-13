@@ -380,6 +380,18 @@ namespace Com.Model
 
         #region Overriding System.Object and interfaces
 
+        public string NamePath // A list of segment column names (dot separated)
+        {
+            get
+            {
+                if (Size == 0) return "";
+                string complexName = "";
+                foreach (ComColumn seg in Segments) complexName += "[" + seg.Name + "].";
+                complexName = complexName.Substring(0, complexName.Length - 1); // Remove last dot
+                return complexName;
+            }
+        }
+
         public override string ToString()
         {
             string path = "";

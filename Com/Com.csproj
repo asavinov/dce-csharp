@@ -67,7 +67,7 @@
     <Compile Include="Model\DimData.cs" />
     <Compile Include="Model\DimPath.cs" />
     <Compile Include="Model\DimTree.cs" />
-    <Compile Include="Model\Evaluator.cs" />
+    <Compile Include="Model\ExprEvaluator.cs" />
     <Compile Include="Model\ExprNode.cs" />
     <Compile Include="Model\Mapper.cs" />
     <Compile Include="Model\Mapping.cs" />

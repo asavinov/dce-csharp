@@ -399,8 +399,7 @@ namespace Com.Model
 
         public ComEvaluator GetWhereEvaluator()
         {
-            ComEvaluator evaluator;
-            evaluator = ExprEvaluator.CreateWhereEvaluator(this);
+            ComEvaluator evaluator = new ExprEvaluator(this);
             return evaluator;
         }
 

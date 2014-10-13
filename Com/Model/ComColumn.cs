@@ -104,7 +104,7 @@ namespace Com.Model
         /// When evaluated, it computes a value of the greater set for the identity value of the lesser set.
         /// For aggregated columns, it is an updater expression which computes a new value from the current value and a new fact (measure).
         /// </summary>
-        ExprNode Formula { get; set; }
+        ExprNode FormulaExpr { get; set; }
 
         /// <summary>
         /// One particular type of function specification used for defining mapped dimensions, import specification, copy specification etc.

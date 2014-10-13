@@ -290,7 +290,8 @@ namespace Test
             ComColumn c15 = schema.CreateColumn("Column 15", t1, schema.GetPrimitive("Double"), false);
 
             c15.Definition.DefinitionType = ColumnDefinitionType.ARITHMETIC;
-            c15.Definition.Formula = BuildExpr("([Column 11]+10.0) * this.[Column 13]"); // ConceptScript source code: "[Decimal] [Column 15] <body of expression>"
+            ExprNode ast = BuildExpr("([Column 11]+10.0) * this.[Column 13]"); // ConceptScript source code: "[Decimal] [Column 15] <body of expression>";
+            c15.Definition.FormulaExpr = ast;
 
             c15.Add();
 
@@ -612,15 +613,16 @@ namespace Test
             ComSchema sampleSchema = CreateSampleSchema();
 
             // Add table definition 
-            ExprNode ast = BuildExpr("[Column 22] > 20.0 && this.Super.[Column 23] < 50");
             ComTable t = sampleSchema.GetSubTable("Table 2");
             t.Definition.DefinitionType = TableDefinitionType.PRODUCT;
+            ExprNode ast = BuildExpr("[Column 22] > 20.0 && this.Super.[Column 23] < 50");
             t.Definition.WhereExpr = ast;
 
             // Add column definition 
             ComColumn c = t.GetColumn("Column 22");
             c.Definition.DefinitionType = ColumnDefinitionType.ARITHMETIC;
-            c.Definition.Formula = BuildExpr("([Column 11]+10.0) * this.[Column 13]");
+            ast = BuildExpr("([Column 11]+10.0) * this.[Column 13]");
+            c.Definition.FormulaExpr = ast;
 
             Workspace ws = new Workspace();
             ws.Schemas.Add(sampleSchema);
@@ -652,7 +654,7 @@ namespace Test
 
             c = t.GetColumn("Column 22");
             Assert.AreEqual(ColumnDefinitionType.ARITHMETIC, c.Definition.DefinitionType);
-            Assert.AreEqual(2, c.Definition.Formula.Children.Count);
+            Assert.AreEqual(2, c.Definition.FormulaExpr.Children.Count);
 
             //
             // 2. Another sample schema with several schemas and inter-schema columns
