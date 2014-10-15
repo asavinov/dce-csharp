@@ -164,6 +164,58 @@ namespace Com.Query
             return n; 
         }
 
+        public override ExprNode VisitMember(ExprParser.MemberContext context) 
+        {
+            // Determine declared (output, returned) type of the member
+            String type;
+            if (context.type().prim_set() != null)
+            {
+                type = context.type().prim_set().GetText();
+            }
+            else if (context.type().DELIMITED_ID() != null)
+            {
+                type = context.type().DELIMITED_ID().GetText();
+                type = type.Substring(1, type.Length - 2); // Remove delimiters
+            }
+            else
+            {
+                type = context.type().ID().GetText();
+            }
+
+            // Determine declared member (constituent, offset, parameter) name
+            ExprNode nameNode = Visit(context.name());
+            String name = nameNode.Name;
+
+            // Determine value assigned to this member (it can be a CALL node, TUPLE node etc.)
+            ExprNode expr = null;
+            if (context.expr() != null)
+            {
+                expr = Visit(context.expr());
+            }
+            else if (context.scope() != null)
+            {
+                throw new NotImplementedException("Scopes in tuple members are currently not implemented");
+            }
+
+            ExprNode n;
+            if (expr.Operation == OperationType.TUPLE) // Use directly this TUPLE node as a member node
+            {
+                n = expr;
+            }
+            else // Create a (primitive, leaf) TUPLE node with the only child as an expression
+            {
+                n = new ExprNode();
+                n.AddChild(expr);
+            }
+
+            n.Name = name;
+            n.Result.TypeName = type;
+            n.Operation = OperationType.TUPLE;
+            n.Action = ActionType.READ;
+
+            return n; 
+        }
+
         public override ExprNode VisitName(ExprParser.NameContext context) 
         {
             ExprNode n = new ExprNode();

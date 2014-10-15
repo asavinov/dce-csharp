@@ -103,9 +103,9 @@ namespace Com.Model
             else if (Operation == OperationType.TUPLE)
             {
                 //
-                // Resolve this (assuming the parents are resolved)
+                // Resolve this (tuples are resolved through the parent which must be resolved before children)
                 //
-                if (string.IsNullOrEmpty(Result.TypeName))
+                if (Result.TypeTable == null) // Not resolved yet
                 {
                     ExprNode parentNode = (ExprNode)Parent;
                     if (parentNode == null)
@@ -133,11 +133,6 @@ namespace Com.Model
                         }
                     }
                 }
-                else if (Result.TypeTable == null || !StringSimilarity.SameTableName(Result.TypeTable.Name, Result.TypeName))
-                {
-                    // There is name without table, so we need to resolve this table name but against correct schema
-                    throw new NotImplementedException();
-                }
 
                 //
                 // Resolve children (important: after the tuple itself, because this node will be used)
@@ -164,7 +159,7 @@ namespace Com.Model
                 }
 
                 //
-                // Resolve this (assuming the children have been resolved)
+                // Resolve this (children must be resolved before parents)
                 //
                 ExprNode methodChild = GetChild("method"); // Get column name
                 ExprNode thisChild = GetChild("this"); // Get column lesser set

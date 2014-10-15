@@ -269,7 +269,7 @@ namespace Test
         }
         
         [TestMethod]
-        public void ColumnDefinitionTest() // ComColumnDefinition. Defining new columns and evaluate them
+        public void ArithmeticTest() // ComColumnDefinition. Defining new columns and evaluate them
         {
             //
             // Prepare schema and fill data
@@ -301,6 +301,42 @@ namespace Test
             Assert.AreEqual(600.0, c15.Data.GetValue(0));
             Assert.AreEqual(200.0, c15.Data.GetValue(1));
             Assert.AreEqual(1200.0, c15.Data.GetValue(2));
+        }
+
+        [TestMethod]
+        public void LinkTest()
+        {
+            //
+            // Prepare schema and fill data
+            //
+            ComSchema schema = CreateSampleSchema();
+            CreateSampleData(schema);
+
+            ComTable t1 = schema.GetSubTable("Table 1");
+            ComColumn c11 = t1.GetColumn("Column 11"); // 20, 10, 30
+
+            ComTable t2 = schema.GetSubTable("Table 2");
+            ComColumn c22 = t2.GetColumn("Column 22"); // 20, 30, 30, 30
+
+            //
+            // Define a derived column with a definition
+            //
+
+            ComColumn link = schema.CreateColumn("Column Link", t2, t1, false);
+
+            link.Definition.DefinitionType = ColumnDefinitionType.LINK;
+            ExprNode ast = BuildExpr("(( [Integer] [Column 11] = this.[Column 22], [Double] [Column 14] = 20.0 ))"); // Tuple structure corresponds to output table
+            link.Definition.FormulaExpr = ast;
+
+            link.Add();
+
+            // Evaluate column
+            link.Definition.Evaluate();
+
+            Assert.AreEqual(0, link.Data.GetValue(0));
+            Assert.AreEqual(2, link.Data.GetValue(1));
+            Assert.AreEqual(2, link.Data.GetValue(2));
+            Assert.AreEqual(2, link.Data.GetValue(2));
         }
 
         [TestMethod]

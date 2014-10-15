@@ -99,6 +99,8 @@ namespace Com.Model
             {
                 exprNode = column.Definition.FormulaExpr;
             }
+            exprNode.Result.TypeName = column.Output.Name;
+            exprNode.Result.TypeTable = column.Output;
 
             currentElement = -1;
             loopTable = column.Input;
