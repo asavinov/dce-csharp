@@ -265,14 +265,14 @@ namespace Com.Model
             Debug.Assert(expr.Result.TypeTable == this, "Wrong use: expression OutputSet must be equal to the set its value is appended/found.");
             Debug.Assert(expr.Operation == OperationType.TUPLE, "Wrong use: operation type for appending has to be TUPLE. ");
 
-            Offset[] result = Enumerable.Range(0, Length).ToArray(); // All elements of this set (as long as this set length - can be quite long)
+            Offset[] result = Enumerable.Range(0, Length).ToArray(); // All elements of this set (can be quite long)
             bool hasBeenRestricted = false; // For the case where the Length==1, and no key columns are really provided, so we get at the end result.Length==1 which is misleading. Also, this fixes the problem of having no key dimensions.
 
             List<ComColumn> dims = new List<ComColumn>();
             dims.AddRange(Columns.Where(x => x.IsKey));
             dims.AddRange(Columns.Where(x => !x.IsKey));
 
-            foreach (Dim dim in dims) // OPTIMIZE: the order of dimensions matters (use statistics, first dimensins with better filtering). Also, first identity dimensions.
+            foreach (ComColumn dim in dims) // OPTIMIZE: the order of dimensions matters (use statistics, first dimensins with better filtering). Also, first identity dimensions.
             {
                 ExprNode childExpr = expr.GetChild(dim.Name);
                 if (childExpr != null)
@@ -303,8 +303,6 @@ namespace Com.Model
             {
                 return -result.Length;
             }
-
-            return 0;
         }
 
         public bool CanAppend(ExprNode expr) // Determine if this expression (it has to be evaluated) can be added into this set as a new instance
