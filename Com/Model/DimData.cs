@@ -132,6 +132,23 @@ namespace Com.Model
 
             _cells[input] = val;
         }
+        public void SetValue(object value)
+        {
+            if (value == null)
+            {
+                Nullify();
+                return;
+            }
+
+            T val = ObjectToGeneric(value);
+            for (Offset i = 0; i < _length; i++)
+            {
+                _cells[i] = val;
+                _offsets[i] = i;
+            }
+
+            _nullCount = 0;
+        }
 
         public void Nullify() // Reset values and index to initial state (all nulls)
         {
@@ -556,6 +573,7 @@ namespace Com.Model
         public object GetValue(Offset input) { return null; }
 
         public void SetValue(Offset input, object value) { }
+        public void SetValue(object value) { }
 
         public void Nullify() { }
 

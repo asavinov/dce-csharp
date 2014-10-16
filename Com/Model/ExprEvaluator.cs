@@ -17,60 +17,57 @@ namespace Com.Model
 
     public class ExprEvaluator : ComEvaluator
     {
-        protected ExprNode exprNode; // Can contain more specific nodes OledbExprNode to access attributes in DataRow
-
-        protected ComVariable thisVariable; // Stores current input (offset in a local set or reference to the current DataRow)
-
-        protected Offset currentElement;
-
         protected ComColumnData columnData;
 
-        protected ComTable loopTable;
+        // Loop
+        protected Offset thisCurrent;
+        protected ComTable thisTable;
+        protected ComVariable thisVariable; // Stores current input (offset in a local set or reference to the current DataRow)
+
+        // Output expression
+        protected ExprNode outputExpr; // Can contain more specific nodes OledbExprNode to access attributes in DataRow
 
         //
         // ComColumnEvaluator interface
         //
 
-        protected bool isUpdate;
-        public bool IsUpdate { get { return isUpdate; } }
-
         public virtual bool Next()
         {
-            if (currentElement < loopTable.Data.Length) currentElement++;
+            if (thisCurrent < thisTable.Data.Length) thisCurrent++;
 
-            if (currentElement < loopTable.Data.Length) return true;
+            if (thisCurrent < thisTable.Data.Length) return true;
             else return false;
         }
         public virtual bool First()
         {
-            currentElement = 0;
+            thisCurrent = 0;
 
-            if (currentElement < loopTable.Data.Length) return true;
+            if (thisCurrent < thisTable.Data.Length) return true;
             else return false;
         }
         public virtual bool Last()
         {
-            currentElement = loopTable.Data.Length - 1;
+            thisCurrent = thisTable.Data.Length - 1;
 
-            if (currentElement >= 0) return true;
+            if (thisCurrent >= 0) return true;
             else return false;
         }
 
         public virtual object Evaluate()
         {
             // Use input value to evaluate the expression
-            thisVariable.SetValue(currentElement);
+            thisVariable.SetValue(thisCurrent);
 
             // evaluate the expression
-            exprNode.Evaluate();
+            outputExpr.Evaluate();
 
             // Write the result value to the function
             if (columnData != null)
             {
-                columnData.SetValue(currentElement, exprNode.Result.GetValue());
+                columnData.SetValue(thisCurrent, outputExpr.Result.GetValue());
             }
 
-            return exprNode.Result.GetValue();
+            return outputExpr.Result.GetValue();
         }
 
         public virtual object EvaluateUpdate() { return null; }
@@ -79,58 +76,193 @@ namespace Com.Model
 
         public virtual object GetResult() 
         { 
-            return exprNode.Result.GetValue(); 
+            return outputExpr.Result.GetValue(); 
         }
 
         public ExprEvaluator(ComColumn column)
         {
+            columnData = column.Data;
+
+            // Loop
+            thisCurrent = -1;
+            thisTable = column.Input;
+            thisVariable = new Variable("this", thisTable.Name);
+            thisVariable.TypeTable = thisTable;
+
+            // Output expression
             if (column.Definition.Mapping != null)
             {
                 if (column.Definition.IsGenerating)
                 {
-                    exprNode = column.Definition.Mapping.BuildExpression(ActionType.APPEND);
+                    outputExpr = column.Definition.Mapping.BuildExpression(ActionType.APPEND);
                 }
                 else
                 {
-                    exprNode = column.Definition.Mapping.BuildExpression(ActionType.READ);
+                    outputExpr = column.Definition.Mapping.BuildExpression(ActionType.READ);
                 }
             }
             else if (column.Definition.FormulaExpr != null)
             {
-                exprNode = column.Definition.FormulaExpr;
+                outputExpr = column.Definition.FormulaExpr;
             }
-            exprNode.Result.TypeName = column.Output.Name;
-            exprNode.Result.TypeTable = column.Output;
 
-            currentElement = -1;
-            loopTable = column.Input;
-            isUpdate = false;
-            thisVariable = new Variable("this", loopTable.Name);
-            thisVariable.TypeTable = loopTable;
-            columnData = column.Data;
+            outputExpr.Result.TypeName = column.Output.Name;
+            outputExpr.Result.TypeTable = column.Output;
 
-            // Resolve names in the expresion by storing direct references to storage objects which will be used during valuation (names will not be used
-            exprNode.Resolve(column.Input.Schema, new List<ComVariable>() { thisVariable });
+            outputExpr.Resolve(column.Input.Schema, new List<ComVariable>() { thisVariable });
         }
 
         public ExprEvaluator(ComTable table)
         {
-            exprNode = table.Definition.WhereExpr;
-
-            currentElement = -1;
-            loopTable = table;
-            isUpdate = false;
-            thisVariable = new Variable("this", loopTable.Name);
-            thisVariable.TypeTable = loopTable;
             columnData = null;
 
-            // Resolve names in the expresion by storing direct references to storage objects which will be used during valuation (names will not be used
-            exprNode.Resolve(loopTable.Schema, new List<ComVariable>() { thisVariable });
+            // Loop
+            thisCurrent = -1;
+            thisTable = table;
+            thisVariable = new Variable("this", thisTable.Name);
+            thisVariable.TypeTable = thisTable;
+
+            // Outtput expression
+            outputExpr = table.Definition.WhereExpr;
+            outputExpr.Resolve(thisTable.Schema, new List<ComVariable>() { thisVariable });
         }
 
         public ExprEvaluator()
         {
         }
+    }
+
+    /// <summary>
+    /// Notes:
+    /// - distinguish between this table (where the aggregated column is defined, and a fact table which provides values to be aggregated where group and measure functions are defined.
+    /// - the way of aggregation is defined as an updater expression which knows how to compute a new value given the old (current) value and a new measure.
+    /// </summary>
+    public class AggrEvaluator : ExprEvaluator
+    {
+        // base::columnData is the aggregated function to be computed
+
+        // Facts
+        // base::thisCurrent is offset in the fact table
+        // base::thisTable is a fact set which is iterated in this class
+        // base::thisVariable stores current fact in the loop table. is used by group expr and meausre expr
+
+        // Groups
+        protected ComVariable groupVariable; // Stores current group (input for the aggregated function)
+        protected ExprNode groupExpr; // Returns a group this fact belongs to, is stored in the group variable
+
+        // Measure
+        protected ComVariable measureVariable; // Stores new value (output for the aggregated function)
+        protected ExprNode measureExpr; // Returns a new value to be aggregated with the old value, is stored in the measure variable
+
+        // Updater/aggregation function
+        // base::outputExpr - updater expression. works in the context of two variables: group and measure
+
+        //
+        // ComColumnEvaluator interface
+        //
+
+        public override object Evaluate()
+        {
+            //
+            // Evalute group and measure expressions for the current fact
+            //
+
+            // Use input value to evaluate the expression
+            thisVariable.SetValue(thisCurrent);
+
+            groupExpr.Evaluate();
+            Offset groupElement = (Offset)groupExpr.Result.GetValue();
+            groupVariable.SetValue(groupElement);
+
+            measureExpr.Evaluate();
+            object measureValue = measureExpr.Result.GetValue();
+            measureVariable.SetValue(measureValue);
+
+            //
+            // Evaluate the update expression and store the new computed value
+            //
+            outputExpr.Evaluate();
+
+            object newValue = outputExpr.Result.GetValue();
+            columnData.SetValue(groupElement, newValue);
+
+            return outputExpr.Result.GetValue();
+        }
+
+        public AggrEvaluator(ComColumn column) // Create evaluator from structured definition
+        {
+            columnData = column.Data;
+
+            if (column.Definition.FormulaExpr == null) // From structured definition (parameters)
+            {
+                // Facts
+                thisCurrent = -1;
+                thisTable = column.Definition.FactTable;
+
+                thisVariable = new Variable("this", thisTable.Name);
+                thisVariable.TypeTable = thisTable;
+
+                // Groups
+                groupExpr = ExprNode.CreateReader(column.Definition.GroupPaths[0], true); // Currently only one path is used
+                groupExpr = (ExprNode)groupExpr.Root;
+                groupExpr.Resolve(thisTable.Schema, new List<ComVariable>() { thisVariable });
+
+                groupVariable = new Variable("this", column.Input.Name);
+                groupVariable.TypeTable = column.Input;
+
+                // Measure
+                measureExpr = ExprNode.CreateReader(column.Definition.MeasurePaths[0], true);
+                measureExpr = (ExprNode)measureExpr.Root;
+                measureExpr.Resolve(thisTable.Schema, new List<ComVariable>() { thisVariable });
+
+                measureVariable = new Variable("value", column.Output.Name);
+                measureVariable.TypeTable = column.Output;
+
+                // Updater/aggregation function
+                outputExpr = ExprNode.CreateUpdater(column, column.Definition.Updater);
+                outputExpr.Resolve(column.Input.Schema, new List<ComVariable>() { groupVariable, measureVariable });
+            }
+            else // From expression
+            {
+                //
+                // Extract all aggregation components from expression (aggregation expression cannot be resolved)
+                //
+                ExprNode aggExpr = column.Definition.FormulaExpr;
+
+                // Facts
+                ExprNode factsNode = aggExpr.GetChild("facts").GetChild(0);
+                string thisTableName = factsNode.Name;
+
+                thisCurrent = -1;
+                thisTable = column.Input.Schema.GetSubTable(thisTableName);
+
+                thisVariable = new Variable("this", thisTable.Name);
+                thisVariable.TypeTable = thisTable;
+
+                // Groups
+                ExprNode groupsNode = aggExpr.GetChild("groups").GetChild(0);
+                groupExpr = groupsNode;
+                groupExpr.Resolve(thisTable.Schema, new List<ComVariable>() { thisVariable });
+
+                groupVariable = new Variable("this", column.Input.Name);
+                groupVariable.TypeTable = column.Input;
+
+                // Measure
+                ExprNode measureNode = aggExpr.GetChild("measure").GetChild(0);
+                measureExpr = measureNode;
+                measureExpr.Resolve(thisTable.Schema, new List<ComVariable>() { thisVariable });
+
+                measureVariable = new Variable("value", column.Output.Name);
+                measureVariable.TypeTable = column.Output;
+
+                // Updater/aggregation function
+                ExprNode updaterExpr = aggExpr.GetChild("aggregator").GetChild(0);
+
+                outputExpr = ExprNode.CreateUpdater(column, updaterExpr.Name);
+                outputExpr.Resolve(column.Input.Schema, new List<ComVariable>() { groupVariable, measureVariable });
+            }
+        }
+
     }
 
     public class CsvEvaluator : ExprEvaluator
@@ -154,7 +286,7 @@ namespace Com.Model
             thisVariable.SetValue(currentRecord);
 
             connectionCsv.Next(); // We increment after iteration because csv is opened with first record initialized
-            currentElement++;
+            thisCurrent++;
 
             return true;
         }
@@ -165,10 +297,10 @@ namespace Com.Model
             thisVariable.SetValue(currentRecord);
 
             // evaluate the expression
-            exprNode.Evaluate();
+            outputExpr.Evaluate();
 
             // Write the result value to the function
-            // columnData.SetValue(currentElement, exprNode.Result.GetValue()); // We do not store import functions (we do not need this data)
+            // columnData.SetValue(currentElement, outputExpr.Result.GetValue()); // We do not store import functions (we do not need this data)
 
             return null;
         }
@@ -177,10 +309,10 @@ namespace Com.Model
             : base(column)
         {
             // Produce a result set that can be iterated through
-            connectionCsv = ((SetTopCsv)loopTable.Schema).connection;
-            connectionCsv.Open((SetCsv)loopTable);
+            connectionCsv = ((SetTopCsv)thisTable.Schema).connection;
+            connectionCsv.Open((SetCsv)thisTable);
 
-            currentElement = 0;
+            thisCurrent = 0;
             currentRecord = connectionCsv.CurrentRecord; // Start from the first record
         }
     }
@@ -200,7 +332,7 @@ namespace Com.Model
 
         public override bool Next()
         {
-            currentElement++;
+            thisCurrent++;
 
             bool res = rows.MoveNext();
             currentRow = (DataRow)rows.Current;
@@ -215,10 +347,10 @@ namespace Com.Model
             thisVariable.SetValue(currentRow);
 
             // evaluate the expression
-            exprNode.Evaluate();
+            outputExpr.Evaluate();
 
             // Write the result value to the function
-            // columnData.SetValue(currentElement, exprNode.Result.GetValue()); // We do not store import functions (we do not need this data)
+            // columnData.SetValue(currentElement, outputExpr.Result.GetValue()); // We do not store import functions (we do not need this data)
 
             return null;
         }
@@ -227,104 +359,8 @@ namespace Com.Model
             : base(column)
         {
             // Produce a result set from the remote database by executing a query on the source table
-            dataTable = ((SetTopOledb)loopTable.Schema).LoadTable(loopTable);
+            dataTable = ((SetTopOledb)thisTable.Schema).LoadTable(thisTable);
             rows = dataTable.Rows.GetEnumerator();
-        }
-    }
-
-    /// <summary>
-    /// Notes:
-    /// - distinguish between this table (where the aggregated column is defined, and a fact table which provides values to be aggregated where group and measure functions are defined.
-    /// - the way of aggregation is defined as an updater expression which knows how to compute a new value given the old (current) value and a new measure.
-    /// </summary>
-    public class AggrEvaluator : ExprEvaluator
-    {
-        //
-        // Fact-related members
-        //
-
-        // base::thisVariable stores current fact in the loop table. is used by group expr and meausre expr
-        // base::currentElement is offset in the fact table
-        // base::loopTable is a fact set which is iterated in this class
-
-        protected ExprNode groupExpr; // Returns a group this fact belongs to, is stored in the group variable
-
-        protected ExprNode measureExpr; // Returns a new value to be aggregated with the old value, is stored in the measure variable
-
-        //
-        // Aggregation-related members
-        //
-
-        protected ComVariable groupVariable; // Stores current group (input for the aggregated function)
-
-        protected ComVariable measureVariable; // Stores new value (output for the aggregated function)
-
-        // base::exprNode - updater expression. works in the context of two variables: group and measure
-        // base::columnData is the aggregated function to be computed
-
-        //
-        // ComColumnEvaluator interface
-        //
-
-        public override object Evaluate()
-        {
-            //
-            // Evalute group and measure expressions for the current fact
-            //
-
-            // Use input value to evaluate the expression
-            thisVariable.SetValue(currentElement);
-
-            groupExpr.Evaluate();
-            Offset groupElement = (Offset)groupExpr.Result.GetValue();
-            groupVariable.SetValue(groupElement);
-
-            measureExpr.Evaluate();
-            object measureValue = measureExpr.Result.GetValue();
-            measureVariable.SetValue(measureValue);
-
-            //
-            // Evaluate the update expression and store the new computed value
-            //
-            exprNode.Evaluate();
-
-            object newValue = exprNode.Result.GetValue();
-            columnData.SetValue(groupElement, newValue);
-
-            return exprNode.Result.GetValue();
-        }
-
-        public AggrEvaluator(ComColumn column)
-        {
-            exprNode = column.Definition.FormulaExpr;
-
-            currentElement = -1;
-            loopTable = column.Definition.FactTable;
-            isUpdate = true;
-
-            thisVariable = new Variable("this", loopTable.Name);
-            thisVariable.TypeTable = loopTable;
-
-            columnData = column.Data;
-
-            groupVariable = new Variable("this", column.Input.Name);
-            groupVariable.TypeTable = column.Input;
-
-            measureVariable = new Variable("value", column.Output.Name);
-            measureVariable.TypeTable = column.Output;
-
-            groupExpr = ExprNode.CreateReader(column.Definition.GroupPaths[0], true); // Currently only one path is used
-            measureExpr = ExprNode.CreateReader(column.Definition.MeasurePaths[0], true);
-            groupExpr = (ExprNode)groupExpr.Root;
-            measureExpr = (ExprNode)measureExpr.Root;
-
-            exprNode = ExprNode.CreateUpdater(column, column.Definition.Updater);
-
-            // Resolve names in the expresions using appropriate variables
-            exprNode.Resolve(column.Input.Schema, new List<ComVariable>() { groupVariable, measureVariable });
-
-            groupExpr.Resolve(loopTable.Schema, new List<ComVariable>() { thisVariable });
-            measureExpr.Resolve(loopTable.Schema, new List<ComVariable>() { thisVariable });
         }
     }
 

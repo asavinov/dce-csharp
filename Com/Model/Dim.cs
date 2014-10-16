@@ -388,6 +388,14 @@ namespace Com.Model
             return colData;
         }
 
+        public Dim(Mapping mapping)
+            : this(mapping.SourceSet.Name, mapping.SourceSet, mapping.TargetSet, false, false)
+        {
+            Definition.Mapping = mapping;
+            _definition.IsGenerating = true;
+            if (Output != null) Output.Definition.DefinitionType = TableDefinitionType.PROJECTION;
+        }
+
         public Dim(Dim dim)
             : this()
         {
@@ -401,14 +409,6 @@ namespace Com.Model
             _data = CreateColumnData(_output, this);
             _definition = new ColumnDefinition(this);
             // TODO: Copy definition
-        }
-
-        public Dim(Mapping mapping)
-            : this(mapping.SourceSet.Name, mapping.SourceSet, mapping.TargetSet, false, false)
-        {
-            Definition.Mapping = mapping;
-            _definition.IsGenerating = true;
-            if (Output != null) Output.Definition.DefinitionType = TableDefinitionType.PROJECTION;
         }
 
         public Dim(ComTable set) // Empty dimension

@@ -360,6 +360,7 @@ namespace Test
             //
             ComColumn c15 = schema.CreateColumn("Agg of Column 23", t1, schema.GetPrimitive("Double"), false);
             c15.Definition.DefinitionType = ColumnDefinitionType.AGGREGATION;
+
             c15.Definition.FactTable = t2; // Fact table
             c15.Definition.GroupPaths = new List<DimPath>(new DimPath[] { new DimPath(c24) }); // One group path
             c15.Definition.MeasurePaths = new List<DimPath>(new DimPath[] { new DimPath(c23) }); // One measure path
@@ -370,11 +371,30 @@ namespace Test
             //
             // Evaluate expression
             //
+            c15.Data.SetValue(0.0);
             c15.Definition.Evaluate(); // {40, 140, 0}
 
             Assert.AreEqual(40.0, c15.Data.GetValue(0));
             Assert.AreEqual(140.0, c15.Data.GetValue(1));
             Assert.AreEqual(0.0, c15.Data.GetValue(2)); // In fact, it has to be NaN or null (no values have been aggregated)
+
+            //
+            // Aggregation via a syntactic formula
+            //
+            ComColumn c16 = schema.CreateColumn("Agg2 of Column 23", t1, schema.GetPrimitive("Double"), false);
+            c16.Definition.DefinitionType = ColumnDefinitionType.AGGREGATION;
+
+            ExprNode ast = BuildExpr("AGGREGATE(facts=[Table 2], groups=[Table 1], measure=[Column 23]*2.0 + 1, aggregator=SUM)");
+            c16.Definition.FormulaExpr = ast;
+
+            c16.Add();
+
+            c15.Data.SetValue(0.0);
+            c16.Definition.Evaluate(); // {40, 140, 0}
+
+            Assert.AreEqual(81.0, c16.Data.GetValue(0));
+            Assert.AreEqual(283.0, c16.Data.GetValue(1));
+            Assert.AreEqual(0.0, c16.Data.GetValue(2));
 
             // TODO:
             // - initializer and finalizer for aggregation evluation (also for other evaluators but for agg it is more important)

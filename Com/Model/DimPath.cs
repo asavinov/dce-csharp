@@ -477,22 +477,22 @@ namespace Com.Model
             Segments = new List<ComColumn>();
         }
 
-        public DimPath(ComColumn segment)
+        public DimPath(ComColumn seg)
             : this()
         {
-            if (segment == null) return;
+            if (seg == null) return;
 
-            Segments.Add(segment);
+            Segments.Add(seg);
             Input = Segments[0].Input;
             Output = Segments[Segments.Count - 1].Output;
         }
 
-        public DimPath(List<ComColumn> segments)
+        public DimPath(List<ComColumn> segs)
             : this()
         {
-            if(segments == null && segments.Count == 0) return;
+            if(segs == null || segs.Count == 0) return;
 
-            Segments.AddRange(segments);
+            Segments.AddRange(segs);
             Input = Segments[0].Input;
             Output = Segments[Segments.Count - 1].Output;
         }

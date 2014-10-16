@@ -136,38 +136,62 @@ namespace Com.Query
                 n.Operation = OperationType.CALL;
                 n.Action = ActionType.READ;
 
-                ExprNode accessNode = Visit(context.access());
-                if (accessAsThisNode) // Represent accessor (after dot) by this node
+                if (context.access().name() != null) // Name of the function - call by-reference
                 {
-                    if (context.access().name() != null) // Name of the function
+                    n.Name = GetName(context.access().name());
+                }
+                else // Call by-value using a definition of the function (lambda)
+                {
+                    context.access().scope();
+                    n.Name = "lambda"; // Automatically generated name for a unnamed lambda
+                }
+                
+                // Find all parameters and store them in the access node
+                int paramCount = context.access().param().Count();
+                for (int i = 0; i < paramCount; i++)
+                {
+                    ExprNode param = Visit(context.access().param(i));
+                    if (param != null)
                     {
-                        n.Name = accessNode.Name;
-                    }
-                    else // A definition of the function (lambda) is provided instead of name
-                    {
-                        context.access().scope();
-                        n.Name = "lambda"; // Automatically generated name for a unnamed lambda
+                        n.AddChild(param);
                     }
                 }
-                else // Access node as a child (it can be named either by real method name or as a special 'method' with the method described represented elsewhere)
-                {
-                    n.Name = ".";
-                    if (accessNode != null)
-                    {
-                        n.AddChild(accessNode);
-                    }
-                }
-
-                // TODO: Read parameters and create nodes for them: context.access().param();
             }
 
             return n; 
         }
 
+        public override ExprNode VisitParam(ExprParser.ParamContext context)
+        {
+            ExprNode n = new ExprNode();
+
+            // Determine declared member (constituent, offset, parameter) name
+            string name = GetName(context.name());
+
+            // Determine value assigned to this param (it can be a CALL node, TUPLE node etc.)
+            ExprNode expr = null;
+            if (context.expr() != null)
+            {
+                expr = Visit(context.expr());
+            }
+            else if (context.scope() != null)
+            {
+                throw new NotImplementedException("Scopes in method parameters are currently not implemented");
+            }
+
+            n.AddChild(expr);
+
+            n.Name = name;
+            n.Operation = OperationType.TUPLE;
+            n.Action = ActionType.READ;
+
+            return n;
+        }
+
         public override ExprNode VisitMember(ExprParser.MemberContext context) 
         {
             // Determine declared (output, returned) type of the member
-            String type;
+            string type;
             if (context.type().prim_set() != null)
             {
                 type = context.type().prim_set().GetText();
@@ -183,8 +207,7 @@ namespace Com.Query
             }
 
             // Determine declared member (constituent, offset, parameter) name
-            ExprNode nameNode = Visit(context.name());
-            String name = nameNode.Name;
+            string name = GetName(context.name());
 
             // Determine value assigned to this member (it can be a CALL node, TUPLE node etc.)
             ExprNode expr = null;
@@ -222,19 +245,30 @@ namespace Com.Query
             n.Operation = OperationType.VALUE;
             n.Action = ActionType.READ;
 
-            if (context.DELIMITED_ID() != null)
-            {
-                string name = context.DELIMITED_ID().GetText();
-                n.Name = name.Substring(1, name.Length - 2); // Remove delimiters
-            }
-            else
-            {
-                n.Name = context.ID().GetText();
-            }
+            n.Name = GetName(context);
 
             return n;
         }
 
+        protected string GetName(ExprParser.NameContext context)
+        {
+            string name;
+            if (context == null)
+            {
+                name = "";
+            }
+            else if (context.DELIMITED_ID() != null)
+            {
+                name = context.DELIMITED_ID().GetText();
+                name = name.Substring(1, name.Length - 2); // Remove delimiters
+            }
+            else
+            {
+                name = context.ID().GetText();
+            }
+
+            return name;
+        }
     }
 
 }

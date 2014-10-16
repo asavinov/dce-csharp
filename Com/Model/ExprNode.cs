@@ -139,7 +139,7 @@ namespace Com.Model
                 //
                 foreach (TreeNode<ExprNode> childNode in Children)
                 {
-                    childNode.Value.Resolve(schema, variables);
+                    childNode.Item.Resolve(schema, variables);
                 }
             }
             else if (Operation == OperationType.CALL)
@@ -149,7 +149,7 @@ namespace Com.Model
                 //
                 foreach (TreeNode<ExprNode> childNode in Children)
                 {
-                    childNode.Value.Resolve(schema, variables);
+                    childNode.Item.Resolve(schema, variables);
                 }
                 
                 // Resolve type name
@@ -307,7 +307,7 @@ namespace Com.Model
                 //
                 foreach (TreeNode<ExprNode> childNode in Children)
                 {
-                    childNode.Value.Evaluate();
+                    childNode.Item.Evaluate();
                 }
 
                 if (Result.TypeTable.IsPrimitive) // Primitive TUPLE nodes are processed differently
@@ -400,7 +400,7 @@ namespace Com.Model
                 //
                 foreach (TreeNode<ExprNode> childNode in Children)
                 {
-                    childNode.Value.Evaluate();
+                    childNode.Item.Evaluate();
                 }
 
                 int intRes;
@@ -455,7 +455,7 @@ namespace Com.Model
                     doubleRes = 1.0;
                     foreach (TreeNode<ExprNode> childNode in Children)
                     {
-                        double arg = Convert.ToDouble(childNode.Value.Result.GetValue());
+                        double arg = Convert.ToDouble(childNode.Item.Result.GetValue());
                         if (double.IsNaN(arg)) continue;
                         doubleRes *= arg;
                     }

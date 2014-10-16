@@ -38,6 +38,7 @@ namespace Com.Model
 
         object GetValue(Offset input);
         void SetValue(Offset input, object value);
+        void SetValue(object value);
 
         void Nullify();
 
