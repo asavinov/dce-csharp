@@ -422,29 +422,6 @@ namespace Test
         }
 
         [TestMethod]
-        public void TableSubsetTest() // Define a filter to get a subset of record from one table
-        {
-            ComSchema schema = CreateSampleSchema();
-            CreateSampleData(schema);
-
-            ComTable t2 = schema.GetSubTable("Table 2");
-
-            //
-            // Define a new filter-set
-            //
-            ComTable t3 = schema.CreateTable("Table 3");
-
-            ExprNode ast = BuildExpr("[Column 22] > 20.0 && this.Super.[Column 23] < 50");
-            t3.Definition.WhereExpr = ast;
-            t3.Definition.DefinitionType = TableDefinitionType.PRODUCT;
-            schema.AddTable(t3, t2, null);
-
-            t3.Definition.Populate();
-            Assert.AreEqual(1, t3.Data.Length);
-            Assert.AreEqual(1, t3.SuperColumn.Data.GetValue(0));
-        }
-
-        [TestMethod]
         public void TableProductTest() // Define a new table and populate it
         {
             ComSchema schema = CreateSampleSchema();
@@ -483,6 +460,30 @@ namespace Test
 
             Assert.AreEqual(0, c31.Data.GetValue(1));
             Assert.AreEqual(3, c32.Data.GetValue(1));
+        }
+
+        [TestMethod]
+        public void TableSubsetTest() // Define a filter to get a subset of record from one table
+        {
+            ComSchema schema = CreateSampleSchema();
+            CreateSampleData(schema);
+
+            ComTable t2 = schema.GetSubTable("Table 2");
+
+            //
+            // Define a new filter-set
+            //
+            ComTable t3 = schema.CreateTable("Table 3");
+
+            ExprNode ast = BuildExpr("[Column 22] > 20.0 && this.Super.[Column 23] < 50");
+            t3.Definition.WhereExpr = ast;
+            t3.Definition.DefinitionType = TableDefinitionType.PRODUCT;
+
+            schema.AddTable(t3, t2, null);
+
+            t3.Definition.Populate();
+            Assert.AreEqual(1, t3.Data.Length);
+            Assert.AreEqual(1, t3.SuperColumn.Data.GetValue(0));
         }
 
         [TestMethod]

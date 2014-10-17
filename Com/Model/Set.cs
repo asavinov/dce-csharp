@@ -408,32 +408,33 @@ namespace Com.Model
                 return; // Nothing to do
             }
 
-            Length = 0; // Empty the table (reset). Maybe should be done in Initialize?
+            Length = 0;
 
             if (DefinitionType == TableDefinitionType.PRODUCT) // Product of local sets (no project/de-project from another set)
             {
-                // - greater with filter (use key dims; de-projection of several greater dims by storing all combinations of their inputs)
-                //   - use only Key greater dims for looping. 
-                //   - user greater sets input values as constituents for new tuples
-                //   - greater dims are populated simultaniously without evaluation (they do not have defs.)
-
-                // Find all local greater key dimensions including the super-dim.
-                ComColumn[] dims = Columns.Where(x => x.IsKey).ToArray();
-                int dimCount = dims.Length;
-                object[] vals = new object[dimCount];
-
-                // Evaluator for where expression
+                //
+                // Evaluator for where expression which will be used to check each new record before it is added
+                //
                 ComEvaluator eval = null;
                 if (Definition.WhereExpr != null)
                 {
                     eval = GetWhereEvaluator();
                 }
 
-                // For building all combinations
-                Offset[] lengths = new Offset[dimCount];
+                //
+                // Find all local greater dimensions to be varied (including the super-dim)
+                //
+                ComColumn[] dims = Columns.Where(x => x.IsKey).ToArray();
+                int dimCount = dims.Length; // Dimensionality - how many free dimensions
+                object[] vals = new object[dimCount]; // A record with values for each free dimension being varied
+
+                //
+                // The current state of the search procedure
+                //
+                Offset[] lengths = new Offset[dimCount]; // Size of each dimension being varied (how many offsets in each dimension)
                 for (int i = 0; i < dimCount; i++) lengths[i] = dims[i].Output.Data.Length;
 
-                Offset[] offsets = new Offset[dimCount]; // Here we store the current state of choices for each dimensions
+                Offset[] offsets = new Offset[dimCount]; // The current point/offset for each dimensions during search
                 for (int i = 0; i < dimCount; i++) offsets[i] = -1;
 
                 int top = -1; // The current level/top where we change the offset. Depth of recursion.
@@ -444,14 +445,14 @@ namespace Com.Model
                 {
                     if (top == dimCount) // New element is ready. Process it.
                     {
-                        // Initialize an instance and append it
+                        // Initialize a record and append it
                         for (int i = 0; i < dimCount; i++)
                         {
                             vals[i] = offsets[i];
                         }
                         Offset input = Append(dims, vals);
 
-                        // Now check if this appended element satsifies the where expression and if not then remove it
+                        // Now check if this appended element satisfies the where expression and if not then remove it
                         if (eval != null)
                         {
                             bool satisfies = true;
@@ -466,7 +467,6 @@ namespace Com.Model
                             }
                         }
 
-
                         top--;
                         while (top >= 0 && lengths[top] == 0) // Go up by skipping empty dimensions and reseting 
                         { offsets[top--] = -1; }
@@ -479,7 +479,7 @@ namespace Com.Model
                         if (offsets[top] < lengths[top]) // Offset chosen
                         {
                             do ++top;
-                            while (top < dimCount && lengths[top] == 0); // Go up (foreward) by skipping empty dimensions
+                            while (top < dimCount && lengths[top] == 0); // Go up (forward) by skipping empty dimensions
                         }
                         else // Level is finished. Go back.
                         {
@@ -492,21 +492,6 @@ namespace Com.Model
             }
             else if (DefinitionType == TableDefinitionType.PROJECTION) // There are import dimensions so copy data from another set (projection of another set)
             {
-                // - lesser with filter
-                //   - use only IsGenerating lesser dims for looping. 
-                //   - use thier lesser sets to loop through all their combinations
-                //   - !!! each lesser dim is evaluated using its formula that returns some constituent of the new set (or a new element in the case of 1 lesser dim)
-                //   - set elements store a combination of lesser dims outputs
-                //   - each lesser dim stores the new tuple in its output (alternatively, these dims could be evaluatd after set population - will it really work for multiple lesser dims?)
-
-                // Use only generating lesser dimensions (IsGenerating)
-                // Organize a loop on combinations of their inputs
-                // For each combination, evaluate all the lesser generating dimensions by finding their outputs
-                // Use these outputs to create a new tuple and try to append it to this set
-                // If appended or found, then set values of the greater generating dimensions
-                // If cannot be added (does not satisfy constraints) then set values of the greater generating dimensions to null
-
-
                 ComColumn projectDim = InputColumns.Where(d => d.Definition.IsGenerating).ToList()[0];
                 ComTable sourceSet = projectDim.Input;
                 ComTable targetSet = projectDim.Output; // this set
