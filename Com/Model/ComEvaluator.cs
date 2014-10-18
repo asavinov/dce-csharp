@@ -15,8 +15,6 @@ namespace Com.Model
         bool Last(); // True if there exists a last element (if the set is not empty)
 
         object Evaluate(); // Compute output for the specified intput and write it
-        object EvaluateUpdate(); // Read group and measure for the specified input and compute update according to the aggregation formula. It may also increment another function if necessary.
-        bool EvaluateJoin(object output); // Called for all pairs of input and output *if* the definition is a join predicate.
 
         object GetResult();
     }

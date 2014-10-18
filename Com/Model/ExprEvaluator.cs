@@ -70,10 +70,6 @@ namespace Com.Model
             return outputExpr.Result.GetValue();
         }
 
-        public virtual object EvaluateUpdate() { return null; }
-
-        public virtual bool EvaluateJoin(object output) { return false; }
-
         public virtual object GetResult() 
         { 
             return outputExpr.Result.GetValue(); 
@@ -92,7 +88,7 @@ namespace Com.Model
             // Output expression
             if (column.Definition.Mapping != null)
             {
-                if (column.Definition.IsGenerating)
+                if (column.Definition.IsAppendData)
                 {
                     outputExpr = column.Definition.Mapping.BuildExpression(ActionType.APPEND);
                 }
@@ -104,6 +100,18 @@ namespace Com.Model
             else if (column.Definition.FormulaExpr != null)
             {
                 outputExpr = column.Definition.FormulaExpr;
+
+                if (column.Definition.DefinitionType == ColumnDefinitionType.LINK)
+                {
+                    // Adjust the expression according to other parameters of the definition
+                    if(column.Definition.IsAppendData) {
+                        outputExpr.Action = ActionType.APPEND;
+                    }
+                    else
+                    {
+                        outputExpr.Action = ActionType.READ;
+                    } 
+                }
             }
 
             outputExpr.Result.TypeName = column.Output.Name;

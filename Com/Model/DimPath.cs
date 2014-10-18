@@ -940,7 +940,7 @@ namespace Com.Model
                     case DimensionType.IDENTITY: return Output.Columns.Where(x => x.IsKey && x.Input.Schema == x.Output.Schema).ToList();
                     case DimensionType.ENTITY: return Output.Columns.Where(x => !x.IsKey && x.Input.Schema == x.Output.Schema).ToList();
 
-                    case DimensionType.GENERATING: return Output.Columns.Where(x => (x.Definition != null && x.Definition.IsGenerating) && x.Input.Schema == x.Output.Schema).ToList();
+                    case DimensionType.GENERATING: return Output.Columns.Where(x => (x.Definition != null && x.Definition.IsAppendData) && x.Input.Schema == x.Output.Schema).ToList();
                 }
             }
             else
@@ -951,7 +951,7 @@ namespace Com.Model
                     case DimensionType.IDENTITY: return Input.InputColumns.Where(x => x.IsKey && x.Input.Schema == x.Output.Schema).ToList();
                     case DimensionType.ENTITY: return Input.InputColumns.Where(x => !x.IsKey && x.Input.Schema == x.Output.Schema).ToList();
 
-                    case DimensionType.GENERATING: return Input.InputColumns.Where(x => (x.Definition != null && x.Definition.IsGenerating) && x.Input.Schema == x.Output.Schema).ToList();
+                    case DimensionType.GENERATING: return Input.InputColumns.Where(x => (x.Definition != null && x.Definition.IsAppendData) && x.Input.Schema == x.Output.Schema).ToList();
                 }
             }
 

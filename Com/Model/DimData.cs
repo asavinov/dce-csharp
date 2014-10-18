@@ -596,7 +596,9 @@ namespace Com.Model
 
         #region ComColumnDefinition interface
 
-        public bool IsGenerating { get; set; }
+        public bool IsAppendData { get; set; }
+
+        public bool IsAppendSchema { get; set; }
 
         public ColumnDefinitionType DefinitionType { get; set; }
 
@@ -629,16 +631,6 @@ namespace Com.Model
 
         public ComEvaluator GetEvaluator()
         {
-            // Principle: population methods are unaware of Definition type (expressions etc.) - they use only evaluator (no dependency on the definition details)
-
-            // Here we return different types of objects that implement this interface depending on the definition type (and reflecting/based on the definition)
-            // Based on Mapping - can be transformed an (tuple) expression
-            // Based on tuple expression - object that can evaluate tuple tree (find, append etc.), say, an extension of a passive tuple or simply implement the Evaluator interface by the expression object
-            // Based on expression - as above
-            // Based on aggregation - it is update function so initially we can return a standard updater like SUM (untyped), in future, return typed updaters, and in future also custom updaters based on v-expr or other code
-            // Based on library - load lib, instantiate via factory, initialize (say, resolve names), return object
-            // Based on source code - compile class, instantiate, initialize (say, resolve), return instance
-
             ComEvaluator evaluator = null;
 
             if (DefinitionType == ColumnDefinitionType.FREE) 
@@ -657,7 +649,11 @@ namespace Com.Model
             {
                 evaluator = new AggrEvaluator(Dim);
             }
-            else if (DefinitionType == ColumnDefinitionType.ARITHMETIC || DefinitionType == ColumnDefinitionType.LINK)
+            else if (DefinitionType == ColumnDefinitionType.ARITHMETIC)
+            {
+                evaluator = new ExprEvaluator(Dim);
+            }
+            else if (DefinitionType == ColumnDefinitionType.LINK)
             {
                 evaluator = new ExprEvaluator(Dim);
             }
@@ -805,7 +801,7 @@ namespace Com.Model
         {
             Dim = dim;
 
-            IsGenerating = false;
+            IsAppendData = false;
             DefinitionType = ColumnDefinitionType.FREE;
             
             GroupPaths = new List<DimPath>();

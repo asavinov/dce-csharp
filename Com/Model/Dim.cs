@@ -139,7 +139,7 @@ namespace Com.Model
             {
                 JObject columnDef = new JObject();
 
-                columnDef["generating"] = Definition.IsGenerating ? "true" : "false";
+                columnDef["generating"] = Definition.IsAppendData ? "true" : "false";
                 columnDef["definition_type"] = (int)Definition.DefinitionType;
 
                 if (Definition.FormulaExpr != null)
@@ -202,7 +202,7 @@ namespace Com.Model
             JObject columnDef = (JObject)json["definition"];
             if (columnDef != null && Definition != null)
             {
-                Definition.IsGenerating = columnDef["generating"] != null ? StringSimilarity.JsonTrue(columnDef["generating"]) : false;
+                Definition.IsAppendData = columnDef["generating"] != null ? StringSimilarity.JsonTrue(columnDef["generating"]) : false;
                 Definition.DefinitionType = columnDef["definition_type"] != null ? (ColumnDefinitionType)(int)columnDef["definition_type"] : ColumnDefinitionType.FREE;
 
                 if (columnDef["formula"] != null)
@@ -392,7 +392,7 @@ namespace Com.Model
             : this(mapping.SourceSet.Name, mapping.SourceSet, mapping.TargetSet, false, false)
         {
             Definition.Mapping = mapping;
-            _definition.IsGenerating = true;
+            _definition.IsAppendData = true;
             if (Output != null) Output.Definition.DefinitionType = TableDefinitionType.PROJECTION;
         }
 

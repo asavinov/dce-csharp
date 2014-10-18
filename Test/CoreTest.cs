@@ -395,30 +395,6 @@ namespace Test
             Assert.AreEqual(81.0, c16.Data.GetValue(0));
             Assert.AreEqual(283.0, c16.Data.GetValue(1));
             Assert.AreEqual(0.0, c16.Data.GetValue(2));
-
-            // TODO:
-            // - initializer and finalizer for aggregation evluation (also for other evaluators but for agg it is more important)
-            // - null measure, null facts
-
-            // More complex case:
-            // This set is a product of some greater sets
-            // grouping function returns a tuple of several greater dims: it is either defined/evaluated independently, or it is defined via grouping expression only for aggregation
-            // Question: 
-            // - do we have to define this mapped grouping dim explicitly (and compute in advance) or 
-            //   - explicit column will already contain/store the group outputs (evaluated and stored independently)
-            // - we can define a md-grouping dimension on the fly in the definition of the aggregation function?
-            //   - the column for storing values does not exist as an object or at least is not part of the schema (temporary column existing only within the expression)
-            //   - so the question is: can we define/use a tuple expression without column objects?
-
-            // How to define AGG function syntactically:
-            // special aggregation function call with all necessary parameters:
-            // AGG(this (fact), value (measure), accu (SUM, AVG etc.) );
-            // Problem: we need to define somewhere the output function name, that is, the result (aggregated function) where everything is stored and which is computed
-            // Indeed, it is a definition of some function: Double MyFunc() = ...
-            // Alternatively, 
-            // - it can be a definition for an updater expression (can be defined for any function along with the setter expression).
-            // - in addition, we point to a feeder or provider of facts for this updater (can be shared among many updaters) which is defind independently in the fact table
-
         }
 
         [TestMethod]
@@ -516,7 +492,7 @@ namespace Test
             ComColumn c24 = schema.CreateColumn(map24.SourceSet.Name, map24.SourceSet, map24.TargetSet, false);
             c24.Definition.Mapping = map24;
             c24.Definition.DefinitionType = ColumnDefinitionType.LINK;
-            c24.Definition.IsGenerating = true;
+            c24.Definition.IsAppendData = true;
             c24.Add();
 
             t3.Definition.Populate();
@@ -549,7 +525,7 @@ namespace Test
             ComColumn c25 = schema.CreateColumn(map25.SourceSet.Name, map25.SourceSet, map25.TargetSet, false);
             c25.Definition.Mapping = map25;
             c25.Definition.DefinitionType = ColumnDefinitionType.LINK;
-            c25.Definition.IsGenerating = true;
+            c25.Definition.IsAppendData = true;
             c25.Add();
 
             t4.Definition.Populate();
@@ -610,7 +586,7 @@ namespace Test
             ComColumn dim = schema.CreateColumn(map.SourceSet.Name, map.SourceSet, map.TargetSet, false);
             dim.Definition.Mapping = map;
             dim.Definition.DefinitionType = ColumnDefinitionType.LINK;
-            dim.Definition.IsGenerating = true;
+            dim.Definition.IsAppendData = true;
 
             dim.Add();
 
@@ -654,7 +630,7 @@ namespace Test
             ComColumn dim = schema.CreateColumn(map.SourceSet.Name, map.SourceSet, map.TargetSet, false);
             dim.Definition.Mapping = map;
             dim.Definition.DefinitionType = ColumnDefinitionType.LINK;
-            dim.Definition.IsGenerating = true;
+            dim.Definition.IsAppendData = true;
 
             dim.Add();
 
@@ -759,49 +735,5 @@ namespace Test
         }
     
     }
-
-
-    
-    // TODO:
-    // - utility method to (quickly) check type of primitive set without comparing name (with case sensititivy). Maybe introduce enumerator. 
-    // - also, find primitive type using enumerator instead of string comparison.
-
-    // Other TODOs:
-
-    // Expr Evaluate
-    // - Type inference rules for arithmetic expressions
-    // - Use of these rules in computing arithmetic results, that is, double+integer has to use double plus operation
-
-    // Evaluator interface rework:
-    // OledbEvaluator opens a data sets with loading data. So we need to correctly close the resul set etc. 
-    // - Probably, it could be done in Initialize and Finish methods (Next/Evaluate is called between them)
-    // Import dimensions do not store data so they should not have ColumnData object (null) even though they have some local type
-    // Evaluate/EvaluateUpdate etc. could be probably implemented within one Evaluate depending on the real expression and task to be performed
-    // - IsUpdate - type of change of the function output: accumulate or set. Essentially, whether it is aggregation evaluator. Do we need it?
-    // - LoopTable - what set to iterate (fact set for aggregation)
-    // - is supposed to be from Evaluate of Column to decide what to loop and how to update etc.
-
-    // ExprNode constructores and update code: name/operation/action constructor, type/set constructor
-
-    // Set::Find, Set::Appenbd
-    // - There are two Find. Problem is that one uses only key dims while the other all provided parameter values - Decide what is better
-    // - Decide whether Append should check uniqueness and Where conditions or it has been done externally
-
-    // There are generating dims and simply mapped dims. Generating dims are used by set population only, while normal mapped dims are used by dim population. 
-    // Currently any new mapped dim created via Dim(Mapping) is marked as a generating dim. It is better to mark it explicitly as generating dim or not rather than automatically.
-
-    // Set::Populate
-    // !!! Append an element to the generating/projection column(s) if an element has been appended/found in the target set. Alternatively, we will have to evaluate this generating dimension separately (double work).
-    // - This means a principle: generating dimensions are not evaluated separately - they are evaluated during their target set population.
-    // - For Oledb (import/export) dims it is not needed because these dimensions do not store data.
-    // - !!! For product, turn off indexing and then index the whole result set at the end. It is because we append ALL generated elements and then remove them if they do not satisfy the where condition which can be very inefficient. 
-    //   - Introduce API for controling indexing (on/off, table/column etc.)
-    //   - Alternativey, we could introduce 'this' value as an Expr instance similar to having DataRow for 'this' value, and then a special evaluator. But it might be more difficult and more restrictive in future for complex where conditions.
-
-    // Dim population principles:
-    // - currently we Append from the loop manually and not from the expression (as opposed ot Set::Populate) - it is bad: either all in Evaluate or all in Populate
-    //   - so we should NOT use column Evaluator for populating a set 
-    //      --> column evaluator of generating dims is never used from the colum population procedure (but can be if called explicitly) 
-    //      --> all column evaluators NEVER change (influence) their sets (neither greater nor lesser) - it computes only this function
 
 }

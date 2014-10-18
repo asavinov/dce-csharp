@@ -88,7 +88,9 @@ namespace Com.Model
         /// <summary>
         /// Whether output values are appended to the output set. 
         /// </summary>
-        bool IsGenerating { get; set; }
+        bool IsAppendData { get; set; }
+
+        bool IsAppendSchema { get; set; }
 
         /// <summary>
         /// Restricts kind of formula used to define this column. 

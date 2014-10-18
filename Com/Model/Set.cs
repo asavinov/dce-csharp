@@ -364,7 +364,7 @@ namespace Com.Model
             //
             // Really append a new element to the set
             //
-            foreach (Dim dim in Columns) // We must append one value to ALL greater dimensions (possibly null)
+            foreach (ComColumn dim in Columns) // We must append one value to ALL greater dimensions (possibly null)
             {
                 ExprNode childExpr = expr.GetChild(dim.Name); // TODO: replace by accessor by dimension reference (has to be resolved in the tuple)
                 object val = null;
@@ -381,8 +381,6 @@ namespace Com.Model
 
             length++;
             return Length - 1;
-
-            return 0;
         }
 
         #endregion
@@ -492,7 +490,7 @@ namespace Com.Model
             }
             else if (DefinitionType == TableDefinitionType.PROJECTION) // There are import dimensions so copy data from another set (projection of another set)
             {
-                ComColumn projectDim = InputColumns.Where(d => d.Definition.IsGenerating).ToList()[0];
+                ComColumn projectDim = InputColumns.Where(d => d.Definition.IsAppendData).ToList()[0];
                 ComTable sourceSet = projectDim.Input;
                 ComTable targetSet = projectDim.Output; // this set
 
@@ -543,7 +541,7 @@ namespace Com.Model
 
             foreach (ComColumn col in InputColumns) // If a generating source set has changed then this set has to be populated
             {
-                if (!col.Definition.IsGenerating) continue;
+                if (!col.Definition.IsAppendData) continue;
                 res.Add(col.Input);
             }
 
@@ -577,7 +575,7 @@ namespace Com.Model
 
             foreach (ComColumn col in Columns) // If this table has changed then output tables of generating dimensions have to be populated
             {
-                if (!col.Definition.IsGenerating) continue;
+                if (!col.Definition.IsAppendData) continue;
                 res.Add(col.Output);
             }
 
@@ -607,7 +605,7 @@ namespace Com.Model
 
             foreach (ComColumn col in InputColumns) // If a generating source column (definition) has changed then this set has to be updated
             {
-                if (!col.Definition.IsGenerating) continue;
+                if (!col.Definition.IsAppendData) continue;
                 res.Add(col);
             }
 
@@ -640,7 +638,7 @@ namespace Com.Model
 
             foreach (ComColumn col in Columns) // If this set has changed then all greater generating columns have to be updated
             {
-                if (!col.Definition.IsGenerating) continue;
+                if (!col.Definition.IsAppendData) continue;
                 res.Add(col);
             }
 
