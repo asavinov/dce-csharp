@@ -683,42 +683,11 @@ namespace Com.Model
                     // Analyze sample values of sd and choose the most specific target type
                     //
                     List<string> values = ((DimCsv)sd).SampleValues;
-                    string targetTypeName = "String";
-                    bool success = false;
 
-                    if (success == false)
-                    {
-                        targetTypeName = "Integer";
-                        success = true;
-                        foreach (var val in values)
-                        {
-                            int intValue;
-                            if (!int.TryParse(val, NumberStyles.Integer, CultureInfo.InvariantCulture, out intValue))
-                            {
-                                success = false;
-                                break;
-                            }
-                        }
-                    }
-                    if (success == false)
-                    {
-                        targetTypeName = "Double";
-                        success = true;
-                        foreach (var val in values)
-                        {
-                            double doubleValue;
-                            if (!double.TryParse(val, NumberStyles.Float, CultureInfo.InvariantCulture, out doubleValue))
-                            {
-                                success = false;
-                                break;
-                            }
-                        }
-                    }
-                    if (success == false)
-                    {
-                        targetTypeName = "String";
-                        success = true;
-                    }
+                    string targetTypeName;
+                    if (Utils.isInt32(values.ToArray())) targetTypeName = "Integer";
+                    else if (Utils.isDouble(values.ToArray())) targetTypeName = "Double";
+                    else targetTypeName = "String";
 
                     ComTable targetType = targetSchema.GetPrimitive(targetTypeName);
 

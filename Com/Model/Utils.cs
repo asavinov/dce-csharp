@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Text;
 
 using Newtonsoft.Json.Linq;
+using System.Globalization;
 
 namespace Com.Model
 {
@@ -234,6 +235,33 @@ namespace Com.Model
             }
 
             return obj;
+        }
+
+
+        public static bool isInt32(string[] values)
+        {
+            foreach (var val in values)
+            {
+                int intValue;
+                if (!int.TryParse(val, NumberStyles.Integer, CultureInfo.InvariantCulture, out intValue))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        public static bool isDouble(string[] values)
+        {
+            foreach (var val in values)
+            {
+                double doubleValue;
+                if (!double.TryParse(val, NumberStyles.Float, CultureInfo.InvariantCulture, out doubleValue))
+                {
+                    return false;
+                }
+            }
+            return true;
         }
 
     }
