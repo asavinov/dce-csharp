@@ -52,7 +52,7 @@ namespace Com.Query
         {
             // Context stores the current state which is read and then written as a result of the operation execution
             ScriptContext ctx = GetContext();
-            SetTop top = ctx.Schemas[0];
+            Schema top = ctx.Schemas[0];
             string name, type;
 
             switch (OpType)
@@ -114,7 +114,7 @@ namespace Com.Query
                         }
                         else { break; } // ERROR: parameter wrong or not found
 
-                        //SetTopOledb dbTop = new SetTopOledb("");
+                        //SchemaOledb dbTop = new SchemaOledb("");
                         //dbTop.ConnectionString = connection;
                         //dbTop.Open();
                         //dbTop.ImportSchema();
@@ -123,10 +123,10 @@ namespace Com.Query
                     else if (Name == "Load")
                     {
                         ScriptOp child = GetChild("this");
-                        SetTop db = null;
+                        Schema db = null;
                         if (child != null)
                         {
-                            db = (SetTop)child.Result.Value;
+                            db = (Schema)child.Result.Value;
                         }
                         else { break; } // ERROR: parameter wrong or not found
 
@@ -262,7 +262,7 @@ namespace Com.Query
     /// </summary>
     public class ScriptContext : ScriptOp
     {
-        public List<SetTop> Schemas { get; set; } // State. Each schema stores a list of function objects as well as sets and maybe also schema-level variables.
+        public List<Schema> Schemas { get; set; } // State. Each schema stores a list of function objects as well as sets and maybe also schema-level variables.
 
         public List<ContextVariable> Variables { get; set; } // State. A list of named and typed variables each storing a shared run-time object references that can be used by operations within this context. 
         public ContextVariable GetVariable(string name) 
@@ -316,8 +316,8 @@ namespace Com.Query
         {
             OpType = ScriptOpType.CONTEXT;
 
-            Schemas = new List<SetTop>();
-            SetTop top = new SetTop("My Mashup");
+            Schemas = new List<Schema>();
+            Schema top = new Schema("My Mashup");
             Schemas.Add(top);
 
             Variables = new List<ContextVariable>();

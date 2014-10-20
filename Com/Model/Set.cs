@@ -49,7 +49,7 @@ namespace Com.Model
             {
                 ComTable set = this;
                 while (set.SuperTable != null) set = set.SuperTable;
-                return set is SetTop ? (SetTop)set : null; // A set which is not integrated in the schema does not have top
+                return set is Schema ? (Schema)set : null; // A set which is not integrated in the schema does not have top
             }
         }
 

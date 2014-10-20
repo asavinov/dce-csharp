@@ -72,9 +72,9 @@
     <Compile Include="Model\Mapper.cs" />
     <Compile Include="Model\Mapping.cs" />
     <Compile Include="Model\Set.cs" />
-    <Compile Include="Model\SetTop.cs" />
-    <Compile Include="Model\SetTopCsv.cs" />
-    <Compile Include="Model\SetTopOledb.cs" />
+    <Compile Include="Model\Schema.cs" />
+    <Compile Include="Model\SchemaCsv.cs" />
+    <Compile Include="Model\SchemaOledb.cs" />
     <Compile Include="Model\TreeNode.cs" />
     <Compile Include="Model\Utils.cs" />
     <Compile Include="Model\Workspace.cs" />

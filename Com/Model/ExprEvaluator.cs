@@ -317,7 +317,7 @@ namespace Com.Model
             : base(column)
         {
             // Produce a result set that can be iterated through
-            connectionCsv = ((SetTopCsv)thisTable.Schema).connection;
+            connectionCsv = ((SchemaCsv)thisTable.Schema).connection;
             connectionCsv.Open((SetCsv)thisTable);
 
             thisCurrent = 0;
@@ -367,7 +367,7 @@ namespace Com.Model
             : base(column)
         {
             // Produce a result set from the remote database by executing a query on the source table
-            dataTable = ((SetTopOledb)thisTable.Schema).LoadTable(thisTable);
+            dataTable = ((SchemaOledb)thisTable.Schema).LoadTable(thisTable);
             rows = dataTable.Rows.GetEnumerator();
         }
     }

@@ -54,7 +54,7 @@ namespace Test
         protected ComSchema CreateSampleSchema()
         {
             // Prepare schema
-            ComSchema schema = new SetTop("My Schema");
+            ComSchema schema = new Schema("My Schema");
 
             // Table 1
             ComTable t1 = schema.CreateTable("Table 1");
@@ -551,7 +551,7 @@ namespace Test
             Assert.AreEqual(20, tables.Count);
 
             // Db
-            SetTopOledb top = new SetTopOledb("");
+            SchemaOledb top = new SchemaOledb("");
             top.connection = conn;
 
             //
@@ -572,7 +572,7 @@ namespace Test
             //
             // Configure import 
             //
-            ComSchema schema = new SetTop("My Schema");
+            ComSchema schema = new Schema("My Schema");
 
             ComTable orderDetailsTable = schema.CreateTable("Order Details");
             orderDetailsTable.Definition.DefinitionType = TableDefinitionType.PROJECTION;
@@ -600,7 +600,7 @@ namespace Test
         public void CsvTest() // Load Csv schema and data
         {
             // Create schema for a remote db
-            SetTopCsv top = new SetTopCsv("My Files");
+            SchemaCsv top = new SchemaCsv("My Files");
 
             // Load schema
             SetCsv table = (SetCsv)top.CreateTable("Products");
@@ -616,7 +616,7 @@ namespace Test
             //
             // Configure import 
             //
-            ComSchema schema = new SetTop("My Schema");
+            ComSchema schema = new Schema("My Schema");
 
             ComTable productsTable = schema.CreateTable("Products");
             productsTable.Definition.DefinitionType = TableDefinitionType.PROJECTION;
@@ -698,7 +698,7 @@ namespace Test
 'schemas': [ 
 
 { 
-'type': 'SetTop', 
+'type': 'Schema', 
 'name': 'My Schema', 
 'tables': [
   { 'type': 'Set', 'name': 'My Table' }
@@ -710,7 +710,7 @@ namespace Test
 }, 
 
 { 
-'type': 'SetTopCsv', 
+'type': 'SchemaCsv', 
 'name': 'Rel Schema', 
 'tables': [
   { 'type': 'SetRel', 'name': 'Rel Table' }

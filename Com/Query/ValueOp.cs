@@ -121,7 +121,7 @@ namespace Com.Query
     /// </summary>
     public class ValueContext : ValueOp
     {
-        public List<SetTop> Schemas { get; set; } // State. Each schema stores a list of function objects as well as sets and maybe also schema-level variables.
+        public List<Schema> Schemas { get; set; } // State. Each schema stores a list of function objects as well as sets and maybe also schema-level variables.
 
         public List<ValVariable> Variables { get; set; } // State. A list of named and typed variables each storing a shared run-time object references that can be used by operations within this context. 
 
@@ -129,7 +129,7 @@ namespace Com.Query
         {
             OpType = ValueOpType.CONTEXT;
 
-            Schemas = new List<SetTop>();
+            Schemas = new List<Schema>();
 
             Variables = new List<ValVariable>();
         }

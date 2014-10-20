@@ -637,11 +637,11 @@ namespace Com.Model
             {
                 ; // Nothing to do
             }
-            else if (Dim.Input.Schema != Dim.Output.Schema && Dim.Input.Schema is SetTopCsv) // Import data from a remote source
+            else if (Dim.Input.Schema != Dim.Output.Schema && Dim.Input.Schema is SchemaCsv) // Import data from a remote source
             {
                 evaluator = new CsvEvaluator(Dim);
             }
-            else if (Dim.Input.Schema != Dim.Output.Schema && Dim.Input.Schema is SetTopOledb) // Import data from a remote source
+            else if (Dim.Input.Schema != Dim.Output.Schema && Dim.Input.Schema is SchemaOledb) // Import data from a remote source
             {
                 evaluator = new OledbEvaluator(Dim);
             }

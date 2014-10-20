@@ -683,7 +683,7 @@ namespace Com.Model
         {
             ExprNode expr = null;
 
-            if (path.Input.Schema is SetTopCsv) // Access via column index
+            if (path.Input.Schema is SchemaCsv) // Access via column index
             {
                 DimCsv seg = (DimCsv)path.FirstSegment;
 
@@ -694,7 +694,7 @@ namespace Com.Model
                 expr.Result.TypeTable = seg.Output;
                 expr.Result.TypeName = seg.Output.Name;
             }
-            else if (path.Input.Schema is SetTopOledb) // Access via relational attribute
+            else if (path.Input.Schema is SchemaOledb) // Access via relational attribute
             {
                 expr = new OledbExprNode();
                 expr.Operation = OperationType.CALL;

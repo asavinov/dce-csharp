@@ -68,23 +68,23 @@ namespace Com.Model
             List<Mapping> maps = new List<Mapping>();
             ComTable targetSet;
 
-            if (sourceSchema.GetType() == typeof(SetTop)) // SetTop -> *
+            if (sourceSchema.GetType() == typeof(Schema)) // Schema -> *
             {
-                if (targetSchema.GetType() == typeof(SetTop)) // SetTop -> SetTop
+                if (targetSchema.GetType() == typeof(Schema)) // Schema -> Schema
                 {
                     targetSet = targetSchema.GetPrimitive(sourceSet.Name);
                     Mapping map = new Mapping(sourceSet, targetSet);
                     map.Similarity = 1.0;
                     maps.Add(map);
                 }
-                else if (targetSchema.GetType() == typeof(SetTopOledb)) // SetTop -> SetTopOledb
+                else if (targetSchema.GetType() == typeof(SchemaOledb)) // Schema -> SchemaOledb
                 {
                     throw new NotImplementedException();
                 }
             }
-            else if (sourceSchema is SetTopOledb) // SetTopOledb -> *
+            else if (sourceSchema is SchemaOledb) // SchemaOledb -> *
             {
-                if (targetSchema.GetType() == typeof(SetTop)) // SetTopOledb -> SetTop
+                if (targetSchema.GetType() == typeof(Schema)) // SchemaOledb -> Schema
                 {
                     OleDbType sourceType = (OleDbType)Enum.Parse(typeof(OleDbType), sourceSet.Name, false); // Convert type representation: from name to enum (equivalent)
                     string targetType;
@@ -173,7 +173,7 @@ namespace Com.Model
                     map.Similarity = 1.0;
                     maps.Add(map);
                 }
-                else if (targetSchema.GetType() == typeof(SetTopOledb)) // SetTopOledb -> SetTopOledb
+                else if (targetSchema.GetType() == typeof(SchemaOledb)) // SchemaOledb -> SchemaOledb
                 {
                     targetSet = targetSchema.GetPrimitive(sourceSet.Name);
                     Mapping map = new Mapping(sourceSet, targetSet);
@@ -181,9 +181,9 @@ namespace Com.Model
                     maps.Add(map);
                 }
             }
-            else if (sourceSchema is SetTopCsv) // SetTopCsv -> *
+            else if (sourceSchema is SchemaCsv) // SchemaCsv -> *
             {
-                if (targetSchema.GetType() == typeof(SetTop)) // SetTopCsv -> SetTop
+                if (targetSchema.GetType() == typeof(Schema)) // SchemaCsv -> Schema
                 {
                     string targetType = "String";
                 }
@@ -648,7 +648,7 @@ namespace Com.Model
 
             PathMatch match;
 
-            if (sourceSchema is SetTopOledb)
+            if (sourceSchema is SchemaOledb)
             {
                 SetRel set = (SetRel)map.SourceSet;
                 foreach (DimAttribute att in set.GreaterPaths)
@@ -668,7 +668,7 @@ namespace Com.Model
                     map.Matches.Add(match);
                 }
             }
-            else if (sourceSchema is SetTopCsv)
+            else if (sourceSchema is SchemaCsv)
             {
                 ComTable set = (ComTable)map.SourceSet;
                 foreach (ComColumn sd in set.Columns)

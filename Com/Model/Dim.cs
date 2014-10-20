@@ -328,10 +328,10 @@ namespace Com.Model
             ComColumnData colData = new DimDataEmpty();
 
             /*
-            if (column.Input != null && column.Input.Schema != null && column.Input.Schema.GetType() != typeof(SetTop)) // Import dim
+            if (column.Input != null && column.Input.Schema != null && column.Input.Schema.GetType() != typeof(Schema)) // Import dim
             {
             }
-            else if (column.Output != null && column.Output.Schema != null && column.Output.Schema.GetType() != typeof(SetTop)) // Output dim
+            else if (column.Output != null && column.Output.Schema != null && column.Output.Schema.GetType() != typeof(Schema)) // Output dim
             {
             }
             */
