@@ -109,7 +109,7 @@ namespace Com.Model
             }
             else
             {
-                val = ObjectToGeneric(value);
+                val = ToThisType(value);
                 interval = FindIndexes(val);
 
                 if (oldPos < _nullCount) _nullCount--; // If old value is null, then decrease the number of nulls
@@ -140,7 +140,7 @@ namespace Com.Model
                 return;
             }
 
-            T val = ObjectToGeneric(value);
+            T val = ToThisType(value);
             for (Offset i = 0; i < _length; i++)
             {
                 _cells[i] = val;
@@ -177,7 +177,7 @@ namespace Com.Model
             }
             else
             {
-                val = ObjectToGeneric(value);
+                val = ToThisType(value);
                 interval = FindIndexes(val);
             }
 
@@ -224,11 +224,11 @@ namespace Com.Model
         {
             if (value == null || !value.GetType().IsArray)
             {
-                return deprojectValue(ObjectToGeneric(value));
+                return deprojectValue(ToThisType(value));
             }
             else
             {
-                return deproject(ObjectToGenericArray(value));
+                return deproject(ArrayToThisType(value));
             }
         }
 
@@ -240,7 +240,7 @@ namespace Com.Model
         {
             if (values == null) return default(T);
 
-            T[] array = ObjectToGenericArray(values);
+            T[] array = ArrayToThisType(values);
             return Aggregate(array, function, Aggregator);
         }
 
@@ -427,7 +427,7 @@ namespace Com.Model
             return result;
         }
 
-        protected T ObjectToGeneric(object value)
+        protected T ToThisType(object value)
         {
             // You can use Convert.ChangeType method, if the types you use implement IConvertible (all primitive types do):
             // Convert.ChangeType(value, targetType);
@@ -459,7 +459,7 @@ namespace Com.Model
             }
         }
 
-        protected T[] ObjectToGenericArray(object values)
+        protected T[] ArrayToThisType(object values)
         {
             // Cast array parameter type: object[] -> T[]
             if (values is T[])
@@ -483,7 +483,7 @@ namespace Com.Model
             }
             else
             {
-                return new T[] { ObjectToGeneric(values) };
+                return new T[] { ToThisType(values) };
             }
 
             // Alternatives:
@@ -519,17 +519,17 @@ namespace Com.Model
             Type type = typeof(T);
             if (type == typeof(int))
             {
-                _nullValue = ObjectToGeneric(int.MinValue);
+                _nullValue = ToThisType(int.MinValue);
                 Aggregator = new IntAggregator() as IAggregator<T>;
             }
             else if (type == typeof(double))
             {
-                _nullValue = ObjectToGeneric(double.NaN);
+                _nullValue = ToThisType(double.NaN);
                 Aggregator = new DoubleAggregator() as IAggregator<T>;
             }
             else if (type == typeof(decimal))
             {
-                _nullValue = ObjectToGeneric(decimal.MinValue);
+                _nullValue = ToThisType(decimal.MinValue);
                 Aggregator = new DecimalAggregator() as IAggregator<T>;
             }
             else if (!type.IsValueType) // Reference type
