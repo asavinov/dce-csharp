@@ -16,6 +16,8 @@ namespace Com.Model
     // Main unit of the representation is a triple: (Type) Name = Value. 
     public class ExprNode : TreeNode<ExprNode>, ComJson
     {
+        public static CultureInfo cultureInfo = new System.Globalization.CultureInfo("en-US");
+
         public ExprNode GetChild(int child) { return (ExprNode)Children[child]; }
         public ExprNode GetChild(string name)
         {
@@ -83,12 +85,12 @@ namespace Com.Model
                 // Resolve string into object and store in the result. Derive the type from the format. 
                 //
                 // About conversion from string: http://stackoverflow.com/questions/3965871/c-sharp-generic-string-parse-to-any-object
-                if (int.TryParse(Name, NumberStyles.Integer, CultureInfo.InvariantCulture, out intValue))
+                if (int.TryParse(Name, NumberStyles.Integer, cultureInfo, out intValue))
                 {
                     Result.TypeName = "Integer";
                     Result.SetValue(intValue);
                 }
-                else if (double.TryParse(Name, NumberStyles.Float, CultureInfo.InvariantCulture, out doubleValue))
+                else if (double.TryParse(Name, NumberStyles.Float, cultureInfo, out doubleValue))
                 {
                     Result.TypeName = "Double";
                     Result.SetValue(doubleValue);

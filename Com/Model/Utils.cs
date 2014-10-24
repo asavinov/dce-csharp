@@ -14,6 +14,8 @@ namespace Com.Model
 
     public class Utils
     {
+        public static CultureInfo cultureInfo = new System.Globalization.CultureInfo("en-US");
+
         // Source: http://stackoverflow.com/questions/7343465/compression-decompression-string-with-c-sharp
         public static byte[] Zip(string str)
         {
@@ -240,10 +242,13 @@ namespace Com.Model
 
         public static bool isInt32(string[] values)
         {
+            if (values == null) return false;
+
             foreach (var val in values)
             {
+                if (val == null) continue; // assumption: null is supposed to be a valid number
                 int intValue;
-                if (!int.TryParse(val, NumberStyles.Integer, CultureInfo.InvariantCulture, out intValue))
+                if (!int.TryParse(val, NumberStyles.Integer, cultureInfo, out intValue))
                 {
                     return false;
                 }
@@ -253,10 +258,13 @@ namespace Com.Model
 
         public static bool isDouble(string[] values)
         {
+            if (values == null) return false;
+
             foreach (var val in values)
             {
+                if (val == null) continue; // assumption: null is supposed to be a valid number
                 double doubleValue;
-                if (!double.TryParse(val, NumberStyles.Float, CultureInfo.InvariantCulture, out doubleValue))
+                if (!double.TryParse(val, NumberStyles.Float, cultureInfo, out doubleValue))
                 {
                     return false;
                 }
