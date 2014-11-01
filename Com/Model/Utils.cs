@@ -279,6 +279,8 @@ namespace Com.Model
     // minimum description length (MDL) similar to Jaccard similarity to compare two attributes. This measure computes the ratio of the size of the intersection of two columns' data to the size of their union.
     //   V. Raman and J. M. Hellerstein. Potter's wheel: An interactive data cleaning system. In VLDB, 381-390, 2001.
     // Welch's t-test for a pair of columns that contain numeric values. Given the columns' means and variances, the t-test gives the probability the columns were drawn from the same distribution.
+    //
+    // The Jaccard similarity between two sets x and y is jaccard(x, y) = |x AND y| / |x OR y| 
     public class StringSimilarity
     {
         public static bool JsonTrue(dynamic val)
