@@ -1,6 +1,7 @@
 ﻿using System; 
 using System.Collections.Generic;
 using System.Linq;
+using System.Collections.ObjectModel;
 using System.Text;
 
 using Newtonsoft.Json.Linq;
@@ -12,7 +13,7 @@ namespace Com.Model
     /// </summary>
     public class Workspace : ComJson
     {
-        public List<ComSchema> Schemas { get; set; }
+        public ObservableCollection<ComSchema> Schemas { get; set; }
         public ComSchema GetSchema(string name)
         {
             return Schemas.FirstOrDefault(x => StringSimilarity.SameColumnName(x.Name, name));
@@ -90,7 +91,7 @@ namespace Com.Model
 
         public Workspace()
         {
-            Schemas = new List<ComSchema>();
+            Schemas = new ObservableCollection<ComSchema>();
         }
     }
 

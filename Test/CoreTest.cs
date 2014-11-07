@@ -605,7 +605,9 @@ namespace Test
             // Load schema
             SetCsv table = (SetCsv)top.CreateTable("Products");
             table.FilePath = CsvConnection;
-            top.LoadSchema(table);
+            var columns = top.LoadSchema(table);
+            columns.ForEach(x => x.Add());
+            top.AddTable(table, null, null);
 
             Assert.AreEqual(1, top.Root.SubTables.Count);
             Assert.AreEqual(15, top.GetSubTable("Products").Columns.Count);

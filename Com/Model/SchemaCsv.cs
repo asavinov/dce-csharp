@@ -40,10 +40,11 @@ namespace Com.Model
 
         #region Schema methods
 
-        public void LoadSchema(SetCsv table) // Table object is created to store all necessary parameters which are individual for each table
+        public List<ComColumn> LoadSchema(SetCsv table) // Table object is created to store all necessary parameters which are individual for each table
         {
             connection.Open(table);
 
+            List<ComColumn> columns = new List<ComColumn>();
             List<string> names = connection.GetColumns();
             List<string[]> sampleRows = connection.GetSampleValues();
             for (int i = 0; i < names.Count; i++)
@@ -52,7 +53,8 @@ namespace Com.Model
                 ComTable type = this.GetPrimitive("String");
                 DimCsv column = (DimCsv)this.CreateColumn(columnName, table, type, false);
                 column.ColumnIndex = i;
-                column.Add();
+                columns.Add(column);
+                //column.Add();
 
                 var values = new List<string>();
                 foreach (var row in sampleRows)
@@ -63,9 +65,11 @@ namespace Com.Model
                 column.SampleValues = values;
             }
 
-            AddTable(table, null, null);
+            //AddTable(table, null, null);
 
             connection.Close();
+
+            return columns;
         }
 
         #endregion
