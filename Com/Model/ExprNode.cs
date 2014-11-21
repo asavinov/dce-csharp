@@ -16,7 +16,13 @@ namespace Com.Model
     // Main unit of the representation is a triple: (Type) Name = Value. 
     public class ExprNode : TreeNode<ExprNode>, ComJson
     {
-        public static CultureInfo cultureInfo = new System.Globalization.CultureInfo("en-US");
+        public CultureInfo CultureInfo = new System.Globalization.CultureInfo("en-US");
+        public int ObjectToInt32(object val) { return Convert.ToInt32(val, CultureInfo); }
+        public double ObjectToDouble(object val) { return Convert.ToDouble(val, CultureInfo); }
+        public decimal ObjectToDecimal(object val) { return Convert.ToDecimal(val, CultureInfo); }
+        public string ObjectToString(object val) { return Convert.ToString(val, CultureInfo); }
+        public bool ObjectToBoolean(object val) { return Convert.ToBoolean(val, CultureInfo); }
+        public DateTime ObjectToDateTime(object val) { return Convert.ToDateTime(val, CultureInfo); }
 
         public ExprNode GetChild(int child) { return (ExprNode)Children[child]; }
         public ExprNode GetChild(string name)
@@ -85,12 +91,12 @@ namespace Com.Model
                 // Resolve string into object and store in the result. Derive the type from the format. 
                 //
                 // About conversion from string: http://stackoverflow.com/questions/3965871/c-sharp-generic-string-parse-to-any-object
-                if (int.TryParse(Name, NumberStyles.Integer, cultureInfo, out intValue))
+                if (int.TryParse(Name, NumberStyles.Integer, CultureInfo, out intValue))
                 {
                     Result.TypeName = "Integer";
                     Result.SetValue(intValue);
                 }
-                else if (double.TryParse(Name, NumberStyles.Float, cultureInfo, out doubleValue))
+                else if (double.TryParse(Name, NumberStyles.Float, CultureInfo, out doubleValue))
                 {
                     Result.TypeName = "Double";
                     Result.SetValue(doubleValue);
@@ -330,27 +336,27 @@ namespace Com.Model
                     }
                     else if (StringSimilarity.SameTableName(targeTypeName, "Integer"))
                     {
-                        Result.SetValue(Convert.ToInt32(val));
+                        Result.SetValue(childNode.ObjectToInt32(val));
                     }
                     else if (StringSimilarity.SameTableName(targeTypeName, "Double"))
                     {
-                        Result.SetValue(Convert.ToDouble(val));
+                        Result.SetValue(childNode.ObjectToDouble(val));
                     }
                     else if (StringSimilarity.SameTableName(targeTypeName, "Decimal"))
                     {
-                        Result.SetValue(Convert.ToDecimal(val));
+                        Result.SetValue(childNode.ObjectToDecimal(val));
                     }
                     else if (StringSimilarity.SameTableName(targeTypeName, "String"))
                     {
-                        Result.SetValue(Convert.ToString(val));
+                        Result.SetValue(childNode.ObjectToString(val));
                     }
                     else if (StringSimilarity.SameTableName(targeTypeName, "Boolean"))
                     {
-                        Result.SetValue(Convert.ToBoolean(val));
+                        Result.SetValue(childNode.ObjectToBoolean(val));
                     }
                     else if (StringSimilarity.SameTableName(targeTypeName, "DateTime"))
                     {
-                        Result.SetValue(Convert.ToDateTime(val));
+                        Result.SetValue(childNode.ObjectToDateTime(val));
                     }
                     else
                     {
@@ -400,11 +406,14 @@ namespace Com.Model
                 //
                 // Evaluate children
                 //
-                foreach (TreeNode<ExprNode> childNode in Children)
+                foreach (ExprNode childNode in Children)
                 {
-                    childNode.Item.Evaluate();
+                    childNode.Evaluate();
                 }
 
+                ExprNode child1 = Children.Count > 0 ? (ExprNode) Children[0] : null;
+                ExprNode child2 = Children.Count > 1 ? (ExprNode)Children[1] : null;
+                
                 int intRes;
                 double doubleRes;
                 bool boolRes = false;
@@ -435,7 +444,7 @@ namespace Com.Model
                     }
                     else if (Column != null) 
                     {
-                        ExprNode prevOutput = GetChild(0);
+                        ExprNode prevOutput = child1;
                         Offset input = (Offset)prevOutput.Result.GetValue();
                         object output = Column.Data.GetValue(input);
                         Result.SetValue(output);
@@ -455,9 +464,9 @@ namespace Com.Model
                 else if (Action == ActionType.MUL)
                 {
                     doubleRes = 1.0;
-                    foreach (TreeNode<ExprNode> childNode in Children)
+                    foreach (ExprNode childNode in Children)
                     {
-                        double arg = Convert.ToDouble(childNode.Item.Result.GetValue());
+                        double arg = childNode.ObjectToDouble(childNode.Result.GetValue());
                         if (double.IsNaN(arg)) continue;
                         doubleRes *= arg;
                     }
@@ -465,10 +474,11 @@ namespace Com.Model
                 }
                 else if (Action == ActionType.DIV)
                 {
-                    doubleRes = Convert.ToDouble(((ExprNode)Children[0]).Result.GetValue());
+                    doubleRes = child1.ObjectToDouble(child1.Result.GetValue());
                     for (int i = 1; i < Children.Count; i++)
                     {
-                        double arg = Convert.ToDouble(((ExprNode)Children[i]).Result.GetValue());
+                        ExprNode childNode = (ExprNode)Children[i];
+                        double arg = childNode.ObjectToDouble(childNode.Result.GetValue());
                         if (double.IsNaN(arg)) continue;
                         doubleRes /= arg;
                     }
@@ -479,7 +489,7 @@ namespace Com.Model
                     doubleRes = 0.0;
                     foreach (ExprNode childNode in Children)
                     {
-                        double arg = Convert.ToDouble(childNode.Result.GetValue());
+                        double arg = childNode.ObjectToDouble(childNode.Result.GetValue());
                         if (double.IsNaN(arg)) continue;
                         doubleRes += arg;
                     }
@@ -487,10 +497,11 @@ namespace Com.Model
                 }
                 else if (Action == ActionType.SUB)
                 {
-                    doubleRes = Convert.ToDouble(((ExprNode)Children[0]).Result.GetValue());
+                    doubleRes = child1.ObjectToDouble(child1.Result.GetValue());
                     for (int i = 1; i < Children.Count; i++)
                     {
-                        double arg = Convert.ToDouble(((ExprNode)Children[i]).Result.GetValue());
+                        ExprNode childNode = (ExprNode)Children[i];
+                        double arg = childNode.ObjectToDouble(childNode.Result.GetValue());
                         if (double.IsNaN(arg)) continue;
                         doubleRes /= arg;
                     }
@@ -498,7 +509,7 @@ namespace Com.Model
                 }
                 else if (Action == ActionType.COUNT)
                 {
-                    intRes = Convert.ToInt32(((ExprNode)Children[0]).Result.GetValue());
+                    intRes = child1.ObjectToInt32(child1.Result.GetValue());
                     intRes += 1;
                     Result.SetValue(intRes);
                 }
@@ -507,29 +518,29 @@ namespace Com.Model
                 //
                 else if (Action == ActionType.LEQ)
                 {
-                    double arg1 = Convert.ToDouble(((ExprNode)Children[0]).Result.GetValue());
-                    double arg2 = Convert.ToDouble(((ExprNode)Children[1]).Result.GetValue());
+                    double arg1 = child1.ObjectToDouble(child1.Result.GetValue());
+                    double arg2 = child2.ObjectToDouble(child2.Result.GetValue());
                     boolRes = arg1 <= arg2;
                     Result.SetValue(boolRes);
                 }
                 else if (Action == ActionType.GEQ)
                 {
-                    double arg1 = Convert.ToDouble(((ExprNode)Children[0]).Result.GetValue());
-                    double arg2 = Convert.ToDouble(((ExprNode)Children[1]).Result.GetValue());
+                    double arg1 = child1.ObjectToDouble(child1.Result.GetValue());
+                    double arg2 = child2.ObjectToDouble(child2.Result.GetValue());
                     boolRes = arg1 >= arg2;
                     Result.SetValue(boolRes);
                 }
                 else if (Action == ActionType.GRE)
                 {
-                    double arg1 = Convert.ToDouble(((ExprNode)Children[0]).Result.GetValue());
-                    double arg2 = Convert.ToDouble(((ExprNode)Children[1]).Result.GetValue());
+                    double arg1 = child1.ObjectToDouble(child1.Result.GetValue());
+                    double arg2 = child2.ObjectToDouble(child2.Result.GetValue());
                     boolRes = arg1 > arg2;
                     Result.SetValue(boolRes);
                 }
                 else if (Action == ActionType.LES)
                 {
-                    double arg1 = Convert.ToDouble(((ExprNode)Children[0]).Result.GetValue());
-                    double arg2 = Convert.ToDouble(((ExprNode)Children[1]).Result.GetValue());
+                    double arg1 = child1.ObjectToDouble(child1.Result.GetValue());
+                    double arg2 = child2.ObjectToDouble(child2.Result.GetValue());
                     boolRes = arg1 < arg2;
                     Result.SetValue(boolRes);
                 }
@@ -538,15 +549,15 @@ namespace Com.Model
                 //
                 else if (Action == ActionType.EQ)
                 {
-                    double arg1 = Convert.ToDouble(((ExprNode)Children[0]).Result.GetValue());
-                    double arg2 = Convert.ToDouble(((ExprNode)Children[1]).Result.GetValue());
+                    double arg1 = child1.ObjectToDouble(child1.Result.GetValue());
+                    double arg2 = child2.ObjectToDouble(child2.Result.GetValue());
                     boolRes = arg1 == arg2;
                     Result.SetValue(boolRes);
                 }
                 else if (Action == ActionType.NEQ)
                 {
-                    double arg1 = Convert.ToDouble(((ExprNode)Children[0]).Result.GetValue());
-                    double arg2 = Convert.ToDouble(((ExprNode)Children[1]).Result.GetValue());
+                    double arg1 = child1.ObjectToDouble(child1.Result.GetValue());
+                    double arg2 = child2.ObjectToDouble(child2.Result.GetValue());
                     boolRes = arg1 != arg2;
                     Result.SetValue(boolRes);
                 }
@@ -555,15 +566,15 @@ namespace Com.Model
                 //
                 else if (Action == ActionType.AND)
                 {
-                    bool arg1 = Convert.ToBoolean(((ExprNode)Children[0]).Result.GetValue());
-                    bool arg2 = Convert.ToBoolean(((ExprNode)Children[1]).Result.GetValue());
+                    bool arg1 = child1.ObjectToBoolean(child1.Result.GetValue());
+                    bool arg2 = child2.ObjectToBoolean(child2.Result.GetValue());
                     boolRes = arg1 && arg2;
                     Result.SetValue(boolRes);
                 }
                 else if (Action == ActionType.OR)
                 {
-                    bool arg1 = Convert.ToBoolean(((ExprNode)Children[0]).Result.GetValue());
-                    bool arg2 = Convert.ToBoolean(((ExprNode)Children[1]).Result.GetValue());
+                    bool arg1 = child1.ObjectToBoolean(child1.Result.GetValue());
+                    bool arg2 = child2.ObjectToBoolean(child2.Result.GetValue());
                     boolRes = arg1 || arg2;
                     Result.SetValue(boolRes);
                 }
@@ -695,6 +706,8 @@ namespace Com.Model
                 expr.Name = seg.Name;
                 expr.Result.TypeTable = seg.Output;
                 expr.Result.TypeName = seg.Output.Name;
+
+                expr.CultureInfo = ((SetCsv)seg.Input).CultureInfo;
             }
             else if (path.Input.Schema is SchemaOledb) // Access via relational attribute
             {
@@ -890,6 +903,7 @@ namespace Com.Model
 
         public ExprNode()
         {
+            CultureInfo = Utils.cultureInfo; // Default
             Result = new Variable("return", "Void");
         }
 
