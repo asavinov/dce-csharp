@@ -42,9 +42,15 @@ namespace Com.Model
 
         public List<ComColumn> LoadSchema(SetCsv table) // Table object is created to store all necessary parameters which are individual for each table
         {
+            List<ComColumn> columns = new List<ComColumn>();
+
+            if (table.FilePath == null || !File.Exists(table.FilePath)) // File might not have been created (e.g., if it is an export file)
+            {
+                return columns;
+            }
+            
             connection.Open(table);
 
-            List<ComColumn> columns = new List<ComColumn>();
             List<string> names = connection.GetColumns();
             List<string[]> sampleRows = connection.GetSampleValues();
             for (int i = 0; i < names.Count; i++)
@@ -182,7 +188,20 @@ namespace Com.Model
         public List<string> GetColumns()
         {
             if (csv == null) return null;
-            return csv.FieldHeaders.ToList();
+            if (csv.Configuration.HasHeaderRecord && csv.FieldHeaders != null)
+            {
+                return csv.FieldHeaders.ToList();
+            }
+            else // No columns
+            {
+                var names = new List<string>();
+                var rec = csv.CurrentRecord;
+                for (int f = 0; f < rec.Length; f++)
+                {
+                    names.Add("Column " + (f+1));
+                }
+                return names;
+            }
         }
 
         public List<string[]> GetSampleValues()
