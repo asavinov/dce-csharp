@@ -257,7 +257,7 @@ namespace Com.Model
             length--;
         }
 
-        public Offset Find(ExprNode expr) // Use only identity dims (for general case use Search which returns a subset of elements)
+        public virtual Offset Find(ExprNode expr) // Use only identity dims (for general case use Search which returns a subset of elements)
         {
             // Find the specified tuple but not its nested tuples (if nested tuples have to be found before then use recursive calls, say, a visitor or recursive epxression evaluation)
 
@@ -305,7 +305,7 @@ namespace Com.Model
             }
         }
 
-        public bool CanAppend(ExprNode expr) // Determine if this expression (it has to be evaluated) can be added into this set as a new instance
+        public virtual bool CanAppend(ExprNode expr) // Determine if this expression (it has to be evaluated) can be added into this set as a new instance
         {
             // CanAppend: Check if the whole tuple can be added without errors
             // We do not check existence (it is done before). If tuple exists then no check is done and return false. If null then we check general criterial for adding (presence of all necessary data).
@@ -341,7 +341,7 @@ namespace Com.Model
             return true;
         }
 
-        public Offset Append(ExprNode expr) // Identity dims must be set (for uniqueness). Entity dims are also used when appending.
+        public virtual Offset Append(ExprNode expr) // Identity dims must be set (for uniqueness). Entity dims are also used when appending.
         {
             // Append: append *this* tuple to the set 
             // Greater tuples are not processed  - it is the task of the interpreter. If it is necessary to append (or do something else) with a greater tuple then it has to be done in the interpreter (depending on the operation, action and other parameters)
@@ -494,13 +494,8 @@ namespace Com.Model
                 ComTable sourceSet = projectDim.Input;
                 ComTable targetSet = projectDim.Output; // this set
 
-                // Prepare the expression from the mapping
-                ComEvaluator evaluator = projectDim.Definition.GetEvaluator();
-
-                while (evaluator.Next()) 
-                {
-                    evaluator.Evaluate();
-                }
+                // Delegate to column evaluation - it will add records from column expression
+                projectDim.Definition.Evaluate();
             }
             else
             {
@@ -1012,6 +1007,55 @@ namespace Com.Model
         public string Delimiter { get; set; }
         public CultureInfo CultureInfo { get; set; }
         public Encoding Encoding { get; set; }
+
+        #region ComTableData interface
+
+        public override Offset Find(ExprNode expr) // Use only identity dims (for general case use Search which returns a subset of elements)
+        {
+            return -1; // Not found 
+        }
+
+        public override bool CanAppend(ExprNode expr) // Determine if this expression (it has to be evaluated) can be added into this set as a new instance
+        {
+            return true;
+        }
+
+        public override Offset Append(ExprNode expr) // Identity dims must be set (for uniqueness). Entity dims are also used when appending.
+        {
+            Debug.Assert(!IsPrimitive, "Wrong use: cannot append to a primitive set. ");
+            Debug.Assert(expr.Result.TypeTable == this, "Wrong use: expression OutputSet must be equal to the set its value is appended/found.");
+            Debug.Assert(expr.Operation == OperationType.TUPLE, "Wrong use: operation type for appending has to be TUPLE. ");
+
+
+            string[] values = new string[Columns.Count];
+            
+            //
+            // Really append a new element to the set
+            //
+            foreach (ComColumn dim in Columns) // We must append one value to ALL greater dimensions (possibly null)
+            {
+                for(int i=0; i<values.Length; i++) values[i] = null; // Reset
+
+                ExprNode childExpr = expr.GetChild(dim.Name); // TODO: replace by accessor by dimension reference (has to be resolved in the tuple)
+                object val = null;
+                if (childExpr != null) // A tuple contains a subset of all dimensions
+                {
+                    val = childExpr.Result.GetValue();
+                }
+
+                int colIdx = ((DimCsv)dim).ColumnIndex;
+
+                values[colIdx] = val.ToString();
+            }
+
+            // Append record to the file
+            ConnectionCsv conn = ((SchemaCsv)this.Schema).connection;
+
+            length++;
+            return Length - 1;
+        }
+        
+        #endregion
 
         #region ComJson serialization
 
