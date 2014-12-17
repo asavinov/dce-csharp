@@ -293,7 +293,7 @@ namespace Com.Model
 
             thisVariable.SetValue(currentRecord);
 
-            connectionCsv.Next(); // We increment after iteration because csv is opened with first record initialized
+            connectionCsv.ReadNext(); // We increment after iteration because csv is opened with first record initialized
             thisCurrent++;
 
             return true;
@@ -318,7 +318,7 @@ namespace Com.Model
         {
             // Produce a result set that can be iterated through
             connectionCsv = ((SchemaCsv)thisTable.Schema).connection;
-            connectionCsv.Open((SetCsv)thisTable);
+            connectionCsv.OpenReader((SetCsv)thisTable);
 
             thisCurrent = 0;
             currentRecord = connectionCsv.CurrentRecord; // Start from the first record

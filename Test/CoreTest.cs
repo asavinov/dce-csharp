@@ -29,7 +29,8 @@ namespace Test
         public static string Northwind = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\\Users\\savinov\\git\\comcsharp\\Test\\Northwind.accdb";
         public static string TextDbConnection = "Provider=Microsoft.ACE.OLEDB.12.0; Data Source=C:\\Users\\savinov\\git\\comcsharp\\Test; Extended Properties='Text;Excel 12.0;HDR=Yes;FMT=CSVDelimited;'";
 
-        public static string CsvConnection = "C:\\Users\\savinov\\git\\comcsharp\\Test\\Products.csv";
+        public static string CsvRead = "C:\\Users\\savinov\\git\\comcsharp\\Test\\Products.csv";
+        public static string CsvWrite = "C:\\Users\\savinov\\git\\comcsharp\\Test\\_temp_test_output.csv";
 
         protected ExprNode BuildExpr(string str)
         {
@@ -597,14 +598,14 @@ namespace Test
         }
 
         [TestMethod]
-        public void CsvTest() // Load Csv schema and data
+        public void CsvReadTest() // Load Csv schema and data as a result of evaluation
         {
             // Create schema for a remote db
             SchemaCsv top = new SchemaCsv("My Files");
 
-            // Load schema
+            // Create a remote file description
             SetCsv table = (SetCsv)top.CreateTable("Products");
-            table.FilePath = CsvConnection;
+            table.FilePath = CsvRead;
             var columns = top.LoadSchema(table);
             columns.ForEach(x => x.Add());
             top.AddTable(table, null, null);
@@ -640,6 +641,57 @@ namespace Test
             productsTable.Definition.Populate();
 
             Assert.AreEqual(45, productsTable.Data.Length);
+        }
+
+        [TestMethod]
+        public void CsvWriteTest() // Store schema and data to a CSV file as a result of evaluation
+        {
+            ComSchema schema = CreateSampleSchema();
+            CreateSampleData(schema);
+
+            ComTable t2 = schema.GetSubTable("Table 2");
+
+            ComColumn c21 = t2.GetColumn("Column 21");
+            ComColumn c22 = t2.GetColumn("Column 22");
+            ComColumn c23 = t2.GetColumn("Column 23");
+
+            //
+            // Create schema for a remote db
+            //
+            SchemaCsv top = new SchemaCsv("My Files");
+
+            // Create a remote file description
+            SetCsv table = (SetCsv)top.CreateTable("Products");
+            table.FilePath = CsvWrite;
+            table.Definition.DefinitionType = TableDefinitionType.PROJECTION;
+            top.AddTable(table, null, null);
+
+            //
+            // Configure import 
+            //
+
+            // Create mapping. 
+            Mapper mapper = new Mapper();
+            Mapping map = mapper.CreatePrimitive(top.GetSubTable("Products"), table, schema); // It will map source String to different target types
+            map.Matches.ForEach(m => m.TargetPath.Segments.ForEach(p => p.Add()));
+
+            // Create generating/import column
+            ComColumn dim = schema.CreateColumn(map.SourceSet.Name, map.SourceSet, map.TargetSet, false);
+            dim.Definition.Mapping = map;
+            dim.Definition.DefinitionType = ColumnDefinitionType.LINK;
+            dim.Definition.IsAppendData = true;
+
+            dim.Add();
+
+            table.Definition.Populate();
+            // 1. Create evaluator by generating Expr 
+            //    --> Here we need mapping and output (csv table) column structure. Do we need them? How can we generate them? 
+            //    --> Maybe here we need AppendStructure property and the corresponding method?
+            // 2. Iterate (through normal set) by calling Expr evaluate 
+            // 3. From Expr TUPLE (root), write records to the file by calling Append (and Find)
+            //    --> These Append/Find are overriden in the SetCsv
+
+            // TODO: We could test by reading the file manually
         }
 
         [TestMethod]

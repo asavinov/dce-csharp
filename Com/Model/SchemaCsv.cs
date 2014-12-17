@@ -49,10 +49,10 @@ namespace Com.Model
                 return columns;
             }
             
-            connection.Open(table);
+            connection.OpenReader(table);
 
-            List<string> names = connection.GetColumns();
-            List<string[]> sampleRows = connection.GetSampleValues();
+            List<string> names = connection.ReadColumns();
+            List<string[]> sampleRows = connection.ReadSampleValues();
             for (int i = 0; i < names.Count; i++)
             {
                 string columnName = names[i];
@@ -73,7 +73,7 @@ namespace Com.Model
 
             //AddTable(table, null, null);
 
-            connection.Close();
+            connection.CloseReader();
 
             return columns;
         }
@@ -152,50 +152,51 @@ namespace Com.Model
         // Various parameters for reading the file:
         public int SampleSize = 10;
 
-        private CsvHelper.CsvReader csv;
+        private CsvHelper.CsvReader csvReader;
 
-        public string[] CurrentRecord { get { return csv.CurrentRecord; } }
+        public string[] CurrentRecord { get { return csvReader.CurrentRecord; } }
 
-        public bool Next()
-        {
-            return csv.Read();
-        }
-        
-        public void Open(SetCsv table)
+        public void OpenReader(SetCsv table)
         {
             // Open file
             System.IO.StreamReader textReader = File.OpenText(table.FilePath);
+            //System.IO.StreamReader textReader = new StreamReader(table.FilePath, table.Encoding);
 
-            csv = new CsvHelper.CsvReader(textReader);
+            csvReader = new CsvHelper.CsvReader(textReader);
 
-            csv.Configuration.HasHeaderRecord = table.HasHeaderRecord;
-            csv.Configuration.Delimiter = table.Delimiter;
-            csv.Configuration.CultureInfo = table.CultureInfo;
-            csv.Configuration.Encoding = table.Encoding;
+            csvReader.Configuration.HasHeaderRecord = table.HasHeaderRecord;
+            csvReader.Configuration.Delimiter = table.Delimiter;
+            csvReader.Configuration.CultureInfo = table.CultureInfo;
+            csvReader.Configuration.Encoding = table.Encoding;
 
             // If header is present (parameter is true) then it will read first line and initialize column names from the first line (independent of whether these are names or values)
             // If header is not present (parameter is false) then it will position on the first line and make valid other structures. In particular, we can learn that column names are null.
-            csv.Read();
+            csvReader.Read();
         }
 
-        public void Close()
+        public void CloseReader()
         {
-            if (csv == null) return;
-            csv.Dispose();
-            csv = null;
+            if (csvReader == null) return;
+            csvReader.Dispose();
+            csvReader = null;
         }
 
-        public List<string> GetColumns()
+        public bool ReadNext()
         {
-            if (csv == null) return null;
-            if (csv.Configuration.HasHeaderRecord && csv.FieldHeaders != null)
+            return csvReader.Read();
+        }
+
+        public List<string> ReadColumns()
+        {
+            if (csvReader == null) return null;
+            if (csvReader.Configuration.HasHeaderRecord && csvReader.FieldHeaders != null)
             {
-                return csv.FieldHeaders.ToList();
+                return csvReader.FieldHeaders.ToList();
             }
             else // No columns
             {
                 var names = new List<string>();
-                var rec = csv.CurrentRecord;
+                var rec = csvReader.CurrentRecord;
                 for (int f = 0; f < rec.Length; f++)
                 {
                     names.Add("Column " + (f+1));
@@ -204,19 +205,49 @@ namespace Com.Model
             }
         }
 
-        public List<string[]> GetSampleValues()
+        public List<string[]> ReadSampleValues()
         {
             var sampleRows = new List<string[]>();
 
             for (int row = 0; row < SampleSize; row++)
             {
-                var rec = csv.CurrentRecord;
+                var rec = csvReader.CurrentRecord;
                 sampleRows.Add(rec);
 
-                if (!csv.Read()) break;
+                if (!csvReader.Read()) break;
             }
 
             return sampleRows;
+        }
+
+        private CsvHelper.CsvWriter csvWriter;
+
+        public void OpenWriter(SetCsv table)
+        {
+            // Open file
+            //System.IO.StreamWriter textWriter = File.OpenWrite(table.FilePath);
+            System.IO.StreamWriter textWriter = new StreamWriter(table.FilePath, false, table.Encoding);
+
+            csvWriter = new CsvHelper.CsvWriter(textWriter);
+
+            csvWriter.Configuration.HasHeaderRecord = table.HasHeaderRecord;
+            csvWriter.Configuration.Delimiter = table.Delimiter;
+            csvWriter.Configuration.CultureInfo = table.CultureInfo;
+            csvWriter.Configuration.Encoding = table.Encoding;
+
+            //csvWriter.WriteHeader();
+        }
+
+        public void CloseWriter()
+        {
+            if (csvWriter == null) return;
+            csvWriter.Dispose();
+            csvWriter = null;
+        }
+
+        public void WriteNext(string[] record)
+        {
+            csvWriter.WriteRecord(record);
         }
 
     }

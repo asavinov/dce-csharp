@@ -1030,26 +1030,26 @@ namespace Com.Model
             string[] values = new string[Columns.Count];
             
             //
-            // Really append a new element to the set
+            // Prepare a record with all fields
             //
             foreach (ComColumn dim in Columns) // We must append one value to ALL greater dimensions (possibly null)
             {
-                for(int i=0; i<values.Length; i++) values[i] = null; // Reset
-
                 ExprNode childExpr = expr.GetChild(dim.Name); // TODO: replace by accessor by dimension reference (has to be resolved in the tuple)
                 object val = null;
                 if (childExpr != null) // A tuple contains a subset of all dimensions
                 {
                     val = childExpr.Result.GetValue();
+                    int colIdx = ((DimCsv)dim).ColumnIndex;
+                    if (val != null)
+                    {
+                        values[colIdx] = val.ToString();
+                    }
                 }
-
-                int colIdx = ((DimCsv)dim).ColumnIndex;
-
-                values[colIdx] = val.ToString();
             }
 
-            // Append record to the file
+            // Really append record to the file
             ConnectionCsv conn = ((SchemaCsv)this.Schema).connection;
+            conn.WriteNext(values);
 
             length++;
             return Length - 1;
