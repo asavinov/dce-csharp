@@ -10,6 +10,8 @@ namespace Com.Model
     {
         // Never changes any set - neither lesser nor greater - just compute output given input
 
+        Workspace Workspace { get; set; }
+
         bool Next(); // True if there exists a next element
         bool First(); // True if there exists a first element (if the set is not empty)
         bool Last(); // True if there exists a last element (if the set is not empty)

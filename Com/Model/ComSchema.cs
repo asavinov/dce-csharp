@@ -9,6 +9,8 @@ namespace Com.Model
 {
     public interface ComSchema : ComTable
     {
+        Workspace Workspace { get; set; }
+
         ComTable GetPrimitive(string dataType);
         ComTable Root { get; } // Convenience
 

@@ -160,10 +160,14 @@ namespace Test
         [TestMethod]
         public void SchemaTest() // ComColumn. Manually add/remove tables/columns
         {
+            Workspace workspace = new Workspace();
+
             //
             // Prepare schema
             //
             ComSchema schema = CreateSampleSchema();
+            workspace.Schemas.Add(schema);
+            schema.Workspace = workspace;
 
             ComTable t1 = schema.GetSubTable("Table 1");
             ComTable t2 = schema.GetSubTable("Table 2");
@@ -190,10 +194,14 @@ namespace Test
         [TestMethod]
         public void ColumnDataTest() // ComColumnData. Manually read/write data
         {
+            Workspace workspace = new Workspace();
+
             //
             // Prepare schema
             //
             ComSchema schema = CreateSampleSchema();
+            workspace.Schemas.Add(schema);
+            schema.Workspace = workspace;
 
             ComTable t1 = schema.GetSubTable("Table 1");
 
@@ -242,10 +250,15 @@ namespace Test
         [TestMethod]
         public void TableDataTest() // ComTableData. Manually read/write data to/from tables
         {
+            Workspace workspace = new Workspace();
+
             //
             // Prepare schema
             //
             ComSchema schema = CreateSampleSchema();
+            workspace.Schemas.Add(schema);
+            schema.Workspace = workspace;
+
             CreateSampleData(schema);
 
             ComTable t1 = schema.GetSubTable("Table 1");
@@ -272,10 +285,15 @@ namespace Test
         [TestMethod]
         public void ArithmeticTest() // ComColumnDefinition. Defining new columns and evaluate them
         {
+            Workspace workspace = new Workspace();
+
             //
             // Prepare schema and fill data
             //
             ComSchema schema = CreateSampleSchema();
+            workspace.Schemas.Add(schema);
+            schema.Workspace = workspace;
+            
             CreateSampleData(schema);
 
             ComTable t1 = schema.GetSubTable("Table 1");
@@ -307,10 +325,15 @@ namespace Test
         [TestMethod]
         public void LinkTest()
         {
+            Workspace workspace = new Workspace();
+
             //
             // Prepare schema and fill data
             //
             ComSchema schema = CreateSampleSchema();
+            workspace.Schemas.Add(schema);
+            schema.Workspace = workspace;
+
             CreateSampleData(schema);
 
             ComTable t1 = schema.GetSubTable("Table 1");
@@ -343,10 +366,15 @@ namespace Test
         [TestMethod]
         public void AggregationTest() // Defining new aggregated columns and evaluate them
         {
+            Workspace workspace = new Workspace();
+
             //
             // Prepare schema and fill data
             //
             ComSchema schema = CreateSampleSchema();
+            workspace.Schemas.Add(schema);
+            schema.Workspace = workspace;
+
             CreateSampleData(schema);
 
             ComTable t1 = schema.GetSubTable("Table 1");
@@ -401,7 +429,12 @@ namespace Test
         [TestMethod]
         public void TableProductTest() // Define a new table and populate it
         {
+            Workspace workspace = new Workspace();
+
             ComSchema schema = CreateSampleSchema();
+            workspace.Schemas.Add(schema);
+            schema.Workspace = workspace;
+
             CreateSampleData(schema);
 
             ComTable t1 = schema.GetSubTable("Table 1");
@@ -442,7 +475,12 @@ namespace Test
         [TestMethod]
         public void TableSubsetTest() // Define a filter to get a subset of record from one table
         {
+            Workspace workspace = new Workspace();
+
             ComSchema schema = CreateSampleSchema();
+            workspace.Schemas.Add(schema);
+            schema.Workspace = workspace;
+
             CreateSampleData(schema);
 
             ComTable t2 = schema.GetSubTable("Table 2");
@@ -466,7 +504,12 @@ namespace Test
         [TestMethod]
         public void ProjectionTest() // Defining new tables via function projection and populate them
         {
+            Workspace workspace = new Workspace();
+
             ComSchema schema = CreateSampleSchema();
+            workspace.Schemas.Add(schema);
+            schema.Workspace = workspace;
+
             CreateSampleData(schema);
 
             ComTable t2 = schema.GetSubTable("Table 2");
@@ -551,9 +594,13 @@ namespace Test
 
             Assert.AreEqual(20, tables.Count);
 
+            Workspace workspace = new Workspace();
+
             // Db
             SchemaOledb top = new SchemaOledb("");
             top.connection = conn;
+            workspace.Schemas.Add(top);
+            top.Workspace = workspace;
 
             //
             // Load schema
@@ -574,6 +621,8 @@ namespace Test
             // Configure import 
             //
             ComSchema schema = new Schema("My Schema");
+            workspace.Schemas.Add(schema);
+            schema.Workspace = workspace;
 
             ComTable orderDetailsTable = schema.CreateTable("Order Details");
             orderDetailsTable.Definition.DefinitionType = TableDefinitionType.PROJECTION;
@@ -600,8 +649,12 @@ namespace Test
         [TestMethod]
         public void CsvReadTest() // Load Csv schema and data as a result of evaluation
         {
+            Workspace workspace = new Workspace();
+
             // Create schema for a remote db
             SchemaCsv top = new SchemaCsv("My Files");
+            workspace.Schemas.Add(top);
+            top.Workspace = workspace;
 
             // Create a remote file description
             SetCsv table = (SetCsv)top.CreateTable("Products");
@@ -620,6 +673,8 @@ namespace Test
             // Configure import 
             //
             ComSchema schema = new Schema("My Schema");
+            workspace.Schemas.Add(schema);
+            schema.Workspace = workspace;
 
             ComTable productsTable = schema.CreateTable("Products");
             productsTable.Definition.DefinitionType = TableDefinitionType.PROJECTION;
@@ -646,7 +701,12 @@ namespace Test
         [TestMethod]
         public void CsvWriteTest() // Store schema and data to a CSV file as a result of evaluation
         {
+            Workspace workspace = new Workspace();
+
             ComSchema schema = CreateSampleSchema();
+            workspace.Schemas.Add(schema);
+            schema.Workspace = workspace;
+
             CreateSampleData(schema);
 
             ComTable t2 = schema.GetSubTable("Table 2");
@@ -659,9 +719,11 @@ namespace Test
             // Create schema for a remote db
             //
             SchemaCsv top = new SchemaCsv("My Files");
+            workspace.Schemas.Add(top);
+            top.Workspace = workspace;
 
             // Create a remote file description
-            SetCsv table = (SetCsv)top.CreateTable("Products");
+            SetCsv table = (SetCsv)top.CreateTable("Table_1");
             table.FilePath = CsvWrite;
             table.Definition.DefinitionType = TableDefinitionType.PROJECTION;
             top.AddTable(table, null, null);
@@ -672,7 +734,7 @@ namespace Test
 
             // Create mapping. 
             Mapper mapper = new Mapper();
-            Mapping map = mapper.CreatePrimitive(top.GetSubTable("Products"), table, schema); // It will map source String to different target types
+            Mapping map = mapper.CreatePrimitive(schema.GetSubTable("Table 1"), table, top); // It will map source String to different target types
             map.Matches.ForEach(m => m.TargetPath.Segments.ForEach(p => p.Add()));
 
             // Create generating/import column
@@ -697,10 +759,13 @@ namespace Test
         [TestMethod]
         public void JsonTest() // Serialize/deserialize schema elements
         {
-            ComSchema sampleSchema = CreateSampleSchema();
+            ComSchema schema = CreateSampleSchema();
+            Workspace sampleWs = new Workspace();
+            sampleWs.Schemas.Add(schema);
+            schema.Workspace = sampleWs;
 
             // Add table definition 
-            ComTable t = sampleSchema.GetSubTable("Table 2");
+            ComTable t = schema.GetSubTable("Table 2");
             t.Definition.DefinitionType = TableDefinitionType.PRODUCT;
             ExprNode ast = BuildExpr("[Column 22] > 20.0 && this.Super.[Column 23] < 50");
             t.Definition.WhereExpr = ast;
@@ -712,7 +777,7 @@ namespace Test
             c.Definition.FormulaExpr = ast;
 
             Workspace ws = new Workspace();
-            ws.Schemas.Add(sampleSchema);
+            ws.Schemas.Add(schema);
 
             JObject workspace = Utils.CreateJsonFromObject(ws);
             ws.ToJson(workspace);

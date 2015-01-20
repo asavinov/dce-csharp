@@ -31,6 +31,8 @@ namespace Com.Model
         // ComColumnEvaluator interface
         //
 
+        public Workspace Workspace { get; set; }
+
         public virtual bool Next()
         {
             if (thisCurrent < thisTable.Data.Length) thisCurrent++;
@@ -77,12 +79,14 @@ namespace Com.Model
 
         public ExprEvaluator(ComColumn column)
         {
+            Workspace = column.Input.Schema.Workspace;
             columnData = column.Data;
 
             // Loop
             thisCurrent = -1;
             thisTable = column.Input;
-            thisVariable = new Variable("this", thisTable.Name);
+            thisVariable = new Variable(thisTable.Schema.Name, thisTable.Name, "this");
+            thisVariable.TypeSchema = thisTable.Schema;
             thisVariable.TypeTable = thisTable;
 
             // Output expression
@@ -114,25 +118,30 @@ namespace Com.Model
                 }
             }
 
+            outputExpr.Result.SchemaName = column.Output.Schema.Name;
             outputExpr.Result.TypeName = column.Output.Name;
+            outputExpr.Result.TypeSchema = column.Output.Schema;
             outputExpr.Result.TypeTable = column.Output;
 
-            outputExpr.Resolve(column.Input.Schema, new List<ComVariable>() { thisVariable });
+            outputExpr.Resolve(Workspace, new List<ComVariable>() { thisVariable });
         }
 
         public ExprEvaluator(ComTable table)
         {
+            Workspace = table.Schema.Workspace;
             columnData = null;
 
             // Loop
             thisCurrent = -1;
             thisTable = table;
-            thisVariable = new Variable("this", thisTable.Name);
+            thisVariable = new Variable(thisTable.Schema.Name, thisTable.Name, "this");
+
+            thisVariable.TypeSchema = thisTable.Schema;
             thisVariable.TypeTable = thisTable;
 
             // Outtput expression
             outputExpr = table.Definition.WhereExpr;
-            outputExpr.Resolve(thisTable.Schema, new List<ComVariable>() { thisVariable });
+            outputExpr.Resolve(Workspace, new List<ComVariable>() { thisVariable });
         }
 
         public ExprEvaluator()
@@ -199,6 +208,7 @@ namespace Com.Model
 
         public AggrEvaluator(ComColumn column) // Create evaluator from structured definition
         {
+            Workspace = column.Input.Schema.Workspace;
             columnData = column.Data;
 
             if (column.Definition.FormulaExpr == null) // From structured definition (parameters)
@@ -207,28 +217,31 @@ namespace Com.Model
                 thisCurrent = -1;
                 thisTable = column.Definition.FactTable;
 
-                thisVariable = new Variable("this", thisTable.Name);
+                thisVariable = new Variable(thisTable.Schema.Name, thisTable.Name, "this");
+                thisVariable.TypeSchema = thisTable.Schema;
                 thisVariable.TypeTable = thisTable;
 
                 // Groups
                 groupExpr = ExprNode.CreateReader(column.Definition.GroupPaths[0], true); // Currently only one path is used
                 groupExpr = (ExprNode)groupExpr.Root;
-                groupExpr.Resolve(thisTable.Schema, new List<ComVariable>() { thisVariable });
+                groupExpr.Resolve(Workspace, new List<ComVariable>() { thisVariable });
 
-                groupVariable = new Variable("this", column.Input.Name);
+                groupVariable = new Variable(column.Input.Schema.Name, column.Input.Name, "this");
+                groupVariable.TypeSchema = column.Input.Schema;
                 groupVariable.TypeTable = column.Input;
 
                 // Measure
                 measureExpr = ExprNode.CreateReader(column.Definition.MeasurePaths[0], true);
                 measureExpr = (ExprNode)measureExpr.Root;
-                measureExpr.Resolve(thisTable.Schema, new List<ComVariable>() { thisVariable });
+                measureExpr.Resolve(Workspace, new List<ComVariable>() { thisVariable });
 
-                measureVariable = new Variable("value", column.Output.Name);
+                measureVariable = new Variable(column.Output.Schema.Name, column.Output.Name, "value");
+                measureVariable.TypeSchema = column.Output.Schema;
                 measureVariable.TypeTable = column.Output;
 
                 // Updater/aggregation function
                 outputExpr = ExprNode.CreateUpdater(column, column.Definition.Updater);
-                outputExpr.Resolve(column.Input.Schema, new List<ComVariable>() { groupVariable, measureVariable });
+                outputExpr.Resolve(Workspace, new List<ComVariable>() { groupVariable, measureVariable });
             }
             else // From expression
             {
@@ -244,30 +257,33 @@ namespace Com.Model
                 thisCurrent = -1;
                 thisTable = column.Input.Schema.GetSubTable(thisTableName);
 
-                thisVariable = new Variable("this", thisTable.Name);
+                thisVariable = new Variable(thisTable.Schema.Name, thisTable.Name, "this");
+                thisVariable.TypeSchema = thisTable.Schema;
                 thisVariable.TypeTable = thisTable;
 
                 // Groups
                 ExprNode groupsNode = aggExpr.GetChild("groups").GetChild(0);
                 groupExpr = groupsNode;
-                groupExpr.Resolve(thisTable.Schema, new List<ComVariable>() { thisVariable });
+                groupExpr.Resolve(Workspace, new List<ComVariable>() { thisVariable });
 
-                groupVariable = new Variable("this", column.Input.Name);
+                groupVariable = new Variable(column.Input.Schema.Name, column.Input.Name, "this");
+                groupVariable.TypeSchema = column.Input.Schema;
                 groupVariable.TypeTable = column.Input;
 
                 // Measure
                 ExprNode measureNode = aggExpr.GetChild("measure").GetChild(0);
                 measureExpr = measureNode;
-                measureExpr.Resolve(thisTable.Schema, new List<ComVariable>() { thisVariable });
+                measureExpr.Resolve(Workspace, new List<ComVariable>() { thisVariable });
 
-                measureVariable = new Variable("value", column.Output.Name);
+                measureVariable = new Variable(column.Output.Schema.Name, column.Output.Name, "value");
+                measureVariable.TypeSchema = column.Output.Schema;
                 measureVariable.TypeTable = column.Output;
 
                 // Updater/aggregation function
                 ExprNode updaterExpr = aggExpr.GetChild("aggregator").GetChild(0);
 
                 outputExpr = ExprNode.CreateUpdater(column, updaterExpr.Name);
-                outputExpr.Resolve(column.Input.Schema, new List<ComVariable>() { groupVariable, measureVariable });
+                outputExpr.Resolve(Workspace, new List<ComVariable>() { groupVariable, measureVariable });
             }
         }
 

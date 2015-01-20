@@ -341,8 +341,11 @@ namespace Com.Model
             tupleExpr.Operation = OperationType.TUPLE;
             tupleExpr.Action = action;
             tupleExpr.Name = ""; // This tuple is not a member in any other tuple
-            tupleExpr.Result.TypeTable = TargetSet; // This tuple is a member in the set
+
+            tupleExpr.Result.SchemaName = TargetSet.Schema.Name;
             tupleExpr.Result.TypeName = TargetSet.Name;
+            tupleExpr.Result.TypeSchema = TargetSet.Schema;
+            tupleExpr.Result.TypeTable = TargetSet; // This tuple is a member in the set
 
             // For each match, add a tuple branch and then an access call
             foreach (PathMatch match in Matches)

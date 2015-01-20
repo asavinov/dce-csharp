@@ -21,6 +21,8 @@ namespace Com.Model
 
         #region ComSchema interface
 
+        public Workspace Workspace { get; set; }
+        
         public ComTable GetPrimitive(string name)
         {
             ComColumn dim = SubColumns.FirstOrDefault(x => StringSimilarity.SameTableName(x.Input.Name, name));

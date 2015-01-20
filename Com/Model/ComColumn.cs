@@ -156,7 +156,20 @@ namespace Com.Model
         string Updater { get; set; }
 
         //
-        // Compute
+        // Schema/structure operations
+        //
+        
+        /// <summary>
+        /// Analyze this definition by extracting the structure of its function output. 
+        /// Append these output columns from the definition of the output table. 
+        ///
+        /// The method guarantees that the function outputs (data) produced by this definition can be appended to the output table, that is, the output table is consistent with this definition. 
+        /// This method can be called before (or within) resolution procedure which can be viewed as a schema-level analogue of data population and which ensures that we have correct schema which is consistent with all formulas/definitions. 
+        /// </summary>
+        void Append();
+
+        //
+        // Compute. Data operations.
         //
 
         ComEvaluator GetEvaluator(); // Get an object which is used to compute the function values according to the formula

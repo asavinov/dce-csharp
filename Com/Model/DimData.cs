@@ -626,7 +626,48 @@ namespace Com.Model
         // Aassert: if LoopSet == ThisSet then GroupCode = null, ThisFunc = MeasureCode
 
         //
-        // Compute
+        // Schema/structure operations
+        //
+
+        public void Append()
+        {
+            if (Dim == null) return;
+            if (Dim.Output == null) return;
+            if (Dim.Output.IsPrimitive) return; // Primitive tables do not have structure
+
+            if (DefinitionType != ColumnDefinitionType.AGGREGATION) return;
+            if (DefinitionType != ColumnDefinitionType.ARITHMETIC) return;
+
+            if (FormulaExpr == null) return;
+
+            //
+            // Analyze output structure of the definition and extract all tables that are used in its output
+            //
+            if (FormulaExpr.Result.TypeTable == null)
+            {
+                string outputTableName = FormulaExpr.Item.Result.TypeName;
+
+                // Try to find this table and if found then assign to the column output
+                // If not found then create output table in the schema and assign to the column output
+            }
+
+            //
+            // Analyze output structure of the definition and extract all columns that are used in its output
+            //
+            if (FormulaExpr.Operation == OperationType.TUPLE)
+            {
+                foreach (var child in FormulaExpr.Children)
+                {
+                    string childName = child.Item.Name;
+                }
+            }
+
+            // Append the columns extracted from the definition to the output set
+
+        }
+
+        //
+        // Compute. Data operations.
         //
 
         public ComEvaluator GetEvaluator()

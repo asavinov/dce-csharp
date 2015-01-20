@@ -80,7 +80,7 @@ namespace Com.Model
         /// - Types in tuples depend on the parent type. Columns (variables, procedures etc.) depend on the children. 
         /// </summary>
         /// <param name="variables"></param>
-        public virtual void Resolve(ComSchema schema, List<ComVariable> variables)
+        public virtual void Resolve(Workspace workspace, List<ComVariable> variables)
         {
             if (Operation == OperationType.VALUE)
             {
@@ -106,40 +106,62 @@ namespace Com.Model
                     Result.TypeName = "String";
                     Result.SetValue(Name);
                 }
-                Result.TypeTable = schema.GetPrimitive(Result.TypeName);
+
+                Result.Resolve(workspace);
             }
             else if (Operation == OperationType.TUPLE)
             {
                 //
                 // Resolve this (tuples are resolved through the parent which must be resolved before children)
+                // In TUPLE, Name denotes a function from the parent (input) to this node (output) 
                 //
-                if (Result.TypeTable == null) // Not resolved yet
+
+                //
+                // 1. Resolve type table name 
+                //
+                Result.Resolve(workspace);
+
+                //
+                // 2. Resolve Name into a column object (a function from the parent to this node)
+                //
+                ExprNode parentNode = (ExprNode)Parent;
+                if (parentNode == null)
                 {
-                    ExprNode parentNode = (ExprNode)Parent;
-                    if (parentNode == null)
+                    ; // Nothing to do
+                }
+                else if (parentNode.Operation == OperationType.TUPLE) // This tuple in another tuple
+                {
+                    if (parentNode.Result.TypeTable != null && !string.IsNullOrEmpty(Name))
                     {
-                        ;
-                    }
-                    else if (parentNode.Operation == OperationType.TUPLE) // Tuple in another tuple
-                    {
-                        if (parentNode.Result.TypeTable != null && !string.IsNullOrEmpty(Name))
+                        ComColumn col = parentNode.Result.TypeTable.GetColumn(Name);
+
+                        if (col != null) // Column resolved 
                         {
-                            ComColumn col = parentNode.Result.TypeTable.GetColumn(Name);
                             Column = col;
-                            Result.TypeTable = col.Output;
-                            Result.TypeName = col.Output.Name;
+
+                            // Check and process type information 
+                            if (Result.TypeTable == null)
+                            {
+                                Result.SchemaName = col.Output.Schema.Name;
+                                Result.TypeName = col.Output.Name;
+                                Result.TypeSchema = col.Output.Schema;
+                                Result.TypeTable = col.Output;
+                            }
+                            else if (Result.TypeTable != col.Output)
+                            {
+                                ; // ERROR: Output type of the column must be the same as this node result type
+                            }
+                        }
+                        else // Column not found 
+                        {
+                            // Append a new column (schema change, e.g., if function output structure has to be propagated)
+                            // TODO:
                         }
                     }
-                    else // Tuple in some other node, e.g, argument or value
-                    {
-                        if (parentNode.Result.TypeTable != null && !string.IsNullOrEmpty(Name))
-                        {
-                            ComColumn col = parentNode.Result.TypeTable.GetColumn(Name);
-                            Column = col;
-                            Result.TypeTable = col.Output;
-                            Result.TypeName = col.Output.Name;
-                        }
-                    }
+                }
+                else // This tuple in some other node, e.g, argument or value
+                {
+                    ; // Is it a valid situation?
                 }
 
                 //
@@ -147,43 +169,45 @@ namespace Com.Model
                 //
                 foreach (TreeNode<ExprNode> childNode in Children)
                 {
-                    childNode.Item.Resolve(schema, variables);
+                    childNode.Item.Resolve(workspace, variables);
                 }
             }
             else if (Operation == OperationType.CALL)
             {
                 //
-                // Resolve children (important: before this node because this node uses children)
+                // Resolve children (important: before this node because this node uses children) 
+                // In CALL, Name denotes a function from children (input) to this node (output) 
                 //
                 foreach (TreeNode<ExprNode> childNode in Children)
                 {
-                    childNode.Item.Resolve(schema, variables);
-                }
-                
-                // Resolve type name
-                if (!string.IsNullOrEmpty(Result.TypeName))
-                {
-                    Result.TypeTable = schema.GetSubTable(Result.TypeName);
+                    childNode.Item.Resolve(workspace, variables);
                 }
 
                 //
-                // Resolve this (children must be resolved before parents)
+                // 1. Resolve type table name
+                //
+                Result.Resolve(workspace);
+
+                //
+                // 2. Resolve Name into a column object, variable, procedure or whatever object that will return a result (children must be resolved before)
                 //
                 ExprNode methodChild = GetChild("method"); // Get column name
-                ExprNode thisChild = GetChild("this"); // Get column lesser set
+                ExprNode thisChild = GetChild("this"); // Get column input (while this node is output)
                 int childCount = Children.Count;
 
-                if (childCount == 0) // Resolve variable (or add a child this variable assuming that it has been omitted)
+                if (childCount == 0) // It is a variable (or it is a function but a child is ommited and has to be reconstructed)
                 {
                     // Try to resolve as a variable (including this variable). If success then finish.
                     ComVariable var = variables.FirstOrDefault(v => StringSimilarity.SameColumnName(v.Name, Name));
 
                     if (var != null) // Resolved as a variable
                     {
-                        Variable = var;
-
+                        Result.SchemaName = var.SchemaName;
                         Result.TypeName = var.TypeName;
+                        Result.TypeSchema = var.TypeSchema;
                         Result.TypeTable = var.TypeTable;
+
+                        Variable = var;
                     }
                     else // Cannot resolve as a variable - try resolve as a column name starting from 'this' table and then continue to super tables
                     {
@@ -196,8 +220,12 @@ namespace Com.Model
                         thisChild.Operation = OperationType.CALL;
                         thisChild.Action = ActionType.READ;
                         thisChild.Name = "this";
+
+                        thisChild.Result.SchemaName = thisVar.SchemaName;
                         thisChild.Result.TypeName = thisVar.TypeName;
+                        thisChild.Result.TypeSchema = thisVar.TypeSchema;
                         thisChild.Result.TypeTable = thisVar.TypeTable;
+
                         thisChild.Variable = thisVar;
 
                         ExprNode path = thisChild;
@@ -240,22 +268,32 @@ namespace Com.Model
                             path = superNode;
                         }
 
-                        if (col != null) // Successfully resolved. Store the results.
+                        if (col != null) // Column resolved
                         {
                             Column = col;
 
-                            Result.TypeName = col.Output.Name;
-                            Result.TypeTable = col.Output;
+                            // Check and process type information 
+                            if (Result.TypeTable == null)
+                            {
+                                Result.SchemaName = col.Output.Schema.Name;
+                                Result.TypeName = col.Output.Name;
+                                Result.TypeSchema = col.Output.Schema;
+                                Result.TypeTable = col.Output;
+                            }
+                            else if (Result.TypeTable != col.Output)
+                            {
+                                ; // ERROR: Output type of the column must be the same as this node result type
+                            }
 
                             AddChild(path);
                         }
-                        else // Failed to resolve symbol
+                        else // Column not found 
                         {
-                            ; // ERROR: failed to resolve symbol in this and parent contexts
+                            ; // ERROR: failed to resolve symbol 
                         }
                     }
                 }
-                else if (childCount == 1) // Function applied to previous output (resolve column)
+                else if (childCount == 1) // It is a column applied to previous output returned in the child
                 {
                     string methodName = this.Name;
                     ExprNode outputChild = null;
@@ -267,19 +305,38 @@ namespace Com.Model
                     {
                         outputChild = GetChild(0);
                     }
-                    ComColumn col = outputChild.Result.TypeTable.GetColumn(methodName);
-                    Column = col;
 
-                    Result.TypeName = col.Output.Name;
-                    Result.TypeTable = col.Output;
+                    ComColumn col = outputChild.Result.TypeTable.GetColumn(methodName);
+
+                    if (col != null) // Column resolved
+                    {
+                        Column = col;
+
+                        // Check and process type information 
+                        if (Result.TypeTable == null)
+                        {
+                            Result.SchemaName = col.Output.Schema.Name;
+                            Result.TypeName = col.Output.Name;
+                            Result.TypeSchema = col.Output.Schema;
+                            Result.TypeTable = col.Output;
+                        }
+                        else if (Result.TypeTable != col.Output)
+                        {
+                            ; // ERROR: Output type of the column must be the same as this node result type
+                        }
+                    }
+                    else // Column not found 
+                    {
+                        ; // ERROR: failed to resolve symbol 
+                    }
                 }
-                else // System procedure or operator (arithmetic, logical etc.)
+                else // It is a system procedure or operator (arithmetic, logical etc.)
                 {
                     string methodName = this.Name;
 
                     // TODO: Derive return type. It is derived from arguments by using type conversion rules
                     Result.TypeName = "Double";
-                    Result.TypeTable = schema.GetPrimitive(Result.TypeName);
+                    Result.Resolve(workspace);
 
                     switch (Action)
                     {
@@ -657,8 +714,11 @@ namespace Com.Model
                     child.Operation = OperationType.TUPLE;
                     child.Action = this.Action; // We inherit the action from the tuple root
                     child.Name = seg.Name;
-                    child.Result.TypeTable = seg.Output;
+
+                    child.Result.SchemaName = seg.Output.Schema.Name;
                     child.Result.TypeName = seg.Output.Name;
+                    child.Result.TypeSchema = seg.Output.Schema;
+                    child.Result.TypeTable = seg.Output;
 
                     node.AddChild(child);
                 }
@@ -678,8 +738,10 @@ namespace Com.Model
                 thisNode.Operation = OperationType.CALL;
                 thisNode.Action = ActionType.READ;
 
-                thisNode.Result.TypeTable = path.Input;
+                thisNode.Result.SchemaName = path.Input.Schema.Name;
                 thisNode.Result.TypeName = path.Input.Name;
+                thisNode.Result.TypeSchema = path.Input.Schema;
+                thisNode.Result.TypeTable = path.Input;
 
                 node.AddChild(thisNode);
                 node = thisNode;
@@ -704,8 +766,11 @@ namespace Com.Model
                 expr.Operation = OperationType.CALL;
                 expr.Action = ActionType.READ;
                 expr.Name = seg.Name;
-                expr.Result.TypeTable = seg.Output;
+
+                expr.Result.SchemaName = seg.Output.Schema.Name;
                 expr.Result.TypeName = seg.Output.Name;
+                expr.Result.TypeSchema = seg.Output.Schema;
+                expr.Result.TypeTable = seg.Output;
 
                 expr.CultureInfo = ((SetCsv)seg.Input).CultureInfo;
             }
@@ -715,8 +780,11 @@ namespace Com.Model
                 expr.Operation = OperationType.CALL;
                 expr.Action = ActionType.READ;
                 expr.Name = path.Name;
-                expr.Result.TypeTable = path.Input;
+
+                expr.Result.SchemaName = path.Input.Schema.Name;
                 expr.Result.TypeName = path.Input.Name;
+                expr.Result.TypeSchema = path.Input.Schema;
+                expr.Result.TypeTable = path.Input;
             }
             else // Access via function/column composition
             {
@@ -728,8 +796,11 @@ namespace Com.Model
                     node.Operation = OperationType.CALL;
                     node.Action = ActionType.READ;
                     node.Name = seg.Name;
-                    node.Result.TypeTable = seg.Output;
+
+                    node.Result.SchemaName = seg.Output.Schema.Name;
                     node.Result.TypeName = seg.Output.Name;
+                    node.Result.TypeSchema = seg.Output.Schema;
+                    node.Result.TypeTable = seg.Output;
 
                     if (expr != null)
                     {
@@ -751,8 +822,10 @@ namespace Com.Model
                 thisNode.Operation = OperationType.CALL;
                 thisNode.Action = ActionType.READ;
 
-                thisNode.Result.TypeTable = path.Input;
+                thisNode.Result.SchemaName = path.Input.Schema.Name;
                 thisNode.Result.TypeName = path.Input.Name;
+                thisNode.Result.TypeSchema = path.Input.Schema;
+                thisNode.Result.TypeTable = path.Input;
 
                 if (expr != null)
                 {
@@ -810,8 +883,10 @@ namespace Com.Model
             valueNode.Operation = OperationType.CALL;
             valueNode.Action = ActionType.READ;
 
-            valueNode.Result.TypeTable = column.Output;
+            valueNode.Result.SchemaName = column.Output.Schema.Name;
             valueNode.Result.TypeName = column.Output.Name;
+            valueNode.Result.TypeSchema = column.Output.Schema;
+            valueNode.Result.TypeTable = column.Output;
 
             //
             // A node for computing a result (updated) function value from the current value and new value
@@ -821,8 +896,10 @@ namespace Com.Model
             expr.Action = aggregation; // SUM etc.
             expr.Name = column.Name;
 
-            expr.Result.TypeTable = column.Output;
+            expr.Result.SchemaName = column.Output.Schema.Name;
             expr.Result.TypeName = column.Output.Name;
+            expr.Result.TypeSchema = column.Output.Schema;
+            expr.Result.TypeTable = column.Output;
 
             // Two arguments in child nodes
             expr.AddChild(currentValueNode);
@@ -847,8 +924,9 @@ namespace Com.Model
             {
                 dynamic result = new JObject();
 
-                result.name = Result.Name;
+                result.schema_name = Result.SchemaName;
                 result.type_name = Result.TypeName;
+                result.name = Result.Name;
 
                 expr.result = result;
             }
@@ -876,10 +954,11 @@ namespace Com.Model
             JObject resultDef = (JObject)json["result"];
             if (resultDef != null)
             {
-                string resultName = (string)resultDef["name"];
+                string resultSchema = (string)resultDef["schema_name"];
                 string resultType = (string)resultDef["type_name"];
+                string resultName = (string)resultDef["name"];
 
-                Result = new Variable(resultName, resultType);
+                Result = new Variable(resultSchema, resultType, resultName);
             }
 
             // List of children
@@ -904,7 +983,7 @@ namespace Com.Model
         public ExprNode()
         {
             CultureInfo = Utils.cultureInfo; // Default
-            Result = new Variable("return", "Void");
+            Result = new Variable("", "Void", "return");
         }
 
     }
@@ -914,19 +993,19 @@ namespace Com.Model
     /// </summary>
     public class OledbExprNode : ExprNode
     {
-        public override void Resolve(ComSchema schema, List<ComVariable> variables)
+        public override void Resolve(Workspace workspace, List<ComVariable> variables)
         {
             if (Operation == OperationType.VALUE)
             {
-                base.Resolve(schema, variables);
+                base.Resolve(workspace, variables);
             }
             else if (Operation == OperationType.TUPLE)
             {
-                base.Resolve(schema, variables);
+                base.Resolve(workspace, variables);
             }
             else if (Operation == OperationType.CALL)
             {
-                base.Resolve(schema, variables);
+                base.Resolve(workspace, variables);
                 // Resolve attribute names by preparing them for access - use directly the name for accessting the row object found in the this child
             }
         }
@@ -954,19 +1033,19 @@ namespace Com.Model
     /// </summary>
     public class CsvExprNode : ExprNode
     {
-        public override void Resolve(ComSchema schema, List<ComVariable> variables)
+        public override void Resolve(Workspace workspace, List<ComVariable> variables)
         {
             if (Operation == OperationType.VALUE)
             {
-                base.Resolve(schema, variables);
+                base.Resolve(workspace, variables);
             }
             else if (Operation == OperationType.TUPLE)
             {
-                base.Resolve(schema, variables);
+                base.Resolve(workspace, variables);
             }
             else if (Operation == OperationType.CALL)
             {
-                base.Resolve(schema, variables);
+                base.Resolve(workspace, variables);
                 // Resolve attribute names by preparing them for access - use directly the name for accessting the row object found in the this child
             }
         }
