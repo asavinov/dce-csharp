@@ -670,7 +670,8 @@ namespace Com.Model
         // Compute. Data operations.
         //
 
-        public ComEvaluator GetEvaluator()
+        // Get an object which is used to compute the function values according to the formula
+        protected ComEvaluator GetEvaluator()
         {
             ComEvaluator evaluator = null;
 
@@ -706,20 +707,106 @@ namespace Com.Model
             return evaluator;
         }
 
-        public void Initialize() { }
+        private void EvaluateBegin() 
+        {
+            //
+            // Open files/databases
+            //
+            if (Dim.Output.Schema is SchemaCsv) // Prepare to writing to a csv file during evaluation
+            {
+                SchemaCsv csvSchema = (SchemaCsv) Dim.Output.Schema;
+                SetCsv csvOutput = (SetCsv) Dim.Output;
+
+                // Ensure that all parameters are correct
+                // Set index for all columns that have to written to the file
+                int index = 0;
+                for(int i = 0; i<csvOutput.Columns.Count; i++) 
+                {
+                    if (!(csvOutput.Columns[i] is DimCsv)) continue;
+
+                    DimCsv col = (DimCsv)csvOutput.Columns[i];
+                    if(col.IsSuper) 
+                    {
+                        col.ColumnIndex = -1; // Will not be written 
+                    }
+                    else if(col.Output.Schema != col.Input.Schema) // Import/export columns do not store data
+                    {
+                        col.ColumnIndex = -1;
+                    }
+                    else 
+                    {
+                        col.ColumnIndex = index;
+                        index++;
+                    }
+                }
+
+                // Open file for writing
+                if (csvSchema.connection != null)
+                {
+                    csvSchema.connection.OpenWriter(csvOutput);
+
+                    // Write header
+                    if (csvOutput.HasHeaderRecord)
+                    {
+                        var header = csvOutput.GetColumnNamesByIndex();
+                        csvSchema.connection.WriteNext(header);
+                    }
+                }
+
+            }
+            else if (Dim.Output.Schema is SchemaOledb) // Prepare to writing to a database during evaluation
+            {
+            }
+
+        }
 
         public void Evaluate()
         {
             ComEvaluator evaluator = GetEvaluator();
             if (evaluator == null) return;
 
-            while (evaluator.Next())
+            try
             {
-                evaluator.Evaluate();
+                EvaluateBegin();
+
+                while (evaluator.Next())
+                {
+                    evaluator.Evaluate();
+                }
             }
+            catch (System.Exception ex)
+            {
+                throw ex;
+            }
+            finally
+            {
+                EvaluateEnd();
+            }
+
         }
 
-        public void Finish() { }
+        private void EvaluateEnd() 
+        {
+            //
+            // Close files/databases
+            //
+            if (Dim.Output.Schema is SchemaCsv)
+            {
+                SchemaCsv csvSchema = (SchemaCsv)Dim.Output.Schema;
+                SetCsv csvOutput = (SetCsv)Dim.Output;
+
+                // Close file
+                if (csvSchema.connection != null)
+                {
+                    csvSchema.connection.CloseWriter();
+                }
+
+            }
+            else if (Dim.Output.Schema is SchemaOledb)
+            {
+            }
+
+        }
 
         //
         // Dependencies

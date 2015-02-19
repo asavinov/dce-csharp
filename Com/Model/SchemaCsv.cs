@@ -88,6 +88,24 @@ namespace Com.Model
             return table;
         }
 
+        public override ComTable AddTable(ComTable table, ComTable parent, string superName)
+        {
+            if (parent == null)
+            {
+                parent = Root;
+            }
+            if (string.IsNullOrEmpty(superName))
+            {
+                superName = "Super";
+            }
+
+            Dim dim = new DimCsv(superName, table, parent, true, true);
+
+            dim.Add();
+
+            return table;
+        }
+
         public override ComColumn CreateColumn(string name, ComTable input, ComTable output, bool isKey)
         {
             Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
@@ -235,7 +253,8 @@ namespace Com.Model
             csvWriter.Configuration.CultureInfo = table.CultureInfo;
             csvWriter.Configuration.Encoding = table.Encoding;
 
-            //csvWriter.WriteHeader();
+            csvWriter.Configuration.QuoteAllFields = true;
+
         }
 
         public void CloseWriter()
@@ -247,7 +266,16 @@ namespace Com.Model
 
         public void WriteNext(string[] record)
         {
-            csvWriter.WriteRecord(record);
+            //csvWriter.WriteRecord<string[]>(record);
+            for (int i = 0; i < record.Length; i++)
+            {
+                string val = "";
+                if (record[i] != null) val = record[i];
+
+                csvWriter.WriteField(val);
+            }
+
+            csvWriter.NextRecord();
         }
 
     }

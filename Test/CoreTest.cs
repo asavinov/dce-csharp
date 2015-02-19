@@ -26,11 +26,11 @@ namespace Test
     [TestClass]
     public class CoreTest
     {
-        public static string Northwind = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\\Users\\savinov\\git\\comcsharp\\Test\\Northwind.accdb";
-        public static string TextDbConnection = "Provider=Microsoft.ACE.OLEDB.12.0; Data Source=C:\\Users\\savinov\\git\\comcsharp\\Test; Extended Properties='Text;Excel 12.0;HDR=Yes;FMT=CSVDelimited;'";
+        public static string Northwind = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\\Users\\savinov\\git\\dce-csharp\\Test\\Northwind.accdb";
+        public static string TextDbConnection = "Provider=Microsoft.ACE.OLEDB.12.0; Data Source=C:\\Users\\savinov\\git\\dce-csharp\\Test; Extended Properties='Text;Excel 12.0;HDR=Yes;FMT=CSVDelimited;'";
 
-        public static string CsvRead = "C:\\Users\\savinov\\git\\comcsharp\\Test\\Products.csv";
-        public static string CsvWrite = "C:\\Users\\savinov\\git\\comcsharp\\Test\\_temp_test_output.csv";
+        public static string CsvRead = "C:\\Users\\savinov\\git\\dce-csharp\\Test\\Products.csv";
+        public static string CsvWrite = "C:\\Users\\savinov\\git\\dce-csharp\\Test\\_temp_test_output.csv";
 
         protected ExprNode BuildExpr(string str)
         {
@@ -585,6 +585,10 @@ namespace Test
         [TestMethod]
         public void OledbTest() // Load Oledb schema and data
         {
+            // Important: this test uses Oledb engine which is architecture dependent (32 or 64) and hence the test can fail depending on what kind of Oledb engine is present (installed)
+            // The test executable has to have the same architecture as the installed Oledb engine (and it can depend on, say, the MS Office architecture)
+            // In VS, this can be set in: Menu | Test | Test Settings | Default Processor Architecture 
+
             // Connection object
             ConnectionOledb conn = new ConnectionOledb();
             conn.ConnectionString = Northwind;

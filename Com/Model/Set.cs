@@ -1008,6 +1008,37 @@ namespace Com.Model
         public CultureInfo CultureInfo { get; set; }
         public Encoding Encoding { get; set; }
 
+        public ComColumn[] GetColumnsByIndex() // Return an array of columns with indexes starting from 0 and ending with last index
+        {
+            var columns = new List<ComColumn>();
+            int columnCount = 0;
+
+            foreach (ComColumn col in Columns)
+            {
+                if (!(col is DimCsv)) continue;
+
+                int colIdx = ((DimCsv)col).ColumnIndex;
+                if (colIdx < 0) continue;
+
+                if (colIdx >= columns.Count) // Ensure that this index exists 
+                {
+                    columns.AddRange(new ComColumn[colIdx - columns.Count + 1]);
+                }
+
+                columns[colIdx] = col;
+                columnCount = Math.Max(columnCount, colIdx);
+            }
+
+            return columns.ToArray();
+        }
+        public string[] GetColumnNamesByIndex()
+        {
+            var columns = GetColumnsByIndex();
+            var columnNames = new string[columns.Length];
+            for (int i = 0; i < columns.Length; i++) columnNames[i] = columns[i].Name;
+            return columnNames;
+        }
+
         #region ComTableData interface
 
         public override Offset Find(ExprNode expr) // Use only identity dims (for general case use Search which returns a subset of elements)
@@ -1027,29 +1058,35 @@ namespace Com.Model
             Debug.Assert(expr.Operation == OperationType.TUPLE, "Wrong use: operation type for appending has to be TUPLE. ");
 
 
-            string[] values = new string[Columns.Count];
-            
+            var columns = GetColumnsByIndex();
+            string[] record = new string[columns.Length];
+
             //
-            // Prepare a record with all fields
+            // Prepare a record with all fields. Here we choose the columns to be written
             //
-            foreach (ComColumn dim in Columns) // We must append one value to ALL greater dimensions (possibly null)
+
+            for (int i = 0; i < columns.Length; i++) // We must append one value to ALL greater dimensions even if a child expression is absent
             {
-                ExprNode childExpr = expr.GetChild(dim.Name); // TODO: replace by accessor by dimension reference (has to be resolved in the tuple)
+                ComColumn col = columns[i];
+                ExprNode childExpr = expr.GetChild(col.Name);
                 object val = null;
-                if (childExpr != null) // A tuple contains a subset of all dimensions
+                if (childExpr != null) // Found. Value is present.
                 {
                     val = childExpr.Result.GetValue();
-                    int colIdx = ((DimCsv)dim).ColumnIndex;
                     if (val != null)
                     {
-                        values[colIdx] = val.ToString();
+                        record[i] = val.ToString();
+                    }
+                    else
+                    {
+                        record[i] = "";
                     }
                 }
             }
 
             // Really append record to the file
             ConnectionCsv conn = ((SchemaCsv)this.Schema).connection;
-            conn.WriteNext(values);
+            conn.WriteNext(record);
 
             length++;
             return Length - 1;

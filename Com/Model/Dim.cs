@@ -513,7 +513,7 @@ namespace Com.Model
         /// </summary>
         public List<string> SampleValues { get; set; }
 
-        public int ColumnIndex { get; set; }
+        public int ColumnIndex { get; set; } // Zero-based sequential column number in the file
 
         #region ComJson serialization
 
