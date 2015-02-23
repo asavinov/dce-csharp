@@ -7,13 +7,6 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-using Antlr4.Runtime;
-//using Antlr4.Runtime.Atn;
-//using Antlr4.Runtime.Dfa;
-//using Antlr4.Runtime.Misc;
-using Antlr4.Runtime.Tree;
-//using DFA = Antlr4.Runtime.Dfa.DFA;
-
 using Com.Model;
 using Com.Query;
 
@@ -32,26 +25,19 @@ namespace Test
         public static string CsvRead = "C:\\Users\\savinov\\git\\dce-csharp\\Test\\Products.csv";
         public static string CsvWrite = "C:\\Users\\savinov\\git\\dce-csharp\\Test\\_temp_test_output.csv";
 
-        protected ExprNode BuildExpr(string str)
+        public static ExprBuilder ExprBuilder { get; set; }
+
+        private static TestContext context;
+
+        #region Initialisation and cleanup
+
+        [ClassInitialize()]
+        public static void SetUpClass(TestContext testContext)
         {
-            ExprLexer lexer;
-            ExprParser parser;
-            IParseTree tree;
-            string tree_str;
-            ExprNode ast;
-
-            ExprBuilder builder = new ExprBuilder();
-
-            lexer = new ExprLexer(new AntlrInputStream(str));
-            parser = new ExprParser(new CommonTokenStream(lexer));
-            tree = parser.expr();
-            tree_str = tree.ToStringTree(parser);
-
-            ast = builder.Visit(tree);
-
-            return ast;
+            context = testContext; 
+            ExprBuilder = new ExprBuilder();
         }
-
+        
         protected ComSchema CreateSampleSchema()
         {
             // Prepare schema
@@ -156,6 +142,8 @@ namespace Test
             vals[3] = 1;
             t2.Data.Append(cols, vals);
         }
+
+        #endregion
 
         [TestMethod]
         public void SchemaTest() // ComColumn. Manually add/remove tables/columns
@@ -309,8 +297,7 @@ namespace Test
             ComColumn c15 = schema.CreateColumn("Column 15", t1, schema.GetPrimitive("Double"), false);
 
             c15.Definition.DefinitionType = ColumnDefinitionType.ARITHMETIC;
-            ExprNode ast = BuildExpr("([Column 11]+10.0) * this.[Column 13]"); // ConceptScript source code: "[Decimal] [Column 15] <body of expression>";
-            c15.Definition.FormulaExpr = ast;
+            c15.Definition.Formula = "([Column 11]+10.0) * this.[Column 13]";
 
             c15.Add();
 
@@ -349,8 +336,7 @@ namespace Test
             ComColumn link = schema.CreateColumn("Column Link", t2, t1, false);
 
             link.Definition.DefinitionType = ColumnDefinitionType.LINK;
-            ExprNode ast = BuildExpr("(( [Integer] [Column 11] = this.[Column 22], [Double] [Column 14] = 20.0 ))"); // Tuple structure corresponds to output table
-            link.Definition.FormulaExpr = ast;
+            link.Definition.Formula = "(( [Integer] [Column 11] = this.[Column 22], [Double] [Column 14] = 20.0 ))"; // Tuple structure corresponds to output table
 
             link.Add();
 
@@ -413,8 +399,7 @@ namespace Test
             ComColumn c16 = schema.CreateColumn("Agg2 of Column 23", t1, schema.GetPrimitive("Double"), false);
             c16.Definition.DefinitionType = ColumnDefinitionType.AGGREGATION;
 
-            ExprNode ast = BuildExpr("AGGREGATE(facts=[Table 2], groups=[Table 1], measure=[Column 23]*2.0 + 1, aggregator=SUM)");
-            c16.Definition.FormulaExpr = ast;
+            c16.Definition.Formula = "AGGREGATE(facts=[Table 2], groups=[Table 1], measure=[Column 23]*2.0 + 1, aggregator=SUM)";
 
             c16.Add();
 
@@ -459,7 +444,7 @@ namespace Test
             // Add simple where expression
             //
 
-            ExprNode ast = BuildExpr("([Table 1].[Column 11] > 10) && this.[Table 2].[Column 23] == 50.0");
+            ExprNode ast = ExprBuilder.Build("([Table 1].[Column 11] > 10) && this.[Table 2].[Column 23] == 50.0");
             t3.Definition.WhereExpr = ast;
 
             t3.Definition.Populate();
@@ -490,7 +475,7 @@ namespace Test
             //
             ComTable t3 = schema.CreateTable("Table 3");
 
-            ExprNode ast = BuildExpr("[Column 22] > 20.0 && this.Super.[Column 23] < 50");
+            ExprNode ast = ExprBuilder.Build("[Column 22] > 20.0 && this.Super.[Column 23] < 50");
             t3.Definition.WhereExpr = ast;
             t3.Definition.DefinitionType = TableDefinitionType.PRODUCT;
 
@@ -771,13 +756,13 @@ namespace Test
             // Add table definition 
             ComTable t = schema.GetSubTable("Table 2");
             t.Definition.DefinitionType = TableDefinitionType.PRODUCT;
-            ExprNode ast = BuildExpr("[Column 22] > 20.0 && this.Super.[Column 23] < 50");
+            ExprNode ast = ExprBuilder.Build("[Column 22] > 20.0 && this.Super.[Column 23] < 50");
             t.Definition.WhereExpr = ast;
 
             // Add column definition 
             ComColumn c = t.GetColumn("Column 22");
             c.Definition.DefinitionType = ColumnDefinitionType.ARITHMETIC;
-            ast = BuildExpr("([Column 11]+10.0) * this.[Column 13]");
+            ast = ExprBuilder.Build("([Column 11]+10.0) * this.[Column 13]");
             c.Definition.FormulaExpr = ast;
 
             Workspace ws = new Workspace();

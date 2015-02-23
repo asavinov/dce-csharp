@@ -3,6 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
+using Antlr4.Runtime;
+//using Antlr4.Runtime.Atn;
+//using Antlr4.Runtime.Dfa;
+//using Antlr4.Runtime.Misc;
+using Antlr4.Runtime.Tree;
+//using DFA = Antlr4.Runtime.Dfa.DFA;
+
 using Com.Model;
 
 using Offset = System.Int32;
@@ -16,6 +23,9 @@ namespace Com.Query
     public class ExprBuilder : ExprBaseVisitor<ExprNode>
     {
         static bool accessAsThisNode = true; // Design alternative: access node can be represented either as a child or this node
+
+
+        #region Visotor interface
 
         public override ExprNode VisitExpr(ExprParser.ExprContext context) 
         {
@@ -250,6 +260,8 @@ namespace Com.Query
             return n;
         }
 
+        #endregion
+
         protected string GetName(ExprParser.NameContext context)
         {
             string name;
@@ -269,6 +281,25 @@ namespace Com.Query
 
             return name;
         }
+
+        public ExprNode Build(string str)
+        {
+            ExprLexer lexer;
+            ExprParser parser;
+            IParseTree tree;
+            string tree_str;
+            ExprNode ast;
+
+            lexer = new ExprLexer(new AntlrInputStream(str));
+            parser = new ExprParser(new CommonTokenStream(lexer));
+            tree = parser.expr();
+            tree_str = tree.ToStringTree(parser);
+
+            ast = this.Visit(tree);
+
+            return ast;
+        }
+
     }
 
 }

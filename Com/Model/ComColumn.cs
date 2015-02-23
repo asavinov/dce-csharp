@@ -97,10 +97,23 @@ namespace Com.Model
         /// </summary>
         ColumnDefinitionType DefinitionType { get; set; }
 
+        //
+        // COEL (language) representation
+        //
+
+        /// <summary>
+        /// Formula in COEL with the function definition
+        /// </summary>
+        string Formula { get; set; }
+
         /// <summary>
         /// Source (user, non-executable) formula for computing this function consisting of value-operations
         /// </summary>
         //AstNode FormulaAst { get; set; }
+
+        //
+        // Structured (object) representation
+        //
 
         /// <summary>
         /// Represents a function definition in terms of other functions (select expression).

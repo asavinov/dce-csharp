@@ -602,7 +602,29 @@ namespace Com.Model
 
         public ColumnDefinitionType DefinitionType { get; set; }
 
-        public AstNode FormulaAst { get; set; }
+        //
+        // COEL (language) representation
+        //
+
+        protected string formula;
+        public String Formula 
+        {
+            get { return formula; }
+            set
+            {
+                formula = value;
+
+                ExprBuilder exprBuilder = new ExprBuilder();
+                ExprNode expr = exprBuilder.Build(formula);
+                FormulaExpr = expr;
+            }
+        }
+
+        //public AstNode FormulaAst { get; set; }
+
+        //
+        // Structured (object) representation
+        //
 
         public ExprNode FormulaExpr { get; set; }
 
