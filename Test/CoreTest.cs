@@ -38,6 +38,21 @@ namespace Test
             ExprBuilder = new ExprBuilder();
         }
         
+        Workspace workspace { get; set; }
+        ComSchema schema { get; set; }
+
+        [TestInitialize()]
+        public void SetUp() {
+            workspace = new Workspace();
+
+            //
+            // Prepare schema
+            //
+            schema = CreateSampleSchema();
+            workspace.Schemas.Add(schema);
+            schema.Workspace = workspace;
+        }
+    
         protected ComSchema CreateSampleSchema()
         {
             // Prepare schema
@@ -148,15 +163,6 @@ namespace Test
         [TestMethod]
         public void SchemaTest() // ComColumn. Manually add/remove tables/columns
         {
-            Workspace workspace = new Workspace();
-
-            //
-            // Prepare schema
-            //
-            ComSchema schema = CreateSampleSchema();
-            workspace.Schemas.Add(schema);
-            schema.Workspace = workspace;
-
             ComTable t1 = schema.GetSubTable("Table 1");
             ComTable t2 = schema.GetSubTable("Table 2");
 
@@ -182,15 +188,6 @@ namespace Test
         [TestMethod]
         public void ColumnDataTest() // ComColumnData. Manually read/write data
         {
-            Workspace workspace = new Workspace();
-
-            //
-            // Prepare schema
-            //
-            ComSchema schema = CreateSampleSchema();
-            workspace.Schemas.Add(schema);
-            schema.Workspace = workspace;
-
             ComTable t1 = schema.GetSubTable("Table 1");
 
             ComColumn c11 = t1.GetColumn("Column 11");
@@ -238,15 +235,6 @@ namespace Test
         [TestMethod]
         public void TableDataTest() // ComTableData. Manually read/write data to/from tables
         {
-            Workspace workspace = new Workspace();
-
-            //
-            // Prepare schema
-            //
-            ComSchema schema = CreateSampleSchema();
-            workspace.Schemas.Add(schema);
-            schema.Workspace = workspace;
-
             CreateSampleData(schema);
 
             ComTable t1 = schema.GetSubTable("Table 1");
@@ -273,15 +261,6 @@ namespace Test
         [TestMethod]
         public void ArithmeticTest() // ComColumnDefinition. Defining new columns and evaluate them
         {
-            Workspace workspace = new Workspace();
-
-            //
-            // Prepare schema and fill data
-            //
-            ComSchema schema = CreateSampleSchema();
-            workspace.Schemas.Add(schema);
-            schema.Workspace = workspace;
-            
             CreateSampleData(schema);
 
             ComTable t1 = schema.GetSubTable("Table 1");
@@ -310,17 +289,54 @@ namespace Test
         }
 
         [TestMethod]
+        public void NativeFunctionTest() // Call native function in column definition
+        {
+            CreateSampleData(schema);
+
+            ComTable t1 = schema.GetSubTable("Table 1");
+
+            ComColumn c11 = t1.GetColumn("Column 11");
+            ComColumn c12 = t1.GetColumn("Column 12");
+            ComColumn c13 = t1.GetColumn("Column 13");
+            ComColumn c14 = t1.GetColumn("Column 14");
+
+            //
+            // Define a derived column with a definition
+            //
+            ComColumn c15 = schema.CreateColumn("Column 15", t1, schema.GetPrimitive("String"), false);
+
+            c15.Definition.DefinitionType = ColumnDefinitionType.ARITHMETIC;
+            c15.Definition.Formula = "call:System.String.Substring( [Column 12], 7, 1 )";
+
+            c15.Add();
+
+            // Evaluate column
+            c15.Definition.Evaluate();
+
+            Assert.AreEqual("0", c15.Data.GetValue(0));
+            Assert.AreEqual("1", c15.Data.GetValue(1));
+            Assert.AreEqual("2", c15.Data.GetValue(2));
+
+            //
+            // Define a derived column with a definition
+            //
+            ComColumn c16 = schema.CreateColumn("Column 15", t1, schema.GetPrimitive("Double"), false);
+            c16.Definition.DefinitionType = ColumnDefinitionType.ARITHMETIC;
+
+            c16.Definition.Formula = "call:System.Math.Pow( [Column 11] / 10.0, [Column 13] / 10.0 )";
+
+            c16.Add();
+
+            c16.Definition.Evaluate();
+
+            Assert.AreEqual(4.0, c16.Data.GetValue(0));
+            Assert.AreEqual(1.0, c16.Data.GetValue(1));
+            Assert.AreEqual(27.0, c16.Data.GetValue(2));
+        }
+
+        [TestMethod]
         public void LinkTest()
         {
-            Workspace workspace = new Workspace();
-
-            //
-            // Prepare schema and fill data
-            //
-            ComSchema schema = CreateSampleSchema();
-            workspace.Schemas.Add(schema);
-            schema.Workspace = workspace;
-
             CreateSampleData(schema);
 
             ComTable t1 = schema.GetSubTable("Table 1");
@@ -352,15 +368,6 @@ namespace Test
         [TestMethod]
         public void AggregationTest() // Defining new aggregated columns and evaluate them
         {
-            Workspace workspace = new Workspace();
-
-            //
-            // Prepare schema and fill data
-            //
-            ComSchema schema = CreateSampleSchema();
-            workspace.Schemas.Add(schema);
-            schema.Workspace = workspace;
-
             CreateSampleData(schema);
 
             ComTable t1 = schema.GetSubTable("Table 1");
@@ -414,12 +421,6 @@ namespace Test
         [TestMethod]
         public void TableProductTest() // Define a new table and populate it
         {
-            Workspace workspace = new Workspace();
-
-            ComSchema schema = CreateSampleSchema();
-            workspace.Schemas.Add(schema);
-            schema.Workspace = workspace;
-
             CreateSampleData(schema);
 
             ComTable t1 = schema.GetSubTable("Table 1");
@@ -460,12 +461,6 @@ namespace Test
         [TestMethod]
         public void TableSubsetTest() // Define a filter to get a subset of record from one table
         {
-            Workspace workspace = new Workspace();
-
-            ComSchema schema = CreateSampleSchema();
-            workspace.Schemas.Add(schema);
-            schema.Workspace = workspace;
-
             CreateSampleData(schema);
 
             ComTable t2 = schema.GetSubTable("Table 2");
@@ -489,12 +484,6 @@ namespace Test
         [TestMethod]
         public void ProjectionTest() // Defining new tables via function projection and populate them
         {
-            Workspace workspace = new Workspace();
-
-            ComSchema schema = CreateSampleSchema();
-            workspace.Schemas.Add(schema);
-            schema.Workspace = workspace;
-
             CreateSampleData(schema);
 
             ComTable t2 = schema.GetSubTable("Table 2");

@@ -106,6 +106,27 @@ namespace Com.Query
             {
                 n = Visit(context.expr(0)); // Skip
             }
+            else if (context.GetChild(0).GetText().Equals("call:")) // Native method call
+            {
+                n.Operation = OperationType.CALL;
+                n.Action = ActionType.PROCEDURE;
+
+                string className = context.className.GetText();
+                n.NameSpace = className; // Non-empty name space is an indication of a native method
+
+                string methodName = context.methodName.Text;
+                n.Name = methodName;
+
+                int argCount = context.expr().Count();
+                for (int i = 0; i < argCount; i++)
+                {
+                    ExprNode arg = Visit(context.expr(i));
+                    if (arg != null)
+                    {
+                        n.AddChild(arg);
+                    }
+                }
+            }
             else if (context.GetChild(0).GetText().Equals("((") || context.GetChild(0).GetText().Equals("TUPLE")) // Tuple
             {
                 n.Operation = OperationType.TUPLE;
@@ -202,11 +223,7 @@ namespace Com.Query
         {
             // Determine declared (output, returned) type of the member
             string type;
-            if (context.type().prim_set() != null)
-            {
-                type = context.type().prim_set().GetText();
-            }
-            else if (context.type().DELIMITED_ID() != null)
+            if (context.type().DELIMITED_ID() != null)
             {
                 type = context.type().DELIMITED_ID().GetText();
                 type = type.Substring(1, type.Length - 2); // Remove delimiters

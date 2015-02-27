@@ -33,7 +33,9 @@ expr
   | literal // Primitive value
   | access // Start without prefix (variable or function)
 // Global/system/external function call
-  | '(' expr ')' // Priority
+  | 'call:' className=qualifiedName '.' methodName=ID '(' (expr (',' expr)*)? ')'
+// Priority
+  | '(' expr ')' 
 // Tuple (combination)
   | '((' member (',' member)* '))'
 // Aggregation. Generally, it is not a value op (it cannot be executed) but in source code we can use aggregation-like expressions which have to be compiled out into separate specialized (aggregation) formula of a separate function.
@@ -68,23 +70,23 @@ name : (ID | DELIMITED_ID) ;
 
 // Value type. But it specifies a concrete set like variable (by reference), set expression, primitive set
 type
-  : prim_set // Reserved names
-  | (ID | DELIMITED_ID)
+//  : prim_set // Reserved names
+  : (ID | DELIMITED_ID)
   ;
 
 // Primitive sets. A primitive set is a collection of primitive values (domain).
-prim_set
-  : 'Top'
-  | 'Bottom'
-  | 'Void' // No value is returned or stored. Could be equivalent to Top.
-  | 'Root' // Root or Reference or Surrogate
-  | 'Integer'
-  | 'Double'
-  | 'Decimal'
-  | 'String'
-  | 'Boolean'
-  | 'DateTime'
-  ;
+//prim_set
+//  : 'Top'
+//  | 'Bottom'
+//  | 'Void' // No value is returned or stored. Could be equivalent to Top.
+//  | 'Root' // Root or Reference or Surrogate
+//  | 'Integer'
+//  | 'Double'
+//  | 'Decimal'
+//  | 'String'
+//  | 'Boolean'
+//  | 'DateTime'
+//  ;
 
 //
 // Primitive value. Concrete instance of some primitive set.
@@ -96,9 +98,9 @@ literal
   | 'null'
   ;
 
-//qualifiedName
-//    :   Identifier ('.' Identifier)*
-//    ;
+qualifiedName
+  : ID ('.' ID)*
+  ;
 
 //
 // Tuple general syntax <Type Name = expr> for expressions

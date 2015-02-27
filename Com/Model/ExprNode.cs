@@ -9,6 +9,7 @@ using System.Diagnostics;
 using Newtonsoft.Json.Linq;
 
 using Offset = System.Int32;
+using System.Reflection;
 
 namespace Com.Model
 {
@@ -43,6 +44,9 @@ namespace Com.Model
         // Attribute of the result value relative to the parent
         //
 
+        // It specifies the scope where the name is defined and is used normally as a package name for native method calls
+        public string NameSpace { get; set; }
+        
         // An relative offset of the result in the parent which is interpreted by the parent node.
         // 'method' - the node represents a method, procedure (SUM, MUL), function, variable or another action to be performed by the parent
         // 'this' - the node represents a special this argument for the processing parent node
@@ -54,6 +58,7 @@ namespace Com.Model
         // Alternatively, the whole node implements this interface
         public ComColumn Column { get; set; }
         public ComVariable Variable { get; set; }
+        public MethodInfo Method { get; set; }
         // Action type. A modifier that helps to choose the function variation
         public ActionType Action { get; set; }
 
@@ -195,7 +200,37 @@ namespace Com.Model
                 ExprNode thisChild = GetChild("this"); // Get column input (while this node is output)
                 int childCount = Children.Count;
 
-                if (childCount == 0) // It is a variable (or it is a function but a child is ommited and has to be reconstructed)
+                if( !string.IsNullOrEmpty(NameSpace) ) // External name space (java call, c# call etc.) 
+                {
+                    string className = NameSpace.Trim();
+                    if(NameSpace.StartsWith("call:")) 
+                    {
+                        className = className.Substring(3).Trim();
+                    }
+                    Type clazz = null;
+                    try {
+		                clazz = Type.GetType(className);
+	                } catch (Exception e) {
+                        Console.WriteLine(e.StackTrace);
+	                }
+            	
+                    string methodName = Name;
+                    MethodInfo[]  methods = null;
+                    methods = clazz.GetMethods(); // BindingFlags.Public
+	                foreach(MethodInfo m in methods) {
+		                if(!m.Name.Equals(methodName)) continue;
+		                if(m.IsStatic) {
+			                if(m.GetParameters().Length != childCount) continue;
+		                }
+		                else {
+			                if(m.GetParameters().Length + 1 != childCount) continue;
+		                }
+					
+		                Method = m;
+		                break;
+	                }
+                }	
+                else if (childCount == 0) // It is a variable (or it is a function but a child is ommited and has to be reconstructed)
                 {
                     // Try to resolve as a variable (including this variable). If success then finish.
                     ComVariable var = variables.FirstOrDefault(v => StringSimilarity.SameColumnName(v.Name, Name));
@@ -474,6 +509,9 @@ namespace Com.Model
                 int intRes;
                 double doubleRes;
                 bool boolRes = false;
+                object objRes = null;
+
+                int childCount = Children.Count;
 
                 if (Action == ActionType.READ)
                 {
@@ -634,6 +672,39 @@ namespace Com.Model
                     bool arg2 = child2.ObjectToBoolean(child2.Result.GetValue());
                     boolRes = arg1 || arg2;
                     Result.SetValue(boolRes);
+                }
+                else if (Action == ActionType.PROCEDURE)
+                {
+            	    Type[] types = Method.GetParameters().Select(x => x.ParameterType).ToArray();
+            	
+            	    object thisObj = null;
+            	    object[] args = null;
+
+				    // Preparing parameters for the procedure
+            	    if(Method.IsStatic) {
+	            	    args = new object[childCount]; 
+	            	    for(int i=0; i<childCount; i++) {
+	            		    args[i] = ((ExprNode)Children[0]).Result.GetValue();
+	            	    }
+				    }
+				    else {
+	            	    if(childCount > 0) thisObj = ((ExprNode)Children[0]).Result.GetValue();
+
+	            	    args = new object[childCount - 1]; 
+	            	    for(int i=0; i<childCount-1; i++) {
+	            		    args[i] = ((ExprNode)Children[i+1]).Result.GetValue();
+	            	    }
+				    }
+				
+            	    // Dynamic invocation
+                    try {
+                        objRes = Method.Invoke(thisObj, args);
+                    }
+                    catch (Exception e) {
+                        Console.WriteLine(e.StackTrace);
+                    }            	
+                
+                    Result.SetValue(objRes);
                 }
                 else // Some procedure. Find its API specification or retrieve via reflection
                 {

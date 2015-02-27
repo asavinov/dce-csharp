@@ -67,7 +67,6 @@
   </Choose>
   <ItemGroup>
     <Compile Include="CoreTest.cs" />
-    <Compile Include="DcTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
