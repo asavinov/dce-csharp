@@ -209,26 +209,26 @@ namespace Com.Model
                     }
                     Type clazz = null;
                     try {
-		                clazz = Type.GetType(className);
-	                } catch (Exception e) {
+                        clazz = Type.GetType(className);
+                    } catch (Exception e) {
                         Console.WriteLine(e.StackTrace);
-	                }
-            	
+                    }
+                
                     string methodName = Name;
                     MethodInfo[]  methods = null;
                     methods = clazz.GetMethods(); // BindingFlags.Public
-	                foreach(MethodInfo m in methods) {
-		                if(!m.Name.Equals(methodName)) continue;
-		                if(m.IsStatic) {
-			                if(m.GetParameters().Length != childCount) continue;
-		                }
-		                else {
-			                if(m.GetParameters().Length + 1 != childCount) continue;
-		                }
-					
-		                Method = m;
-		                break;
-	                }
+                    foreach(MethodInfo m in methods) {
+                        if(!m.Name.Equals(methodName)) continue;
+                        if(m.IsStatic) {
+                            if(m.GetParameters().Length != childCount) continue;
+                        }
+                        else {
+                            if(m.GetParameters().Length + 1 != childCount) continue;
+                        }
+                    
+                        Method = m;
+                        break;
+                    }
                 }	
                 else if (childCount == 0) // It is a variable (or it is a function but a child is ommited and has to be reconstructed)
                 {
@@ -675,28 +675,28 @@ namespace Com.Model
                 }
                 else if (Action == ActionType.PROCEDURE)
                 {
-            	    Type[] types = Method.GetParameters().Select(x => x.ParameterType).ToArray();
-            	
-            	    object thisObj = null;
-            	    object[] args = null;
+                    Type[] types = Method.GetParameters().Select(x => x.ParameterType).ToArray();
+                
+                    object thisObj = null;
+                    object[] args = null;
 
-				    // Preparing parameters for the procedure
-            	    if(Method.IsStatic) {
-	            	    args = new object[childCount]; 
-	            	    for(int i=0; i<childCount; i++) {
-	            		    args[i] = ((ExprNode)Children[0]).Result.GetValue();
-	            	    }
-				    }
-				    else {
-	            	    if(childCount > 0) thisObj = ((ExprNode)Children[0]).Result.GetValue();
+                    // Preparing parameters for the procedure
+                    if(Method.IsStatic) {
+                        args = new object[childCount]; 
+                        for(int i=0; i<childCount; i++) {
+                            args[i] = ((ExprNode)Children[0]).Result.GetValue();
+                        }
+                    }
+                    else {
+                        if(childCount > 0) thisObj = ((ExprNode)Children[0]).Result.GetValue();
 
-	            	    args = new object[childCount - 1]; 
-	            	    for(int i=0; i<childCount-1; i++) {
-	            		    args[i] = ((ExprNode)Children[i+1]).Result.GetValue();
-	            	    }
-				    }
-				
-            	    // Dynamic invocation
+                        args = new object[childCount - 1]; 
+                        for(int i=0; i<childCount-1; i++) {
+                            args[i] = ((ExprNode)Children[i+1]).Result.GetValue();
+                        }
+                    }
+                
+                    // Dynamic invocation
                     try {
                         objRes = Method.Invoke(thisObj, args);
                     }
