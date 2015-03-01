@@ -11,15 +11,15 @@ namespace Com.Model
     /// <summary>
     /// Workspace is a number of schemas as well as parameters for their management. 
     /// </summary>
-    public class Workspace : ComJson
+    public class Workspace : DcJson
     {
-        public ObservableCollection<ComSchema> Schemas { get; set; }
-        public ComSchema GetSchema(string name)
+        public ObservableCollection<DcSchema> Schemas { get; set; }
+        public DcSchema GetSchema(string name)
         {
             return Schemas.FirstOrDefault(x => StringSimilarity.SameColumnName(x.Name, name));
         }
 
-        public ComSchema Mashup { get; set; }
+        public DcSchema Mashup { get; set; }
 
         #region Json serialization
 
@@ -29,7 +29,7 @@ namespace Com.Model
 
             // List of schemas
             JArray schemas = new JArray();
-            foreach (ComSchema comSchema in Schemas)
+            foreach (DcSchema comSchema in Schemas)
             {
                 JObject schema = Utils.CreateJsonFromObject(comSchema);
                 comSchema.ToJson(schema);
@@ -43,7 +43,7 @@ namespace Com.Model
             // List of schemas
             foreach (JObject schema in json["schemas"])
             {
-                ComSchema comSchema = (ComSchema)Utils.CreateObjectFromJson(schema);
+                DcSchema comSchema = (DcSchema)Utils.CreateObjectFromJson(schema);
                 if (comSchema != null)
                 {
                     comSchema.FromJson(schema, this);
@@ -56,7 +56,7 @@ namespace Com.Model
             {
                 foreach (JObject column in schema["columns"]) // List of columns
                 {
-                    ComColumn comColumn = (ComColumn)Utils.CreateObjectFromJson(column);
+                    DcColumn comColumn = (DcColumn)Utils.CreateObjectFromJson(column);
                     if (comColumn != null)
                     {
                         comColumn.FromJson(column, this);
@@ -70,13 +70,13 @@ namespace Com.Model
             {
                 foreach (JObject column in schema["columns"]) // List of columns
                 {
-                    ComColumn comColumn = (ComColumn)Utils.CreateObjectFromJson(column);
+                    DcColumn comColumn = (DcColumn)Utils.CreateObjectFromJson(column);
                     if (comColumn != null)
                     {
                         comColumn.FromJson(column, this);
 
                         // Find the same existing column (possibly without a definition)
-                        ComColumn existing = comColumn.Input.GetColumn(comColumn.Name);
+                        DcColumn existing = comColumn.Input.GetColumn(comColumn.Name);
 
                         // Copy the definition
                         existing.FromJson(column, this);
@@ -84,14 +84,14 @@ namespace Com.Model
                 }
             }
 
-            Mashup = (ComSchema)Utils.ResolveJsonRef((JObject)json["mashup"], this);
+            Mashup = (DcSchema)Utils.ResolveJsonRef((JObject)json["mashup"], this);
         }
 
         #endregion
 
         public Workspace()
         {
-            Schemas = new ObservableCollection<ComSchema>();
+            Schemas = new ObservableCollection<DcSchema>();
         }
     }
 
@@ -105,7 +105,7 @@ namespace Com.Model
     /// - Since we may have inter-schema (import) columns, the columns have to be processed after all tables in all schemas.
     /// - Some fields store references to com-objects and they have to be resolved during de-serialization. Therefore, the corresponding referenced objects have to be created before.
     /// </summary>
-    public interface ComJson
+    public interface DcJson
     {
         void ToJson(JObject json);
         void FromJson(JObject json, Workspace ws);

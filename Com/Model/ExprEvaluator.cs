@@ -15,14 +15,14 @@ using Offset = System.Int32;
 namespace Com.Model
 {
 
-    public class ExprEvaluator : ComEvaluator
+    public class ExprEvaluator : DcIterator
     {
-        protected ComColumnData columnData;
+        protected DcColumnData columnData;
 
         // Loop
         protected Offset thisCurrent;
-        protected ComTable thisTable;
-        protected ComVariable thisVariable; // Stores current input (offset in a local set or reference to the current DataRow)
+        protected DcTable thisTable;
+        protected DcVariable thisVariable; // Stores current input (offset in a local set or reference to the current DataRow)
 
         // Output expression
         protected ExprNode outputExpr; // Can contain more specific nodes OledbExprNode to access attributes in DataRow
@@ -77,7 +77,7 @@ namespace Com.Model
             return outputExpr.Result.GetValue(); 
         }
 
-        public ExprEvaluator(ComColumn column)
+        public ExprEvaluator(DcColumn column)
         {
             Workspace = column.Input.Schema.Workspace;
             columnData = column.Data;
@@ -123,10 +123,10 @@ namespace Com.Model
             outputExpr.Result.TypeSchema = column.Output.Schema;
             outputExpr.Result.TypeTable = column.Output;
 
-            outputExpr.Resolve(Workspace, new List<ComVariable>() { thisVariable });
+            outputExpr.Resolve(Workspace, new List<DcVariable>() { thisVariable });
         }
 
-        public ExprEvaluator(ComTable table)
+        public ExprEvaluator(DcTable table)
         {
             Workspace = table.Schema.Workspace;
             columnData = null;
@@ -141,7 +141,7 @@ namespace Com.Model
 
             // Outtput expression
             outputExpr = table.Definition.WhereExpr;
-            outputExpr.Resolve(Workspace, new List<ComVariable>() { thisVariable });
+            outputExpr.Resolve(Workspace, new List<DcVariable>() { thisVariable });
         }
 
         public ExprEvaluator()
@@ -164,11 +164,11 @@ namespace Com.Model
         // base::thisVariable stores current fact in the loop table. is used by group expr and meausre expr
 
         // Groups
-        protected ComVariable groupVariable; // Stores current group (input for the aggregated function)
+        protected DcVariable groupVariable; // Stores current group (input for the aggregated function)
         protected ExprNode groupExpr; // Returns a group this fact belongs to, is stored in the group variable
 
         // Measure
-        protected ComVariable measureVariable; // Stores new value (output for the aggregated function)
+        protected DcVariable measureVariable; // Stores new value (output for the aggregated function)
         protected ExprNode measureExpr; // Returns a new value to be aggregated with the old value, is stored in the measure variable
 
         // Updater/aggregation function
@@ -206,7 +206,7 @@ namespace Com.Model
             return outputExpr.Result.GetValue();
         }
 
-        public AggrEvaluator(ComColumn column) // Create evaluator from structured definition
+        public AggrEvaluator(DcColumn column) // Create evaluator from structured definition
         {
             Workspace = column.Input.Schema.Workspace;
             columnData = column.Data;
@@ -224,7 +224,7 @@ namespace Com.Model
                 // Groups
                 groupExpr = ExprNode.CreateReader(column.Definition.GroupPaths[0], true); // Currently only one path is used
                 groupExpr = (ExprNode)groupExpr.Root;
-                groupExpr.Resolve(Workspace, new List<ComVariable>() { thisVariable });
+                groupExpr.Resolve(Workspace, new List<DcVariable>() { thisVariable });
 
                 groupVariable = new Variable(column.Input.Schema.Name, column.Input.Name, "this");
                 groupVariable.TypeSchema = column.Input.Schema;
@@ -233,7 +233,7 @@ namespace Com.Model
                 // Measure
                 measureExpr = ExprNode.CreateReader(column.Definition.MeasurePaths[0], true);
                 measureExpr = (ExprNode)measureExpr.Root;
-                measureExpr.Resolve(Workspace, new List<ComVariable>() { thisVariable });
+                measureExpr.Resolve(Workspace, new List<DcVariable>() { thisVariable });
 
                 measureVariable = new Variable(column.Output.Schema.Name, column.Output.Name, "value");
                 measureVariable.TypeSchema = column.Output.Schema;
@@ -241,7 +241,7 @@ namespace Com.Model
 
                 // Updater/aggregation function
                 outputExpr = ExprNode.CreateUpdater(column, column.Definition.Updater);
-                outputExpr.Resolve(Workspace, new List<ComVariable>() { groupVariable, measureVariable });
+                outputExpr.Resolve(Workspace, new List<DcVariable>() { groupVariable, measureVariable });
             }
             else // From expression
             {
@@ -264,7 +264,7 @@ namespace Com.Model
                 // Groups
                 ExprNode groupsNode = aggExpr.GetChild("groups").GetChild(0);
                 groupExpr = groupsNode;
-                groupExpr.Resolve(Workspace, new List<ComVariable>() { thisVariable });
+                groupExpr.Resolve(Workspace, new List<DcVariable>() { thisVariable });
 
                 groupVariable = new Variable(column.Input.Schema.Name, column.Input.Name, "this");
                 groupVariable.TypeSchema = column.Input.Schema;
@@ -273,7 +273,7 @@ namespace Com.Model
                 // Measure
                 ExprNode measureNode = aggExpr.GetChild("measure").GetChild(0);
                 measureExpr = measureNode;
-                measureExpr.Resolve(Workspace, new List<ComVariable>() { thisVariable });
+                measureExpr.Resolve(Workspace, new List<DcVariable>() { thisVariable });
 
                 measureVariable = new Variable(column.Output.Schema.Name, column.Output.Name, "value");
                 measureVariable.TypeSchema = column.Output.Schema;
@@ -283,7 +283,7 @@ namespace Com.Model
                 ExprNode updaterExpr = aggExpr.GetChild("aggregator").GetChild(0);
 
                 outputExpr = ExprNode.CreateUpdater(column, updaterExpr.Name);
-                outputExpr.Resolve(Workspace, new List<ComVariable>() { groupVariable, measureVariable });
+                outputExpr.Resolve(Workspace, new List<DcVariable>() { groupVariable, measureVariable });
             }
         }
 
@@ -329,7 +329,7 @@ namespace Com.Model
             return null;
         }
 
-        public CsvEvaluator(ComColumn column)
+        public CsvEvaluator(DcColumn column)
             : base(column)
         {
             // Produce a result set that can be iterated through
@@ -379,7 +379,7 @@ namespace Com.Model
             return null;
         }
 
-        public OledbEvaluator(ComColumn column)
+        public OledbEvaluator(DcColumn column)
             : base(column)
         {
             // Produce a result set from the remote database by executing a query on the source table

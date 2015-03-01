@@ -55,30 +55,30 @@ namespace Com.Model
             JObject json = new JObject();
             json["type"] = obj.GetType().Name;
 
-            if (obj is ComSchema)
+            if (obj is DcSchema)
             {
                 json["element_type"] = "schema";
 
-                json["schema_name"] = ((ComSchema)obj).Name;
+                json["schema_name"] = ((DcSchema)obj).Name;
             }
-            else if (obj is ComTable)
+            else if (obj is DcTable)
             {
                 json["element_type"] = "table";
 
-                json["schema_name"] = ((ComTable)obj).Schema.Name;
-                json["table_name"] = ((ComTable)obj).Name;
+                json["schema_name"] = ((DcTable)obj).Schema.Name;
+                json["table_name"] = ((DcTable)obj).Name;
             }
-            else if (obj is ComColumn)
+            else if (obj is DcColumn)
             {
                 json["element_type"] = "column";
 
-                json["schema_name"] = ((ComColumn)obj).Input.Schema.Name;
-                json["table_name"] = ((ComColumn)obj).Input.Name;
+                json["schema_name"] = ((DcColumn)obj).Input.Schema.Name;
+                json["table_name"] = ((DcColumn)obj).Input.Name;
 
-                json["type_schema_name"] = ((ComColumn)obj).Output.Schema.Name;
-                json["type_table_name"] = ((ComColumn)obj).Output.Name;
+                json["type_schema_name"] = ((DcColumn)obj).Output.Schema.Name;
+                json["type_table_name"] = ((DcColumn)obj).Output.Name;
 
-                json["column_name"] = ((ComColumn)obj).Name;
+                json["column_name"] = ((DcColumn)obj).Name;
             }
 
             return json;
@@ -102,15 +102,15 @@ namespace Com.Model
             }
             else if (element_type == "table") // Find table
             {
-                ComSchema schema = ws.GetSchema((string)json["schema_name"]);
+                DcSchema schema = ws.GetSchema((string)json["schema_name"]);
                 if (schema == null) return null;
                 return schema.GetSubTable((string)json["table_name"]);
             }
             else if (element_type == "column") // Find column
             {
-                ComSchema schema = ws.GetSchema((string)json["schema_name"]);
+                DcSchema schema = ws.GetSchema((string)json["schema_name"]);
                 if (schema == null) return null;
-                ComTable table = schema.GetSubTable((string)json["table_name"]);
+                DcTable table = schema.GetSubTable((string)json["table_name"]);
                 if (table == null) return null;
                 return table.GetColumn((string)json["column_name"]);
             }
@@ -129,11 +129,11 @@ namespace Com.Model
             json["type"] = obj.GetType().Name;
             json["full_type"] = obj.GetType().FullName;
 
-            if (obj is ComSchema)
+            if (obj is DcSchema)
             {
                 json["element_type"] = "schema";
             }
-            else if (obj is ComTable)
+            else if (obj is DcTable)
             {
                 json["element_type"] = "table";
             }
@@ -141,7 +141,7 @@ namespace Com.Model
             {
                 json["element_type"] = "path";
             }
-            else if (obj is ComColumn)
+            else if (obj is DcColumn)
             {
                 json["element_type"] = "column";
             }

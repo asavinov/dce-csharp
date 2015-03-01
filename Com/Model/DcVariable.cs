@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Com.Model
 {
-    public interface ComVariable // It is a storage element like function or table
+    public interface DcVariable // It is a storage element like function or table
     {
         //
         // Variable name (strictly speaking, it should belong to a different interface)
@@ -22,8 +22,8 @@ namespace Com.Model
 
         void Resolve(Workspace workspace); // Resolve schema name and table name (type) into object references
 
-        ComSchema TypeSchema { get; set; } // Resolved schema name
-        ComTable TypeTable { get; set; } // Resolved table name
+        DcSchema TypeSchema { get; set; } // Resolved schema name
+        DcTable TypeTable { get; set; } // Resolved table name
 
         //
         // Variable data. Analogous to the column data interface but without input argument
@@ -42,7 +42,7 @@ namespace Com.Model
 
     }
 
-    public class Variable : ComVariable
+    public class Variable : DcVariable
     {
         protected bool isNull;
         object Value;
@@ -82,7 +82,7 @@ namespace Com.Model
                 }
 
                 // 2. try to find the table in any other schema
-                foreach (ComSchema schema in workspace.Schemas)
+                foreach (DcSchema schema in workspace.Schemas)
                 {
                     TypeTable = schema.GetSubTable(TypeName);
                     if (TypeTable != null)
@@ -95,8 +95,8 @@ namespace Com.Model
             }
         }
 
-        public ComSchema TypeSchema { get; set; }
-        public ComTable TypeTable { get; set; }
+        public DcSchema TypeSchema { get; set; }
+        public DcTable TypeTable { get; set; }
 
         public bool IsNull()
         {
@@ -140,7 +140,7 @@ namespace Com.Model
             Value = null;
         }
 
-        public Variable(ComTable type, string name)
+        public Variable(DcTable type, string name)
         {
             SchemaName = type.Schema.Name;
             TypeName = type.Name;

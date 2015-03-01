@@ -40,9 +40,9 @@ namespace Com.Model
 
         #region Schema methods
 
-        public List<ComColumn> LoadSchema(SetCsv table) // Table object is created to store all necessary parameters which are individual for each table
+        public List<DcColumn> LoadSchema(SetCsv table) // Table object is created to store all necessary parameters which are individual for each table
         {
-            List<ComColumn> columns = new List<ComColumn>();
+            List<DcColumn> columns = new List<DcColumn>();
 
             if (table.FilePath == null || !File.Exists(table.FilePath)) // File might not have been created (e.g., if it is an export file)
             {
@@ -56,7 +56,7 @@ namespace Com.Model
             for (int i = 0; i < names.Count; i++)
             {
                 string columnName = names[i];
-                ComTable type = this.GetPrimitive("String");
+                DcTable type = this.GetPrimitive("String");
                 DimCsv column = (DimCsv)this.CreateColumn(columnName, table, type, false);
                 column.ColumnIndex = i;
                 columns.Add(column);
@@ -82,13 +82,13 @@ namespace Com.Model
 
         #region ComSchema interface
 
-        public override ComTable CreateTable(String name)
+        public override DcTable CreateTable(String name)
         {
-            ComTable table = new SetCsv(name);
+            DcTable table = new SetCsv(name);
             return table;
         }
 
-        public override ComTable AddTable(ComTable table, ComTable parent, string superName)
+        public override DcTable AddTable(DcTable table, DcTable parent, string superName)
         {
             if (parent == null)
             {
@@ -106,11 +106,11 @@ namespace Com.Model
             return table;
         }
 
-        public override ComColumn CreateColumn(string name, ComTable input, ComTable output, bool isKey)
+        public override DcColumn CreateColumn(string name, DcTable input, DcTable output, bool isKey)
         {
             Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
 
-            ComColumn dim = new DimCsv(name, input, output, isKey, false);
+            DcColumn dim = new DimCsv(name, input, output, isKey, false);
 
             return dim;
         }

@@ -15,7 +15,7 @@ namespace Com.Model
 {
     // Represents a function definition in terms of other functions and provides its run-time interface.
     // Main unit of the representation is a triple: (Type) Name = Value. 
-    public class ExprNode : TreeNode<ExprNode>, ComJson
+    public class ExprNode : TreeNode<ExprNode>, DcJson
     {
         public CultureInfo CultureInfo = new System.Globalization.CultureInfo("en-US");
         public int ObjectToInt32(object val) { return Convert.ToInt32(val, CultureInfo); }
@@ -56,8 +56,8 @@ namespace Com.Model
         // Is resolved from name at compile-time if the name represents a method (dimension, function etc.)
         // It could be ComColumnEvaluator (at least for Dim storage) so that we directly access values at run-time. 
         // Alternatively, the whole node implements this interface
-        public ComColumn Column { get; set; }
-        public ComVariable Variable { get; set; }
+        public DcColumn Column { get; set; }
+        public DcVariable Variable { get; set; }
         public MethodInfo Method { get; set; }
         // Action type. A modifier that helps to choose the function variation
         public ActionType Action { get; set; }
@@ -67,7 +67,7 @@ namespace Com.Model
         //
 
         // Return run-time value after processing this node to be used by the parent. It must have the specified type.
-        public ComVariable Result { get; set; }
+        public DcVariable Result { get; set; }
 
         //
         // Maybe we need a method for retrieving dependency information, that is, a list of other functions (with their sets) used in the formula, including maybe system functions, variables and other context objects
@@ -85,7 +85,7 @@ namespace Com.Model
         /// - Types in tuples depend on the parent type. Columns (variables, procedures etc.) depend on the children. 
         /// </summary>
         /// <param name="variables"></param>
-        public virtual void Resolve(Workspace workspace, List<ComVariable> variables)
+        public virtual void Resolve(Workspace workspace, List<DcVariable> variables)
         {
             if (Operation == OperationType.VALUE)
             {
@@ -138,7 +138,7 @@ namespace Com.Model
                 {
                     if (parentNode.Result.TypeTable != null && !string.IsNullOrEmpty(Name))
                     {
-                        ComColumn col = parentNode.Result.TypeTable.GetColumn(Name);
+                        DcColumn col = parentNode.Result.TypeTable.GetColumn(Name);
 
                         if (col != null) // Column resolved 
                         {
@@ -233,7 +233,7 @@ namespace Com.Model
                 else if (childCount == 0) // It is a variable (or it is a function but a child is ommited and has to be reconstructed)
                 {
                     // Try to resolve as a variable (including this variable). If success then finish.
-                    ComVariable var = variables.FirstOrDefault(v => StringSimilarity.SameColumnName(v.Name, Name));
+                    DcVariable var = variables.FirstOrDefault(v => StringSimilarity.SameColumnName(v.Name, Name));
 
                     if (var != null) // Resolved as a variable
                     {
@@ -249,7 +249,7 @@ namespace Com.Model
                         //
                         // Start from 'this' node bound to 'this' variable
                         //
-                        ComVariable thisVar = variables.FirstOrDefault(v => StringSimilarity.SameColumnName(v.Name, "this"));
+                        DcVariable thisVar = variables.FirstOrDefault(v => StringSimilarity.SameColumnName(v.Name, "this"));
 
                         thisChild = new ExprNode();
                         thisChild.Operation = OperationType.CALL;
@@ -264,8 +264,8 @@ namespace Com.Model
                         thisChild.Variable = thisVar;
 
                         ExprNode path = thisChild;
-                        ComTable contextTable = thisChild.Result.TypeTable;
-                        ComColumn col = null;
+                        DcTable contextTable = thisChild.Result.TypeTable;
+                        DcColumn col = null;
 
                         while (contextTable != null)
                         {
@@ -282,7 +282,7 @@ namespace Com.Model
                             //
                             // Iterator. Find super-column in the current context (where we have just failed to resolve the name)
                             //
-                            ComColumn superColumn = contextTable.SuperColumn;
+                            DcColumn superColumn = contextTable.SuperColumn;
                             contextTable = contextTable.SuperTable;
 
                             if (contextTable == null || contextTable == contextTable.Schema.Root)
@@ -341,7 +341,7 @@ namespace Com.Model
                         outputChild = GetChild(0);
                     }
 
-                    ComColumn col = outputChild.Result.TypeTable.GetColumn(methodName);
+                    DcColumn col = outputChild.Result.TypeTable.GetColumn(methodName);
 
                     if (col != null) // Column resolved
                     {
@@ -717,7 +717,7 @@ namespace Com.Model
         /// By the use we mean dependency, that is, this expression result depends on this column as a function. 
         /// The expressions have to be resolved because we need object references rather than names.
         /// </summary>
-        public List<ExprNode> Find(ComColumn column)
+        public List<ExprNode> Find(DcColumn column)
         {
             var res = new List<ExprNode>();
 
@@ -741,7 +741,7 @@ namespace Com.Model
         /// By the use we mean dependency, that is, this expression result depends on this table (if the table changes then this node must be re-evaluated). 
         /// The expressions have to be resolved because we need object references rather than names.
         /// </summary>
-        public List<ExprNode> Find(ComTable table)
+        public List<ExprNode> Find(DcTable table)
         {
             var res = new List<ExprNode>();
 
@@ -776,7 +776,7 @@ namespace Com.Model
             ExprNode node = this;
             for (int i = 0; i < path.Segments.Count; i++) // We add all segments sequentially
             {
-                ComColumn seg = path.Segments[i];
+                DcColumn seg = path.Segments[i];
                 ExprNode child = node.GetChild(seg.Name); // Try to find a child corresponding to this segment
 
                 if (child == null) // Not found. Add a new child corresponding to this segment
@@ -861,7 +861,7 @@ namespace Com.Model
             {
                 for (int i = path.Segments.Count() - 1; i >= 0; i--)
                 {
-                    ComColumn seg = path.Segments[i];
+                    DcColumn seg = path.Segments[i];
 
                     ExprNode node = new ExprNode();
                     node.Operation = OperationType.CALL;
@@ -912,7 +912,7 @@ namespace Com.Model
         /// Create a read expression for the specified column. 
         /// This expression will read one variables from the context: 'this' typed by the column lesser set.
         /// </summary>
-        public static ExprNode CreateReader(ComColumn column, bool withThisVariable)
+        public static ExprNode CreateReader(DcColumn column, bool withThisVariable)
         {
             return CreateReader(new DimPath(column), withThisVariable);
         }
@@ -921,7 +921,7 @@ namespace Com.Model
         /// Create an upate expression for the specified aggregation column and standard aggregation function. 
         /// This expression will read two variables from the context: 'this' typed by the column lesser set and 'value' typed by the column greater set.
         /// </summary>
-        public static ExprNode CreateUpdater(ComColumn column, string aggregationFunction)
+        public static ExprNode CreateUpdater(DcColumn column, string aggregationFunction)
         {
             ActionType aggregation;
             if (aggregationFunction.Equals("COUNT"))
@@ -1064,7 +1064,7 @@ namespace Com.Model
     /// </summary>
     public class OledbExprNode : ExprNode
     {
-        public override void Resolve(Workspace workspace, List<ComVariable> variables)
+        public override void Resolve(Workspace workspace, List<DcVariable> variables)
         {
             if (Operation == OperationType.VALUE)
             {
@@ -1104,7 +1104,7 @@ namespace Com.Model
     /// </summary>
     public class CsvExprNode : ExprNode
     {
-        public override void Resolve(Workspace workspace, List<ComVariable> variables)
+        public override void Resolve(Workspace workspace, List<DcVariable> variables)
         {
             if (Operation == OperationType.VALUE)
             {

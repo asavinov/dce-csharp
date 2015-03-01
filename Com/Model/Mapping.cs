@@ -12,14 +12,14 @@ namespace Com.Model
     /// <summary>
     /// The class describes one mapping between two concrete sets as a collection of path pairs. 
     /// </summary>
-    public class Mapping : ComJson
+    public class Mapping : DcJson
     {
         public List<PathMatch> Matches { get; private set; }
 
         public double Similarity { get; set; }
 
-        private ComTable _sourceSet;
-        public ComTable SourceSet
+        private DcTable _sourceSet;
+        public DcTable SourceSet
         {
             get { return _sourceSet; }
             set
@@ -53,8 +53,8 @@ namespace Com.Model
             }
         }
 
-        private ComTable _targetSet;
-        public ComTable TargetSet
+        private DcTable _targetSet;
+        public DcTable TargetSet
         {
             get { return _targetSet; }
             set
@@ -150,7 +150,7 @@ namespace Com.Model
             return null;
         }
 
-        public void AddPaths(ComColumn sd, ComColumn td, Mapping gMapping) // Add this pair by expanding it using the mapping
+        public void AddPaths(DcColumn sd, DcColumn td, Mapping gMapping) // Add this pair by expanding it using the mapping
         {
             Debug.Assert(sd != null && sd.Input == SourceSet, "Wrong use: source path must start from the source set.");
             Debug.Assert(td != null && td.Input == TargetSet, "Wrong use: target path must start from the target set.");
@@ -363,11 +363,11 @@ namespace Com.Model
             return tupleExpr;
         }
 
-        public void AddSourceToSchema(ComSchema schema = null)
+        public void AddSourceToSchema(DcSchema schema = null)
         {
             throw new NotImplementedException();
         }
-        public void AddTargetToSchema(ComSchema schema = null) // Ensure that all target elements exist in the specified schema
+        public void AddTargetToSchema(DcSchema schema = null) // Ensure that all target elements exist in the specified schema
         {
             // The mapping can reference new elements which are not in the schema yet so we try to find them and add if necessary
 
@@ -409,8 +409,8 @@ namespace Com.Model
 
             Similarity = (double)json["similarity"];
 
-            _sourceSet = (ComTable)Utils.ResolveJsonRef((JObject)json["source_table"], ws);
-            _targetSet = (ComTable)Utils.ResolveJsonRef((JObject)json["target_table"], ws);
+            _sourceSet = (DcTable)Utils.ResolveJsonRef((JObject)json["source_table"], ws);
+            _targetSet = (DcTable)Utils.ResolveJsonRef((JObject)json["target_table"], ws);
 
             // List of matches
             foreach (JObject match in json["matches"])
@@ -436,7 +436,7 @@ namespace Com.Model
             Matches = new List<PathMatch>();
         }
 
-        public Mapping(ComTable sourceSet, ComTable targetSet)
+        public Mapping(DcTable sourceSet, DcTable targetSet)
         {
             // Debug.Assert((sourceSet.IsPrimitive && targetSet.IsPrimitive) || (!sourceSet.IsPrimitive && !targetSet.IsPrimitive), "Wrong use: cannot create a mapping between a primitive set and a non-primitive set.");
             Debug.Assert(sourceSet != null && targetSet != null, "Wrong use: parametes cannot be null.");
@@ -452,14 +452,14 @@ namespace Com.Model
     /// <summary>
     /// A pair of matching paths.
     /// </summary>
-    public class PathMatch : ComJson
+    public class PathMatch : DcJson
     {
         public DimPath SourcePath { get; private set; }
         public DimPath TargetPath { get; private set; }
         public double Similarity { get; set; }
 
-        public ComTable SourceSet { get { return SourcePath == null ? null : SourcePath.Input; } }
-        public ComTable TargetSet { get { return TargetPath == null ? null : TargetPath.Input; } }
+        public DcTable SourceSet { get { return SourcePath == null ? null : SourcePath.Input; } }
+        public DcTable TargetSet { get { return TargetPath == null ? null : TargetPath.Input; } }
 
         public bool MatchesSource(DimPath path) // This is more specific (longer) than argument
         {

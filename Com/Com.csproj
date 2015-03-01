@@ -56,12 +56,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Model\Aggregator.cs" />
-    <Compile Include="Model\ComEvaluator.cs" />
-    <Compile Include="Model\ComVariable.cs" />
     <Compile Include="Model\DataCommander.cs" />
-    <Compile Include="Model\ComColumn.cs" />
-    <Compile Include="Model\ComSchema.cs" />
-    <Compile Include="Model\ComTable.cs" />
+    <Compile Include="Model\DcColumn.cs" />
+    <Compile Include="Model\DcIterator.cs" />
+    <Compile Include="Model\DcSchema.cs" />
+    <Compile Include="Model\DcTable.cs" />
+    <Compile Include="Model\DcVariable.cs" />
     <Compile Include="Model\Dim.cs" />
     <Compile Include="Model\DimData.cs" />
     <Compile Include="Model\DimPath.cs" />

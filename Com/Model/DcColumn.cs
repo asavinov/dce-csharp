@@ -7,7 +7,7 @@ using Offset = System.Int32;
 
 namespace Com.Model
 {
-    public interface ComColumn : ComJson // One column object
+    public interface DcColumn : DcJson // One column object
     {
         string Name { get; set; }
 
@@ -17,17 +17,17 @@ namespace Com.Model
         // Other properties: isNullable, isTemporary, IsInstantiable (is supposed/able to have instances = lesser set instantiable)
 
         // Note: Set property works only for handing dims. For connected dims, a dim has to be disconnected first, then change its lesser/greater set and finally added again.
-        ComTable Input { get; set; }
-        ComTable Output { get; set; }
+        DcTable Input { get; set; }
+        DcTable Output { get; set; }
 
         void Add(); // Add to schema
         void Remove(); // Remove from schema
 
-        ComColumnData Data { get; }
-        ComColumnDefinition Definition { get; }
+        DcColumnData Data { get; }
+        DcColumnDefinition Definition { get; }
     }
 
-    public interface ComColumnData // It is interface for managing function data as a mapping to output values (implemented by some kind of storage manager). Input always offset. Output type is a parameter.
+    public interface DcColumnData // It is interface for managing function data as a mapping to output values (implemented by some kind of storage manager). Input always offset. Output type is a parameter.
     {
         Offset Length { get; set; }
 
@@ -69,7 +69,7 @@ namespace Com.Model
         // void Index(Offset start, Offset end); // The specified interval has been changed (or inserted?)
     }
 
-    public interface ComColumnDefinition // How a function is represented and evaluated. It uses API of the column storage like read, write (typed or untyped).
+    public interface DcColumnDefinition // How a function is represented and evaluated. It uses API of the column storage like read, write (typed or untyped).
     {
         // The form of representation:
         // Our own v-expr or its parsed AST: 
@@ -151,7 +151,7 @@ namespace Com.Model
         /// <summary>
         /// Fact set is a set for looping through and providing input for measure and group functions. By default, it is this (lesser) set.
         /// </summary>
-        ComTable FactTable { get; set; } // Dependency on a lesser set and lesser functions
+        DcTable FactTable { get; set; } // Dependency on a lesser set and lesser functions
 
         /// <summary>
         /// Computes a group (this column input) from the current fact (fact table input). Result of this expression is input for this column.
@@ -191,11 +191,11 @@ namespace Com.Model
         // Dependencies. The order is important and corresponds to dependency chain
         //
 
-        List<ComTable> UsesTables(bool recursive); // This element depends upon
-        List<ComTable> IsUsedInTables(bool recursive); // Dependants
+        List<DcTable> UsesTables(bool recursive); // This element depends upon
+        List<DcTable> IsUsedInTables(bool recursive); // Dependants
 
-        List<ComColumn> UsesColumns(bool recursive); // This element depends upon
-        List<ComColumn> IsUsedInColumns(bool recursive); // Dependants
+        List<DcColumn> UsesColumns(bool recursive); // This element depends upon
+        List<DcColumn> IsUsedInColumns(bool recursive); // Dependants
     }
 
     public enum ColumnDefinitionType // Specific types of column formula

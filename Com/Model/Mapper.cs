@@ -31,18 +31,18 @@ namespace Com.Model
         public double MinSetMappingQuality { get; set; } // Do not return mappings with lower quality
         public int MaxMappingsToBuild { get; set; } // Size of the search space. Do not build more potential mappings.
 
-        public ComTable GetBestTargetSet(ComTable sourceSet, ComSchema targetSchema) // Find target in the cache
+        public DcTable GetBestTargetSet(DcTable sourceSet, DcSchema targetSchema) // Find target in the cache
         {
             Mapping bestMapping = GetBestMapping(sourceSet, targetSchema);
             return bestMapping == null ? null : bestMapping.TargetSet;
         }
-        public ComTable GetBestSourceSet(ComSchema sourceSchema, ComTable targetSet)
+        public DcTable GetBestSourceSet(DcSchema sourceSchema, DcTable targetSet)
         {
             Mapping bestMapping = GetBestMapping(sourceSchema, targetSet);
             return bestMapping == null ? null : bestMapping.TargetSet;
         }
 
-        public Mapping GetBestMapping(ComTable sourceSet, ComSchema targetSchema) // Find best mapping in the cache
+        public Mapping GetBestMapping(DcTable sourceSet, DcSchema targetSchema) // Find best mapping in the cache
         {
             Mapping bestMapping = null;
             var setMappings = Mappings.Where(m => m.SourceSet == sourceSet && (m.TargetSet.Schema == null || m.TargetSet.Schema == targetSchema)); // Find available mappings
@@ -55,18 +55,18 @@ namespace Com.Model
 
             return bestMapping;
         }
-        public Mapping GetBestMapping(ComSchema sourceSchema, ComTable targetSet)
+        public Mapping GetBestMapping(DcSchema sourceSchema, DcTable targetSet)
         {
             Mapping bestMapping = GetBestMapping(targetSet, sourceSchema);
             bestMapping.Invert();
             return bestMapping;
         }
 
-        public List<Mapping> MapPrimitiveSet(ComTable sourceSet, ComSchema targetSchema)
+        public List<Mapping> MapPrimitiveSet(DcTable sourceSet, DcSchema targetSchema)
         {
-            ComSchema sourceSchema = sourceSet.Schema;
+            DcSchema sourceSchema = sourceSet.Schema;
             List<Mapping> maps = new List<Mapping>();
-            ComTable targetSet;
+            DcTable targetSet;
 
             if (sourceSchema.GetType() == typeof(Schema)) // Schema -> *
             {
@@ -192,7 +192,7 @@ namespace Com.Model
             Mappings.AddRange(maps);
             return maps;
         }
-        public List<Mapping> MapPrimitiveSet(ComSchema sourceSchema, ComTable targetSet)
+        public List<Mapping> MapPrimitiveSet(DcSchema sourceSchema, DcTable targetSet)
         {
             List<Mapping> maps = MapPrimitiveSet(targetSet, sourceSchema);
             maps.ForEach(m => Mappings.Remove(m));
@@ -206,20 +206,20 @@ namespace Com.Model
         /// Generate best mappings from the specified source set to all possible target sets in the specified schema. 
         /// Best mappings from the source greater sets will be (re)used and created if they do not already exist in the mapper. 
         /// </summary>
-        public List<Mapping> MapSet(ComTable sourceSet, ComSchema targetSchema)
+        public List<Mapping> MapSet(DcTable sourceSet, DcSchema targetSchema)
         {
             if (sourceSet.IsPrimitive) return MapPrimitiveSet((Set)sourceSet, targetSchema);
-            ComSchema sourceSchema = sourceSet.Schema;
+            DcSchema sourceSchema = sourceSet.Schema;
             List<Mapping> maps = new List<Mapping>();
 
-            Dictionary<ComColumn, Mapping> greaterMappings = new Dictionary<ComColumn, Mapping>();
+            Dictionary<DcColumn, Mapping> greaterMappings = new Dictionary<DcColumn, Mapping>();
 
             //
             // 1. Find target greater sets. They are found among mappings and hence can contain both existing (in the schema) and new sets. 
             //
-            List<ComTable> targetOutputSets = new List<ComTable>();
+            List<DcTable> targetOutputSets = new List<DcTable>();
 
-            foreach (ComColumn sd in sourceSet.Columns)
+            foreach (DcColumn sd in sourceSet.Columns)
             {
                 Mapping gMapping = GetBestMapping(sd.Output, targetSchema);
 
@@ -237,7 +237,7 @@ namespace Com.Model
             //
             // 2. Now find the best (existing) lesser set for the target greater sets. The best set should cover most of them by its greater dimensions
             //
-            List<ComTable> allTargetSets = targetSchema.AllSubTables;
+            List<DcTable> allTargetSets = targetSchema.AllSubTables;
             double[] coverage = new double[allTargetSets.Count];
             double maxCoverage = 0;
             int maxCoverageIndex = -1;
@@ -246,9 +246,9 @@ namespace Com.Model
             {
                 // Find coverage of this target set (how many best greater target sets it covers)
                 coverage[i] = 0;
-                foreach (ComColumn tgc in allTargetSets[i].Columns)
+                foreach (DcColumn tgc in allTargetSets[i].Columns)
                 {
-                    ComTable tgs = tgc.Output;
+                    DcTable tgs = tgc.Output;
                     if (!targetOutputSets.Contains(tgs)) continue;
 
                     // TODO: Compare dimension names and then use it as a weight [0,1] instead of simply incrementing
@@ -276,16 +276,16 @@ namespace Com.Model
             Mapping newMapping = null;
             if (maxCoverage < SetCreationThreshold) // Create new target set for mapping (and its greater dimensions) which will be accessible only via the mapping object (not via the schema)
             {
-                ComTable ts = new Set(sourceSet.Name); // New set has the same name as the soure set
+                DcTable ts = new Set(sourceSet.Name); // New set has the same name as the soure set
 
                 newMapping = new Mapping(sourceSet, ts);
 
-                foreach (ComColumn sd in sourceSet.Columns) // For each source dimension, create one new target dimension 
+                foreach (DcColumn sd in sourceSet.Columns) // For each source dimension, create one new target dimension 
                 {
                     Mapping gMapping = greaterMappings[sd];
-                    ComTable gts = gMapping.TargetSet;
+                    DcTable gts = gMapping.TargetSet;
 
-                    ComColumn td = targetSchema.CreateColumn(sd.Name, ts, gts, sd.IsKey); // Create a clone for the source dimension
+                    DcColumn td = targetSchema.CreateColumn(sd.Name, ts, gts, sd.IsKey); // Create a clone for the source dimension
 
                     newMapping.AddPaths(sd, td, gMapping); // Add a pair of dimensions as a match (with expansion using the specified greater mapping)
                 }
@@ -295,17 +295,17 @@ namespace Com.Model
             }
             else // Use existing target set(s) for mapping(s)
             {
-                ComTable ts = allTargetSets[maxCoverageIndex];
+                DcTable ts = allTargetSets[maxCoverageIndex];
 
                 newMapping = new Mapping(sourceSet, ts);
 
-                foreach (ComColumn sd in sourceSet.Columns) // For each source dimension, find best target dimension 
+                foreach (DcColumn sd in sourceSet.Columns) // For each source dimension, find best target dimension 
                 {
                     Mapping gMapping = greaterMappings[sd];
-                    ComTable gts = gMapping.TargetSet;
+                    DcTable gts = gMapping.TargetSet;
 
                     // Find an existing dimension from ts to gts with the best similarity to source dim sd
-                    ComColumn td = null;
+                    DcColumn td = null;
                     var tDims = ts.Columns.Where(d => d.Output == gts); // All target dimensions from ts to gts
                     if (tDims != null && tDims.Count() > 0)
                     {
@@ -330,7 +330,7 @@ namespace Com.Model
             Mappings.AddRange(maps);
             return maps;
         }
-        public List<Mapping> MapSet(ComSchema sourceSchema, ComTable targetSet)
+        public List<Mapping> MapSet(DcSchema sourceSchema, DcTable targetSet)
         {
             if (targetSet.IsPrimitive) return MapPrimitiveSet(sourceSchema, targetSet);
 
@@ -345,12 +345,12 @@ namespace Com.Model
         /// <summary>
         /// Generate best mappings from the source set to the target set. 
         /// </summary>
-        public List<Mapping> MapSet_NEW(ComTable sourceSet, ComTable targetSet)
+        public List<Mapping> MapSet_NEW(DcTable sourceSet, DcTable targetSet)
         {
             // For the first simplest version, we generate only column mappings for relational source sets
 
-            ComSchema sourceSchema = sourceSet.Schema;
-            ComSchema targetSchema = targetSet.Schema;
+            DcSchema sourceSchema = sourceSet.Schema;
+            DcSchema targetSchema = targetSet.Schema;
             List<Mapping> maps = new List<Mapping>();
 
             if (sourceSet.IsPrimitive)
@@ -582,7 +582,7 @@ namespace Com.Model
         /// <summary>
         /// Find best path starting from the target set and corresponding to the source path.
         /// </summary>
-        public DimPath MapDim(DimPath sourcePath, ComTable targetSet)
+        public DimPath MapDim(DimPath sourcePath, DcTable targetSet)
         {
             List<DimPath> targetPaths = (new PathEnumerator(targetSet, DimensionType.IDENTITY_ENTITY)).ToList();
             if (targetPaths.Count == 0) return null;
@@ -607,7 +607,7 @@ namespace Com.Model
         /// The set is not populated but is ready to be populated. 
         /// It is a convenience method simplifying a typical operation. 
         /// </summary>
-        public static ComTable ImportSet(ComTable sourceSet, ComSchema targetSchema)
+        public static DcTable ImportSet(DcTable sourceSet, DcSchema targetSchema)
         {
             Mapper mapper = new Mapper();
             mapper.SetCreationThreshold = 1.0;
@@ -616,7 +616,7 @@ namespace Com.Model
             mapping.AddTargetToSchema(targetSchema);
 
             // Define the column
-            ComColumn dimImport = new Dim(mapping);
+            DcColumn dimImport = new Dim(mapping);
             dimImport.Add();
 
             // Define the table
@@ -631,20 +631,20 @@ namespace Com.Model
         /// For relational source, this means that all primitive columns of the source table will be mapped with their relational names, no FK-referenced tables will be joined and no artifical column names will be used. 
         /// If it is necessary to expand entity dimensions (non-PK columns of joined tables) then a different implementation is needed (which will require joins, artifical column/path names etc.)
         /// </summary>
-        public Mapping CreatePrimitive(ComTable sourceSet, ComTable targetSet, ComSchema targetSchema)
+        public Mapping CreatePrimitive(DcTable sourceSet, DcTable targetSet, DcSchema targetSchema)
         {
             Debug.Assert(!sourceSet.IsPrimitive && !targetSet.IsPrimitive, "Wrong use: copy mapping can be created for only non-primitive sets.");
             Debug.Assert(targetSchema != null || targetSet.Schema != null, "Wrong use: target schema must be specified.");
 
             Mapping map = new Mapping(sourceSet, targetSet);
 
-            ComSchema sourceSchema = map.SourceSet.Schema;
+            DcSchema sourceSchema = map.SourceSet.Schema;
             if (targetSchema == null) targetSchema = targetSet.Schema;
 
             DimPath sp;
             DimPath tp;
 
-            ComColumn td;
+            DcColumn td;
 
             PathMatch match;
 
@@ -657,7 +657,7 @@ namespace Com.Model
 
                     // Recommend matching target type (mapping primitive types)
                     this.MapPrimitiveSet(att.Output, targetSchema);
-                    ComTable targetType = this.GetBestTargetSet(att.Output, targetSchema);
+                    DcTable targetType = this.GetBestTargetSet(att.Output, targetSchema);
 
                     td = new Dim(att.RelationalColumnName, map.TargetSet, targetType, att.IsKey, false);
                     tp = new DimPath(td);
@@ -670,8 +670,8 @@ namespace Com.Model
             }
             else if (sourceSchema is SchemaCsv)
             {
-                ComTable set = (ComTable)map.SourceSet;
-                foreach (ComColumn sd in set.Columns)
+                DcTable set = (DcTable)map.SourceSet;
+                foreach (DcColumn sd in set.Columns)
                 {
                     if (sd.IsSuper) continue;
 
@@ -689,7 +689,7 @@ namespace Com.Model
                     else if (Utils.isDouble(values.ToArray())) targetTypeName = "Double";
                     else targetTypeName = "String";
 
-                    ComTable targetType = targetSchema.GetPrimitive(targetTypeName);
+                    DcTable targetType = targetSchema.GetPrimitive(targetTypeName);
 
                     td = targetSchema.CreateColumn(sd.Name, map.TargetSet, targetType, sd.IsKey);
 

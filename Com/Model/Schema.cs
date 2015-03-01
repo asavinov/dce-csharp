@@ -16,33 +16,33 @@ namespace Com.Model
     /// Top set is used to represent a whole database like a local mash up or a remote database. 
     /// It also can describe how its instances are loaded from a remote source and stored.
     /// </summary>
-    public class Schema : Set, ComSchema
+    public class Schema : Set, DcSchema
     {
 
         #region ComSchema interface
 
         public Workspace Workspace { get; set; }
         
-        public ComTable GetPrimitive(string name)
+        public DcTable GetPrimitive(string name)
         {
-            ComColumn dim = SubColumns.FirstOrDefault(x => StringSimilarity.SameTableName(x.Input.Name, name));
+            DcColumn dim = SubColumns.FirstOrDefault(x => StringSimilarity.SameTableName(x.Input.Name, name));
             return dim != null ? dim.Input : null;
         }
 
-        public ComTable Root { get { return GetPrimitive("Root"); } }
+        public DcTable Root { get { return GetPrimitive("Root"); } }
 
 
         //
         // Factories for tables and columns
         //
 
-        public virtual ComTable CreateTable(String name) 
+        public virtual DcTable CreateTable(String name) 
         {
-            ComTable table = new Set(name);
+            DcTable table = new Set(name);
             return table;
         }
 
-        public virtual ComTable AddTable(ComTable table, ComTable parent, string superName)
+        public virtual DcTable AddTable(DcTable table, DcTable parent, string superName)
         {
             if (parent == null)
             {
@@ -60,39 +60,39 @@ namespace Com.Model
             return table;
         }
 
-        public virtual void DeleteTable(ComTable table) 
+        public virtual void DeleteTable(DcTable table) 
         {
             Debug.Assert(!table.IsPrimitive, "Wrong use: users do not create/delete primitive sets - they are part of the schema.");
 
-            List<ComColumn> toRemove;
+            List<DcColumn> toRemove;
             toRemove = table.InputColumns.ToList();
-            foreach (ComColumn col in toRemove) 
+            foreach (DcColumn col in toRemove) 
             {
                 col.Remove();
             }
             toRemove = table.Columns.ToList();
-            foreach (ComColumn col in toRemove)
+            foreach (DcColumn col in toRemove)
             {
                 col.Remove();
             }
         }
 
-        public void RenameTable(ComTable table, string newName)
+        public void RenameTable(DcTable table, string newName)
         {
             TableRenamed(table, newName); // Rename with propagation
             table.Name = newName;
         }
 
-        public virtual ComColumn CreateColumn(string name, ComTable input, ComTable output, bool isKey)
+        public virtual DcColumn CreateColumn(string name, DcTable input, DcTable output, bool isKey)
         {
             Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
 
-            ComColumn dim = new Dim(name, input, output, isKey, false);
+            DcColumn dim = new Dim(name, input, output, isKey, false);
 
             return dim;
         }
 
-        public virtual void DeleteColumn(ComColumn column)
+        public virtual void DeleteColumn(DcColumn column)
         {
             Debug.Assert(!column.Input.IsPrimitive, "Wrong use: top columns cannot be created/deleted.");
 
@@ -100,7 +100,7 @@ namespace Com.Model
             column.Remove();
         }
 
-        public void RenameColumn(ComColumn column, string newName)
+        public void RenameColumn(DcColumn column, string newName)
         {
             ColumnRenamed(column, newName); // Rename with propagation
             column.Name = newName;
@@ -108,15 +108,15 @@ namespace Com.Model
 
         #endregion
 
-        protected void TableRenamed(ComTable table, string newName)
+        protected void TableRenamed(DcTable table, string newName)
         {
-            ComSchema schema = this;
+            DcSchema schema = this;
 
             //
             // Check all elements of the schema that can store table name (tables, columns etc.)
             // Update their definition so that it uses the new name of the specified element
             //
-            List<ComTable> tables = schema.AllSubTables;
+            List<DcTable> tables = schema.AllSubTables;
             var nodes = new List<ExprNode>();
             foreach (var tab in tables)
             {
@@ -128,12 +128,12 @@ namespace Com.Model
 
                     if (col.Definition.FormulaExpr != null)
                     {
-                        nodes = col.Definition.FormulaExpr.Find((ComTable)table);
+                        nodes = col.Definition.FormulaExpr.Find((DcTable)table);
                         nodes.ForEach(x => x.Name = newName);
                     }
                     if (col.Definition.WhereExpr != null)
                     {
-                        nodes = col.Definition.WhereExpr.Find((ComTable)table);
+                        nodes = col.Definition.WhereExpr.Find((DcTable)table);
                         nodes.ForEach(x => x.Name = newName);
                     }
                 }
@@ -143,12 +143,12 @@ namespace Com.Model
                 // Update table definitions by finding the uses of the specified column
                 if (tab.Definition.WhereExpr != null)
                 {
-                    nodes = tab.Definition.WhereExpr.Find((ComTable)table);
+                    nodes = tab.Definition.WhereExpr.Find((DcTable)table);
                     nodes.ForEach(x => x.Name = newName);
                 }
                 if (tab.Definition.OrderbyExpr != null)
                 {
-                    nodes = tab.Definition.OrderbyExpr.Find((ComTable)table);
+                    nodes = tab.Definition.OrderbyExpr.Find((DcTable)table);
                     nodes.ForEach(x => x.Name = newName);
                 }
             }
@@ -156,15 +156,15 @@ namespace Com.Model
             table.Name = newName;
         }
 
-        protected void ColumnRenamed(ComColumn column, string newName)
+        protected void ColumnRenamed(DcColumn column, string newName)
         {
-            ComSchema schema = this;
+            DcSchema schema = this;
 
             //
             // Check all elements of the schema that can store column name (tables, columns etc.)
             // Update their definition so that it uses the new name of the specified element
             //
-            List<ComTable> tables = schema.AllSubTables;
+            List<DcTable> tables = schema.AllSubTables;
             var nodes = new List<ExprNode>();
             foreach (var tab in tables)
             {
@@ -176,12 +176,12 @@ namespace Com.Model
 
                     if (col.Definition.FormulaExpr != null)
                     {
-                        nodes = col.Definition.FormulaExpr.Find((ComColumn)column);
+                        nodes = col.Definition.FormulaExpr.Find((DcColumn)column);
                         nodes.ForEach(x => x.Name = newName);
                     }
                     if (col.Definition.WhereExpr != null)
                     {
-                        nodes = col.Definition.WhereExpr.Find((ComColumn)column);
+                        nodes = col.Definition.WhereExpr.Find((DcColumn)column);
                         nodes.ForEach(x => x.Name = newName);
                     }
                 }
@@ -191,12 +191,12 @@ namespace Com.Model
                 // Update table definitions by finding the uses of the specified column
                 if (tab.Definition.WhereExpr != null)
                 {
-                    nodes = tab.Definition.WhereExpr.Find((ComColumn)column);
+                    nodes = tab.Definition.WhereExpr.Find((DcColumn)column);
                     nodes.ForEach(x => x.Name = newName);
                 }
                 if (tab.Definition.OrderbyExpr != null)
                 {
-                    nodes = tab.Definition.OrderbyExpr.Find((ComColumn)column);
+                    nodes = tab.Definition.OrderbyExpr.Find((DcColumn)column);
                     nodes.ForEach(x => x.Name = newName);
                 }
             }
@@ -204,14 +204,14 @@ namespace Com.Model
             column.Name = newName;
         }
 
-        protected void ColumnDeleted(ComColumn column)
+        protected void ColumnDeleted(DcColumn column)
         {
-            ComSchema schema = this;
+            DcSchema schema = this;
 
             //
             // Delete all expression nodes that use the deleted column and all references to this column from other objects
             //
-            List<ComTable> tables = schema.AllSubTables;
+            List<DcTable> tables = schema.AllSubTables;
             var nodes = new List<ExprNode>();
             foreach (var tab in tables)
             {
@@ -294,7 +294,7 @@ namespace Com.Model
             // List of all tables
             JArray tables = new JArray();
             JArray columns = new JArray(); // One array for all columns of all tables (not within each tabel)
-            foreach (ComTable comTable in this.AllSubTables)
+            foreach (DcTable comTable in this.AllSubTables)
             {
                 if (comTable.IsPrimitive) continue;
 
@@ -303,7 +303,7 @@ namespace Com.Model
                 tables.Add(table);
 
                 // List of columns
-                foreach (ComColumn comColumn in comTable.Columns)
+                foreach (DcColumn comColumn in comTable.Columns)
                 {
                     JObject column = Utils.CreateJsonFromObject(comColumn);
                     comColumn.ToJson(column);
@@ -324,7 +324,7 @@ namespace Com.Model
             JArray tables = (JArray)json["tables"];
             foreach (JObject table in tables)
             {
-                ComTable comTable = (ComTable)Utils.CreateObjectFromJson(table);
+                DcTable comTable = (DcTable)Utils.CreateObjectFromJson(table);
                 if (comTable != null)
                 {
                     comTable.FromJson(table, ws);

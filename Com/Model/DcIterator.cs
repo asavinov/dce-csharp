@@ -6,7 +6,7 @@ using System.Text;
 namespace Com.Model
 {
     // This class is used only by the column evaluation procedure. 
-    public interface ComEvaluator // Compute output for one input based on some column definition and other already computed columns
+    public interface DcIterator // Compute output for one input based on some column definition and other already computed columns
     {
         // Never changes any set - neither lesser nor greater - just compute output given input
 

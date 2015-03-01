@@ -7,36 +7,36 @@ using Newtonsoft.Json.Linq;
 
 namespace Com.Model
 {
-    public interface ComSchema : ComTable
+    public interface DcSchema : DcTable
     {
         Workspace Workspace { get; set; }
 
-        ComTable GetPrimitive(string dataType);
-        ComTable Root { get; } // Convenience
+        DcTable GetPrimitive(string dataType);
+        DcTable Root { get; } // Convenience
 
         //
         // Table factory
         //
 
-        ComTable CreateTable(string name);
-        ComTable AddTable(ComTable table, ComTable parent, string superName);
-        void DeleteTable(ComTable table);
-        void RenameTable(ComTable table, string newName);
+        DcTable CreateTable(string name);
+        DcTable AddTable(DcTable table, DcTable parent, string superName);
+        void DeleteTable(DcTable table);
+        void RenameTable(DcTable table, string newName);
 
         //
         // Column factory
         //
 
-        ComColumn CreateColumn(string name, ComTable input, ComTable output, bool isKey);
-        void DeleteColumn(ComColumn column);
-        void RenameColumn(ComColumn column, string newName);
+        DcColumn CreateColumn(string name, DcTable input, DcTable output, bool isKey);
+        void DeleteColumn(DcColumn column);
+        void RenameColumn(DcColumn column, string newName);
     }
 
     /// <summary>
     /// Primitive data types used in our local database system. 
     /// We need to enumerate data types for each kind of database along with the primitive mappings to other databases.
     /// </summary>
-    public enum ComDataType
+    public enum DcDataType
     {
         // Built-in types in C#: http://msdn.microsoft.com/en-us/library/vstudio/ya5y69ds.aspx
         Void, // Null, Nothing, Empty no value. Can be equivalent to Top.

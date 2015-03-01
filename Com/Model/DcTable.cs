@@ -7,7 +7,7 @@ using Offset = System.Int32;
 
 namespace Com.Model
 {
-    public interface ComTable : ComJson // One table object
+    public interface DcTable : DcJson // One table object
     {
         /// <summary>
         /// A set name. Note that in the general case a set has an associated structure (concept, type) which may have its own name. 
@@ -23,42 +23,42 @@ namespace Com.Model
         //
         // Outputs
         //
-        List<ComColumn> Columns { get; }
+        List<DcColumn> Columns { get; }
 
-        ComColumn SuperColumn { get; }
-        ComTable SuperTable { get; }
-        ComSchema Schema { get; }
+        DcColumn SuperColumn { get; }
+        DcTable SuperTable { get; }
+        DcSchema Schema { get; }
 
         //
         // Inputs
         //
-        List<ComColumn> InputColumns { get; }
+        List<DcColumn> InputColumns { get; }
 
-        List<ComColumn> SubColumns { get; }
-        List<ComTable> SubTables { get; }
-        List<ComTable> AllSubTables { get; }
+        List<DcColumn> SubColumns { get; }
+        List<DcTable> SubTables { get; }
+        List<DcTable> AllSubTables { get; }
 
         //
         // Poset relation
         //
 
-        bool IsSubTable(ComTable parent); // Is subset of the specified table
-        bool IsInput(ComTable set); // Is lesser than the specified table
+        bool IsSubTable(DcTable parent); // Is subset of the specified table
+        bool IsInput(DcTable set); // Is lesser than the specified table
         bool IsLeast { get; } // Has no inputs
         bool IsGreatest { get; } // Has no outputs
 
         //
         // Names
         //
-        ComColumn GetColumn(string name); // Greater column
-        ComTable GetTable(string name); // TODO: Greater table/type - not subtable
-        ComTable GetSubTable(string name); // Subtable
+        DcColumn GetColumn(string name); // Greater column
+        DcTable GetTable(string name); // TODO: Greater table/type - not subtable
+        DcTable GetSubTable(string name); // Subtable
 
-        ComTableData Data { get; }
-        ComTableDefinition Definition { get; }
+        DcTableData Data { get; }
+        DcTableDefinition Definition { get; }
     }
 
-    public interface ComTableData // It is interface for manipulating data in a table.
+    public interface DcTableData // It is interface for manipulating data in a table.
     {
         Offset Length { get; set; }
 
@@ -77,8 +77,8 @@ namespace Com.Model
         // TUPLE could be used as a set structure specification (e.g., param for set creation).
         //
 
-        Offset Find(ComColumn[] dims, object[] values);
-        Offset Append(ComColumn[] dims, object[] values);
+        Offset Find(DcColumn[] dims, object[] values);
+        Offset Append(DcColumn[] dims, object[] values);
         void Remove(int input);
 
         //
@@ -100,7 +100,7 @@ namespace Com.Model
         //
     }
 
-    public interface ComTableDefinition
+    public interface DcTableDefinition
     {
         /// <summary>
         /// Specifies kind of formula used to define this table. 
@@ -120,7 +120,7 @@ namespace Com.Model
         /// </summary>
         ExprNode OrderbyExpr { get; set; } // Here we should store something like Comparator
 
-        ComEvaluator GetWhereEvaluator(); // Get an object which is used to compute the where expression according to the formula
+        DcIterator GetWhereEvaluator(); // Get an object which is used to compute the where expression according to the formula
 
         /// <summary>
         /// Create all instances of this set. 
@@ -139,11 +139,11 @@ namespace Com.Model
         //
         // Dependencies. The order is important and corresponds to dependency chain
         //
-        List<ComTable> UsesTables(bool recursive); // This element depends upon
-        List<ComTable> IsUsedInTables(bool recursive); // Dependants
+        List<DcTable> UsesTables(bool recursive); // This element depends upon
+        List<DcTable> IsUsedInTables(bool recursive); // Dependants
 
-        List<ComColumn> UsesColumns(bool recursive); // This element depends upon
-        List<ComColumn> IsUsedInColumns(bool recursive); // Dependants
+        List<DcColumn> UsesColumns(bool recursive); // This element depends upon
+        List<DcColumn> IsUsedInColumns(bool recursive); // Dependants
     }
 
     public enum TableDefinitionType // Specific types of table formula

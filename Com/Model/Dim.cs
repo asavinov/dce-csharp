@@ -17,7 +17,7 @@ namespace Com.Model
     /// Extensions also can define functions defined via a formula or a query to an external database.
     /// It is only important that a function somehow impplements a mapping from its lesser set to its greater set. 
     /// </summary>
-    public class Dim : INotifyPropertyChanged, ComColumn
+    public class Dim : INotifyPropertyChanged, DcColumn
     {
         private static int uniqueId;
 
@@ -51,8 +51,8 @@ namespace Com.Model
         /// <summary>
         /// Lesser (input) set. 
         /// </summary>
-        protected ComTable _input;
-        public ComTable Input 
+        protected DcTable _input;
+        public DcTable Input 
         {
             get { return _input; }
             set 
@@ -65,8 +65,8 @@ namespace Com.Model
         /// <summary>
         /// Greater (output) set.
         /// </summary>
-        protected ComTable _output;
-        public ComTable Output
+        protected DcTable _output;
+        public DcTable Output
         {
             get { return _output; }
             set
@@ -113,11 +113,11 @@ namespace Com.Model
         }
 
 
-        protected ComColumnData _data;
-        public virtual ComColumnData Data { get { return _data; } }
+        protected DcColumnData _data;
+        public virtual DcColumnData Data { get { return _data; } }
 
-        protected ComColumnDefinition _definition;
-        public virtual ComColumnDefinition Definition { get { return _definition; } }
+        protected DcColumnDefinition _definition;
+        public virtual DcColumnDefinition Definition { get { return _definition; } }
 
         #endregion
 
@@ -195,8 +195,8 @@ namespace Com.Model
             IsKey = json["key"] != null ? StringSimilarity.JsonTrue((string)json["key"]) : false;
             IsSuper = json["super"] != null ? StringSimilarity.JsonTrue((string)json["super"]) : false;
 
-            Input = (ComTable)Utils.ResolveJsonRef((JObject)json["lesser_table"], ws);
-            Output = (ComTable)Utils.ResolveJsonRef((JObject)json["greater_table"], ws);
+            Input = (DcTable)Utils.ResolveJsonRef((JObject)json["lesser_table"], ws);
+            Output = (DcTable)Utils.ResolveJsonRef((JObject)json["greater_table"], ws);
 
             // Column definition
             JObject columnDef = (JObject)json["definition"];
@@ -227,7 +227,7 @@ namespace Com.Model
 
                 if (columnDef["fact_table"] != null)
                 {
-                    ComTable facts = (ComTable)Utils.CreateObjectFromJson((JObject)columnDef["fact_table"]);
+                    DcTable facts = (DcTable)Utils.CreateObjectFromJson((JObject)columnDef["fact_table"]);
                     if (facts != null)
                     {
                         facts.FromJson((JObject)columnDef["fact_table"], ws);
@@ -323,9 +323,9 @@ namespace Com.Model
         /// Creae storage for the function and its definition depending on the output set type.
         /// </summary>
         /// <returns></returns>
-        public static ComColumnData CreateColumnData(ComTable type, ComColumn column)
+        public static DcColumnData CreateColumnData(DcTable type, DcColumn column)
         {
-            ComColumnData colData = new DimDataEmpty();
+            DcColumnData colData = new DimDataEmpty();
 
             /*
             if (column.Input != null && column.Input.Schema != null && column.Input.Schema.GetType() != typeof(Schema)) // Import dim
@@ -411,7 +411,7 @@ namespace Com.Model
             // TODO: Copy definition
         }
 
-        public Dim(ComTable set) // Empty dimension
+        public Dim(DcTable set) // Empty dimension
             : this("", set, set)
         {
         }
@@ -426,12 +426,12 @@ namespace Com.Model
         {
         }
 
-        public Dim(string name, ComTable input, ComTable output)
+        public Dim(string name, DcTable input, DcTable output)
             : this(name, input, output, false, false)
         {
         }
 
-        public Dim(string name, ComTable input, ComTable output, bool isIdentity, bool isSuper)
+        public Dim(string name, DcTable input, DcTable output, bool isIdentity, bool isSuper)
         {
             Id = Guid.NewGuid();
 
@@ -492,12 +492,12 @@ namespace Com.Model
         {
         }
 
-        public DimRel(string name, ComTable input, ComTable output)
+        public DimRel(string name, DcTable input, DcTable output)
             : this(name, input, output, false, false)
         {
         }
 
-        public DimRel(string name, ComTable input, ComTable output, bool isIdentity, bool isSuper)
+        public DimRel(string name, DcTable input, DcTable output, bool isIdentity, bool isSuper)
             : base(name, input, output, isIdentity, isSuper)
         {
         }
@@ -543,12 +543,12 @@ namespace Com.Model
         {
         }
 
-        public DimCsv(string name, ComTable input, ComTable output)
+        public DimCsv(string name, DcTable input, DcTable output)
             : this(name, input, output, false, false)
         {
         }
 
-        public DimCsv(string name, ComTable input, ComTable output, bool isIdentity, bool isSuper)
+        public DimCsv(string name, DcTable input, DcTable output, bool isIdentity, bool isSuper)
             : base(name, input, output, isIdentity, isSuper)
         {
             SampleValues = new List<string>();

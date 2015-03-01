@@ -44,7 +44,7 @@ namespace Com.Model
 
     public class DcScriptSchema
     {
-        protected ComSchema _schema { get; set; } // The represented object
+        protected DcSchema _schema { get; set; } // The represented object
         // TODO: some important properties of the object stored by-value in this smart reference
         // TODO: status of the reference: is_resolved, is_broken, etc.
 
@@ -91,7 +91,7 @@ namespace Com.Model
 
     public class DcScriptColumn
     {
-        protected ComColumn _column { get; set; } // The represented object
+        protected DcColumn _column { get; set; } // The represented object
         // TODO: some important properties of the object stored by-value in this smart reference
         // TODO: status of the reference: is_resolved, is_broken, etc.
 
@@ -130,7 +130,7 @@ namespace Com.Model
 
     public class DcScriptTable
     {
-        protected ComTable _table { get; set; } // The represented object
+        protected DcTable _table { get; set; } // The represented object
         // TODO: some important properties of the object stored by-value in this smart reference
         // TODO: status of the reference: is_resolved, is_broken, etc.
 

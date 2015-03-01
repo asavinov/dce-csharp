@@ -15,9 +15,9 @@ namespace Com.Model
     /// One array of type T stores elements in their original order without sorting. 
     /// Second array stores indexes (offsets) of elements in the first array in sorted order.
     /// </summary>
-    public class DimData<T> : ComColumnData
+    public class DimData<T> : DcColumnData
     {
-        protected ComColumn Dim { get; set; }
+        protected DcColumn Dim { get; set; }
 
         private T[] _cells; // Each cell contains a T value in arbitrary original order
         private int[] _offsets; // Each cell contains an offset to an element in cells in ascending or descending order
@@ -495,7 +495,7 @@ namespace Com.Model
 
         #region Constructors
 
-        public DimData(ComColumn dim)
+        public DimData(DcColumn dim)
         {
             // TODO: Check if output (greater) set is of correct type
 
@@ -550,7 +550,7 @@ namespace Com.Model
     /// Empty data.
     /// 
     /// </summary>
-    public class DimDataEmpty : ComColumnData
+    public class DimDataEmpty : DcColumnData
     {
 
         #region ComColumnData interface
@@ -590,9 +590,9 @@ namespace Com.Model
         #endregion
     }
 
-    public class ColumnDefinition : ComColumnDefinition 
+    public class ColumnDefinition : DcColumnDefinition 
     {
-        protected ComColumn Dim { get; set; }
+        protected DcColumn Dim { get; set; }
 
         #region ComColumnDefinition interface
 
@@ -636,7 +636,7 @@ namespace Com.Model
         // Aggregation
         //
 
-        public ComTable FactTable { get; set; }
+        public DcTable FactTable { get; set; }
 
         public List<DimPath> GroupPaths { get; set; }
 
@@ -693,9 +693,9 @@ namespace Com.Model
         //
 
         // Get an object which is used to compute the function values according to the formula
-        protected ComEvaluator GetEvaluator()
+        protected DcIterator GetEvaluator()
         {
-            ComEvaluator evaluator = null;
+            DcIterator evaluator = null;
 
             if (DefinitionType == ColumnDefinitionType.FREE) 
             {
@@ -784,7 +784,7 @@ namespace Com.Model
 
         public void Evaluate()
         {
-            ComEvaluator evaluator = GetEvaluator();
+            DcIterator evaluator = GetEvaluator();
             if (evaluator == null) return;
 
             try
@@ -837,9 +837,9 @@ namespace Com.Model
         public List<Dim> Dependencies { get; set; } // Other functions this function directly depends upon. Computed from the definition of this function.
         // Find and store all outputs of this function by evaluating (executing) its definition in a loop for all input elements of the fact set (not necessarily this set)
 
-        public List<ComTable> UsesTables(bool recursive) // This element depends upon
+        public List<DcTable> UsesTables(bool recursive) // This element depends upon
         {
-            List<ComTable> res = new List<ComTable>();
+            List<DcTable> res = new List<DcTable>();
 
             if (DefinitionType == ColumnDefinitionType.FREE)
             {
@@ -849,7 +849,7 @@ namespace Com.Model
             {
                 if (FormulaExpr != null) // Dependency information is stored in expression (formula)
                 {
-                    res = FormulaExpr.Find((ComTable)null).Select(x => x.Result.TypeTable).ToList();
+                    res = FormulaExpr.Find((DcTable)null).Select(x => x.Result.TypeTable).ToList();
                 }
             }
             else if (DefinitionType == ColumnDefinitionType.AGGREGATION)
@@ -861,7 +861,7 @@ namespace Com.Model
                 {
                     foreach (DimPath path in GroupPaths)
                     {
-                        foreach (ComColumn seg in path.Segments)
+                        foreach (DcColumn seg in path.Segments)
                         {
                             if (!res.Contains(seg.Output)) res.Add(seg.Output);
                         }
@@ -871,7 +871,7 @@ namespace Com.Model
                 {
                     foreach (DimPath path in MeasurePaths)
                     {
-                        foreach (ComColumn seg in path.Segments)
+                        foreach (DcColumn seg in path.Segments)
                         {
                             if (!res.Contains(seg.Output)) res.Add(seg.Output);
                         }
@@ -881,9 +881,9 @@ namespace Com.Model
 
             return res;
         }
-        public List<ComTable> IsUsedInTables(bool recursive) // Dependants
+        public List<DcTable> IsUsedInTables(bool recursive) // Dependants
         {
-            List<ComTable> res = new List<ComTable>();
+            List<DcTable> res = new List<DcTable>();
 
             // TODO: Which other sets use this function for their content? Say, if it is a generating function. Or it is a group/measure function.
             // Analyze other function definitions and check if this function is used there directly. 
@@ -894,9 +894,9 @@ namespace Com.Model
             return res;
         }
 
-        public List<ComColumn> UsesColumns(bool recursive) // This element depends upon
+        public List<DcColumn> UsesColumns(bool recursive) // This element depends upon
         {
-            List<ComColumn> res = new List<ComColumn>();
+            List<DcColumn> res = new List<DcColumn>();
 
             if (DefinitionType == ColumnDefinitionType.FREE)
             {
@@ -906,7 +906,7 @@ namespace Com.Model
             {
                 if (FormulaExpr != null) // Dependency information is stored in expression (formula)
                 {
-                    res = FormulaExpr.Find((ComColumn)null).Select(x => x.Column).ToList();
+                    res = FormulaExpr.Find((DcColumn)null).Select(x => x.Column).ToList();
                 }
             }
             else if (DefinitionType == ColumnDefinitionType.AGGREGATION)
@@ -936,9 +936,9 @@ namespace Com.Model
 
             return res;
         }
-        public List<ComColumn> IsUsedInColumns(bool recursive) // Dependants
+        public List<DcColumn> IsUsedInColumns(bool recursive) // Dependants
         {
-            List<ComColumn> res = new List<ComColumn>();
+            List<DcColumn> res = new List<DcColumn>();
 
             // TODO: Find which other columns use this column in the definition
 
@@ -947,7 +947,7 @@ namespace Com.Model
 
         #endregion
 
-        public ColumnDefinition(ComColumn dim)
+        public ColumnDefinition(DcColumn dim)
         {
             Dim = dim;
 

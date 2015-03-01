@@ -181,7 +181,7 @@ namespace Com.Query
 
                         // TOD: Really add a new function with this definition
                         Set typeSet = (Set) top.GetSubTable(type);
-                        Dim dim = (Dim)((ComSchema)top).CreateColumn(name, set, typeSet, true);
+                        Dim dim = (Dim)((DcSchema)top).CreateColumn(name, set, typeSet, true);
                         //dim.FormulaAst = formula;
                         dim.Add();
 

@@ -18,7 +18,7 @@ namespace Com.Model
         /// <summary>
         /// A dimension can be defined as a sequence of other dimensions. For simple dimensions the path is empty.
         /// </summary>
-        public List<ComColumn> Segments { get; set; }
+        public List<DcColumn> Segments { get; set; }
 
         public int Size
         {
@@ -28,7 +28,7 @@ namespace Com.Model
             }
         }
 
-        public ComColumn FirstSegment
+        public DcColumn FirstSegment
         {
             get
             {
@@ -36,7 +36,7 @@ namespace Com.Model
             }
         }
 
-        public ComColumn LastSegment
+        public DcColumn LastSegment
         {
             get
             {
@@ -50,7 +50,7 @@ namespace Com.Model
             {
                 if (Size == 0) return 1; // Simple dimension
                 int r = 0;
-                foreach (ComColumn dim in Segments)
+                foreach (DcColumn dim in Segments)
                 {
                     r += 1; // dim.Rank;
                 }
@@ -66,7 +66,7 @@ namespace Com.Model
             }
         }
 
-        public int IndexOfGreater(ComTable set) // Return index of the dimension with this greater set
+        public int IndexOfGreater(DcTable set) // Return index of the dimension with this greater set
         {
             for (int i = 0; i < Segments.Count; i++)
             {
@@ -74,7 +74,7 @@ namespace Com.Model
             }
             return -1;
         }
-        public int IndexOfLesser(ComTable set) // Return index of the dimension with this lesser set
+        public int IndexOfLesser(DcTable set) // Return index of the dimension with this lesser set
         {
             for (int i = 0; i < Segments.Count; i++)
             {
@@ -82,7 +82,7 @@ namespace Com.Model
             }
             return -1;
         }
-        public int IndexOf(ComColumn dim) // Return index of the specified dimension in this path
+        public int IndexOf(DcColumn dim) // Return index of the specified dimension in this path
         {
             return Segments.IndexOf(dim);
         }
@@ -91,7 +91,7 @@ namespace Com.Model
             throw new NotImplementedException();
         }
 
-        public bool StartsWith(ComColumn dim)
+        public bool StartsWith(DcColumn dim)
         {
             if(Size == 0) return false;
             return Segments[0] == dim;
@@ -100,7 +100,7 @@ namespace Com.Model
         {
             return StartsWith(path.Segments);
         }
-        public bool StartsWith(List<ComColumn> path)
+        public bool StartsWith(List<DcColumn> path)
         {
             if (Segments.Count < path.Count) return false;
             for (int i = 0; i < path.Count; i++)
@@ -114,7 +114,7 @@ namespace Com.Model
         {
             return SamePath(path.Segments);
         }
-        public bool SamePath(List<ComColumn> path) // Equals (the same segments)
+        public bool SamePath(List<DcColumn> path) // Equals (the same segments)
         {
             if (path == null) return false;
 
@@ -146,7 +146,7 @@ namespace Com.Model
 
         #region Add segments
 
-        public void InsertAt(ComColumn dim) // Insert a new segment at the specified position
+        public void InsertAt(DcColumn dim) // Insert a new segment at the specified position
         {
             throw new NotImplementedException();
         }
@@ -155,7 +155,7 @@ namespace Com.Model
             throw new NotImplementedException();
         }
 
-        public void InsertFirst(ComColumn dim) // Insert a new segment at the beginning of the path
+        public void InsertFirst(DcColumn dim) // Insert a new segment at the beginning of the path
         {
             Debug.Assert(Size == 0 || dim.Output == Input, "A path must continue the first segment inserted in the beginning.");
 
@@ -172,7 +172,7 @@ namespace Com.Model
             if (Output == null) Output = path.Output;
         }
 
-        public void InsertLast(ComColumn dim) // Append a new segment to the end of the path
+        public void InsertLast(DcColumn dim) // Append a new segment to the end of the path
         {
             Debug.Assert(Size == 0 || dim.Input == Output, "A new segment appended to a path must continue the previous segments");
 
@@ -199,12 +199,12 @@ namespace Com.Model
 
         #region Remove segments
 
-        private ComColumn RemoveAt(int index)
+        private DcColumn RemoveAt(int index)
         {
             if (Size == 0) return null; // Nothing to remove
             if (index < 0 || index >= Segments.Count) return null; // Bad index
 
-            ComColumn result = Segments[index];
+            DcColumn result = Segments[index];
             Segments.RemoveAt(index);
 
             if (Segments.Count != 0)
@@ -220,13 +220,13 @@ namespace Com.Model
             return result;
         }
 
-        public ComColumn RemoveFirst()
+        public DcColumn RemoveFirst()
         {
             return RemoveFirstAt(0);
         }
-        public ComColumn RemoveFirstAt(int index) // TODO: Implement an additional argument with the number of segments to remove
+        public DcColumn RemoveFirstAt(int index) // TODO: Implement an additional argument with the number of segments to remove
         {
-            ComColumn result = RemoveAt(index);
+            DcColumn result = RemoveAt(index);
             if (result == null) return result;
 
             if (Segments.Count == 0) // This where removal of the first and the last segments is different
@@ -247,7 +247,7 @@ namespace Com.Model
             if (Segments.Count > 0) Input = Segments[0].Input;
             else Input = Output;
         }
-        public void RemoveFirst(ComTable set) // Remove first segments till this set (the new path will start from the specified set if trimmed)
+        public void RemoveFirst(DcTable set) // Remove first segments till this set (the new path will start from the specified set if trimmed)
         {
             if (Input == set) return; // Already here
 
@@ -261,13 +261,13 @@ namespace Com.Model
             else Input = Output;
         }
 
-        public ComColumn RemoveLast() // Remove last segment
+        public DcColumn RemoveLast() // Remove last segment
         {
             return RemoveLastAt(Segments.Count - 1);
         }
-        public ComColumn RemoveLastAt(int index) // TODO: Implement an additional argument with the number of segments to remove
+        public DcColumn RemoveLastAt(int index) // TODO: Implement an additional argument with the number of segments to remove
         {
-            ComColumn result = RemoveAt(index);
+            DcColumn result = RemoveAt(index);
             if (result == null) return result;
 
             if (Segments.Count == 0) // This where removal of the first and the last segments is different
@@ -282,16 +282,16 @@ namespace Com.Model
         {
             throw new NotImplementedException();
         }
-        public void RemoveLast(ComTable set) // Remove last segments starting from this set (the new path will end with the specified set if trimmed)
+        public void RemoveLast(DcTable set) // Remove last segments starting from this set (the new path will end with the specified set if trimmed)
         {
             throw new NotImplementedException();
         }
 
         #endregion // Remove segments
 
-        protected List<ComColumn> GetAllSegments()
+        protected List<DcColumn> GetAllSegments()
         {
-            List<ComColumn> result = new List<ComColumn>();
+            List<DcColumn> result = new List<DcColumn>();
             for (int i = 0; i < Segments.Count; i++)
             {
                 if (Segments[i] is DimPath && ((DimPath)Segments[i]).IsComplex)
@@ -316,7 +316,7 @@ namespace Com.Model
             return Rank; // TODO
         }
 
-        public ComColumn GetSegment(int rank)
+        public DcColumn GetSegment(int rank)
         {
             Debug.Assert(rank >= 0, "Wrong use of method parameter. Rank cannot be negative.");
             return rank < Segments.Count ? Segments[rank] : null; // TODO: take into account the nested structure of complex dimensions
@@ -356,12 +356,12 @@ namespace Com.Model
         {
             base.FromJson(json, ws); // Dim
 
-            var segs = new List<ComColumn>();
+            var segs = new List<DcColumn>();
             JArray segments = (JArray)json["segments"];
             for (int i = 0; i < segments.Count; i++)
             {
                 JObject segRef = (JObject)segments[i];
-                ComColumn column = (ComColumn)Utils.ResolveJsonRef(segRef, ws);
+                DcColumn column = (DcColumn)Utils.ResolveJsonRef(segRef, ws);
                 if (column == null) // Failed to resolve the segment
                 {
                     segs.Clear(); // Empty path because some segment is absent
@@ -386,7 +386,7 @@ namespace Com.Model
             {
                 if (Size == 0) return "";
                 string complexName = "";
-                foreach (ComColumn seg in Segments) complexName += "[" + seg.Name + "].";
+                foreach (DcColumn seg in Segments) complexName += "[" + seg.Name + "].";
                 complexName = complexName.Substring(0, complexName.Length - 1); // Remove last dot
                 return complexName;
             }
@@ -412,15 +412,15 @@ namespace Com.Model
 
             if (obj is DimPath)
             {
-                List<ComColumn> objSegs = ((DimPath)obj).Segments;
+                List<DcColumn> objSegs = ((DimPath)obj).Segments;
 
                 if (Size != objSegs.Count) return false;
                 for (int i = 0; i < Size; i++) if (Segments[i] != objSegs[i]) return false;
                 return true;
             }
-            else if (obj is ComColumn)
+            else if (obj is DcColumn)
             {
-                ComColumn objSeg = (ComColumn)obj;
+                DcColumn objSeg = (DcColumn)obj;
 
                 if (Size != 1) return false;
                 if (FirstSegment != objSeg) return false;
@@ -461,10 +461,10 @@ namespace Com.Model
 
         public DimPath()
         {
-            Segments = new List<ComColumn>();
+            Segments = new List<DcColumn>();
         }
 
-        public DimPath(ComTable set)
+        public DimPath(DcTable set)
             : this()
         {
             Input = set;
@@ -474,10 +474,10 @@ namespace Com.Model
         public DimPath(string name)
             : base(name)
         {
-            Segments = new List<ComColumn>();
+            Segments = new List<DcColumn>();
         }
 
-        public DimPath(ComColumn seg)
+        public DimPath(DcColumn seg)
             : this()
         {
             if (seg == null) return;
@@ -487,7 +487,7 @@ namespace Com.Model
             Output = Segments[Segments.Count - 1].Output;
         }
 
-        public DimPath(List<ComColumn> segs)
+        public DimPath(List<DcColumn> segs)
             : this()
         {
             if(segs == null || segs.Count == 0) return;
@@ -500,14 +500,14 @@ namespace Com.Model
         public DimPath(DimPath path)
             : base(path)
         {
-            Segments = new List<ComColumn>();
+            Segments = new List<DcColumn>();
             Segments.AddRange(path.Segments);
         }
 
-        public DimPath(string name, ComTable input, ComTable output)
+        public DimPath(string name, DcTable input, DcTable output)
             : base(name, input, output)
         {
-            Segments = new List<ComColumn>();
+            Segments = new List<DcColumn>();
         }
 
         #endregion
@@ -557,7 +557,7 @@ namespace Com.Model
         /// Use the provided list of attributes for expansion recursively. This list essentially represents a schema.
         /// Also, adjust path names in special cases like empty name or simple structure. 
         /// </summary>
-        public void ExpandAttribute(List<DimAttribute> attributes, List<ComColumn> columns) // Add and resolve attributes by creating dimension structure from FKs
+        public void ExpandAttribute(List<DimAttribute> attributes, List<DcColumn> columns) // Add and resolve attributes by creating dimension structure from FKs
         {
             DimAttribute att = this;
 
@@ -568,7 +568,7 @@ namespace Com.Model
             if (string.IsNullOrEmpty(att.RelationalFkName)) // No FK - primitive column - end of recursion
             {
                 // Find or create a primitive dim segment
-                ComColumn seg = columns.FirstOrDefault(c => c.Input == att.Input && StringSimilarity.SameColumnName(((DimRel)c).RelationalFkName, att.RelationalFkName));
+                DcColumn seg = columns.FirstOrDefault(c => c.Input == att.Input && StringSimilarity.SameColumnName(((DimRel)c).RelationalFkName, att.RelationalFkName));
                 if (seg == null)
                 {
                     seg = new DimRel(att.RelationalColumnName, att.Input, att.Output, isKey, false); // Maybe copy constructor?
@@ -581,10 +581,10 @@ namespace Com.Model
             else { // There is FK - non-primitive column
                 // Find target set and target attribute (name resolution)
                 DimAttribute tailAtt = attributes.FirstOrDefault(a => StringSimilarity.SameTableName(a.Input.Name, att.RelationalTargetTableName) && StringSimilarity.SameColumnName(a.Name, att.RelationalTargetColumnName));
-                ComTable gSet = tailAtt.Input;
+                DcTable gSet = tailAtt.Input;
 
                 // Find or create a dim segment
-                ComColumn seg = columns.FirstOrDefault(c => c.Input == att.Input && StringSimilarity.SameColumnName(((DimRel)c).RelationalFkName, att.RelationalFkName));
+                DcColumn seg = columns.FirstOrDefault(c => c.Input == att.Input && StringSimilarity.SameColumnName(((DimRel)c).RelationalFkName, att.RelationalFkName));
                 if (seg == null)
                 {
                     seg = new DimRel(att.RelationalFkName, att.Input, gSet, isKey, false);
@@ -621,7 +621,7 @@ namespace Com.Model
             //
             // Flatten all paths by converting <dim, greater-path> pairs by sequences of dimensions <dim, dim2, dim3,...>
             //
-            List<ComColumn> allSegments = GetAllSegments();
+            List<DcColumn> allSegments = GetAllSegments();
             Segments.Clear();
             if (allSegments != null && allSegments.Count != 0)
             {
@@ -689,7 +689,7 @@ namespace Com.Model
         {
         }
 
-        public DimAttribute(string name, ComTable input, ComTable output)
+        public DimAttribute(string name, DcTable input, DcTable output)
             : base(name, input, output)
         {
         }
@@ -709,10 +709,10 @@ namespace Com.Model
     public abstract class DimEnumerator : DimPath, IEnumerator<DimPath>, IEnumerable<DimPath>
     {
 
-        public DimEnumerator(ComTable set)
+        public DimEnumerator(DcTable set)
             : base(set)
         {
-            Segments = new List<ComColumn>();
+            Segments = new List<DcColumn>();
         }
 
         // Get the explicit current node.
@@ -761,8 +761,8 @@ namespace Com.Model
     /// </summary>
     public abstract class DimComplexEnumerator : DimEnumerator
     {
-        protected List<ComTable> _inputs;
-        protected List<ComTable> _outputs;
+        protected List<DcTable> _inputs;
+        protected List<DcTable> _outputs;
         protected bool isInverse;
         protected DimensionType dimType; // The path will be composed of only these types of segments
         protected bool allowIntermediateSets = false; // Not implemented. lesser and greater sets only as source and destination - not in the middle of the path (default). Otherwise, they can appear in the middle of the path (say, one greater set and then the final greater set).
@@ -772,7 +772,7 @@ namespace Com.Model
         // Whether the current set is valid or not. If it is valid then all parents/previous are invalid in the case of coverage condition.
         protected bool[] isValidSet = new bool[1024];
 
-        public DimComplexEnumerator(List<ComTable> inputs, List<ComTable> outputs, bool _isInverse, DimensionType _dimType)
+        public DimComplexEnumerator(List<DcTable> inputs, List<DcTable> outputs, bool _isInverse, DimensionType _dimType)
             : base(null)
         {
             _inputs = inputs;
@@ -796,11 +796,11 @@ namespace Com.Model
             isValidSet = Enumerable.Repeat(false, 1024).ToArray();
         }
 
-        public DimComplexEnumerator(ComTable set)
+        public DimComplexEnumerator(DcTable set)
             : base(set)
         {
-            _inputs = new List<ComTable>(new ComTable[] { set }); // One source set
-            _outputs = new List<ComTable>(new ComTable[] { set.Schema.Root }); // All destination sets from this schema
+            _inputs = new List<DcTable>(new DcTable[] { set }); // One source set
+            _outputs = new List<DcTable>(new DcTable[] { set.Schema.Root }); // All destination sets from this schema
 
             isInverse = false;
 
@@ -818,17 +818,17 @@ namespace Com.Model
     /// </summary>
     public class PathEnumerator : DimComplexEnumerator
     {
-        public PathEnumerator(ComTable set, DimensionType dimType) // All primitive paths
-            : this(new List<ComTable>(new ComTable[] { set }), null, false, dimType)
+        public PathEnumerator(DcTable set, DimensionType dimType) // All primitive paths
+            : this(new List<DcTable>(new DcTable[] { set }), null, false, dimType)
         {
         }
 
-        public PathEnumerator(ComTable input, ComTable output, DimensionType dimType) // Between two sets
-            : this(new List<ComTable>(new ComTable[] { input }), new List<ComTable>(new ComTable[] { output }), false, dimType)
+        public PathEnumerator(DcTable input, DcTable output, DimensionType dimType) // Between two sets
+            : this(new List<DcTable>(new DcTable[] { input }), new List<DcTable>(new DcTable[] { output }), false, dimType)
         {
         }
 
-        public PathEnumerator(List<ComTable> inputs, List<ComTable> outputs, bool isInverse, DimensionType dimType)
+        public PathEnumerator(List<DcTable> inputs, List<DcTable> outputs, bool isInverse, DimensionType dimType)
             : base(inputs, outputs, isInverse, dimType)
         {
         }
@@ -877,7 +877,7 @@ namespace Com.Model
 
                     // Really leave this node
                     childNumber[Size] = -1;
-                    ComColumn column = RemoveLastSegment();
+                    DcColumn column = RemoveLastSegment();
 
                     // Process the parent node we have just returned to on the next iteration.
                 }
@@ -890,7 +890,7 @@ namespace Com.Model
         private bool MoveForward() // return true - valid destination set found, false - no valid destination found and cannot continue (terminal)
         {
             // Move using only valid segments. 
-            List<ComColumn> nextSegs;
+            List<DcColumn> nextSegs;
             bool moved = false;
             while (true)
             {
@@ -904,7 +904,7 @@ namespace Com.Model
         [System.Obsolete("Not needed.", true)]
         private bool MoveBackward() // return true - found a continuation from some parent, false - not found a set with possibility to continue(end, go to next source set)
         {
-            ComColumn segment = null;
+            DcColumn segment = null;
             while(true) // A loop for removing last segment and moving backward
             {
                 segment = RemoveLastSegment(); // Remove last segment
@@ -913,7 +913,7 @@ namespace Com.Model
                     return false; // All segments removed but no continuation found in any of the previous sets including the source one
                 }
 
-                List<ComColumn> nextSegs = GetNextValidSegments();
+                List<DcColumn> nextSegs = GetNextValidSegments();
 
                 int segIndex = nextSegs.IndexOf(segment);
                 if (segIndex + 1 < nextSegs.Count) // Continuation found. Use it
@@ -929,11 +929,11 @@ namespace Com.Model
             }
         }
 
-        private List<ComColumn> GetNextValidSegments() // Here we find continuation segments that satisfy our criteria on columns
+        private List<DcColumn> GetNextValidSegments() // Here we find continuation segments that satisfy our criteria on columns
         {
             if (!isInverse) // Move up from lesser to greater
             {
-                if (Output.IsPrimitive) return new List<ComColumn>(); // We exclude the top element
+                if (Output.IsPrimitive) return new List<DcColumn>(); // We exclude the top element
                 switch (dimType)
                 {
                     case DimensionType.IDENTITY_ENTITY: return Output.Columns.Where(x => x.Input.Schema == x.Output.Schema).ToList();
@@ -957,11 +957,11 @@ namespace Com.Model
 
             return null;
         }
-        private ComColumn RemoveLastSegment()
+        private DcColumn RemoveLastSegment()
         {
             if (Size == 0) return null; // Nothing to remove
 
-            ComColumn segment = null;
+            DcColumn segment = null;
             if (!isInverse)
             {
                 segment = RemoveLast();
@@ -972,7 +972,7 @@ namespace Com.Model
             }
             return segment;
         }
-        private void AddLastSegment(ComColumn segment)
+        private void AddLastSegment(DcColumn segment)
         {
             if (!isInverse)
             {
@@ -985,8 +985,8 @@ namespace Com.Model
         }
         private bool TargetSetValid() // Here we determined of the set satisfy our criteria on tables
         {
-            List<ComTable> destinations = !isInverse ? _outputs : _inputs;
-            ComTable dest = !isInverse ? Output : Input;
+            List<DcTable> destinations = !isInverse ? _outputs : _inputs;
+            DcTable dest = !isInverse ? Output : Input;
 
             if (destinations == null) // Destinations are primitive and only primitive sets
             {
@@ -1003,7 +1003,7 @@ namespace Com.Model
             }
             else // Concrete destinations are specified
             {
-                foreach (ComTable set in destinations) if (dest.IsSubTable(set)) return true;
+                foreach (DcTable set in destinations) if (dest.IsSubTable(set)) return true;
                 return false;
             }
         }

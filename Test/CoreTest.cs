@@ -39,7 +39,7 @@ namespace Test
         }
         
         Workspace workspace { get; set; }
-        ComSchema schema { get; set; }
+        DcSchema schema { get; set; }
 
         [TestInitialize()]
         public void SetUp() {
@@ -53,53 +53,53 @@ namespace Test
             schema.Workspace = workspace;
         }
     
-        protected ComSchema CreateSampleSchema()
+        protected DcSchema CreateSampleSchema()
         {
             // Prepare schema
-            ComSchema schema = new Schema("My Schema");
+            DcSchema schema = new Schema("My Schema");
 
             // Table 1
-            ComTable t1 = schema.CreateTable("Table 1");
+            DcTable t1 = schema.CreateTable("Table 1");
             schema.AddTable(t1, schema.Root, null);
 
-            ComColumn c11 = schema.CreateColumn("Column 11", t1, schema.GetPrimitive("Integer"), true);
+            DcColumn c11 = schema.CreateColumn("Column 11", t1, schema.GetPrimitive("Integer"), true);
             c11.Add();
-            ComColumn c12 = schema.CreateColumn("Column 12", t1, schema.GetPrimitive("String"), true);
+            DcColumn c12 = schema.CreateColumn("Column 12", t1, schema.GetPrimitive("String"), true);
             c12.Add();
-            ComColumn c13 = schema.CreateColumn("Column 13", t1, schema.GetPrimitive("Double"), false);
+            DcColumn c13 = schema.CreateColumn("Column 13", t1, schema.GetPrimitive("Double"), false);
             c13.Add();
-            ComColumn c14 = schema.CreateColumn("Column 14", t1, schema.GetPrimitive("Decimal"), false);
+            DcColumn c14 = schema.CreateColumn("Column 14", t1, schema.GetPrimitive("Decimal"), false);
             c14.Add();
 
             // Table 2
-            ComTable t2 = schema.CreateTable("Table 2");
+            DcTable t2 = schema.CreateTable("Table 2");
             schema.AddTable(t2, schema.Root, null);
 
-            ComColumn c21 = schema.CreateColumn("Column 21", t2, schema.GetPrimitive("String"), true);
+            DcColumn c21 = schema.CreateColumn("Column 21", t2, schema.GetPrimitive("String"), true);
             c21.Add();
-            ComColumn c22 = schema.CreateColumn("Column 22", t2, schema.GetPrimitive("Integer"), true);
+            DcColumn c22 = schema.CreateColumn("Column 22", t2, schema.GetPrimitive("Integer"), true);
             c22.Add();
-            ComColumn c23 = schema.CreateColumn("Column 23", t2, schema.GetPrimitive("Double"), false);
+            DcColumn c23 = schema.CreateColumn("Column 23", t2, schema.GetPrimitive("Double"), false);
             c23.Add();
-            ComColumn c24 = schema.CreateColumn("Table 1", t2, t1, false);
+            DcColumn c24 = schema.CreateColumn("Table 1", t2, t1, false);
             c24.Add();
 
             return schema;
         }
 
-        protected void CreateSampleData(ComSchema schema)
+        protected void CreateSampleData(DcSchema schema)
         {
             //
             // Fill sample data in "Table 1"
             //
-            ComTable t1 = schema.GetSubTable("Table 1");
+            DcTable t1 = schema.GetSubTable("Table 1");
 
-            ComColumn c11 = t1.GetColumn("Column 11");
-            ComColumn c12 = t1.GetColumn("Column 12");
-            ComColumn c13 = t1.GetColumn("Column 13");
-            ComColumn c14 = t1.GetColumn("Column 14");
+            DcColumn c11 = t1.GetColumn("Column 11");
+            DcColumn c12 = t1.GetColumn("Column 12");
+            DcColumn c13 = t1.GetColumn("Column 13");
+            DcColumn c14 = t1.GetColumn("Column 14");
 
-            ComColumn[] cols = new ComColumn[] { c11, c12, c13, c14 };
+            DcColumn[] cols = new DcColumn[] { c11, c12, c13, c14 };
             object[] vals = new object[4];
 
             vals[0] = 20;
@@ -123,14 +123,14 @@ namespace Test
             //
             // Fill sample data in "Table 2"
             //
-            ComTable t2 = schema.GetSubTable("Table 2");
+            DcTable t2 = schema.GetSubTable("Table 2");
 
-            ComColumn c21 = t2.GetColumn("Column 21");
-            ComColumn c22 = t2.GetColumn("Column 22");
-            ComColumn c23 = t2.GetColumn("Column 23");
-            ComColumn c24 = t2.GetColumn("Table 1");
+            DcColumn c21 = t2.GetColumn("Column 21");
+            DcColumn c22 = t2.GetColumn("Column 22");
+            DcColumn c23 = t2.GetColumn("Column 23");
+            DcColumn c24 = t2.GetColumn("Table 1");
 
-            cols = new ComColumn[] { c21, c22, c23, c24 };
+            cols = new DcColumn[] { c21, c22, c23, c24 };
             vals = new object[4];
 
             vals[0] = "Value A";
@@ -163,8 +163,8 @@ namespace Test
         [TestMethod]
         public void SchemaTest() // ComColumn. Manually add/remove tables/columns
         {
-            ComTable t1 = schema.GetSubTable("Table 1");
-            ComTable t2 = schema.GetSubTable("Table 2");
+            DcTable t1 = schema.GetSubTable("Table 1");
+            DcTable t2 = schema.GetSubTable("Table 2");
 
             // Finding by name and check various properties provided by the schema
             Assert.AreEqual(schema.GetPrimitive("Decimal").Name, "Decimal");
@@ -188,15 +188,15 @@ namespace Test
         [TestMethod]
         public void ColumnDataTest() // ComColumnData. Manually read/write data
         {
-            ComTable t1 = schema.GetSubTable("Table 1");
+            DcTable t1 = schema.GetSubTable("Table 1");
 
-            ComColumn c11 = t1.GetColumn("Column 11");
-            ComColumn c12 = t1.GetColumn("Column 12");
-            ComColumn c13 = t1.GetColumn("Column 13");
+            DcColumn c11 = t1.GetColumn("Column 11");
+            DcColumn c12 = t1.GetColumn("Column 12");
+            DcColumn c13 = t1.GetColumn("Column 13");
 
-            ComTable t2 = schema.GetSubTable("Table 2");
-            ComColumn c21 = t2.GetColumn("Column 21");
-            ComColumn c22 = t2.GetColumn("Column 22");
+            DcTable t2 = schema.GetSubTable("Table 2");
+            DcColumn c21 = t2.GetColumn("Column 21");
+            DcColumn c22 = t2.GetColumn("Column 22");
 
             //
             // Data
@@ -237,24 +237,24 @@ namespace Test
         {
             CreateSampleData(schema);
 
-            ComTable t1 = schema.GetSubTable("Table 1");
+            DcTable t1 = schema.GetSubTable("Table 1");
 
-            ComColumn c11 = t1.GetColumn("Column 11");
-            ComColumn c12 = t1.GetColumn("Column 12");
-            ComColumn c13 = t1.GetColumn("Column 13");
+            DcColumn c11 = t1.GetColumn("Column 11");
+            DcColumn c12 = t1.GetColumn("Column 12");
+            DcColumn c13 = t1.GetColumn("Column 13");
 
             //
             // Data manipulations
             //
             Assert.AreEqual(3, t1.Data.Length);
 
-            Offset input = t1.Data.Find(new ComColumn[] { c11 }, new object[] { 10 } );
+            Offset input = t1.Data.Find(new DcColumn[] { c11 }, new object[] { 10 } );
             Assert.AreEqual(1, input);
 
-            input = t1.Data.Find(new ComColumn[] { c12 }, new object[] { "Record 1" });
+            input = t1.Data.Find(new DcColumn[] { c12 }, new object[] { "Record 1" });
             Assert.AreEqual(1, input);
 
-            input = t1.Data.Find(new ComColumn[] { c12 }, new object[] { "Record Does Not Exist" });
+            input = t1.Data.Find(new DcColumn[] { c12 }, new object[] { "Record Does Not Exist" });
             Assert.AreEqual(-1, input);
         }
         
@@ -263,17 +263,17 @@ namespace Test
         {
             CreateSampleData(schema);
 
-            ComTable t1 = schema.GetSubTable("Table 1");
+            DcTable t1 = schema.GetSubTable("Table 1");
 
-            ComColumn c11 = t1.GetColumn("Column 11");
-            ComColumn c12 = t1.GetColumn("Column 12");
-            ComColumn c13 = t1.GetColumn("Column 13");
-            ComColumn c14 = t1.GetColumn("Column 14");
+            DcColumn c11 = t1.GetColumn("Column 11");
+            DcColumn c12 = t1.GetColumn("Column 12");
+            DcColumn c13 = t1.GetColumn("Column 13");
+            DcColumn c14 = t1.GetColumn("Column 14");
 
             //
             // Define a derived column with a definition
             //
-            ComColumn c15 = schema.CreateColumn("Column 15", t1, schema.GetPrimitive("Double"), false);
+            DcColumn c15 = schema.CreateColumn("Column 15", t1, schema.GetPrimitive("Double"), false);
 
             c15.Definition.DefinitionType = ColumnDefinitionType.ARITHMETIC;
             c15.Definition.Formula = "([Column 11]+10.0) * this.[Column 13]";
@@ -293,17 +293,17 @@ namespace Test
         {
             CreateSampleData(schema);
 
-            ComTable t1 = schema.GetSubTable("Table 1");
+            DcTable t1 = schema.GetSubTable("Table 1");
 
-            ComColumn c11 = t1.GetColumn("Column 11");
-            ComColumn c12 = t1.GetColumn("Column 12");
-            ComColumn c13 = t1.GetColumn("Column 13");
-            ComColumn c14 = t1.GetColumn("Column 14");
+            DcColumn c11 = t1.GetColumn("Column 11");
+            DcColumn c12 = t1.GetColumn("Column 12");
+            DcColumn c13 = t1.GetColumn("Column 13");
+            DcColumn c14 = t1.GetColumn("Column 14");
 
             //
             // Define a derived column with a definition
             //
-            ComColumn c15 = schema.CreateColumn("Column 15", t1, schema.GetPrimitive("String"), false);
+            DcColumn c15 = schema.CreateColumn("Column 15", t1, schema.GetPrimitive("String"), false);
 
             c15.Definition.DefinitionType = ColumnDefinitionType.ARITHMETIC;
             c15.Definition.Formula = "call:System.String.Substring( [Column 12], 7, 1 )";
@@ -320,7 +320,7 @@ namespace Test
             //
             // Define a derived column with a definition
             //
-            ComColumn c16 = schema.CreateColumn("Column 15", t1, schema.GetPrimitive("Double"), false);
+            DcColumn c16 = schema.CreateColumn("Column 15", t1, schema.GetPrimitive("Double"), false);
             c16.Definition.DefinitionType = ColumnDefinitionType.ARITHMETIC;
 
             c16.Definition.Formula = "call:System.Math.Pow( [Column 11] / 10.0, [Column 13] / 10.0 )";
@@ -339,17 +339,17 @@ namespace Test
         {
             CreateSampleData(schema);
 
-            ComTable t1 = schema.GetSubTable("Table 1");
-            ComColumn c11 = t1.GetColumn("Column 11"); // 20, 10, 30
+            DcTable t1 = schema.GetSubTable("Table 1");
+            DcColumn c11 = t1.GetColumn("Column 11"); // 20, 10, 30
 
-            ComTable t2 = schema.GetSubTable("Table 2");
-            ComColumn c22 = t2.GetColumn("Column 22"); // 20, 30, 30, 30
+            DcTable t2 = schema.GetSubTable("Table 2");
+            DcColumn c22 = t2.GetColumn("Column 22"); // 20, 30, 30, 30
 
             //
             // Define a derived column with a definition
             //
 
-            ComColumn link = schema.CreateColumn("Column Link", t2, t1, false);
+            DcColumn link = schema.CreateColumn("Column Link", t2, t1, false);
 
             link.Definition.DefinitionType = ColumnDefinitionType.LINK;
             link.Definition.Formula = "(( [Integer] [Column 11] = this.[Column 22], [Double] [Column 14] = 20.0 ))"; // Tuple structure corresponds to output table
@@ -370,17 +370,17 @@ namespace Test
         {
             CreateSampleData(schema);
 
-            ComTable t1 = schema.GetSubTable("Table 1");
+            DcTable t1 = schema.GetSubTable("Table 1");
 
-            ComTable t2 = schema.GetSubTable("Table 2");
+            DcTable t2 = schema.GetSubTable("Table 2");
 
-            ComColumn c23 = t2.GetColumn("Column 23");
-            ComColumn c24 = t2.GetColumn("Table 1");
+            DcColumn c23 = t2.GetColumn("Column 23");
+            DcColumn c24 = t2.GetColumn("Table 1");
 
             //
             // Define aggregated column
             //
-            ComColumn c15 = schema.CreateColumn("Agg of Column 23", t1, schema.GetPrimitive("Double"), false);
+            DcColumn c15 = schema.CreateColumn("Agg of Column 23", t1, schema.GetPrimitive("Double"), false);
             c15.Definition.DefinitionType = ColumnDefinitionType.AGGREGATION;
 
             c15.Definition.FactTable = t2; // Fact table
@@ -403,7 +403,7 @@ namespace Test
             //
             // Aggregation via a syntactic formula
             //
-            ComColumn c16 = schema.CreateColumn("Agg2 of Column 23", t1, schema.GetPrimitive("Double"), false);
+            DcColumn c16 = schema.CreateColumn("Agg2 of Column 23", t1, schema.GetPrimitive("Double"), false);
             c16.Definition.DefinitionType = ColumnDefinitionType.AGGREGATION;
 
             c16.Definition.Formula = "AGGREGATE(facts=[Table 2], groups=[Table 1], measure=[Column 23]*2.0 + 1, aggregator=SUM)";
@@ -423,19 +423,19 @@ namespace Test
         {
             CreateSampleData(schema);
 
-            ComTable t1 = schema.GetSubTable("Table 1");
-            ComTable t2 = schema.GetSubTable("Table 2");
+            DcTable t1 = schema.GetSubTable("Table 1");
+            DcTable t2 = schema.GetSubTable("Table 2");
 
             //
             // Define a new product-set
             //
-            ComTable t3 = schema.CreateTable("Table 3");
+            DcTable t3 = schema.CreateTable("Table 3");
             t3.Definition.DefinitionType = TableDefinitionType.PRODUCT;
             schema.AddTable(t3, null, null);
 
-            ComColumn c31 = schema.CreateColumn(t1.Name, t3, t1, true); // {*20, 10, *30}
+            DcColumn c31 = schema.CreateColumn(t1.Name, t3, t1, true); // {*20, 10, *30}
             c31.Add();
-            ComColumn c32 = schema.CreateColumn(t2.Name, t3, t2, true); // {40, 40, *50, *50}
+            DcColumn c32 = schema.CreateColumn(t2.Name, t3, t2, true); // {40, 40, *50, *50}
             c32.Add();
 
             t3.Definition.Populate();
@@ -463,12 +463,12 @@ namespace Test
         {
             CreateSampleData(schema);
 
-            ComTable t2 = schema.GetSubTable("Table 2");
+            DcTable t2 = schema.GetSubTable("Table 2");
 
             //
             // Define a new filter-set
             //
-            ComTable t3 = schema.CreateTable("Table 3");
+            DcTable t3 = schema.CreateTable("Table 3");
 
             ExprNode ast = ExprBuilder.Build("[Column 22] > 20.0 && this.Super.[Column 23] < 50");
             t3.Definition.WhereExpr = ast;
@@ -486,20 +486,20 @@ namespace Test
         {
             CreateSampleData(schema);
 
-            ComTable t2 = schema.GetSubTable("Table 2");
+            DcTable t2 = schema.GetSubTable("Table 2");
 
-            ComColumn c21 = t2.GetColumn("Column 21");
-            ComColumn c22 = t2.GetColumn("Column 22");
-            ComColumn c23 = t2.GetColumn("Column 23");
+            DcColumn c21 = t2.GetColumn("Column 21");
+            DcColumn c22 = t2.GetColumn("Column 22");
+            DcColumn c23 = t2.GetColumn("Column 23");
 
             //
             // Project "Table 2" along "Column 21" and get 2 unique records in a new set "Value A" (3 references) and "Value B" (1 reference)
             //
-            ComTable t3 = schema.CreateTable("Table 3");
+            DcTable t3 = schema.CreateTable("Table 3");
             t3.Definition.DefinitionType = TableDefinitionType.PROJECTION;
             schema.AddTable(t3, null, null);
 
-            ComColumn c31 = schema.CreateColumn(c21.Name, t3, c21.Output, true);
+            DcColumn c31 = schema.CreateColumn(c21.Name, t3, c21.Output, true);
             c31.Add();
 
             // Manually define a mapping as the generating column definition by using one column only. And create a generating dimension with this mapping.
@@ -507,7 +507,7 @@ namespace Test
             map24.AddMatch(new PathMatch(new DimPath(c21), new DimPath(c31)));
 
             // Create a generating column
-            ComColumn c24 = schema.CreateColumn(map24.SourceSet.Name, map24.SourceSet, map24.TargetSet, false);
+            DcColumn c24 = schema.CreateColumn(map24.SourceSet.Name, map24.SourceSet, map24.TargetSet, false);
             c24.Definition.Mapping = map24;
             c24.Definition.DefinitionType = ColumnDefinitionType.LINK;
             c24.Definition.IsAppendData = true;
@@ -525,13 +525,13 @@ namespace Test
             //
             // Defining a combination of "Column 21" and "Column 22" and project with 3 unique records in a new set
             //
-            ComTable t4 = schema.CreateTable("Table 4");
+            DcTable t4 = schema.CreateTable("Table 4");
             t4.Definition.DefinitionType = TableDefinitionType.PROJECTION;
             schema.AddTable(t4, null, null);
 
-            ComColumn c41 = schema.CreateColumn(c21.Name, t4, c21.Output, true);
+            DcColumn c41 = schema.CreateColumn(c21.Name, t4, c21.Output, true);
             c41.Add();
-            ComColumn c42 = schema.CreateColumn(c22.Name, t4, c22.Output, true);
+            DcColumn c42 = schema.CreateColumn(c22.Name, t4, c22.Output, true);
             c42.Add();
 
             // Manually define a mapping as the generating column definition by using one column only. And create a generating dimension with this mapping.
@@ -540,7 +540,7 @@ namespace Test
             map25.AddMatch(new PathMatch(new DimPath(c22), new DimPath(c42)));
 
             // Create generating/import column
-            ComColumn c25 = schema.CreateColumn(map25.SourceSet.Name, map25.SourceSet, map25.TargetSet, false);
+            DcColumn c25 = schema.CreateColumn(map25.SourceSet.Name, map25.SourceSet, map25.TargetSet, false);
             c25.Definition.Mapping = map25;
             c25.Definition.DefinitionType = ColumnDefinitionType.LINK;
             c25.Definition.IsAppendData = true;
@@ -598,11 +598,11 @@ namespace Test
             //
             // Configure import 
             //
-            ComSchema schema = new Schema("My Schema");
+            DcSchema schema = new Schema("My Schema");
             workspace.Schemas.Add(schema);
             schema.Workspace = workspace;
 
-            ComTable orderDetailsTable = schema.CreateTable("Order Details");
+            DcTable orderDetailsTable = schema.CreateTable("Order Details");
             orderDetailsTable.Definition.DefinitionType = TableDefinitionType.PROJECTION;
             
             // Create mapping
@@ -611,7 +611,7 @@ namespace Test
             map.Matches.ForEach(m => m.TargetPath.Segments.ForEach(p => p.Add()));
 
             // Create generating/import column
-            ComColumn dim = schema.CreateColumn(map.SourceSet.Name, map.SourceSet, map.TargetSet, false);
+            DcColumn dim = schema.CreateColumn(map.SourceSet.Name, map.SourceSet, map.TargetSet, false);
             dim.Definition.Mapping = map;
             dim.Definition.DefinitionType = ColumnDefinitionType.LINK;
             dim.Definition.IsAppendData = true;
@@ -650,11 +650,11 @@ namespace Test
             //
             // Configure import 
             //
-            ComSchema schema = new Schema("My Schema");
+            DcSchema schema = new Schema("My Schema");
             workspace.Schemas.Add(schema);
             schema.Workspace = workspace;
 
-            ComTable productsTable = schema.CreateTable("Products");
+            DcTable productsTable = schema.CreateTable("Products");
             productsTable.Definition.DefinitionType = TableDefinitionType.PROJECTION;
 
             // Create mapping. 
@@ -663,7 +663,7 @@ namespace Test
             map.Matches.ForEach(m => m.TargetPath.Segments.ForEach(p => p.Add()));
 
             // Create generating/import column
-            ComColumn dim = schema.CreateColumn(map.SourceSet.Name, map.SourceSet, map.TargetSet, false);
+            DcColumn dim = schema.CreateColumn(map.SourceSet.Name, map.SourceSet, map.TargetSet, false);
             dim.Definition.Mapping = map;
             dim.Definition.DefinitionType = ColumnDefinitionType.LINK;
             dim.Definition.IsAppendData = true;
@@ -681,17 +681,17 @@ namespace Test
         {
             Workspace workspace = new Workspace();
 
-            ComSchema schema = CreateSampleSchema();
+            DcSchema schema = CreateSampleSchema();
             workspace.Schemas.Add(schema);
             schema.Workspace = workspace;
 
             CreateSampleData(schema);
 
-            ComTable t2 = schema.GetSubTable("Table 2");
+            DcTable t2 = schema.GetSubTable("Table 2");
 
-            ComColumn c21 = t2.GetColumn("Column 21");
-            ComColumn c22 = t2.GetColumn("Column 22");
-            ComColumn c23 = t2.GetColumn("Column 23");
+            DcColumn c21 = t2.GetColumn("Column 21");
+            DcColumn c22 = t2.GetColumn("Column 22");
+            DcColumn c23 = t2.GetColumn("Column 23");
 
             //
             // Create schema for a remote db
@@ -716,7 +716,7 @@ namespace Test
             map.Matches.ForEach(m => m.TargetPath.Segments.ForEach(p => p.Add()));
 
             // Create generating/import column
-            ComColumn dim = schema.CreateColumn(map.SourceSet.Name, map.SourceSet, map.TargetSet, false);
+            DcColumn dim = schema.CreateColumn(map.SourceSet.Name, map.SourceSet, map.TargetSet, false);
             dim.Definition.Mapping = map;
             dim.Definition.DefinitionType = ColumnDefinitionType.LINK;
             dim.Definition.IsAppendData = true;
@@ -737,19 +737,19 @@ namespace Test
         [TestMethod]
         public void JsonTest() // Serialize/deserialize schema elements
         {
-            ComSchema schema = CreateSampleSchema();
+            DcSchema schema = CreateSampleSchema();
             Workspace sampleWs = new Workspace();
             sampleWs.Schemas.Add(schema);
             schema.Workspace = sampleWs;
 
             // Add table definition 
-            ComTable t = schema.GetSubTable("Table 2");
+            DcTable t = schema.GetSubTable("Table 2");
             t.Definition.DefinitionType = TableDefinitionType.PRODUCT;
             ExprNode ast = ExprBuilder.Build("[Column 22] > 20.0 && this.Super.[Column 23] < 50");
             t.Definition.WhereExpr = ast;
 
             // Add column definition 
-            ComColumn c = t.GetColumn("Column 22");
+            DcColumn c = t.GetColumn("Column 22");
             c.Definition.DefinitionType = ColumnDefinitionType.ARITHMETIC;
             ast = ExprBuilder.Build("([Column 11]+10.0) * this.[Column 13]");
             c.Definition.FormulaExpr = ast;
