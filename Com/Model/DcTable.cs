@@ -62,6 +62,10 @@ namespace Com.Model
     {
         Offset Length { get; set; }
 
+        bool AutoIndex { set; }
+        bool Indexed { get; }
+        void Reindex();
+        
         //
         // Value methods (convenience, probably should be removed and replaced by manual access to dimensions)
         //

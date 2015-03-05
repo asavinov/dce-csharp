@@ -275,7 +275,6 @@ namespace Test
             //
             DcColumn c15 = schema.CreateColumn("Column 15", t1, schema.GetPrimitive("Double"), false);
 
-            c15.Definition.DefinitionType = ColumnDefinitionType.ARITHMETIC;
             c15.Definition.Formula = "([Column 11]+10.0) * this.[Column 13]";
 
             c15.Add();
@@ -305,7 +304,6 @@ namespace Test
             //
             DcColumn c15 = schema.CreateColumn("Column 15", t1, schema.GetPrimitive("String"), false);
 
-            c15.Definition.DefinitionType = ColumnDefinitionType.ARITHMETIC;
             c15.Definition.Formula = "call:System.String.Substring( [Column 12], 7, 1 )";
 
             c15.Add();
@@ -321,7 +319,6 @@ namespace Test
             // Define a derived column with a definition
             //
             DcColumn c16 = schema.CreateColumn("Column 15", t1, schema.GetPrimitive("Double"), false);
-            c16.Definition.DefinitionType = ColumnDefinitionType.ARITHMETIC;
 
             c16.Definition.Formula = "call:System.Math.Pow( [Column 11] / 10.0, [Column 13] / 10.0 )";
 
@@ -351,7 +348,6 @@ namespace Test
 
             DcColumn link = schema.CreateColumn("Column Link", t2, t1, false);
 
-            link.Definition.DefinitionType = ColumnDefinitionType.LINK;
             link.Definition.Formula = "(( [Integer] [Column 11] = this.[Column 22], [Double] [Column 14] = 20.0 ))"; // Tuple structure corresponds to output table
 
             link.Add();
@@ -404,7 +400,6 @@ namespace Test
             // Aggregation via a syntactic formula
             //
             DcColumn c16 = schema.CreateColumn("Agg2 of Column 23", t1, schema.GetPrimitive("Double"), false);
-            c16.Definition.DefinitionType = ColumnDefinitionType.AGGREGATION;
 
             c16.Definition.Formula = "AGGREGATE(facts=[Table 2], groups=[Table 1], measure=[Column 23]*2.0 + 1, aggregator=SUM)";
 

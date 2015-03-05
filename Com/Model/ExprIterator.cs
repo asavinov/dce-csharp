@@ -15,7 +15,7 @@ using Offset = System.Int32;
 namespace Com.Model
 {
 
-    public class ExprEvaluator : DcIterator
+    public class ExprIterator : DcIterator
     {
         protected DcColumnData columnData;
 
@@ -77,7 +77,7 @@ namespace Com.Model
             return outputExpr.Result.GetValue(); 
         }
 
-        public ExprEvaluator(DcColumn column)
+        public ExprIterator(DcColumn column)
         {
             Workspace = column.Input.Schema.Workspace;
             columnData = column.Data;
@@ -126,7 +126,7 @@ namespace Com.Model
             outputExpr.Resolve(Workspace, new List<DcVariable>() { thisVariable });
         }
 
-        public ExprEvaluator(DcTable table)
+        public ExprIterator(DcTable table)
         {
             Workspace = table.Schema.Workspace;
             columnData = null;
@@ -144,7 +144,7 @@ namespace Com.Model
             outputExpr.Resolve(Workspace, new List<DcVariable>() { thisVariable });
         }
 
-        public ExprEvaluator()
+        public ExprIterator()
         {
         }
     }
@@ -154,7 +154,7 @@ namespace Com.Model
     /// - distinguish between this table (where the aggregated column is defined, and a fact table which provides values to be aggregated where group and measure functions are defined.
     /// - the way of aggregation is defined as an updater expression which knows how to compute a new value given the old (current) value and a new measure.
     /// </summary>
-    public class AggrEvaluator : ExprEvaluator
+    public class AggrIterator : ExprIterator
     {
         // base::columnData is the aggregated function to be computed
 
@@ -206,7 +206,7 @@ namespace Com.Model
             return outputExpr.Result.GetValue();
         }
 
-        public AggrEvaluator(DcColumn column) // Create evaluator from structured definition
+        public AggrIterator(DcColumn column) // Create evaluator from structured definition
         {
             Workspace = column.Input.Schema.Workspace;
             columnData = column.Data;
@@ -289,7 +289,7 @@ namespace Com.Model
 
     }
 
-    public class CsvEvaluator : ExprEvaluator
+    public class CsvEvaluator : ExprIterator
     {
         protected string[] currentRecord;
         protected ConnectionCsv connectionCsv;
@@ -341,7 +341,7 @@ namespace Com.Model
         }
     }
 
-    public class OledbEvaluator : ExprEvaluator
+    public class OledbEvaluator : ExprIterator
     {
         protected DataRow currentRow;
         protected IEnumerator rows;

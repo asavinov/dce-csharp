@@ -185,6 +185,35 @@ namespace Com.Model
             }
         }
 
+        public bool AutoIndex 
+        {
+            set 
+            { 
+                foreach(DcColumn column in Columns) 
+                {
+                    column.Data.AutoIndex = value;
+                }
+            }
+        }
+        public bool Indexed
+        {
+            get
+            {
+                foreach (DcColumn column in Columns)
+                {
+                    if (!column.Data.Indexed) return false;
+                }
+                return true;
+            }
+        }
+        public void Reindex()
+        {
+            foreach (DcColumn column in Columns)
+            {
+                column.Data.Reindex();
+            }
+        }
+
         public object GetValue(string name, Offset offset)
         {
             Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
@@ -395,7 +424,7 @@ namespace Com.Model
 
         public DcIterator GetWhereEvaluator()
         {
-            DcIterator evaluator = new ExprEvaluator(this);
+            DcIterator evaluator = new ExprIterator(this);
             return evaluator;
         }
 

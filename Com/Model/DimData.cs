@@ -26,8 +26,8 @@ namespace Com.Model
         private T _nullValue; // It is what is written in cell instead of null if null is not supported by the type. If null is supported then null is stored (instead, we can use _nullValue=null).
 
         // Memory management parameters for instances (used by extensions and in future will be removed from this class).
-        protected static int initialSize = 1024 * 8; // In elements
-        protected static int incrementSize = 1024; // In elements
+        protected static int initialSize = 1024 * 10; // In elements
+        protected static int incrementSize = 1024 * 2; // In elements
 
         protected int allocatedSize; // How many elements (maximum) fit into the allocated memory
 
@@ -79,6 +79,36 @@ namespace Com.Model
             }
         }
 
+        public bool AutoIndex { get; set; }
+        protected bool _indexed;
+        public bool Indexed { get { return _indexed; } }
+        public void Reindex()
+        {
+            // Here the idea is to sort the index (that is, precisely what we need) by defining a custom comparare via cells referenced by the index elements
+            // Source: http://stackoverflow.com/questions/659866/is-there-c-sharp-support-for-an-index-based-sort
+            // http://www.csharp-examples.net/sort-array/
+            Comparer<T> comparer = Comparer<T>.Default;
+            Array.Sort(_offsets, /* 0, _count, */ (a, b) => comparer.Compare(_cells[a], _cells[b]));
+
+            _indexed = true;
+        }
+        public void Reindex2()
+        {
+            // Index sort in Java: http://stackoverflow.com/questions/951848/java-array-sort-quick-way-to-get-a-sorted-list-of-indices-of-an-array
+            // We need it because the sorting method will change the cells. 
+            // Optimization: use one global large array for that purpose instead of a local variable
+            T[] tempCells = (T[])_cells.Clone();
+
+            // Reset offsets befroe sorting (so it will be completely new sort)
+            for (int i = 0; i < _length; i++)
+            {
+                _offsets[i] = i; // Now each offset represents (references) an element of the function (from domain) but they are unsorted
+            }
+
+            Array.Sort<T, int>(tempCells, _offsets, 0, _length);
+            // Now offsets are sorted and temp array can be deleted
+        }
+
         public bool IsNull(Offset input)
         {
             // For non-nullable storage, use the index to find if this cell is in the null interval of the index (beginning)
@@ -96,9 +126,10 @@ namespace Com.Model
         public void SetValue(Offset input, object value) // Replace an existing value with the new value and update the index. 
         {
             T val = default(T);
-            int oldPos = FindIndex(input); // Old sorted position of the cell we are going to change
             Tuple<int,int> interval;
             int pos = -1; // New sorted position for this cell
+
+            int oldPos = FindIndex(input); // Old sorted position of the cell we are going to change
 
             if (value == null)
             {
@@ -178,7 +209,16 @@ namespace Com.Model
             else
             {
                 val = ToThisType(value);
-                interval = FindIndexes(val);
+
+                if (AutoIndex)
+                {
+                    interval = FindIndexes(val);
+                }
+                else
+                {
+                    interval = new Tuple<int, int>(_length - 1, _length);
+                    _indexed = false;
+                }
             }
 
             pos = interval.Item2; // New value has the largest offset and hence is inserted after the end of the interval of values
@@ -308,32 +348,6 @@ namespace Com.Model
                 ;
 
             return new Tuple<int, int>(first + 1, last);
-        }
-
-        private void FullSort()
-        {
-            // Index sort in Java: http://stackoverflow.com/questions/951848/java-array-sort-quick-way-to-get-a-sorted-list-of-indices-of-an-array
-            // We need it because the sorting method will change the cells. 
-            // Optimization: use one global large array for that purpose
-            T[] tempCells = (T[])_cells.Clone();
-
-            // Reset offsets befroe sorting (so it will be completely new sort)
-            for (int i = 0; i < _length; i++)
-            {
-                _offsets[i] = i; // Now each offset represents (references) an element of the function (from domain) but they are unsorted
-            }
-
-            Array.Sort<T, int>(tempCells, _offsets, 0, _length);
-            // Now offsets are sorted and temp array can be deleted
-        }
-
-        private void FullSort_2()
-        {
-            // Here the idea is to sort the index (that is, precisely what we need) by defining a custom comparare via cells referenced by the index elements
-            // Source: http://stackoverflow.com/questions/659866/is-there-c-sharp-support-for-an-index-based-sort
-            // http://www.csharp-examples.net/sort-array/
-            Comparer<T> comparer = Comparer<T>.Default;
-            Array.Sort(_offsets, /* 0, _count, */ (a, b) => comparer.Compare(_cells[a], _cells[b]));
         }
 
         protected T[] projectOffsets(int[] offsets)
@@ -502,6 +516,8 @@ namespace Com.Model
             Dim = dim;
 
             _length = 0;
+            AutoIndex = true;
+            _indexed = true;
             allocatedSize = initialSize;
             _cells = new T[allocatedSize];
             _offsets = new int[allocatedSize];
@@ -568,6 +584,11 @@ namespace Com.Model
             }
         }
 
+        public bool AutoIndex { get; set; }
+        protected bool _indexed;
+        public bool Indexed { get { return _indexed; } }
+        public void Reindex() { }
+
         public bool IsNull(Offset input) { return true; }
 
         public object GetValue(Offset input) { return null; }
@@ -617,6 +638,19 @@ namespace Com.Model
                 ExprBuilder exprBuilder = new ExprBuilder();
                 ExprNode expr = exprBuilder.Build(formula);
                 FormulaExpr = expr;
+
+                if (expr.Operation == OperationType.TUPLE)
+                {
+                    DefinitionType = ColumnDefinitionType.LINK;
+                }
+                else if (expr.Operation == OperationType.CALL && expr.Name.Equals("AGGREGATE", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    DefinitionType = ColumnDefinitionType.AGGREGATION;
+                }
+                else
+                {
+                    DefinitionType = ColumnDefinitionType.ARITHMETIC;
+                }
             }
         }
 
@@ -711,15 +745,15 @@ namespace Com.Model
             }
             else if (DefinitionType == ColumnDefinitionType.AGGREGATION)
             {
-                evaluator = new AggrEvaluator(Dim);
+                evaluator = new AggrIterator(Dim);
             }
             else if (DefinitionType == ColumnDefinitionType.ARITHMETIC)
             {
-                evaluator = new ExprEvaluator(Dim);
+                evaluator = new ExprIterator(Dim);
             }
             else if (DefinitionType == ColumnDefinitionType.LINK)
             {
-                evaluator = new ExprEvaluator(Dim);
+                evaluator = new ExprIterator(Dim);
             }
             else
             {

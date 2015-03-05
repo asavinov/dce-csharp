@@ -31,6 +31,10 @@ namespace Com.Model
     {
         Offset Length { get; set; }
 
+        bool AutoIndex { get; set; }
+        bool Indexed { get; }
+        void Reindex();
+
         //
         // Untyped methods. Default conversion will be done according to the function type.
         //
