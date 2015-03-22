@@ -187,7 +187,7 @@ namespace Com.Model
             }
 
         }
-        public virtual void FromJson(JObject json, Workspace ws) // Init this object fields by using json object
+        public virtual void FromJson(JObject json, DcWorkspace ws) // Init this object fields by using json object
         {
             // No super-object
 
@@ -473,7 +473,7 @@ namespace Com.Model
             json["RelationalFkName"] = RelationalFkName;
         }
 
-        public override void FromJson(JObject json, Workspace ws)
+        public override void FromJson(JObject json, DcWorkspace ws)
         {
             base.FromJson(json, ws); // Dim
 
@@ -524,7 +524,7 @@ namespace Com.Model
             json["ColumnIndex"] = ColumnIndex;
         }
 
-        public override void FromJson(JObject json, Workspace ws)
+        public override void FromJson(JObject json, DcWorkspace ws)
         {
             base.FromJson(json, ws); // Dim
 

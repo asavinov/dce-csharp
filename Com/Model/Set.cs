@@ -712,7 +712,7 @@ namespace Com.Model
             }
         }
 
-        public virtual void FromJson(JObject json, Workspace ws)
+        public virtual void FromJson(JObject json, DcWorkspace ws)
         {
             // No super-object
 
@@ -973,7 +973,7 @@ namespace Com.Model
 
         }
 
-        public override void FromJson(JObject json, Workspace ws)
+        public override void FromJson(JObject json, DcWorkspace ws)
         {
             base.FromJson(json, ws); // Set
 
@@ -1137,7 +1137,7 @@ namespace Com.Model
             json["Encoding"] = this.Encoding.EncodingName;
         }
 
-        public override void FromJson(JObject json, Workspace ws)
+        public override void FromJson(JObject json, DcWorkspace ws)
         {
             base.FromJson(json, ws); // Set
 

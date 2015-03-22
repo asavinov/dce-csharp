@@ -9,7 +9,7 @@ namespace Com.Model
 {
     public interface DcSchema : DcTable
     {
-        Workspace Workspace { get; set; }
+        DcWorkspace Workspace { get; set; }
 
         DcTable GetPrimitive(string dataType);
         DcTable Root { get; } // Convenience

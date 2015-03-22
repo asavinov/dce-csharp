@@ -403,7 +403,7 @@ namespace Com.Model
             json["matches"] = matches;
         }
 
-        public virtual void FromJson(JObject json, Workspace ws)
+        public virtual void FromJson(JObject json, DcWorkspace ws)
         {
             // No super-object
 
@@ -529,7 +529,7 @@ namespace Com.Model
             TargetPath.ToJson((JObject)json["target_path"]);
         }
 
-        public virtual void FromJson(JObject json, Workspace ws)
+        public virtual void FromJson(JObject json, DcWorkspace ws)
         {
             // No super-object
 

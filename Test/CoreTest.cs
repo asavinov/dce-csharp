@@ -38,7 +38,7 @@ namespace Test
             ExprBuilder = new ExprBuilder();
         }
         
-        Workspace workspace { get; set; }
+        DcWorkspace workspace { get; set; }
         DcSchema schema { get; set; }
 
         [TestInitialize()]
@@ -567,7 +567,7 @@ namespace Test
 
             Assert.AreEqual(20, tables.Count);
 
-            Workspace workspace = new Workspace();
+            DcWorkspace workspace = new Workspace();
 
             // Db
             SchemaOledb top = new SchemaOledb("");
@@ -622,7 +622,7 @@ namespace Test
         [TestMethod]
         public void CsvReadTest() // Load Csv schema and data as a result of evaluation
         {
-            Workspace workspace = new Workspace();
+            DcWorkspace workspace = new Workspace();
 
             // Create schema for a remote db
             SchemaCsv top = new SchemaCsv("My Files");
@@ -674,7 +674,7 @@ namespace Test
         [TestMethod]
         public void CsvWriteTest() // Store schema and data to a CSV file as a result of evaluation
         {
-            Workspace workspace = new Workspace();
+            DcWorkspace workspace = new Workspace();
 
             DcSchema schema = CreateSampleSchema();
             workspace.Schemas.Add(schema);
@@ -733,7 +733,7 @@ namespace Test
         public void JsonTest() // Serialize/deserialize schema elements
         {
             DcSchema schema = CreateSampleSchema();
-            Workspace sampleWs = new Workspace();
+            DcWorkspace sampleWs = new Workspace();
             sampleWs.Schemas.Add(schema);
             schema.Workspace = sampleWs;
 
@@ -749,7 +749,7 @@ namespace Test
             ast = ExprBuilder.Build("([Column 11]+10.0) * this.[Column 13]");
             c.Definition.FormulaExpr = ast;
 
-            Workspace ws = new Workspace();
+            DcWorkspace ws = new Workspace();
             ws.Schemas.Add(schema);
 
             JObject workspace = Utils.CreateJsonFromObject(ws);
@@ -765,8 +765,8 @@ namespace Test
             //
             // Instantiate and initialize
             //
-            ws = Utils.CreateObjectFromJson(objWs);
-            ws.FromJson(objWs, ws);
+            ws = (Workspace)Utils.CreateObjectFromJson(objWs);
+            ((Workspace)ws).FromJson(objWs, ws);
 
             Assert.AreEqual(5, ws.Schemas[0].GetSubTable("Table 1").Columns.Count);
             Assert.AreEqual(5, ws.Schemas[0].GetSubTable("Table 2").Columns.Count);

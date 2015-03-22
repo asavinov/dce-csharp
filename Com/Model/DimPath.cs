@@ -352,7 +352,7 @@ namespace Com.Model
 
             json["segments"] = segments;
         }
-        public override void FromJson(JObject json, Workspace ws) // Init this object fields by using json object
+        public override void FromJson(JObject json, DcWorkspace ws) // Init this object fields by using json object
         {
             base.FromJson(json, ws); // Dim
 
@@ -661,7 +661,7 @@ namespace Com.Model
             json["RelationalTargetTableName"] = RelationalTargetTableName;
             json["RelationalTargetColumnName"] = RelationalTargetColumnName;
         }
-        public override void FromJson(JObject json, Workspace ws) // Init this object fields by using json object
+        public override void FromJson(JObject json, DcWorkspace ws) // Init this object fields by using json object
         {
             base.FromJson(json, ws); // DimPath
 

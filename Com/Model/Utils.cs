@@ -83,7 +83,7 @@ namespace Com.Model
 
             return json;
         }
-        public static object ResolveJsonRef(JObject json, Workspace ws) // Resolve a json reference to a real object
+        public static object ResolveJsonRef(JObject json, DcWorkspace ws) // Resolve a json reference to a real object
         {
             if (json == null) return null;
 

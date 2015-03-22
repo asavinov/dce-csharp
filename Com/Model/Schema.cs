@@ -21,7 +21,7 @@ namespace Com.Model
 
         #region ComSchema interface
 
-        public Workspace Workspace { get; set; }
+        public DcWorkspace Workspace { get; set; }
         
         public DcTable GetPrimitive(string name)
         {
@@ -314,7 +314,7 @@ namespace Com.Model
             json["columns"] = columns;
         }
 
-        public override void FromJson(JObject json, Workspace ws)
+        public override void FromJson(JObject json, DcWorkspace ws)
         {
             base.FromJson(json, ws); // Set
 

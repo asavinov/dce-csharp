@@ -125,7 +125,7 @@ namespace Com.Model
 
         }
 
-        public override void FromJson(JObject json, Workspace ws)
+        public override void FromJson(JObject json, DcWorkspace ws)
         {
             base.FromJson(json, ws); // Schema
 

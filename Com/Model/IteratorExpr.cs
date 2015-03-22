@@ -31,7 +31,7 @@ namespace Com.Model
         // DcIterator interface
         //
 
-        public Workspace Workspace { get; set; }
+        public DcWorkspace Workspace { get; set; }
 
         public virtual bool Next()
         {

@@ -85,7 +85,7 @@ namespace Com.Model
         /// - Types in tuples depend on the parent type. Columns (variables, procedures etc.) depend on the children. 
         /// </summary>
         /// <param name="variables"></param>
-        public virtual void Resolve(Workspace workspace, List<DcVariable> variables)
+        public virtual void Resolve(DcWorkspace workspace, List<DcVariable> variables)
         {
             if (Operation == OperationType.VALUE)
             {
@@ -1012,7 +1012,7 @@ namespace Com.Model
             }
         }
 
-        public virtual void FromJson(JObject json, Workspace ws)
+        public virtual void FromJson(JObject json, DcWorkspace ws)
         {
             // We do not use the base TreeNode serialization
 
@@ -1064,7 +1064,7 @@ namespace Com.Model
     /// </summary>
     public class OledbExprNode : ExprNode
     {
-        public override void Resolve(Workspace workspace, List<DcVariable> variables)
+        public override void Resolve(DcWorkspace workspace, List<DcVariable> variables)
         {
             if (Operation == OperationType.VALUE)
             {
@@ -1104,7 +1104,7 @@ namespace Com.Model
     /// </summary>
     public class CsvExprNode : ExprNode
     {
-        public override void Resolve(Workspace workspace, List<DcVariable> variables)
+        public override void Resolve(DcWorkspace workspace, List<DcVariable> variables)
         {
             if (Operation == OperationType.VALUE)
             {

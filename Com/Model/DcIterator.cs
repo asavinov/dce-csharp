@@ -10,7 +10,7 @@ namespace Com.Model
     {
         // Never changes any set - neither lesser nor greater - just compute output given input
 
-        Workspace Workspace { get; set; }
+        DcWorkspace Workspace { get; set; }
 
         bool Next(); // True if there exists a next element
         bool First(); // True if there exists a first element (if the set is not empty)
