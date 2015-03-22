@@ -620,7 +620,7 @@ namespace Com.Model
             dimImport.Add();
 
             // Define the table
-            dimImport.Output.Definition.DefinitionType = TableDefinitionType.PROJECTION;
+            dimImport.Output.Definition.DefinitionType = DcTableDefinitionType.PROJECTION;
 
             return mapping.TargetSet;
         }

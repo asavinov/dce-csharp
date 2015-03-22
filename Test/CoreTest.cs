@@ -377,7 +377,7 @@ namespace Test
             // Define aggregated column
             //
             DcColumn c15 = schema.CreateColumn("Agg of Column 23", t1, schema.GetPrimitive("Double"), false);
-            c15.Definition.DefinitionType = ColumnDefinitionType.AGGREGATION;
+            c15.Definition.DefinitionType = DcColumnDefinitionType.AGGREGATION;
 
             c15.Definition.FactTable = t2; // Fact table
             c15.Definition.GroupPaths = new List<DimPath>(new DimPath[] { new DimPath(c24) }); // One group path
@@ -425,7 +425,7 @@ namespace Test
             // Define a new product-set
             //
             DcTable t3 = schema.CreateTable("Table 3");
-            t3.Definition.DefinitionType = TableDefinitionType.PRODUCT;
+            t3.Definition.DefinitionType = DcTableDefinitionType.PRODUCT;
             schema.AddTable(t3, null, null);
 
             DcColumn c31 = schema.CreateColumn(t1.Name, t3, t1, true); // {*20, 10, *30}
@@ -467,7 +467,7 @@ namespace Test
 
             ExprNode ast = ExprBuilder.Build("[Column 22] > 20.0 && this.Super.[Column 23] < 50");
             t3.Definition.WhereExpr = ast;
-            t3.Definition.DefinitionType = TableDefinitionType.PRODUCT;
+            t3.Definition.DefinitionType = DcTableDefinitionType.PRODUCT;
 
             schema.AddTable(t3, t2, null);
 
@@ -491,7 +491,7 @@ namespace Test
             // Project "Table 2" along "Column 21" and get 2 unique records in a new set "Value A" (3 references) and "Value B" (1 reference)
             //
             DcTable t3 = schema.CreateTable("Table 3");
-            t3.Definition.DefinitionType = TableDefinitionType.PROJECTION;
+            t3.Definition.DefinitionType = DcTableDefinitionType.PROJECTION;
             schema.AddTable(t3, null, null);
 
             DcColumn c31 = schema.CreateColumn(c21.Name, t3, c21.Output, true);
@@ -504,7 +504,7 @@ namespace Test
             // Create a generating column
             DcColumn c24 = schema.CreateColumn(map24.SourceSet.Name, map24.SourceSet, map24.TargetSet, false);
             c24.Definition.Mapping = map24;
-            c24.Definition.DefinitionType = ColumnDefinitionType.LINK;
+            c24.Definition.DefinitionType = DcColumnDefinitionType.LINK;
             c24.Definition.IsAppendData = true;
             c24.Add();
 
@@ -521,7 +521,7 @@ namespace Test
             // Defining a combination of "Column 21" and "Column 22" and project with 3 unique records in a new set
             //
             DcTable t4 = schema.CreateTable("Table 4");
-            t4.Definition.DefinitionType = TableDefinitionType.PROJECTION;
+            t4.Definition.DefinitionType = DcTableDefinitionType.PROJECTION;
             schema.AddTable(t4, null, null);
 
             DcColumn c41 = schema.CreateColumn(c21.Name, t4, c21.Output, true);
@@ -537,7 +537,7 @@ namespace Test
             // Create generating/import column
             DcColumn c25 = schema.CreateColumn(map25.SourceSet.Name, map25.SourceSet, map25.TargetSet, false);
             c25.Definition.Mapping = map25;
-            c25.Definition.DefinitionType = ColumnDefinitionType.LINK;
+            c25.Definition.DefinitionType = DcColumnDefinitionType.LINK;
             c25.Definition.IsAppendData = true;
             c25.Add();
 
@@ -598,7 +598,7 @@ namespace Test
             schema.Workspace = workspace;
 
             DcTable orderDetailsTable = schema.CreateTable("Order Details");
-            orderDetailsTable.Definition.DefinitionType = TableDefinitionType.PROJECTION;
+            orderDetailsTable.Definition.DefinitionType = DcTableDefinitionType.PROJECTION;
             
             // Create mapping
             Mapper mapper = new Mapper();
@@ -608,7 +608,7 @@ namespace Test
             // Create generating/import column
             DcColumn dim = schema.CreateColumn(map.SourceSet.Name, map.SourceSet, map.TargetSet, false);
             dim.Definition.Mapping = map;
-            dim.Definition.DefinitionType = ColumnDefinitionType.LINK;
+            dim.Definition.DefinitionType = DcColumnDefinitionType.LINK;
             dim.Definition.IsAppendData = true;
 
             dim.Add();
@@ -650,7 +650,7 @@ namespace Test
             schema.Workspace = workspace;
 
             DcTable productsTable = schema.CreateTable("Products");
-            productsTable.Definition.DefinitionType = TableDefinitionType.PROJECTION;
+            productsTable.Definition.DefinitionType = DcTableDefinitionType.PROJECTION;
 
             // Create mapping. 
             Mapper mapper = new Mapper();
@@ -660,7 +660,7 @@ namespace Test
             // Create generating/import column
             DcColumn dim = schema.CreateColumn(map.SourceSet.Name, map.SourceSet, map.TargetSet, false);
             dim.Definition.Mapping = map;
-            dim.Definition.DefinitionType = ColumnDefinitionType.LINK;
+            dim.Definition.DefinitionType = DcColumnDefinitionType.LINK;
             dim.Definition.IsAppendData = true;
 
             dim.Add();
@@ -698,7 +698,7 @@ namespace Test
             // Create a remote file description
             SetCsv table = (SetCsv)top.CreateTable("Table_1");
             table.FilePath = CsvWrite;
-            table.Definition.DefinitionType = TableDefinitionType.PROJECTION;
+            table.Definition.DefinitionType = DcTableDefinitionType.PROJECTION;
             top.AddTable(table, null, null);
 
             //
@@ -713,7 +713,7 @@ namespace Test
             // Create generating/import column
             DcColumn dim = schema.CreateColumn(map.SourceSet.Name, map.SourceSet, map.TargetSet, false);
             dim.Definition.Mapping = map;
-            dim.Definition.DefinitionType = ColumnDefinitionType.LINK;
+            dim.Definition.DefinitionType = DcColumnDefinitionType.LINK;
             dim.Definition.IsAppendData = true;
 
             dim.Add();
@@ -739,13 +739,13 @@ namespace Test
 
             // Add table definition 
             DcTable t = schema.GetSubTable("Table 2");
-            t.Definition.DefinitionType = TableDefinitionType.PRODUCT;
+            t.Definition.DefinitionType = DcTableDefinitionType.PRODUCT;
             ExprNode ast = ExprBuilder.Build("[Column 22] > 20.0 && this.Super.[Column 23] < 50");
             t.Definition.WhereExpr = ast;
 
             // Add column definition 
             DcColumn c = t.GetColumn("Column 22");
-            c.Definition.DefinitionType = ColumnDefinitionType.ARITHMETIC;
+            c.Definition.DefinitionType = DcColumnDefinitionType.ARITHMETIC;
             ast = ExprBuilder.Build("([Column 11]+10.0) * this.[Column 13]");
             c.Definition.FormulaExpr = ast;
 
@@ -774,11 +774,11 @@ namespace Test
             Assert.AreEqual("Table 1", ws.Schemas[0].GetSubTable("Table 2").GetColumn("Table 1").Output.Name);
 
             t = ws.Schemas[0].GetSubTable("Table 2");
-            Assert.AreEqual(TableDefinitionType.PRODUCT, t.Definition.DefinitionType);
+            Assert.AreEqual(DcTableDefinitionType.PRODUCT, t.Definition.DefinitionType);
             Assert.AreEqual(2, t.Definition.WhereExpr.Children.Count);
 
             c = t.GetColumn("Column 22");
-            Assert.AreEqual(ColumnDefinitionType.ARITHMETIC, c.Definition.DefinitionType);
+            Assert.AreEqual(DcColumnDefinitionType.ARITHMETIC, c.Definition.DefinitionType);
             Assert.AreEqual(2, c.Definition.FormulaExpr.Children.Count);
 
             //

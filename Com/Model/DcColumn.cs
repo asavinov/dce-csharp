@@ -99,7 +99,7 @@ namespace Com.Model
         /// <summary>
         /// Restricts kind of formula used to define this column. 
         /// </summary>
-        ColumnDefinitionType DefinitionType { get; set; }
+        DcColumnDefinitionType DefinitionType { get; set; }
 
         //
         // COEL (language) representation
@@ -202,7 +202,7 @@ namespace Com.Model
         List<DcColumn> IsUsedInColumns(bool recursive); // Dependants
     }
 
-    public enum ColumnDefinitionType // Specific types of column formula
+    public enum DcColumnDefinitionType // Specific types of column formula
     {
         FREE, // No definition for the column (and cannot be defined). Example: key columns of a product table
         ANY, // Arbitrary formula without constraints which can mix many other types of expressions

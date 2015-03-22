@@ -416,7 +416,7 @@ namespace Com.Model
 
         #region ComTableDefinition
 
-        public TableDefinitionType DefinitionType { get; set; }
+        public DcTableDefinitionType DefinitionType { get; set; }
 
         public ExprNode WhereExpr { get; set; }
 
@@ -424,20 +424,20 @@ namespace Com.Model
 
         public DcIterator GetWhereEvaluator()
         {
-            DcIterator evaluator = new ExprIterator(this);
+            DcIterator evaluator = new IteratorExpr(this);
             return evaluator;
         }
 
         public void Populate() 
         {
-            if (DefinitionType == TableDefinitionType.FREE)
+            if (DefinitionType == DcTableDefinitionType.FREE)
             {
                 return; // Nothing to do
             }
 
             Length = 0;
 
-            if (DefinitionType == TableDefinitionType.PRODUCT) // Product of local sets (no project/de-project from another set)
+            if (DefinitionType == DcTableDefinitionType.PRODUCT) // Product of local sets (no project/de-project from another set)
             {
                 //
                 // Evaluator for where expression which will be used to check each new record before it is added
@@ -517,7 +517,7 @@ namespace Com.Model
                 }
 
             }
-            else if (DefinitionType == TableDefinitionType.PROJECTION) // There are import dimensions so copy data from another set (projection of another set)
+            else if (DefinitionType == DcTableDefinitionType.PROJECTION) // There are import dimensions so copy data from another set (projection of another set)
             {
                 DcColumn projectDim = InputColumns.Where(d => d.Definition.IsAppendData).ToList()[0];
                 DcTable sourceSet = projectDim.Input;
@@ -722,7 +722,7 @@ namespace Com.Model
             JObject tableDef = (JObject)json["definition"];
             if (tableDef != null && Definition != null)
             {
-                Definition.DefinitionType = tableDef["definition_type"] != null ? (TableDefinitionType)(int)tableDef["definition_type"] : TableDefinitionType.FREE;
+                Definition.DefinitionType = tableDef["definition_type"] != null ? (DcTableDefinitionType)(int)tableDef["definition_type"] : DcTableDefinitionType.FREE;
 
                 if (tableDef["where"] != null)
                 {
@@ -815,7 +815,7 @@ namespace Com.Model
             greaterDims = new List<DcColumn>(); // Up arrows
             lesserDims = new List<DcColumn>();
 
-            DefinitionType = TableDefinitionType.FREE;
+            DefinitionType = DcTableDefinitionType.FREE;
         }
 
         #endregion

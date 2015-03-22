@@ -682,7 +682,7 @@ namespace Com.Model
 
         public bool IsAppendSchema { get; set; }
 
-        public ColumnDefinitionType DefinitionType { get; set; }
+        public DcColumnDefinitionType DefinitionType { get; set; }
 
         //
         // COEL (language) representation
@@ -702,15 +702,15 @@ namespace Com.Model
 
                 if (expr.Operation == OperationType.TUPLE)
                 {
-                    DefinitionType = ColumnDefinitionType.LINK;
+                    DefinitionType = DcColumnDefinitionType.LINK;
                 }
                 else if (expr.Operation == OperationType.CALL && expr.Name.Equals("AGGREGATE", StringComparison.InvariantCultureIgnoreCase))
                 {
-                    DefinitionType = ColumnDefinitionType.AGGREGATION;
+                    DefinitionType = DcColumnDefinitionType.AGGREGATION;
                 }
                 else
                 {
-                    DefinitionType = ColumnDefinitionType.ARITHMETIC;
+                    DefinitionType = DcColumnDefinitionType.ARITHMETIC;
                 }
             }
         }
@@ -752,8 +752,8 @@ namespace Com.Model
             if (Dim.Output == null) return;
             if (Dim.Output.IsPrimitive) return; // Primitive tables do not have structure
 
-            if (DefinitionType != ColumnDefinitionType.AGGREGATION) return;
-            if (DefinitionType != ColumnDefinitionType.ARITHMETIC) return;
+            if (DefinitionType != DcColumnDefinitionType.AGGREGATION) return;
+            if (DefinitionType != DcColumnDefinitionType.ARITHMETIC) return;
 
             if (FormulaExpr == null) return;
 
@@ -792,29 +792,29 @@ namespace Com.Model
         {
             DcIterator evaluator = null;
 
-            if (DefinitionType == ColumnDefinitionType.FREE) 
+            if (DefinitionType == DcColumnDefinitionType.FREE) 
             {
                 ; // Nothing to do
             }
             else if (Dim.Input.Schema is SchemaCsv) // Import from CSV
             {
-                evaluator = new CsvIterator(Dim);
+                evaluator = new IteratorCsv(Dim);
             }
             else if (Dim.Input.Schema is SchemaOledb) // Import from OLEDB
             {
-                evaluator = new OledbIterator(Dim);
+                evaluator = new IteratorOledb(Dim);
             }
-            else if (DefinitionType == ColumnDefinitionType.AGGREGATION)
+            else if (DefinitionType == DcColumnDefinitionType.AGGREGATION)
             {
-                evaluator = new AggrIterator(Dim);
+                evaluator = new IteratorAggr(Dim);
             }
-            else if (DefinitionType == ColumnDefinitionType.ARITHMETIC)
+            else if (DefinitionType == DcColumnDefinitionType.ARITHMETIC)
             {
-                evaluator = new ExprIterator(Dim);
+                evaluator = new IteratorExpr(Dim);
             }
-            else if (DefinitionType == ColumnDefinitionType.LINK)
+            else if (DefinitionType == DcColumnDefinitionType.LINK)
             {
-                evaluator = new ExprIterator(Dim);
+                evaluator = new IteratorExpr(Dim);
             }
             else
             {
@@ -937,18 +937,18 @@ namespace Com.Model
         {
             List<DcTable> res = new List<DcTable>();
 
-            if (DefinitionType == ColumnDefinitionType.FREE)
+            if (DefinitionType == DcColumnDefinitionType.FREE)
             {
                 ;
             }
-            else if (DefinitionType == ColumnDefinitionType.ANY || DefinitionType == ColumnDefinitionType.ARITHMETIC || DefinitionType == ColumnDefinitionType.LINK)
+            else if (DefinitionType == DcColumnDefinitionType.ANY || DefinitionType == DcColumnDefinitionType.ARITHMETIC || DefinitionType == DcColumnDefinitionType.LINK)
             {
                 if (FormulaExpr != null) // Dependency information is stored in expression (formula)
                 {
                     res = FormulaExpr.Find((DcTable)null).Select(x => x.Result.TypeTable).ToList();
                 }
             }
-            else if (DefinitionType == ColumnDefinitionType.AGGREGATION)
+            else if (DefinitionType == DcColumnDefinitionType.AGGREGATION)
             {
                 res.Add(FactTable); // This column depends on the fact table
 
@@ -994,18 +994,18 @@ namespace Com.Model
         {
             List<DcColumn> res = new List<DcColumn>();
 
-            if (DefinitionType == ColumnDefinitionType.FREE)
+            if (DefinitionType == DcColumnDefinitionType.FREE)
             {
                 ;
             }
-            else if (DefinitionType == ColumnDefinitionType.ANY || DefinitionType == ColumnDefinitionType.ARITHMETIC || DefinitionType == ColumnDefinitionType.LINK)
+            else if (DefinitionType == DcColumnDefinitionType.ANY || DefinitionType == DcColumnDefinitionType.ARITHMETIC || DefinitionType == DcColumnDefinitionType.LINK)
             {
                 if (FormulaExpr != null) // Dependency information is stored in expression (formula)
                 {
                     res = FormulaExpr.Find((DcColumn)null).Select(x => x.Column).ToList();
                 }
             }
-            else if (DefinitionType == ColumnDefinitionType.AGGREGATION)
+            else if (DefinitionType == DcColumnDefinitionType.AGGREGATION)
             {
                 // Grouping and measure paths are used in this column
                 if (GroupPaths != null)
@@ -1048,7 +1048,7 @@ namespace Com.Model
             Dim = dim;
 
             IsAppendData = false;
-            DefinitionType = ColumnDefinitionType.FREE;
+            DefinitionType = DcColumnDefinitionType.FREE;
             
             GroupPaths = new List<DimPath>();
             MeasurePaths = new List<DimPath>();

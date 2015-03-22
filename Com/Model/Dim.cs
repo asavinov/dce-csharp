@@ -203,7 +203,7 @@ namespace Com.Model
             if (columnDef != null && Definition != null)
             {
                 Definition.IsAppendData = columnDef["generating"] != null ? StringSimilarity.JsonTrue(columnDef["generating"]) : false;
-                Definition.DefinitionType = columnDef["definition_type"] != null ? (ColumnDefinitionType)(int)columnDef["definition_type"] : ColumnDefinitionType.FREE;
+                Definition.DefinitionType = columnDef["definition_type"] != null ? (DcColumnDefinitionType)(int)columnDef["definition_type"] : DcColumnDefinitionType.FREE;
 
                 if (columnDef["formula"] != null)
                 {
@@ -393,7 +393,7 @@ namespace Com.Model
         {
             Definition.Mapping = mapping;
             _definition.IsAppendData = true;
-            if (Output != null) Output.Definition.DefinitionType = TableDefinitionType.PROJECTION;
+            if (Output != null) Output.Definition.DefinitionType = DcTableDefinitionType.PROJECTION;
         }
 
         public Dim(Dim dim)

@@ -15,7 +15,7 @@ using Offset = System.Int32;
 namespace Com.Model
 {
 
-    public class ExprIterator : DcIterator
+    public class IteratorExpr : DcIterator
     {
         protected DcColumnData columnData;
 
@@ -77,7 +77,7 @@ namespace Com.Model
             return outputExpr.Result.GetValue(); 
         }
 
-        public ExprIterator(DcColumn column)
+        public IteratorExpr(DcColumn column)
         {
             Workspace = column.Input.Schema.Workspace;
             columnData = column.Data;
@@ -105,7 +105,7 @@ namespace Com.Model
             {
                 outputExpr = column.Definition.FormulaExpr;
 
-                if (column.Definition.DefinitionType == ColumnDefinitionType.LINK)
+                if (column.Definition.DefinitionType == DcColumnDefinitionType.LINK)
                 {
                     // Adjust the expression according to other parameters of the definition
                     if(column.Definition.IsAppendData) {
@@ -126,7 +126,7 @@ namespace Com.Model
             outputExpr.Resolve(Workspace, new List<DcVariable>() { thisVariable });
         }
 
-        public ExprIterator(DcTable table)
+        public IteratorExpr(DcTable table)
         {
             Workspace = table.Schema.Workspace;
             columnData = null;
@@ -144,7 +144,7 @@ namespace Com.Model
             outputExpr.Resolve(Workspace, new List<DcVariable>() { thisVariable });
         }
 
-        public ExprIterator()
+        public IteratorExpr()
         {
         }
     }
@@ -154,7 +154,7 @@ namespace Com.Model
     /// - distinguish between this table (where the aggregated column is defined, and a fact table which provides values to be aggregated where group and measure functions are defined.
     /// - the way of aggregation is defined as an updater expression which knows how to compute a new value given the old (current) value and a new measure.
     /// </summary>
-    public class AggrIterator : ExprIterator
+    public class IteratorAggr : IteratorExpr
     {
         // base::columnData is the aggregated function to be computed
 
@@ -206,7 +206,7 @@ namespace Com.Model
             return outputExpr.Result.GetValue();
         }
 
-        public AggrIterator(DcColumn column) // Create evaluator from structured definition
+        public IteratorAggr(DcColumn column) // Create evaluator from structured definition
         {
             Workspace = column.Input.Schema.Workspace;
             columnData = column.Data;
@@ -289,7 +289,7 @@ namespace Com.Model
 
     }
 
-    public class CsvIterator : ExprIterator
+    public class IteratorCsv : IteratorExpr
     {
         protected string[] currentRecord;
         protected ConnectionCsv connectionCsv;
@@ -329,7 +329,7 @@ namespace Com.Model
             return null;
         }
 
-        public CsvIterator(DcColumn column)
+        public IteratorCsv(DcColumn column)
             : base(column)
         {
             // Produce a result set that can be iterated through
@@ -341,7 +341,7 @@ namespace Com.Model
         }
     }
 
-    public class OledbIterator : ExprIterator
+    public class IteratorOledb : IteratorExpr
     {
         protected DataRow currentRow;
         protected IEnumerator rows;
@@ -379,7 +379,7 @@ namespace Com.Model
             return null;
         }
 
-        public OledbIterator(DcColumn column)
+        public IteratorOledb(DcColumn column)
             : base(column)
         {
             // Produce a result set from the remote database by executing a query on the source table

@@ -109,7 +109,7 @@ namespace Com.Model
         /// <summary>
         /// Specifies kind of formula used to define this table. 
         /// </summary>
-        TableDefinitionType DefinitionType { get; set; }
+        DcTableDefinitionType DefinitionType { get; set; }
 
         /// <summary>
         /// Constraints on all possible instances. 
@@ -150,7 +150,7 @@ namespace Com.Model
         List<DcColumn> IsUsedInColumns(bool recursive); // Dependants
     }
 
-    public enum TableDefinitionType // Specific types of table formula
+    public enum DcTableDefinitionType // Specific types of table formula
     {
         FREE, // No definition for the table (and cannot be defined). 
         // Example: manually created table with primitive dimensions.
