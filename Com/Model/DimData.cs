@@ -19,19 +19,25 @@ namespace Com.Model
     {
         protected DcColumn Dim { get; set; }
 
-        private T[] _cells; // Each cell contains a T value in arbitrary original order
-        private int[] _offsets; // Each cell contains an offset to an element in cells in ascending or descending order
-
-        private int _nullCount; // Nulls are stored in the beginning of array of indexes (that is, treated as absolute minimum)
-        private T _nullValue; // It is what is written in cell instead of null if null is not supported by the type. If null is supported then null is stored (instead, we can use _nullValue=null).
-
         // Memory management parameters for instances (used by extensions and in future will be removed from this class).
         protected static int initialSize = 1024 * 10; // In elements
         protected static int incrementSize = 1024 * 2; // In elements
 
+        //
+        // Storage for the values of the column
+        //
         protected int allocatedSize; // How many elements (maximum) fit into the allocated memory
+        private T[] _cells; // Each cell contains a T value in arbitrary original order
 
-        protected bool _autoindex = true; // If true then index will be automatically maintained. If false then indexing has to be done manually.
+        private bool[] _nullCells; // True if the cell is null and false if it is not null. The field is used only if nulls are not values.
+        private bool _nullAsValue; // Null is a normal value with a special meaning 
+        private T _nullValue; // If null is a normal value this it is what is this null value. If null is not a value then this field is ignored. 
+        private int _nullCount; // Nulls are stored in the beginning of array of indexes (that is, treated as absolute minimum)
+
+        //
+        // Index
+        //
+        private int[] _offsets; // Each cell contains an offset to an element in cells in ascending or descending order
 
         protected static IAggregator<T> Aggregator;
         public static T Aggregate<T, TProcessor>(T[] values, string function, TProcessor proc) where TProcessor : IAggregator<T>
@@ -80,8 +86,10 @@ namespace Com.Model
         }
 
         public bool AutoIndex { get; set; }
+
         protected bool _indexed;
         public bool Indexed { get { return _indexed; } }
+
         public void Reindex()
         {
             // Here the idea is to sort the index (that is, precisely what we need) by defining a custom comparare via cells referenced by the index elements
@@ -111,11 +119,17 @@ namespace Com.Model
 
         public bool IsNull(Offset input)
         {
-            // For non-nullable storage, use the index to find if this cell is in the null interval of the index (beginning)
-            int pos = FindIndex(input);
-            return pos < _nullCount;
-            // For nullable storage: simply check the value (actually this method is not needed for nullable storage because the user can compare the values returned from GetValue)
-            // return EqualityComparer<T>.Default.Equals(_nullValue, _cells[offset]);
+            if (_nullAsValue)
+            {
+                // For nullable storage: simply check the value (actually this method is not needed for nullable storage because the user can compare the values returned from GetValue)
+                return EqualityComparer<T>.Default.Equals(_cells[input], _nullValue);
+            }
+            else
+            {
+                // For non-nullable storage, use the index to find if this cell is in the null interval of the index (beginning)
+                int pos = FindIndex(input);
+                return pos < _nullCount;
+            }
         }
 
         public object GetValue(Offset input)
@@ -126,43 +140,63 @@ namespace Com.Model
         public void SetValue(Offset input, object value) // Replace an existing value with the new value and update the index. 
         {
             T val = default(T);
-            Tuple<int,int> interval;
-            int pos = -1; // New sorted position for this cell
-
-            int oldPos = FindIndex(input); // Old sorted position of the cell we are going to change
-
             if (value == null)
             {
                 val = _nullValue;
-                interval = new Tuple<int,int>(0, _nullCount);
-
-                if (oldPos >= _nullCount) _nullCount++; // If old value is not null, then increase the number of nulls
             }
             else
             {
                 val = ToThisType(value);
-                interval = FindIndexes(val);
+            }
 
+            // No indexing required
+            if (!AutoIndex)
+            {
+                _offsets[_length] = _length; // It will be last in sorted order
+                _cells[input] = val;
+                _indexed = false; // Mark index as dirty
+                return;
+            }
+
+            //
+            // Index
+            //
+
+            // 1. Old sorted position of the cell we are going to overwrite
+            int oldPos = FindIndex(input);
+
+            // 2.1 Find an interval for the new value (FindIndexes)
+            Tuple<int, int> interval;
+            if (value == null)
+            {
+                interval = new Tuple<int, int>(0, _nullCount);
+                if (oldPos >= _nullCount) _nullCount++; // If old value is not null, then increase the number of nulls
+            }
+            else
+            {
+                interval = FindIndexes(val);
                 if (oldPos < _nullCount) _nullCount--; // If old value is null, then decrease the number of nulls
             }
 
-            // Find sorted position within this value interval (by increasing offsets)
-            pos = Array.BinarySearch(_offsets, interval.Item1, interval.Item2 - interval.Item1, input);
+            // 2.2 Find sorted position within this value interval (by increasing offsets)
+            int pos = Array.BinarySearch(_offsets, interval.Item1, interval.Item2 - interval.Item1, input);
             if (pos < 0) pos = ~pos;
 
+            // 3. Finally simply change the position by shifting the index elements accordingly
             if (pos > oldPos)
             {
                 Array.Copy(_offsets, oldPos + 1, _offsets, oldPos, (pos - 1) - oldPos); // Shift backward by overwriting old
-                _offsets[pos - 1] = input;
+                pos = pos - 1;
             }
             else if (pos < oldPos)
             {
                 Array.Copy(_offsets, pos, _offsets, pos + 1, oldPos - pos); // Shift forward by overwriting old pos
-                _offsets[pos] = input;
             }
 
+            _offsets[pos] = input;
             _cells[input] = val;
         }
+
         public void SetValue(object value)
         {
             if (value == null)
@@ -179,6 +213,7 @@ namespace Com.Model
             }
 
             _nullCount = 0;
+            _indexed = true;
         }
 
         public void Nullify() // Reset values and index to initial state (all nulls)
@@ -197,36 +232,45 @@ namespace Com.Model
             }
 
             T val = default(T);
-            Tuple<int, int> interval;
-            int pos = -1;
-
             if (value == null)
             {
                 val = _nullValue;
+            }
+            else
+            {
+                val = ToThisType(value);
+            }
+
+            // No indexing required
+            if (!AutoIndex)
+            {
+                _offsets[_length] = _length; // It will be last in sort
+                _cells[_length] = val;
+                _length = _length + 1;
+
+                _indexed = false;
+                return;
+            }
+
+            //
+            // Index
+            //
+            Tuple<int, int> interval;
+            if (value == null)
+            {
                 interval = new Tuple<int, int>(0, _nullCount);
                 _nullCount++;
             }
             else
             {
-                val = ToThisType(value);
-
-                if (AutoIndex)
-                {
-                    interval = FindIndexes(val);
-                }
-                else
-                {
-                    interval = new Tuple<int, int>(_length - 1, _length);
-                    _indexed = false;
-                }
+                interval = FindIndexes(val);
             }
 
-            pos = interval.Item2; // New value has the largest offset and hence is inserted after the end of the interval of values
-
+            int pos = interval.Item2; // New value has the largest offset and hence is inserted after the end of the interval of values
             Array.Copy(_offsets, pos, _offsets, pos + 1, _length - pos); // Free an index element by shifting other elements forward
 
-            _cells[_length] = val;
-            _offsets[pos] = _length;
+            _offsets[pos] = _length; // Update index
+            _cells[_length] = val; // Update storage
             _length = _length + 1;
         }
 
@@ -515,21 +559,12 @@ namespace Com.Model
 
             Dim = dim;
 
-            _length = 0;
-            AutoIndex = true;
-            _indexed = true;
             allocatedSize = initialSize;
             _cells = new T[allocatedSize];
-            _offsets = new int[allocatedSize];
 
+            _nullCells = null;
             _nullCount = Length;
-
-            Length = 0;
-            if (dim.Input != null && dim.Input.Data != null)
-            {
-                Length = dim.Input.Data.Length;
-            }
-
+            _nullAsValue = false;
             // Initialize what representative value will be used instead of nulls
             _nullValue = default(T); // Check if type is nullable: http://stackoverflow.com/questions/374651/how-to-check-if-an-object-is-nullable
             Type type = typeof(T);
@@ -548,15 +583,41 @@ namespace Com.Model
                 _nullValue = ToThisType(decimal.MinValue);
                 Aggregator = new DecimalAggregator() as IAggregator<T>;
             }
+            else if (type == typeof(bool))
+            {
+                _nullValue = ToThisType(false);
+                Aggregator = new DecimalAggregator() as IAggregator<T>;
+            }
+            else if (type == typeof(DateTime))
+            {
+                _nullValue = ToThisType(DateTime.MinValue);
+                Aggregator = new DecimalAggregator() as IAggregator<T>;
+            }
             else if (!type.IsValueType) // Reference type
             {
+                _nullAsValue = true;
                 _nullValue = default(T);
             }
             else if (Nullable.GetUnderlyingType(type) != null) // Nullable<T> (like int?)
             {
+                _nullAsValue = true;
                 _nullValue = default(T);
             }
+            else
+            {
+                throw new NotImplementedException();
+            }
 
+            _offsets = new int[allocatedSize];
+            AutoIndex = true;
+            _indexed = true;
+
+            _length = 0;
+            Length = 0;
+            if (dim.Input != null && dim.Input.Data != null)
+            {
+                Length = dim.Input.Data.Length;
+            }
         }
 
         #endregion
@@ -727,7 +788,7 @@ namespace Com.Model
         //
 
         // Get an object which is used to compute the function values according to the formula
-        protected DcIterator GetEvaluator()
+        protected DcIterator GetIterator()
         {
             DcIterator evaluator = null;
 
@@ -737,11 +798,11 @@ namespace Com.Model
             }
             else if (Dim.Input.Schema is SchemaCsv) // Import from CSV
             {
-                evaluator = new CsvEvaluator(Dim);
+                evaluator = new CsvIterator(Dim);
             }
             else if (Dim.Input.Schema is SchemaOledb) // Import from OLEDB
             {
-                evaluator = new OledbEvaluator(Dim);
+                evaluator = new OledbIterator(Dim);
             }
             else if (DefinitionType == ColumnDefinitionType.AGGREGATION)
             {
@@ -808,17 +869,18 @@ namespace Com.Model
                         csvSchema.connection.WriteNext(header);
                     }
                 }
-
             }
             else if (Dim.Output.Schema is SchemaOledb) // Prepare to writing to a database during evaluation
             {
             }
 
+            Dim.Data.AutoIndex = false;
+            //Dim.Data.Nullify();
         }
 
         public void Evaluate()
         {
-            DcIterator evaluator = GetEvaluator();
+            DcIterator evaluator = GetIterator();
             if (evaluator == null) return;
 
             try
@@ -838,11 +900,13 @@ namespace Com.Model
             {
                 EvaluateEnd();
             }
-
         }
 
         private void EvaluateEnd() 
         {
+            Dim.Data.Reindex();
+            Dim.Data.AutoIndex = true;
+
             //
             // Close files/databases
             //
@@ -856,12 +920,10 @@ namespace Com.Model
                 {
                     csvSchema.connection.CloseWriter();
                 }
-
             }
             else if (Dim.Output.Schema is SchemaOledb)
             {
             }
-
         }
 
         //

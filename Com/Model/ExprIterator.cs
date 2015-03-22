@@ -28,7 +28,7 @@ namespace Com.Model
         protected ExprNode outputExpr; // Can contain more specific nodes OledbExprNode to access attributes in DataRow
 
         //
-        // ComColumnEvaluator interface
+        // DcIterator interface
         //
 
         public Workspace Workspace { get; set; }
@@ -175,7 +175,7 @@ namespace Com.Model
         // base::outputExpr - updater expression. works in the context of two variables: group and measure
 
         //
-        // ComColumnEvaluator interface
+        // DcIterator interface
         //
 
         public override object Evaluate()
@@ -289,13 +289,13 @@ namespace Com.Model
 
     }
 
-    public class CsvEvaluator : ExprIterator
+    public class CsvIterator : ExprIterator
     {
         protected string[] currentRecord;
         protected ConnectionCsv connectionCsv;
 
         //
-        // ComColumnEvaluator interface
+        // DcIterator interface
         //
 
         protected bool isUpdate;
@@ -329,7 +329,7 @@ namespace Com.Model
             return null;
         }
 
-        public CsvEvaluator(DcColumn column)
+        public CsvIterator(DcColumn column)
             : base(column)
         {
             // Produce a result set that can be iterated through
@@ -341,14 +341,14 @@ namespace Com.Model
         }
     }
 
-    public class OledbEvaluator : ExprIterator
+    public class OledbIterator : ExprIterator
     {
         protected DataRow currentRow;
         protected IEnumerator rows;
         protected DataTable dataTable;
 
         //
-        // ComColumnEvaluator interface
+        // DcIterator interface
         //
 
         protected bool isUpdate;
@@ -379,7 +379,7 @@ namespace Com.Model
             return null;
         }
 
-        public OledbEvaluator(DcColumn column)
+        public OledbIterator(DcColumn column)
             : base(column)
         {
             // Produce a result set from the remote database by executing a query on the source table

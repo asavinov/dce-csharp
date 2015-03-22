@@ -405,7 +405,7 @@ namespace Test
 
             c16.Add();
 
-            c15.Data.SetValue(0.0);
+            c16.Data.SetValue(0.0);
             c16.Definition.Evaluate(); // {40, 140, 0}
 
             Assert.AreEqual(81.0, c16.Data.GetValue(0));
