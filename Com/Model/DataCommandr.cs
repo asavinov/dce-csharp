@@ -15,7 +15,7 @@ namespace Com.Model
     /// These elements can be then manipulated using their own interface. 
     /// It implements an environment for managing schema and data elements.
     /// </summary>
-    public class DataCommander
+    public class DataCommandr 
     {
         private List<DcScriptSchema> _schemas { get; set; }
 
@@ -36,7 +36,7 @@ namespace Com.Model
         // Configuration of the environment itself.
         //
 
-        public DataCommander() // We need a constructor accepting configuration parameters
+        public DataCommandr() // We need a constructor accepting configuration parameters
         {
             _schemas = new List<DcScriptSchema>();
         }

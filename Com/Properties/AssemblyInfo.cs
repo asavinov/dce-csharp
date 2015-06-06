@@ -6,11 +6,11 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("Com")]
-[assembly: AssemblyDescription("DataCommander: Integrate. Transform. Analyze")]
+[assembly: AssemblyDescription("Data Commandr: Integrate. Transform. Analyze")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Alexandr Savinov")]
 [assembly: AssemblyProduct("Com")]
-[assembly: AssemblyCopyright("Copyright © 2013-2014 Alexandr Savinov")]
+[assembly: AssemblyCopyright("Copyright © 2013-2015 Alexandr Savinov")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
