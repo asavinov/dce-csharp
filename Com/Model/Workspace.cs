@@ -24,6 +24,14 @@ namespace Com.Model
         }
         public void RemoveSchema(DcSchema schema)
         {
+            // We have to ensure that inter-schema (import/export) columns are also deleted
+            List<DcTable> allTables = schema.AllSubTables;
+            foreach (DcTable t in allTables)
+            {
+                if (t.IsPrimitive) continue;
+                schema.DeleteTable(t);
+            }
+
             Schemas.Remove(schema);
         }
 
