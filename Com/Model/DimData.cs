@@ -696,8 +696,13 @@ namespace Com.Model
             {
                 formula = value;
 
+                if (string.IsNullOrWhiteSpace(formula)) return;
+
                 ExprBuilder exprBuilder = new ExprBuilder();
                 ExprNode expr = exprBuilder.Build(formula);
+
+                if (expr == null) return;
+
                 FormulaExpr = expr;
 
                 if (expr.Operation == OperationType.TUPLE)

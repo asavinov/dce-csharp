@@ -11,7 +11,7 @@ namespace Com.Model
     {
         string Name { get; set; }
 
-        bool IsKey { get; }
+        bool IsKey { get; set; }
         bool IsSuper { get; } // Changing this property may influence storage type
         bool IsPrimitive { get; }
         // Other properties: isNullable, isTemporary, IsInstantiable (is supposed/able to have instances = lesser set instantiable)

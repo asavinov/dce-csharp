@@ -36,7 +36,7 @@ namespace Com.Model
         /// <summary>
         /// Whether it is an identity dimension.
         /// </summary>
-        public bool IsKey { get; protected set; }
+        public bool IsKey { get; set; }
 
         /// <summary>
         /// This dimension belongs to the inclusion hierarchy (super-dimension).
