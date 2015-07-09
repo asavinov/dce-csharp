@@ -189,7 +189,14 @@ namespace Com.Model
 
             // If header is present (parameter is true) then it will read first line and initialize column names from the first line (independent of whether these are names or values)
             // If header is not present (parameter is false) then it will position on the first line and make valid other structures. In particular, we can learn that column names are null.
-            csvReader.Read();
+
+            try
+            {
+                csvReader.Read();
+            }
+            catch (Exception e)
+            {
+            }
         }
 
         public void CloseReader()
@@ -215,9 +222,12 @@ namespace Com.Model
             {
                 var names = new List<string>();
                 var rec = csvReader.CurrentRecord;
-                for (int f = 0; f < rec.Length; f++)
+                if (rec != null)
                 {
-                    names.Add("Column " + (f+1));
+                    for (int f = 0; f < rec.Length; f++)
+                    {
+                        names.Add("Column " + (f + 1));
+                    }
                 }
                 return names;
             }
@@ -230,6 +240,8 @@ namespace Com.Model
             for (int row = 0; row < SampleSize; row++)
             {
                 var rec = csvReader.CurrentRecord;
+                if (rec == null) break;
+
                 sampleRows.Add(rec);
 
                 if (!csvReader.Read()) break;

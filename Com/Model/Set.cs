@@ -418,6 +418,7 @@ namespace Com.Model
 
         public DcTableDefinitionType DefinitionType { get; set; }
 
+        public string WhereFormula { get; set; }
         public ExprNode WhereExpr { get; set; }
 
         public ExprNode OrderbyExpr { get; set; }
