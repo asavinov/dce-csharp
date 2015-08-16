@@ -1,4 +1,4 @@
-lexer grammar CommonLexerRules;
+lexer grammar Common;
 
 // Assign token names. They can be then used as constant in the program
 //NEG : '-' ;
