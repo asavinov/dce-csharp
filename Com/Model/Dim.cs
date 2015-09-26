@@ -7,7 +7,11 @@ using System.Diagnostics;
 
 using Newtonsoft.Json.Linq;
 
-using Offset = System.Int32;
+using Com.Data;
+using Com.Query;
+using Com.Utils;
+
+using Rowid = System.Int32;
 
 namespace Com.Model
 {

@@ -12,7 +12,11 @@ using System.Diagnostics;
 
 using Newtonsoft.Json.Linq;
 
-using Offset = System.Int32;
+using Com.Query;
+using Com.Data;
+using Com.Utils;
+
+using Rowid = System.Int32;
 
 namespace Com.Model
 {
@@ -171,8 +175,8 @@ namespace Com.Model
         /// <summary>
         /// How many instances this set has. Cardinality. Set power. Length (height) of instance set.
         /// </summary>
-        protected Offset length;
-        public Offset Length 
+        protected Rowid length;
+        public Rowid Length 
         { 
             get { return length; }
             set // Uniqueness of keys is not (and cannot be) checked and can be broken
@@ -214,31 +218,31 @@ namespace Com.Model
             }
         }
 
-        public object GetValue(string name, Offset offset)
+        public object GetValue(string name, Rowid offset)
         {
             Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
             DcColumn col = GetColumn(name);
             return col.Data.GetValue(offset);
         }
 
-        public void SetValue(string name, Offset offset, object value)
+        public void SetValue(string name, Rowid offset, object value)
         {
             Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
             DcColumn col = GetColumn(name);
             col.Data.SetValue(offset, value);
         }
 
-        public Offset Find(DcColumn[] dims, object[] values) // Type of dimensions (super, id, non-id) is not important and is not used
+        public Rowid Find(DcColumn[] dims, object[] values) // Type of dimensions (super, id, non-id) is not important and is not used
         {
             Debug.Assert(dims != null && values != null && dims.Length == values.Length, "Wrong use: for each dimension, there has to be a value specified.");
 
-            Offset[] result = Enumerable.Range(0, Length).ToArray(); // All elements of this set (can be quite long)
+            Rowid[] result = Enumerable.Range(0, Length).ToArray(); // All elements of this set (can be quite long)
 
             bool hasBeenRestricted = false; // For the case where the Length==1, and no key columns are really provided, so we get at the end result.Length==1 which is misleading. Also, this fixes the problem of having no key dimensions.
             for (int i = 0; i < dims.Length; i++)
             {
                 hasBeenRestricted = true;
-                Offset[] range = dims[i].Data.Deproject(values[i]); // Deproject one value
+                Rowid[] range = dims[i].Data.Deproject(values[i]); // Deproject one value
                 result = result.Intersect(range).ToArray(); 
                 // OPTIMIZE: Write our own implementation for various operations (intersection etc.). Use the fact that they are ordered.
                 // OPTIMIZE: Use statistics for column distribution to choose best order of de-projections. Alternatively, the order of dimensions can be set by the external procedure taking into account statistics. Say, there could be a special utility method like SortDimensionsAccordingDiscriminationFactor or SortDimsForFinding tuples.
@@ -262,7 +266,7 @@ namespace Com.Model
             }
         }
 
-        public Offset Append(DcColumn[] dims, object[] values) // Identity dims must be set (for uniqueness). Entity dims are also used when appending. Possibility to append (CanAppend) is not checked. 
+        public Rowid Append(DcColumn[] dims, object[] values) // Identity dims must be set (for uniqueness). Entity dims are also used when appending. Possibility to append (CanAppend) is not checked. 
         {
             Debug.Assert(dims != null && values != null && dims.Length == values.Length, "Wrong use: for each dimension, there has to be a value specified.");
             Debug.Assert(!IsPrimitive, "Wrong use: cannot append to a primitive set. ");
@@ -276,7 +280,7 @@ namespace Com.Model
             return length - 1;
         }
 
-        public void Remove(Offset input) // Propagation to lesser (referencing) sets is not checked - it is done by removal/nullifying by de-projection (all records that store some value in some function are removed)
+        public void Remove(Rowid input) // Propagation to lesser (referencing) sets is not checked - it is done by removal/nullifying by de-projection (all records that store some value in some function are removed)
         {
             foreach (DcColumn col in Columns)
             {
@@ -286,7 +290,7 @@ namespace Com.Model
             length--;
         }
 
-        public virtual Offset Find(ExprNode expr) // Use only identity dims (for general case use Search which returns a subset of elements)
+        public virtual Rowid Find(ExprNode expr) // Use only identity dims (for general case use Search which returns a subset of elements)
         {
             // Find the specified tuple but not its nested tuples (if nested tuples have to be found before then use recursive calls, say, a visitor or recursive epxression evaluation)
 
@@ -294,7 +298,7 @@ namespace Com.Model
             Debug.Assert(expr.Result.TypeTable == this, "Wrong use: expression OutputSet must be equal to the set its value is appended/found.");
             Debug.Assert(expr.Operation == OperationType.TUPLE, "Wrong use: operation type for appending has to be TUPLE. ");
 
-            Offset[] result = Enumerable.Range(0, Length).ToArray(); // All elements of this set (can be quite long)
+            Rowid[] result = Enumerable.Range(0, Length).ToArray(); // All elements of this set (can be quite long)
             bool hasBeenRestricted = false; // For the case where the Length==1, and no key columns are really provided, so we get at the end result.Length==1 which is misleading. Also, this fixes the problem of having no key dimensions.
 
             List<DcColumn> dims = new List<DcColumn>();
@@ -310,7 +314,7 @@ namespace Com.Model
                     val = childExpr.Result.GetValue();
 
                     hasBeenRestricted = true;
-                    Offset[] range = dim.Data.Deproject(val); // Deproject the value
+                    Rowid[] range = dim.Data.Deproject(val); // Deproject the value
                     result = result.Intersect(range).ToArray(); // Intersect with previous de-projections
                     // OPTIMIZE: Write our own implementation for intersection and other operations. Assume that they are ordered.
                     // OPTIMIZE: Remember the position for the case this value will have to be inserted so we do not have again search for this positin during insertion (optimization)
@@ -370,7 +374,7 @@ namespace Com.Model
             return true;
         }
 
-        public virtual Offset Append(ExprNode expr) // Identity dims must be set (for uniqueness). Entity dims are also used when appending.
+        public virtual Rowid Append(ExprNode expr) // Identity dims must be set (for uniqueness). Entity dims are also used when appending.
         {
             // Append: append *this* tuple to the set 
             // Greater tuples are not processed  - it is the task of the interpreter. If it is necessary to append (or do something else) with a greater tuple then it has to be done in the interpreter (depending on the operation, action and other parameters)
@@ -459,10 +463,10 @@ namespace Com.Model
                 //
                 // The current state of the search procedure
                 //
-                Offset[] lengths = new Offset[dimCount]; // Size of each dimension being varied (how many offsets in each dimension)
+                Rowid[] lengths = new Rowid[dimCount]; // Size of each dimension being varied (how many offsets in each dimension)
                 for (int i = 0; i < dimCount; i++) lengths[i] = dims[i].Output.Data.Length;
 
-                Offset[] offsets = new Offset[dimCount]; // The current point/offset for each dimensions during search
+                Rowid[] offsets = new Rowid[dimCount]; // The current point/offset for each dimensions during search
                 for (int i = 0; i < dimCount; i++) offsets[i] = -1;
 
                 int top = -1; // The current level/top where we change the offset. Depth of recursion.
@@ -478,7 +482,7 @@ namespace Com.Model
                         {
                             vals[i] = offsets[i];
                         }
-                        Offset input = Append(dims, vals);
+                        Rowid input = Append(dims, vals);
 
                         // Now check if this appended element satisfies the where expression and if not then remove it
                         if (eval != null)
@@ -1071,7 +1075,7 @@ namespace Com.Model
 
         #region ComTableData interface
 
-        public override Offset Find(ExprNode expr) // Use only identity dims (for general case use Search which returns a subset of elements)
+        public override Rowid Find(ExprNode expr) // Use only identity dims (for general case use Search which returns a subset of elements)
         {
             return -1; // Not found 
         }
@@ -1081,7 +1085,7 @@ namespace Com.Model
             return true;
         }
 
-        public override Offset Append(ExprNode expr) // Identity dims must be set (for uniqueness). Entity dims are also used when appending.
+        public override Rowid Append(ExprNode expr) // Identity dims must be set (for uniqueness). Entity dims are also used when appending.
         {
             Debug.Assert(!IsPrimitive, "Wrong use: cannot append to a primitive set. ");
             Debug.Assert(expr.Result.TypeTable == this, "Wrong use: expression OutputSet must be equal to the set its value is appended/found.");

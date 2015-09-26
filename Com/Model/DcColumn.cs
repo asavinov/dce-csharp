@@ -3,7 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-using Offset = System.Int32;
+using Com.Query;
+using Com.Data;
+
+using Rowid = System.Int32;
+using Com.Utils;
 
 namespace Com.Model
 {
@@ -25,52 +29,6 @@ namespace Com.Model
 
         DcColumnData Data { get; }
         DcColumnDefinition Definition { get; }
-    }
-
-    public interface DcColumnData // It is interface for managing function data as a mapping to output values (implemented by some kind of storage manager). Input always offset. Output type is a parameter.
-    {
-        Offset Length { get; set; }
-
-        bool AutoIndex { get; set; }
-        bool Indexed { get; }
-        void Reindex();
-
-        //
-        // Untyped methods. Default conversion will be done according to the function type.
-        //
-        bool IsNull(Offset input);
-
-        object GetValue(Offset input);
-        void SetValue(Offset input, object value);
-        void SetValue(object value);
-
-        void Nullify();
-
-        void Append(object value);
-
-        void Insert(Offset input, object value);
-
-        void Remove(Offset input);
-
-        //void WriteValue(object value); // Convenience, performance method: set all outputs to the specified value
-        //void InsertValue(Offset input, object value); // Changle length. Do we need this?
-
-        //
-        // Project/de-project
-        //
-        object Project(Offset[] offsets);
-        Offset[] Deproject(object value);
-
-        //
-        // Typed methods for each primitive type like GetInteger(). No NULL management since we use real values including NULL.
-        //
-
-        //
-        // Index control.
-        //
-        // bool IsAutoIndexed { get; set; } // Index is maintained automatically
-        // void Index(); // Index all and build new index
-        // void Index(Offset start, Offset end); // The specified interval has been changed (or inserted?)
     }
 
     public interface DcColumnDefinition // How a function is represented and evaluated. It uses API of the column storage like read, write (typed or untyped).

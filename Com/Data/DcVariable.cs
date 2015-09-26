@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Com.Model
+using Com.Model;
+
+namespace Com.Data
 {
     public interface DcVariable // It is a storage element like function or table
     {

@@ -6,7 +6,8 @@ using System.Data.OleDb;
 using System.Data;
 using System.Diagnostics;
 
-using Offset = System.Int32;
+using Rowid = System.Int32;
+using Com.Utils;
 
 namespace Com.Model
 {

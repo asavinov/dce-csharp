@@ -6,13 +6,14 @@ using System.Data;
 using System.Diagnostics;
 using System.Collections;
 
+using Com.Model;
 using Com.Query;
 
-using Offset = System.Int32;
+using Rowid = System.Int32;
 
 // Possible evaluators: Expr (based on expression as code), MappingEvaluator (based on Mapping, essentially a tuple), AstNode evaluator, source code evaluator, external library evaluator
 // Also, there are at least two types of evaluators: normal (set/assign), and aggregation (update, accumulate)
-namespace Com.Model
+namespace Com.Data
 {
 
     public class IteratorExpr : DcIterator
@@ -20,7 +21,7 @@ namespace Com.Model
         protected DcColumnData columnData;
 
         // Loop
-        protected Offset thisCurrent;
+        protected Rowid thisCurrent;
         protected DcTable thisTable;
         protected DcVariable thisVariable; // Stores current input (offset in a local set or reference to the current DataRow)
 
@@ -188,7 +189,7 @@ namespace Com.Model
             thisVariable.SetValue(thisCurrent);
 
             groupExpr.Evaluate();
-            Offset groupElement = (Offset)groupExpr.Result.GetValue();
+            Rowid groupElement = (Rowid)groupExpr.Result.GetValue();
             groupVariable.SetValue(groupElement);
 
             measureExpr.Evaluate();

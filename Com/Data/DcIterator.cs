@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Com.Model
+using Com.Model;
+
+namespace Com.Data
 {
     // This class is used only by the column evaluation procedure. 
     public interface DcIterator // Compute output for one input based on some column definition and other already computed columns

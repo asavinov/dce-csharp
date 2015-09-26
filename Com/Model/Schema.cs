@@ -4,9 +4,12 @@ using System.Linq;
 using System.Text;
 using System.Data;
 using System.Diagnostics;
-using Offset = System.Int32;
 
 using Newtonsoft.Json.Linq;
+
+using Com.Query;
+
+using Rowid = System.Int32;
 
 namespace Com.Model
 {

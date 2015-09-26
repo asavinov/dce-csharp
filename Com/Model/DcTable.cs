@@ -3,7 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-using Offset = System.Int32;
+using Com.Query;
+using Com.Data;
+
+using Rowid = System.Int32;
 
 namespace Com.Model
 {
@@ -56,52 +59,6 @@ namespace Com.Model
 
         DcTableData Data { get; }
         DcTableDefinition Definition { get; }
-    }
-
-    public interface DcTableData // It is interface for manipulating data in a table.
-    {
-        Offset Length { get; set; }
-
-        bool AutoIndex { set; }
-        bool Indexed { get; }
-        void Reindex();
-        
-        //
-        // Value methods (convenience, probably should be removed and replaced by manual access to dimensions)
-        //
-
-        object GetValue(string name, Offset offset);
-        void SetValue(string name, Offset offset, object value);
-
-        //
-        // Tuple (flat record) methods: append, insert, remove, read, write.
-        //
-        // Here we use TUPLE and its constituents as primitive types: Reference etc.
-        // Column names or references are important. Types (table references or names) are necessary and important. Maybe also flags like Super, Key would be useful. 
-        // TUPLE could be used as a set structure specification (e.g., param for set creation).
-        //
-
-        Offset Find(DcColumn[] dims, object[] values);
-        Offset Append(DcColumn[] dims, object[] values);
-        void Remove(int input);
-
-        //
-        // Expression (nested record) methods: append, insert, remove, read, write.
-        //
-
-        Offset Find(ExprNode expr);
-        bool CanAppend(ExprNode expr);
-        Offset Append(ExprNode expr);
-
-        //Offset FindTuple(CsRecord record); // If many records can satisfy then another method has to be used. What is many found? Maybe return negative number with the number of records (-1 or Length means not found, positive means found 1)? 
-        //void InsertTuple(Offset input, CsRecord record); // All keys are required? Are non-keys allowed?
-        //void RemoveTuple(Offset input); // We use it to remove a tuple that does not satisfy filter constraints. Note that filter constraints can use only data that is loaded (some columns will be computed later). So the filter predicate has to be validated for sets which are projected/loaded or all other functions have to be evaluated during set population. 
-
-        //
-        // Typed data manipulation methods (do we need this especially taking into account that we will mapping of data types with conversion)
-        // Here we need an interface like ResultSet in JDBC with all possible types
-        // Alternative: maybe define these methos in the SetRemote class where we will have one class for manually entering elements
-        //
     }
 
     public interface DcTableDefinition

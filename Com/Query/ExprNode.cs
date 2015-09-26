@@ -5,13 +5,17 @@ using System.Linq;
 using System.Text;
 using System.Data;
 using System.Diagnostics;
+using System.Reflection;
 
 using Newtonsoft.Json.Linq;
 
-using Offset = System.Int32;
-using System.Reflection;
+using Com.Model;
+using Com.Data;
+using Com.Utils;
 
-namespace Com.Model
+using Rowid = System.Int32;
+
+namespace Com.Query
 {
     // Represents a function definition in terms of other functions and provides its run-time interface.
     // Main unit of the representation is a triple: (Type) Name = Value. 
@@ -462,7 +466,7 @@ namespace Com.Model
                     // Find, append or update an element in this set (depending on the action type)
                     if (Action == ActionType.READ) // Find the offset
                     {
-                        Offset input = Result.TypeTable.Data.Find(this);
+                        Rowid input = Result.TypeTable.Data.Find(this);
 
                         if (input < 0 || input >= Result.TypeTable.Data.Length) // Not found
                         {
@@ -478,7 +482,7 @@ namespace Com.Model
                     }
                     else if (Action == ActionType.APPEND) // Find, try to update and append if cannot be found
                     {
-                        Offset input = Result.TypeTable.Data.Find(this); // Uniqueness constraint: check if it exists already
+                        Rowid input = Result.TypeTable.Data.Find(this); // Uniqueness constraint: check if it exists already
 
                         if (input < 0 || input >= Result.TypeTable.Data.Length) // Not found
                         {
@@ -540,7 +544,7 @@ namespace Com.Model
                     else if (Column != null) 
                     {
                         ExprNode prevOutput = child1;
-                        Offset input = (Offset)prevOutput.Result.GetValue();
+                        Rowid input = (Rowid)prevOutput.Result.GetValue();
                         object output = Column.Data.GetValue(input);
                         Result.SetValue(output);
                     }
@@ -1006,7 +1010,7 @@ namespace Com.Model
             expr.children = new JArray() as dynamic;
             foreach (var node in Children)
             {
-                dynamic child = Utils.CreateJsonFromObject(node);
+                dynamic child = Com.Model.Utils.CreateJsonFromObject(node);
                 ((ExprNode)node).ToJson(child);
                 expr.children.Add(child);
             }
@@ -1035,7 +1039,7 @@ namespace Com.Model
             // List of children
             foreach (JObject child in json["children"])
             {
-                ExprNode childNode = (ExprNode)Utils.CreateObjectFromJson(child);
+                ExprNode childNode = (ExprNode)Com.Model.Utils.CreateObjectFromJson(child);
                 if (childNode != null)
                 {
                     this.AddChild(childNode);
@@ -1053,7 +1057,7 @@ namespace Com.Model
 
         public ExprNode()
         {
-            CultureInfo = Utils.cultureInfo; // Default
+            CultureInfo = Com.Model.Utils.cultureInfo; // Default
             Result = new Variable("", "Void", "return");
         }
 
