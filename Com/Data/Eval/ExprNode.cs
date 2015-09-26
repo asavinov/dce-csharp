@@ -10,6 +10,8 @@ using System.Reflection;
 using Newtonsoft.Json.Linq;
 
 using Com.Schema;
+using Com.Schema.Csv;
+using Com.Schema.Rel;
 using Com.Data;
 using Com.Utils;
 

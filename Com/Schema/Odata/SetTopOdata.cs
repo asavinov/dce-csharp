@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using Offset = System.Int32;
 
-namespace Com.Model
+namespace Com.Schema.Odata
 {
     /// <summary>
     /// Set with data loaded from OData connection.

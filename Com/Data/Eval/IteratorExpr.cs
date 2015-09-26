@@ -7,6 +7,8 @@ using System.Diagnostics;
 using System.Collections;
 
 using Com.Schema;
+using Com.Schema.Csv;
+using Com.Schema.Rel;
 
 using Rowid = System.Int32;
 

@@ -62,6 +62,9 @@
     <Compile Include="Data\DcColumnData.cs" />
     <Compile Include="Data\DcTableData.cs" />
     <Compile Include="Schema\ColumnDefinition.cs" />
+    <Compile Include="Schema\Csv\ConnectionCsv.cs" />
+    <Compile Include="Schema\Csv\DimCsv.cs" />
+    <Compile Include="Schema\Csv\SetCsv.cs" />
     <Compile Include="Schema\DcColumnDefinition.cs" />
     <Compile Include="Data\Aggregator.cs" />
     <Compile Include="Schema\DataCommandr.cs" />
@@ -72,6 +75,11 @@
     <Compile Include="Data\DcVariable.cs" />
     <Compile Include="Schema\Dim.cs" />
     <Compile Include="Data\DimData.cs" />
+    <Compile Include="Schema\Rel\ConnectionOledb.cs" />
+    <Compile Include="Schema\Rel\DimAttribute.cs" />
+    <Compile Include="Schema\Rel\DimRel.cs" />
+    <Compile Include="Schema\Rel\SetRel.cs" />
+    <Compile Include="Utils\DimEnumerator.cs" />
     <Compile Include="Utils\DimPath.cs" />
     <Compile Include="Utils\DimTree.cs" />
     <Compile Include="Data\Eval\ExprNode.cs" />
@@ -81,8 +89,8 @@
     <Compile Include="Utils\Mapping.cs" />
     <Compile Include="Schema\Set.cs" />
     <Compile Include="Schema\Schema.cs" />
-    <Compile Include="Schema\SchemaCsv.cs" />
-    <Compile Include="Schema\SchemaOledb.cs" />
+    <Compile Include="Schema\Csv\SchemaCsv.cs" />
+    <Compile Include="Schema\Rel\SchemaOledb.cs" />
     <Compile Include="Utils\TreeNode.cs" />
     <Compile Include="Schema\Utils.cs" />
     <Compile Include="Schema\Workspace.cs" />

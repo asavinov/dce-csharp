@@ -5,9 +5,9 @@ using System.Text;
 using System.Data.OleDb;
 using System.Data;
 
-using Offset = System.Int32;
+using Rowid = System.Int32;
 
-namespace Com.Model
+namespace Com.Schema.Rel
 {
     /// <summary>
     /// Set with data loaded from a text file.

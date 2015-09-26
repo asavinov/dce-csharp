@@ -8,6 +8,8 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 using Com.Schema;
+using Com.Schema.Rel;
+using Com.Schema.Csv;
 using Com.Utils;
 using Com.Data;
 using Com.Data.Query;

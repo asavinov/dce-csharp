@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
+using Com.Utils;
 using Com.Data;
 using Com.Data.Query;
 
 using Rowid = System.Int32;
-using Com.Utils;
 
 namespace Com.Schema
 {

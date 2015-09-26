@@ -9,7 +9,6 @@ using Newtonsoft.Json.Linq;
 
 using Com.Utils;
 using Com.Data;
-using Com.Data.Query;
 using Com.Data.Eval;
 
 using Rowid = System.Int32;
@@ -457,108 +456,6 @@ namespace Com.Schema
 
         #endregion
 
-    }
-
-    /// <summary>
-    /// Relational dimension representing a foreign key as a whole (without its attributes) or a primitive non-FK attribute. 
-    /// </summary>
-    public class DimRel : Dim
-    {
-        /// <summary>
-        /// Additional names specific to the relational model and imported from a relational schema. 
-        /// </summary>
-        public string RelationalFkName { get; set; } // The original FK name this dimension was created from
-
-        #region ComJson serialization
-
-        public override void ToJson(JObject json)
-        {
-            base.ToJson(json); // Dim
-
-            json["RelationalFkName"] = RelationalFkName;
-        }
-
-        public override void FromJson(JObject json, DcWorkspace ws)
-        {
-            base.FromJson(json, ws); // Dim
-
-            RelationalFkName = (string)json["RelationalFkName"];
-        }
-
-        #endregion
-
-        public DimRel()
-            : base(null, null, null)
-        {
-        }
-
-        public DimRel(string name)
-            : this(name, null, null)
-        {
-        }
-
-        public DimRel(string name, DcTable input, DcTable output)
-            : this(name, input, output, false, false)
-        {
-        }
-
-        public DimRel(string name, DcTable input, DcTable output, bool isIdentity, bool isSuper)
-            : base(name, input, output, isIdentity, isSuper)
-        {
-        }
-    }
-
-    /// <summary>
-    /// Dimension representing a column in a text file. 
-    /// </summary>
-    public class DimCsv : Dim
-    {
-        /// <summary>
-        /// Sample values. 
-        /// </summary>
-        public List<string> SampleValues { get; set; }
-
-        public int ColumnIndex { get; set; } // Zero-based sequential column number in the file
-
-        #region ComJson serialization
-
-        public override void ToJson(JObject json)
-        {
-            base.ToJson(json); // Dim
-
-            json["ColumnIndex"] = ColumnIndex;
-        }
-
-        public override void FromJson(JObject json, DcWorkspace ws)
-        {
-            base.FromJson(json, ws); // Dim
-
-            ColumnIndex = (int)json["ColumnIndex"];
-        }
-
-        #endregion
-
-        public DimCsv()
-            : base(null, null, null)
-        {
-        }
-
-        public DimCsv(string name)
-            : this(name, null, null)
-        {
-        }
-
-        public DimCsv(string name, DcTable input, DcTable output)
-            : this(name, input, output, false, false)
-        {
-        }
-
-        public DimCsv(string name, DcTable input, DcTable output, bool isIdentity, bool isSuper)
-            : base(name, input, output, isIdentity, isSuper)
-        {
-            SampleValues = new List<string>();
-            ColumnIndex = -1;
-        }
     }
 
 }
