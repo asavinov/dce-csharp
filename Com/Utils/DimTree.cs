@@ -8,7 +8,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
-using Com.Model;
+using Com.Schema;
 
 namespace Com.Utils
 {

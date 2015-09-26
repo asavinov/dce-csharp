@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-using Com.Model;
-using Com.Query;
+using Com.Schema;
+using Com.Data.Query;
+using Com.Data.Eval;
 
 using Rowid = System.Int32;
 

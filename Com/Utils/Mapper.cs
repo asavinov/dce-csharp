@@ -9,7 +9,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 
-using Com.Model;
+using Com.Schema;
 
 namespace Com.Utils
 {
@@ -70,9 +70,9 @@ namespace Com.Utils
             List<Mapping> maps = new List<Mapping>();
             DcTable targetSet;
 
-            if (sourceSchema.GetType() == typeof(Schema)) // Schema -> *
+            if (sourceSchema.GetType() == typeof(Schema.Schema)) // Schema -> *
             {
-                if (targetSchema.GetType() == typeof(Schema)) // Schema -> Schema
+                if (targetSchema.GetType() == typeof(Schema.Schema)) // Schema -> Schema
                 {
                     targetSet = targetSchema.GetPrimitive(sourceSet.Name);
                     Mapping map = new Mapping(sourceSet, targetSet);
@@ -86,7 +86,7 @@ namespace Com.Utils
             }
             else if (sourceSchema is SchemaOledb) // SchemaOledb -> *
             {
-                if (targetSchema.GetType() == typeof(Schema)) // SchemaOledb -> Schema
+                if (targetSchema.GetType() == typeof(Schema.Schema)) // SchemaOledb -> Schema
                 {
                     OleDbType sourceType = (OleDbType)Enum.Parse(typeof(OleDbType), sourceSet.Name, false); // Convert type representation: from name to enum (equivalent)
                     string targetType;
@@ -185,7 +185,7 @@ namespace Com.Utils
             }
             else if (sourceSchema is SchemaCsv) // SchemaCsv -> *
             {
-                if (targetSchema.GetType() == typeof(Schema)) // SchemaCsv -> Schema
+                if (targetSchema.GetType() == typeof(Schema.Schema)) // SchemaCsv -> Schema
                 {
                     string targetType = "String";
                 }
@@ -687,8 +687,8 @@ namespace Com.Utils
                     List<string> values = ((DimCsv)sd).SampleValues;
 
                     string targetTypeName;
-                    if (Com.Model.Utils.isInt32(values.ToArray())) targetTypeName = "Integer";
-                    else if (Com.Model.Utils.isDouble(values.ToArray())) targetTypeName = "Double";
+                    if (Com.Schema.Utils.isInt32(values.ToArray())) targetTypeName = "Integer";
+                    else if (Com.Schema.Utils.isDouble(values.ToArray())) targetTypeName = "Double";
                     else targetTypeName = "String";
 
                     DcTable targetType = targetSchema.GetPrimitive(targetTypeName);

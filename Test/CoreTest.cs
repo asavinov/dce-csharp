@@ -7,10 +7,11 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-using Com.Model;
-using Com.Query;
+using Com.Schema;
 using Com.Utils;
 using Com.Data;
+using Com.Data.Query;
+using Com.Data.Eval;
 
 using Offset = System.Int32;
 

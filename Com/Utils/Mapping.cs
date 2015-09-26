@@ -5,9 +5,10 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
-using Com.Query;
-using Com.Model;
 using Com.Utils;
+using Com.Schema;
+using Com.Data.Query;
+using Com.Data.Eval;
 
 using Newtonsoft.Json.Linq;
 
@@ -393,14 +394,14 @@ namespace Com.Utils
 
             json["similarity"] = Similarity;
 
-            json["source_table"] = Com.Model.Utils.CreateJsonRef(_sourceSet);
-            json["target_table"] = Com.Model.Utils.CreateJsonRef(_targetSet);
+            json["source_table"] = Com.Schema.Utils.CreateJsonRef(_sourceSet);
+            json["target_table"] = Com.Schema.Utils.CreateJsonRef(_targetSet);
 
             // List of all matches
             JArray matches = new JArray();
             foreach (PathMatch comMatch in this.Matches)
             {
-                JObject match = (JObject)Com.Model.Utils.CreateJsonFromObject(comMatch);
+                JObject match = (JObject)Com.Schema.Utils.CreateJsonFromObject(comMatch);
                 comMatch.ToJson(match);
                 matches.Add(match);
             }
@@ -413,13 +414,13 @@ namespace Com.Utils
 
             Similarity = (double)json["similarity"];
 
-            _sourceSet = (DcTable)Com.Model.Utils.ResolveJsonRef((JObject)json["source_table"], ws);
-            _targetSet = (DcTable)Com.Model.Utils.ResolveJsonRef((JObject)json["target_table"], ws);
+            _sourceSet = (DcTable)Com.Schema.Utils.ResolveJsonRef((JObject)json["source_table"], ws);
+            _targetSet = (DcTable)Com.Schema.Utils.ResolveJsonRef((JObject)json["target_table"], ws);
 
             // List of matches
             foreach (JObject match in json["matches"])
             {
-                PathMatch comMatch = (PathMatch)Com.Model.Utils.CreateObjectFromJson(match);
+                PathMatch comMatch = (PathMatch)Com.Schema.Utils.CreateObjectFromJson(match);
                 if (comMatch != null)
                 {
                     comMatch.FromJson(match, ws);
@@ -526,10 +527,10 @@ namespace Com.Utils
 
             json["similarity"] = Similarity;
 
-            json["source_path"] = Com.Model.Utils.CreateJsonFromObject(SourcePath);
+            json["source_path"] = Com.Schema.Utils.CreateJsonFromObject(SourcePath);
             SourcePath.ToJson((JObject)json["source_path"]);
 
-            json["target_path"] = Com.Model.Utils.CreateJsonFromObject(TargetPath);
+            json["target_path"] = Com.Schema.Utils.CreateJsonFromObject(TargetPath);
             TargetPath.ToJson((JObject)json["target_path"]);
         }
 
@@ -539,10 +540,10 @@ namespace Com.Utils
 
             Similarity = (double)json["similarity"];
 
-            SourcePath = (DimPath)Com.Model.Utils.CreateObjectFromJson((JObject)json["source_path"]);
+            SourcePath = (DimPath)Com.Schema.Utils.CreateObjectFromJson((JObject)json["source_path"]);
             SourcePath.FromJson((JObject)json["source_path"], ws);
 
-            TargetPath = (DimPath)Com.Model.Utils.CreateObjectFromJson((JObject)json["target_path"]);
+            TargetPath = (DimPath)Com.Schema.Utils.CreateObjectFromJson((JObject)json["target_path"]);
             TargetPath.FromJson((JObject)json["target_path"], ws);
         }
 

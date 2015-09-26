@@ -7,7 +7,7 @@ using System.Diagnostics;
 
 using Newtonsoft.Json.Linq;
 
-using Com.Model;
+using Com.Schema;
 
 using Rowid = System.Int32;
 
@@ -349,7 +349,7 @@ namespace Com.Utils
 
             for (int i = 0; i < Size; i++)
             {
-                JObject segRef = Com.Model.Utils.CreateJsonRef(Segments[i]);
+                JObject segRef = Com.Schema.Utils.CreateJsonRef(Segments[i]);
                 segments.Add(segRef);
             }
 
@@ -364,7 +364,7 @@ namespace Com.Utils
             for (int i = 0; i < segments.Count; i++)
             {
                 JObject segRef = (JObject)segments[i];
-                DcColumn column = (DcColumn)Com.Model.Utils.ResolveJsonRef(segRef, ws);
+                DcColumn column = (DcColumn)Com.Schema.Utils.ResolveJsonRef(segRef, ws);
                 if (column == null) // Failed to resolve the segment
                 {
                     segs.Clear(); // Empty path because some segment is absent
