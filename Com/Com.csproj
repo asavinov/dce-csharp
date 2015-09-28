@@ -57,6 +57,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Data\DimDataEmpty.cs" />
+    <Compile Include="Data\Eval\ExprNodeCsv.cs" />
+    <Compile Include="Data\Eval\ExprNodeOledb.cs" />
+    <Compile Include="Data\Eval\IteratorAggr.cs" />
+    <Compile Include="Data\Eval\IteratorCsv.cs" />
+    <Compile Include="Data\Eval\IteratorOledb.cs" />
     <Compile Include="Data\Variable.cs" />
     <Compile Include="Data\DcColumnData.cs" />
     <Compile Include="Data\DcTableData.cs" />
@@ -72,12 +78,14 @@
     <Compile Include="Schema\DcSchema.cs" />
     <Compile Include="Schema\DcTable.cs" />
     <Compile Include="Data\DcVariable.cs" />
+    <Compile Include="Schema\DcTableDefinition.cs" />
     <Compile Include="Schema\Dim.cs" />
     <Compile Include="Data\DimData.cs" />
     <Compile Include="Schema\Rel\ConnectionOledb.cs" />
     <Compile Include="Schema\Rel\DimAttribute.cs" />
     <Compile Include="Schema\Rel\DimRel.cs" />
     <Compile Include="Schema\Rel\SetRel.cs" />
+    <Compile Include="Schema\DcJson.cs" />
     <Compile Include="Utils\DimEnumerator.cs" />
     <Compile Include="Utils\DimPath.cs" />
     <Compile Include="Utils\DimTree.cs" />

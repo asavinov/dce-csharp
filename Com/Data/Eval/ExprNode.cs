@@ -521,7 +521,7 @@ namespace Com.Data.Eval
 
                 if (Action == ActionType.READ)
                 {
-                    if (this is CsvExprNode) // It is easier to do it here rather than (correctly) in the extension
+                    if (this is ExprNodeCsv) // It is easier to do it here rather than (correctly) in the extension
                     {
                         // Find current Row object
                         ExprNode thisNode = GetChild("this");
@@ -532,7 +532,7 @@ namespace Com.Data.Eval
                         object output = input[attributeIndex];
                         Result.SetValue(output);
                     }
-                    else if (this is OledbExprNode) // It is easier to do it here rather than (correctly) in the extension
+                    else if (this is ExprNodeOledb) // It is easier to do it here rather than (correctly) in the extension
                     {
                         // Find current Row object
                         ExprNode thisNode = GetChild("this");
@@ -839,7 +839,7 @@ namespace Com.Data.Eval
             {
                 DimCsv seg = (DimCsv)path.FirstSegment;
 
-                expr = new CsvExprNode();
+                expr = new ExprNodeCsv();
                 expr.Operation = OperationType.CALL;
                 expr.Action = ActionType.READ;
                 expr.Name = seg.Name;
@@ -853,7 +853,7 @@ namespace Com.Data.Eval
             }
             else if (path.Input.Schema is SchemaOledb) // Access via relational attribute
             {
-                expr = new OledbExprNode();
+                expr = new ExprNodeOledb();
                 expr.Operation = OperationType.CALL;
                 expr.Action = ActionType.READ;
                 expr.Name = path.Name;
@@ -1061,86 +1061,6 @@ namespace Com.Data.Eval
         {
             CultureInfo = Com.Schema.Utils.cultureInfo; // Default
             Result = new Variable("", "Void", "return");
-        }
-
-    }
-
-    /// <summary>
-    /// This class implements functions for accessing Oledb data source as input. 
-    /// </summary>
-    public class OledbExprNode : ExprNode
-    {
-        public override void Resolve(DcWorkspace workspace, List<DcVariable> variables)
-        {
-            if (Operation == OperationType.VALUE)
-            {
-                base.Resolve(workspace, variables);
-            }
-            else if (Operation == OperationType.TUPLE)
-            {
-                base.Resolve(workspace, variables);
-            }
-            else if (Operation == OperationType.CALL)
-            {
-                base.Resolve(workspace, variables);
-                // Resolve attribute names by preparing them for access - use directly the name for accessting the row object found in the this child
-            }
-        }
-
-        public override void Evaluate()
-        {
-            if (Operation == OperationType.VALUE)
-            {
-                base.Evaluate();
-            }
-            else if (Operation == OperationType.TUPLE)
-            {
-                throw new NotImplementedException("ERROR: Wrong use: tuple is never evaluated for relational table.");
-            }
-            else if (Operation == OperationType.CALL)
-            {
-                base.Evaluate();
-            }
-        }
-
-    }
-
-    /// <summary>
-    /// This class implements functions for accessing Csv data source as input. 
-    /// </summary>
-    public class CsvExprNode : ExprNode
-    {
-        public override void Resolve(DcWorkspace workspace, List<DcVariable> variables)
-        {
-            if (Operation == OperationType.VALUE)
-            {
-                base.Resolve(workspace, variables);
-            }
-            else if (Operation == OperationType.TUPLE)
-            {
-                base.Resolve(workspace, variables);
-            }
-            else if (Operation == OperationType.CALL)
-            {
-                base.Resolve(workspace, variables);
-                // Resolve attribute names by preparing them for access - use directly the name for accessting the row object found in the this child
-            }
-        }
-
-        public override void Evaluate()
-        {
-            if (Operation == OperationType.VALUE)
-            {
-                base.Evaluate();
-            }
-            else if (Operation == OperationType.TUPLE)
-            {
-                throw new NotImplementedException("ERROR: Wrong use: tuple is never evaluated for relational table.");
-            }
-            else if (Operation == OperationType.CALL)
-            {
-                base.Evaluate();
-            }
         }
 
     }
