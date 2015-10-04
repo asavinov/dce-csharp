@@ -12,7 +12,7 @@ using Rowid = System.Int32;
 
 namespace Com.Data.Eval
 {
-    public class IteratorOledb : IteratorExpr
+    public class EvaluatorOledb : EvaluatorExpr
     {
         protected DataRow currentRow;
         protected IEnumerator rows;
@@ -25,7 +25,7 @@ namespace Com.Data.Eval
         protected bool isUpdate;
         public bool IsUpdate { get { return isUpdate; } }
 
-        public override bool Next()
+        public override bool NextInput()
         {
             thisCurrent++;
 
@@ -50,7 +50,7 @@ namespace Com.Data.Eval
             return null;
         }
 
-        public IteratorOledb(DcColumn column)
+        public EvaluatorOledb(DcColumn column)
             : base(column)
         {
             // Produce a result set from the remote database by executing a query on the source table

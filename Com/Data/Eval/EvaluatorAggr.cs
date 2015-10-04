@@ -14,7 +14,7 @@ namespace Com.Data.Eval
     /// - distinguish between this table (where the aggregated column is defined, and a fact table which provides values to be aggregated where group and measure functions are defined.
     /// - the way of aggregation is defined as an updater expression which knows how to compute a new value given the old (current) value and a new measure.
     /// </summary>
-    public class IteratorAggr : IteratorExpr
+    public class EvaluatorAggr : EvaluatorExpr
     {
         // base::columnData is the aggregated function to be computed
 
@@ -48,11 +48,11 @@ namespace Com.Data.Eval
             thisVariable.SetValue(thisCurrent);
 
             groupExpr.Evaluate();
-            Rowid groupElement = (Rowid)groupExpr.Result.GetValue();
+            Rowid groupElement = (Rowid)groupExpr.OutputVariable.GetValue();
             groupVariable.SetValue(groupElement);
 
             measureExpr.Evaluate();
-            object measureValue = measureExpr.Result.GetValue();
+            object measureValue = measureExpr.OutputVariable.GetValue();
             measureVariable.SetValue(measureValue);
 
             //
@@ -60,13 +60,13 @@ namespace Com.Data.Eval
             //
             outputExpr.Evaluate();
 
-            object newValue = outputExpr.Result.GetValue();
+            object newValue = outputExpr.OutputVariable.GetValue();
             columnData.SetValue(groupElement, newValue);
 
-            return outputExpr.Result.GetValue();
+            return outputExpr.OutputVariable.GetValue();
         }
 
-        public IteratorAggr(DcColumn column) // Create evaluator from structured definition
+        public EvaluatorAggr(DcColumn column) // Create evaluator from structured definition
         {
             Workspace = column.Input.Schema.Workspace;
             columnData = column.Data;

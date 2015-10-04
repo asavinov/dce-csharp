@@ -73,7 +73,7 @@ namespace Com.Data.Eval
         //
 
         // Return run-time value after processing this node to be used by the parent. It must have the specified type.
-        public DcVariable Result { get; set; }
+        public DcVariable OutputVariable { get; set; }
 
         //
         // Maybe we need a method for retrieving dependency information, that is, a list of other functions (with their sets) used in the formula, including maybe system functions, variables and other context objects
@@ -104,21 +104,21 @@ namespace Com.Data.Eval
                 // About conversion from string: http://stackoverflow.com/questions/3965871/c-sharp-generic-string-parse-to-any-object
                 if (int.TryParse(Name, NumberStyles.Integer, CultureInfo, out intValue))
                 {
-                    Result.TypeName = "Integer";
-                    Result.SetValue(intValue);
+                    OutputVariable.TypeName = "Integer";
+                    OutputVariable.SetValue(intValue);
                 }
                 else if (double.TryParse(Name, NumberStyles.Float, CultureInfo, out doubleValue))
                 {
-                    Result.TypeName = "Double";
-                    Result.SetValue(doubleValue);
+                    OutputVariable.TypeName = "Double";
+                    OutputVariable.SetValue(doubleValue);
                 }
                 else // Cannot parse means string
                 {
-                    Result.TypeName = "String";
-                    Result.SetValue(Name);
+                    OutputVariable.TypeName = "String";
+                    OutputVariable.SetValue(Name);
                 }
 
-                Result.Resolve(workspace);
+                OutputVariable.Resolve(workspace);
             }
             else if (Operation == OperationType.TUPLE)
             {
@@ -130,7 +130,7 @@ namespace Com.Data.Eval
                 //
                 // 1. Resolve type table name 
                 //
-                Result.Resolve(workspace);
+                OutputVariable.Resolve(workspace);
 
                 //
                 // 2. Resolve Name into a column object (a function from the parent to this node)
@@ -142,23 +142,23 @@ namespace Com.Data.Eval
                 }
                 else if (parentNode.Operation == OperationType.TUPLE) // This tuple in another tuple
                 {
-                    if (parentNode.Result.TypeTable != null && !string.IsNullOrEmpty(Name))
+                    if (parentNode.OutputVariable.TypeTable != null && !string.IsNullOrEmpty(Name))
                     {
-                        DcColumn col = parentNode.Result.TypeTable.GetColumn(Name);
+                        DcColumn col = parentNode.OutputVariable.TypeTable.GetColumn(Name);
 
                         if (col != null) // Column resolved 
                         {
                             Column = col;
 
                             // Check and process type information 
-                            if (Result.TypeTable == null)
+                            if (OutputVariable.TypeTable == null)
                             {
-                                Result.SchemaName = col.Output.Schema.Name;
-                                Result.TypeName = col.Output.Name;
-                                Result.TypeSchema = col.Output.Schema;
-                                Result.TypeTable = col.Output;
+                                OutputVariable.SchemaName = col.Output.Schema.Name;
+                                OutputVariable.TypeName = col.Output.Name;
+                                OutputVariable.TypeSchema = col.Output.Schema;
+                                OutputVariable.TypeTable = col.Output;
                             }
-                            else if (Result.TypeTable != col.Output)
+                            else if (OutputVariable.TypeTable != col.Output)
                             {
                                 ; // ERROR: Output type of the column must be the same as this node result type
                             }
@@ -197,7 +197,7 @@ namespace Com.Data.Eval
                 //
                 // 1. Resolve type table name
                 //
-                Result.Resolve(workspace);
+                OutputVariable.Resolve(workspace);
 
                 //
                 // 2. Resolve Name into a column object, variable, procedure or whatever object that will return a result (children must be resolved before)
@@ -243,10 +243,10 @@ namespace Com.Data.Eval
 
                     if (var != null) // Resolved as a variable
                     {
-                        Result.SchemaName = var.SchemaName;
-                        Result.TypeName = var.TypeName;
-                        Result.TypeSchema = var.TypeSchema;
-                        Result.TypeTable = var.TypeTable;
+                        OutputVariable.SchemaName = var.SchemaName;
+                        OutputVariable.TypeName = var.TypeName;
+                        OutputVariable.TypeSchema = var.TypeSchema;
+                        OutputVariable.TypeTable = var.TypeTable;
 
                         Variable = var;
                     }
@@ -262,15 +262,15 @@ namespace Com.Data.Eval
                         thisChild.Action = ActionType.READ;
                         thisChild.Name = "this";
 
-                        thisChild.Result.SchemaName = thisVar.SchemaName;
-                        thisChild.Result.TypeName = thisVar.TypeName;
-                        thisChild.Result.TypeSchema = thisVar.TypeSchema;
-                        thisChild.Result.TypeTable = thisVar.TypeTable;
+                        thisChild.OutputVariable.SchemaName = thisVar.SchemaName;
+                        thisChild.OutputVariable.TypeName = thisVar.TypeName;
+                        thisChild.OutputVariable.TypeSchema = thisVar.TypeSchema;
+                        thisChild.OutputVariable.TypeTable = thisVar.TypeTable;
 
                         thisChild.Variable = thisVar;
 
                         ExprNode path = thisChild;
-                        DcTable contextTable = thisChild.Result.TypeTable;
+                        DcTable contextTable = thisChild.OutputVariable.TypeTable;
                         DcColumn col = null;
 
                         while (contextTable != null)
@@ -314,14 +314,14 @@ namespace Com.Data.Eval
                             Column = col;
 
                             // Check and process type information 
-                            if (Result.TypeTable == null)
+                            if (OutputVariable.TypeTable == null)
                             {
-                                Result.SchemaName = col.Output.Schema.Name;
-                                Result.TypeName = col.Output.Name;
-                                Result.TypeSchema = col.Output.Schema;
-                                Result.TypeTable = col.Output;
+                                OutputVariable.SchemaName = col.Output.Schema.Name;
+                                OutputVariable.TypeName = col.Output.Name;
+                                OutputVariable.TypeSchema = col.Output.Schema;
+                                OutputVariable.TypeTable = col.Output;
                             }
-                            else if (Result.TypeTable != col.Output)
+                            else if (OutputVariable.TypeTable != col.Output)
                             {
                                 ; // ERROR: Output type of the column must be the same as this node result type
                             }
@@ -347,21 +347,21 @@ namespace Com.Data.Eval
                         outputChild = GetChild(0);
                     }
 
-                    DcColumn col = outputChild.Result.TypeTable.GetColumn(methodName);
+                    DcColumn col = outputChild.OutputVariable.TypeTable.GetColumn(methodName);
 
                     if (col != null) // Column resolved
                     {
                         Column = col;
 
                         // Check and process type information 
-                        if (Result.TypeTable == null)
+                        if (OutputVariable.TypeTable == null)
                         {
-                            Result.SchemaName = col.Output.Schema.Name;
-                            Result.TypeName = col.Output.Name;
-                            Result.TypeSchema = col.Output.Schema;
-                            Result.TypeTable = col.Output;
+                            OutputVariable.SchemaName = col.Output.Schema.Name;
+                            OutputVariable.TypeName = col.Output.Name;
+                            OutputVariable.TypeSchema = col.Output.Schema;
+                            OutputVariable.TypeTable = col.Output;
                         }
-                        else if (Result.TypeTable != col.Output)
+                        else if (OutputVariable.TypeTable != col.Output)
                         {
                             ; // ERROR: Output type of the column must be the same as this node result type
                         }
@@ -376,8 +376,8 @@ namespace Com.Data.Eval
                     string methodName = this.Name;
 
                     // TODO: Derive return type. It is derived from arguments by using type conversion rules
-                    Result.TypeName = "Double";
-                    Result.Resolve(workspace);
+                    OutputVariable.TypeName = "Double";
+                    OutputVariable.Resolve(workspace);
 
                     switch (Action)
                     {
@@ -416,45 +416,45 @@ namespace Com.Data.Eval
                     childNode.Item.Evaluate();
                 }
 
-                if (Result.TypeTable.IsPrimitive) // Primitive TUPLE nodes are processed differently
+                if (OutputVariable.TypeTable.IsPrimitive) // Primitive TUPLE nodes are processed differently
                 {
                     Debug.Assert(Children.Count == 1, "Wrong use: a primitive TUPLE node must have one child expression providing its value.");
                     ExprNode childNode = GetChild(0);
-                    object val = childNode.Result.GetValue();
-                    string targeTypeName = Result.TypeTable.Name;
+                    object val = childNode.OutputVariable.GetValue();
+                    string targeTypeName = OutputVariable.TypeTable.Name;
 
                     // Copy result from the child expression and convert it to this node type
                     if (val is DBNull)
                     {
-                        Result.SetValue(null);
+                        OutputVariable.SetValue(null);
                     }
                     else if (val is string && string.IsNullOrWhiteSpace((string)val))
                     {
-                        Result.SetValue(null);
+                        OutputVariable.SetValue(null);
                     }
                     else if (StringSimilarity.SameTableName(targeTypeName, "Integer"))
                     {
-                        Result.SetValue(childNode.ObjectToInt32(val));
+                        OutputVariable.SetValue(childNode.ObjectToInt32(val));
                     }
                     else if (StringSimilarity.SameTableName(targeTypeName, "Double"))
                     {
-                        Result.SetValue(childNode.ObjectToDouble(val));
+                        OutputVariable.SetValue(childNode.ObjectToDouble(val));
                     }
                     else if (StringSimilarity.SameTableName(targeTypeName, "Decimal"))
                     {
-                        Result.SetValue(childNode.ObjectToDecimal(val));
+                        OutputVariable.SetValue(childNode.ObjectToDecimal(val));
                     }
                     else if (StringSimilarity.SameTableName(targeTypeName, "String"))
                     {
-                        Result.SetValue(childNode.ObjectToString(val));
+                        OutputVariable.SetValue(childNode.ObjectToString(val));
                     }
                     else if (StringSimilarity.SameTableName(targeTypeName, "Boolean"))
                     {
-                        Result.SetValue(childNode.ObjectToBoolean(val));
+                        OutputVariable.SetValue(childNode.ObjectToBoolean(val));
                     }
                     else if (StringSimilarity.SameTableName(targeTypeName, "DateTime"))
                     {
-                        Result.SetValue(childNode.ObjectToDateTime(val));
+                        OutputVariable.SetValue(childNode.ObjectToDateTime(val));
                     }
                     else
                     {
@@ -468,15 +468,15 @@ namespace Com.Data.Eval
                     // Find, append or update an element in this set (depending on the action type)
                     if (Action == ActionType.READ) // Find the offset
                     {
-                        Rowid input = Result.TypeTable.Data.Find(this);
+                        Rowid input = OutputVariable.TypeTable.Data.Find(this);
 
-                        if (input < 0 || input >= Result.TypeTable.Data.Length) // Not found
+                        if (input < 0 || input >= OutputVariable.TypeTable.Data.Length) // Not found
                         {
-                            Result.SetValue(null);
+                            OutputVariable.SetValue(null);
                         }
                         else
                         {
-                            Result.SetValue(input);
+                            OutputVariable.SetValue(input);
                         }
                     }
                     else if (Action == ActionType.UPDATE) // Find and update the record
@@ -484,14 +484,14 @@ namespace Com.Data.Eval
                     }
                     else if (Action == ActionType.APPEND) // Find, try to update and append if cannot be found
                     {
-                        Rowid input = Result.TypeTable.Data.Find(this); // Uniqueness constraint: check if it exists already
+                        Rowid input = OutputVariable.TypeTable.Data.Find(this); // Uniqueness constraint: check if it exists already
 
-                        if (input < 0 || input >= Result.TypeTable.Data.Length) // Not found
+                        if (input < 0 || input >= OutputVariable.TypeTable.Data.Length) // Not found
                         {
-                            input = Result.TypeTable.Data.Append(this); // Append new
+                            input = OutputVariable.TypeTable.Data.Append(this); // Append new
                         }
 
-                        Result.SetValue(input);
+                        OutputVariable.SetValue(input);
                     }
                     else
                     {
@@ -525,35 +525,35 @@ namespace Com.Data.Eval
                     {
                         // Find current Row object
                         ExprNode thisNode = GetChild("this");
-                        string[] input = (string[])thisNode.Result.GetValue();
+                        string[] input = (string[])thisNode.OutputVariable.GetValue();
 
                         // Use attribute name or number by applying it to the current Row object (offset is not used)
                         int attributeIndex = ((DimCsv)Column).ColumnIndex;
                         object output = input[attributeIndex];
-                        Result.SetValue(output);
+                        OutputVariable.SetValue(output);
                     }
                     else if (this is ExprNodeOledb) // It is easier to do it here rather than (correctly) in the extension
                     {
                         // Find current Row object
                         ExprNode thisNode = GetChild("this");
-                        DataRow input = (DataRow)thisNode.Result.GetValue();
+                        DataRow input = (DataRow)thisNode.OutputVariable.GetValue();
 
                         // Use attribute name or number by applying it to the current Row object (offset is not used)
                         string attributeName = Name;
                         object output = input[attributeName];
-                        Result.SetValue(output);
+                        OutputVariable.SetValue(output);
                     }
                     else if (Column != null) 
                     {
                         ExprNode prevOutput = child1;
-                        Rowid input = (Rowid)prevOutput.Result.GetValue();
+                        Rowid input = (Rowid)prevOutput.OutputVariable.GetValue();
                         object output = Column.Data.GetValue(input);
-                        Result.SetValue(output);
+                        OutputVariable.SetValue(output);
                     }
                     else if (Variable != null)
                     {
                         object result = Variable.GetValue();
-                        Result.SetValue(result);
+                        OutputVariable.SetValue(result);
                     }
                 }
                 else if (Action == ActionType.UPDATE) // Compute new value for the specified offset using a new value in the variable
@@ -567,117 +567,117 @@ namespace Com.Data.Eval
                     doubleRes = 1.0;
                     foreach (ExprNode childNode in Children)
                     {
-                        double arg = childNode.ObjectToDouble(childNode.Result.GetValue());
+                        double arg = childNode.ObjectToDouble(childNode.OutputVariable.GetValue());
                         if (double.IsNaN(arg)) continue;
                         doubleRes *= arg;
                     }
-                    Result.SetValue(doubleRes);
+                    OutputVariable.SetValue(doubleRes);
                 }
                 else if (Action == ActionType.DIV)
                 {
-                    doubleRes = child1.ObjectToDouble(child1.Result.GetValue());
+                    doubleRes = child1.ObjectToDouble(child1.OutputVariable.GetValue());
                     for (int i = 1; i < Children.Count; i++)
                     {
                         ExprNode childNode = (ExprNode)Children[i];
-                        double arg = childNode.ObjectToDouble(childNode.Result.GetValue());
+                        double arg = childNode.ObjectToDouble(childNode.OutputVariable.GetValue());
                         if (double.IsNaN(arg)) continue;
                         doubleRes /= arg;
                     }
-                    Result.SetValue(doubleRes);
+                    OutputVariable.SetValue(doubleRes);
                 }
                 else if (Action == ActionType.ADD)
                 {
                     doubleRes = 0.0;
                     foreach (ExprNode childNode in Children)
                     {
-                        double arg = childNode.ObjectToDouble(childNode.Result.GetValue());
+                        double arg = childNode.ObjectToDouble(childNode.OutputVariable.GetValue());
                         if (double.IsNaN(arg)) continue;
                         doubleRes += arg;
                     }
-                    Result.SetValue(doubleRes);
+                    OutputVariable.SetValue(doubleRes);
                 }
                 else if (Action == ActionType.SUB)
                 {
-                    doubleRes = child1.ObjectToDouble(child1.Result.GetValue());
+                    doubleRes = child1.ObjectToDouble(child1.OutputVariable.GetValue());
                     for (int i = 1; i < Children.Count; i++)
                     {
                         ExprNode childNode = (ExprNode)Children[i];
-                        double arg = childNode.ObjectToDouble(childNode.Result.GetValue());
+                        double arg = childNode.ObjectToDouble(childNode.OutputVariable.GetValue());
                         if (double.IsNaN(arg)) continue;
                         doubleRes /= arg;
                     }
-                    Result.SetValue(doubleRes);
+                    OutputVariable.SetValue(doubleRes);
                 }
                 else if (Action == ActionType.COUNT)
                 {
-                    intRes = child1.ObjectToInt32(child1.Result.GetValue());
+                    intRes = child1.ObjectToInt32(child1.OutputVariable.GetValue());
                     intRes += 1;
-                    Result.SetValue(intRes);
+                    OutputVariable.SetValue(intRes);
                 }
                 //
                 // LEQ, GEQ, GRE, LES,
                 //
                 else if (Action == ActionType.LEQ)
                 {
-                    double arg1 = child1.ObjectToDouble(child1.Result.GetValue());
-                    double arg2 = child2.ObjectToDouble(child2.Result.GetValue());
+                    double arg1 = child1.ObjectToDouble(child1.OutputVariable.GetValue());
+                    double arg2 = child2.ObjectToDouble(child2.OutputVariable.GetValue());
                     boolRes = arg1 <= arg2;
-                    Result.SetValue(boolRes);
+                    OutputVariable.SetValue(boolRes);
                 }
                 else if (Action == ActionType.GEQ)
                 {
-                    double arg1 = child1.ObjectToDouble(child1.Result.GetValue());
-                    double arg2 = child2.ObjectToDouble(child2.Result.GetValue());
+                    double arg1 = child1.ObjectToDouble(child1.OutputVariable.GetValue());
+                    double arg2 = child2.ObjectToDouble(child2.OutputVariable.GetValue());
                     boolRes = arg1 >= arg2;
-                    Result.SetValue(boolRes);
+                    OutputVariable.SetValue(boolRes);
                 }
                 else if (Action == ActionType.GRE)
                 {
-                    double arg1 = child1.ObjectToDouble(child1.Result.GetValue());
-                    double arg2 = child2.ObjectToDouble(child2.Result.GetValue());
+                    double arg1 = child1.ObjectToDouble(child1.OutputVariable.GetValue());
+                    double arg2 = child2.ObjectToDouble(child2.OutputVariable.GetValue());
                     boolRes = arg1 > arg2;
-                    Result.SetValue(boolRes);
+                    OutputVariable.SetValue(boolRes);
                 }
                 else if (Action == ActionType.LES)
                 {
-                    double arg1 = child1.ObjectToDouble(child1.Result.GetValue());
-                    double arg2 = child2.ObjectToDouble(child2.Result.GetValue());
+                    double arg1 = child1.ObjectToDouble(child1.OutputVariable.GetValue());
+                    double arg2 = child2.ObjectToDouble(child2.OutputVariable.GetValue());
                     boolRes = arg1 < arg2;
-                    Result.SetValue(boolRes);
+                    OutputVariable.SetValue(boolRes);
                 }
                 //
                 // EQ, NEQ
                 //
                 else if (Action == ActionType.EQ)
                 {
-                    double arg1 = child1.ObjectToDouble(child1.Result.GetValue());
-                    double arg2 = child2.ObjectToDouble(child2.Result.GetValue());
+                    double arg1 = child1.ObjectToDouble(child1.OutputVariable.GetValue());
+                    double arg2 = child2.ObjectToDouble(child2.OutputVariable.GetValue());
                     boolRes = arg1 == arg2;
-                    Result.SetValue(boolRes);
+                    OutputVariable.SetValue(boolRes);
                 }
                 else if (Action == ActionType.NEQ)
                 {
-                    double arg1 = child1.ObjectToDouble(child1.Result.GetValue());
-                    double arg2 = child2.ObjectToDouble(child2.Result.GetValue());
+                    double arg1 = child1.ObjectToDouble(child1.OutputVariable.GetValue());
+                    double arg2 = child2.ObjectToDouble(child2.OutputVariable.GetValue());
                     boolRes = arg1 != arg2;
-                    Result.SetValue(boolRes);
+                    OutputVariable.SetValue(boolRes);
                 }
                 //
                 // AND, OR
                 //
                 else if (Action == ActionType.AND)
                 {
-                    bool arg1 = child1.ObjectToBoolean(child1.Result.GetValue());
-                    bool arg2 = child2.ObjectToBoolean(child2.Result.GetValue());
+                    bool arg1 = child1.ObjectToBoolean(child1.OutputVariable.GetValue());
+                    bool arg2 = child2.ObjectToBoolean(child2.OutputVariable.GetValue());
                     boolRes = arg1 && arg2;
-                    Result.SetValue(boolRes);
+                    OutputVariable.SetValue(boolRes);
                 }
                 else if (Action == ActionType.OR)
                 {
-                    bool arg1 = child1.ObjectToBoolean(child1.Result.GetValue());
-                    bool arg2 = child2.ObjectToBoolean(child2.Result.GetValue());
+                    bool arg1 = child1.ObjectToBoolean(child1.OutputVariable.GetValue());
+                    bool arg2 = child2.ObjectToBoolean(child2.OutputVariable.GetValue());
                     boolRes = arg1 || arg2;
-                    Result.SetValue(boolRes);
+                    OutputVariable.SetValue(boolRes);
                 }
                 else if (Action == ActionType.PROCEDURE)
                 {
@@ -690,15 +690,15 @@ namespace Com.Data.Eval
                     if(Method.IsStatic) {
                         args = new object[childCount]; 
                         for(int i=0; i<childCount; i++) {
-                            args[i] = ((ExprNode)Children[0]).Result.GetValue();
+                            args[i] = ((ExprNode)Children[0]).OutputVariable.GetValue();
                         }
                     }
                     else {
-                        if(childCount > 0) thisObj = ((ExprNode)Children[0]).Result.GetValue();
+                        if(childCount > 0) thisObj = ((ExprNode)Children[0]).OutputVariable.GetValue();
 
                         args = new object[childCount - 1]; 
                         for(int i=0; i<childCount-1; i++) {
-                            args[i] = ((ExprNode)Children[i+1]).Result.GetValue();
+                            args[i] = ((ExprNode)Children[i+1]).OutputVariable.GetValue();
                         }
                     }
                 
@@ -710,7 +710,7 @@ namespace Com.Data.Eval
                         Console.WriteLine(e.StackTrace);
                     }            	
                 
-                    Result.SetValue(objRes);
+                    OutputVariable.SetValue(objRes);
                 }
                 else // Some procedure. Find its API specification or retrieve via reflection
                 {
@@ -753,9 +753,9 @@ namespace Com.Data.Eval
 
             Action<ExprNode> visitor = delegate(ExprNode node)
             {
-                if (node.Result == null || node.Result.TypeTable == null) return; // The node does not use a table
+                if (node.OutputVariable == null || node.OutputVariable.TypeTable == null) return; // The node does not use a table
 
-                if (table == null || table == node.Result.TypeTable)
+                if (table == null || table == node.OutputVariable.TypeTable)
                 {
                     if (!res.Contains(node)) res.Add(node);
                 }
@@ -775,7 +775,7 @@ namespace Com.Data.Eval
         {
             // Question: what operation whould be in the leaf: TUPLE, VALUE or whatever
 
-            Debug.Assert(path != null && path.Input == Result.TypeTable, "Wrong use: path must start from the node (output set) it is applied to.");
+            Debug.Assert(path != null && path.Input == OutputVariable.TypeTable, "Wrong use: path must start from the node (output set) it is applied to.");
 
             if (path.Segments == null || path.Segments.Count == 0) return this;
 
@@ -792,10 +792,10 @@ namespace Com.Data.Eval
                     child.Action = this.Action; // We inherit the action from the tuple root
                     child.Name = seg.Name;
 
-                    child.Result.SchemaName = seg.Output.Schema.Name;
-                    child.Result.TypeName = seg.Output.Name;
-                    child.Result.TypeSchema = seg.Output.Schema;
-                    child.Result.TypeTable = seg.Output;
+                    child.OutputVariable.SchemaName = seg.Output.Schema.Name;
+                    child.OutputVariable.TypeName = seg.Output.Name;
+                    child.OutputVariable.TypeSchema = seg.Output.Schema;
+                    child.OutputVariable.TypeTable = seg.Output;
 
                     node.AddChild(child);
                 }
@@ -815,10 +815,10 @@ namespace Com.Data.Eval
                 thisNode.Operation = OperationType.CALL;
                 thisNode.Action = ActionType.READ;
 
-                thisNode.Result.SchemaName = path.Input.Schema.Name;
-                thisNode.Result.TypeName = path.Input.Name;
-                thisNode.Result.TypeSchema = path.Input.Schema;
-                thisNode.Result.TypeTable = path.Input;
+                thisNode.OutputVariable.SchemaName = path.Input.Schema.Name;
+                thisNode.OutputVariable.TypeName = path.Input.Name;
+                thisNode.OutputVariable.TypeSchema = path.Input.Schema;
+                thisNode.OutputVariable.TypeTable = path.Input;
 
                 node.AddChild(thisNode);
                 node = thisNode;
@@ -844,10 +844,10 @@ namespace Com.Data.Eval
                 expr.Action = ActionType.READ;
                 expr.Name = seg.Name;
 
-                expr.Result.SchemaName = seg.Output.Schema.Name;
-                expr.Result.TypeName = seg.Output.Name;
-                expr.Result.TypeSchema = seg.Output.Schema;
-                expr.Result.TypeTable = seg.Output;
+                expr.OutputVariable.SchemaName = seg.Output.Schema.Name;
+                expr.OutputVariable.TypeName = seg.Output.Name;
+                expr.OutputVariable.TypeSchema = seg.Output.Schema;
+                expr.OutputVariable.TypeTable = seg.Output;
 
                 expr.CultureInfo = ((SetCsv)seg.Input).CultureInfo;
             }
@@ -858,10 +858,10 @@ namespace Com.Data.Eval
                 expr.Action = ActionType.READ;
                 expr.Name = path.Name;
 
-                expr.Result.SchemaName = path.Input.Schema.Name;
-                expr.Result.TypeName = path.Input.Name;
-                expr.Result.TypeSchema = path.Input.Schema;
-                expr.Result.TypeTable = path.Input;
+                expr.OutputVariable.SchemaName = path.Input.Schema.Name;
+                expr.OutputVariable.TypeName = path.Input.Name;
+                expr.OutputVariable.TypeSchema = path.Input.Schema;
+                expr.OutputVariable.TypeTable = path.Input;
             }
             else // Access via function/column composition
             {
@@ -874,10 +874,10 @@ namespace Com.Data.Eval
                     node.Action = ActionType.READ;
                     node.Name = seg.Name;
 
-                    node.Result.SchemaName = seg.Output.Schema.Name;
-                    node.Result.TypeName = seg.Output.Name;
-                    node.Result.TypeSchema = seg.Output.Schema;
-                    node.Result.TypeTable = seg.Output;
+                    node.OutputVariable.SchemaName = seg.Output.Schema.Name;
+                    node.OutputVariable.TypeName = seg.Output.Name;
+                    node.OutputVariable.TypeSchema = seg.Output.Schema;
+                    node.OutputVariable.TypeTable = seg.Output;
 
                     if (expr != null)
                     {
@@ -899,10 +899,10 @@ namespace Com.Data.Eval
                 thisNode.Operation = OperationType.CALL;
                 thisNode.Action = ActionType.READ;
 
-                thisNode.Result.SchemaName = path.Input.Schema.Name;
-                thisNode.Result.TypeName = path.Input.Name;
-                thisNode.Result.TypeSchema = path.Input.Schema;
-                thisNode.Result.TypeTable = path.Input;
+                thisNode.OutputVariable.SchemaName = path.Input.Schema.Name;
+                thisNode.OutputVariable.TypeName = path.Input.Name;
+                thisNode.OutputVariable.TypeSchema = path.Input.Schema;
+                thisNode.OutputVariable.TypeTable = path.Input;
 
                 if (expr != null)
                 {
@@ -960,10 +960,10 @@ namespace Com.Data.Eval
             valueNode.Operation = OperationType.CALL;
             valueNode.Action = ActionType.READ;
 
-            valueNode.Result.SchemaName = column.Output.Schema.Name;
-            valueNode.Result.TypeName = column.Output.Name;
-            valueNode.Result.TypeSchema = column.Output.Schema;
-            valueNode.Result.TypeTable = column.Output;
+            valueNode.OutputVariable.SchemaName = column.Output.Schema.Name;
+            valueNode.OutputVariable.TypeName = column.Output.Name;
+            valueNode.OutputVariable.TypeSchema = column.Output.Schema;
+            valueNode.OutputVariable.TypeTable = column.Output;
 
             //
             // A node for computing a result (updated) function value from the current value and new value
@@ -973,10 +973,10 @@ namespace Com.Data.Eval
             expr.Action = aggregation; // SUM etc.
             expr.Name = column.Name;
 
-            expr.Result.SchemaName = column.Output.Schema.Name;
-            expr.Result.TypeName = column.Output.Name;
-            expr.Result.TypeSchema = column.Output.Schema;
-            expr.Result.TypeTable = column.Output;
+            expr.OutputVariable.SchemaName = column.Output.Schema.Name;
+            expr.OutputVariable.TypeName = column.Output.Name;
+            expr.OutputVariable.TypeSchema = column.Output.Schema;
+            expr.OutputVariable.TypeTable = column.Output;
 
             // Two arguments in child nodes
             expr.AddChild(currentValueNode);
@@ -997,13 +997,13 @@ namespace Com.Data.Eval
             expr.action = Action;
 
             // Result
-            if (Result  != null) // Manually serialize
+            if (OutputVariable  != null) // Manually serialize
             {
                 dynamic result = new JObject();
 
-                result.schema_name = Result.SchemaName;
-                result.type_name = Result.TypeName;
-                result.name = Result.Name;
+                result.schema_name = OutputVariable.SchemaName;
+                result.type_name = OutputVariable.TypeName;
+                result.name = OutputVariable.Name;
 
                 expr.result = result;
             }
@@ -1035,7 +1035,7 @@ namespace Com.Data.Eval
                 string resultType = (string)resultDef["type_name"];
                 string resultName = (string)resultDef["name"];
 
-                Result = new Variable(resultSchema, resultType, resultName);
+                OutputVariable = new Variable(resultSchema, resultType, resultName);
             }
 
             // List of children
@@ -1060,7 +1060,7 @@ namespace Com.Data.Eval
         public ExprNode()
         {
             CultureInfo = Com.Schema.Utils.cultureInfo; // Default
-            Result = new Variable("", "Void", "return");
+            OutputVariable = new Variable("", "Void", "return");
         }
 
     }

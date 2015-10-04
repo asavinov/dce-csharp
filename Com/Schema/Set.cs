@@ -296,7 +296,7 @@ namespace Com.Schema
             // Find the specified tuple but not its nested tuples (if nested tuples have to be found before then use recursive calls, say, a visitor or recursive epxression evaluation)
 
             Debug.Assert(!IsPrimitive, "Wrong use: cannot append to a primitive set. ");
-            Debug.Assert(expr.Result.TypeTable == this, "Wrong use: expression OutputSet must be equal to the set its value is appended/found.");
+            Debug.Assert(expr.OutputVariable.TypeTable == this, "Wrong use: expression OutputSet must be equal to the set its value is appended/found.");
             Debug.Assert(expr.Operation == OperationType.TUPLE, "Wrong use: operation type for appending has to be TUPLE. ");
 
             Rowid[] result = Enumerable.Range(0, Length).ToArray(); // All elements of this set (can be quite long)
@@ -312,7 +312,7 @@ namespace Com.Schema
                 if (childExpr != null)
                 {
                     object val = null;
-                    val = childExpr.Result.GetValue();
+                    val = childExpr.OutputVariable.GetValue();
 
                     hasBeenRestricted = true;
                     Rowid[] range = dim.Data.Deproject(val); // Deproject the value
@@ -388,7 +388,7 @@ namespace Com.Schema
             // It is assumed that the column names are resolved.
 
             Debug.Assert(!IsPrimitive, "Wrong use: cannot append to a primitive set. ");
-            Debug.Assert(expr.Result.TypeTable == this, "Wrong use: expression OutputSet must be equal to the set its value is appended/found.");
+            Debug.Assert(expr.OutputVariable.TypeTable == this, "Wrong use: expression OutputSet must be equal to the set its value is appended/found.");
             Debug.Assert(expr.Operation == OperationType.TUPLE, "Wrong use: operation type for appending has to be TUPLE. ");
 
             //
@@ -404,7 +404,7 @@ namespace Com.Schema
                 object val = null;
                 if (childExpr != null) // A tuple contains a subset of all dimensions
                 {
-                    val = childExpr.Result.GetValue();
+                    val = childExpr.OutputVariable.GetValue();
                 }
                 dim.Data.Append(val);
             }
@@ -428,9 +428,9 @@ namespace Com.Schema
 
         public ExprNode OrderbyExpr { get; set; }
 
-        public DcIterator GetWhereEvaluator()
+        public DcEvaluator GetWhereEvaluator()
         {
-            DcIterator evaluator = new IteratorExpr(this);
+            DcEvaluator evaluator = new EvaluatorExpr(this);
             return evaluator;
         }
 
@@ -448,7 +448,7 @@ namespace Com.Schema
                 //
                 // Evaluator for where expression which will be used to check each new record before it is added
                 //
-                DcIterator eval = null;
+                DcEvaluator eval = null;
                 if (Definition.WhereExpr != null)
                 {
                     eval = GetWhereEvaluator();
@@ -490,9 +490,9 @@ namespace Com.Schema
                         {
                             bool satisfies = true;
 
-                            eval.Last();
+                            eval.LastInput();
                             eval.Evaluate();
-                            satisfies = (bool)eval.GetResult();
+                            satisfies = (bool)eval.GetOutput();
 
                             if (!satisfies)
                             {

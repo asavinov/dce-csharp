@@ -15,7 +15,7 @@ using Rowid = System.Int32;
 namespace Com.Data.Eval
 {
 
-    public class IteratorExpr : DcIterator
+    public class EvaluatorExpr : DcEvaluator
     {
         protected DcColumnData columnData;
 
@@ -33,21 +33,21 @@ namespace Com.Data.Eval
 
         public DcWorkspace Workspace { get; set; }
 
-        public virtual bool Next()
+        public virtual bool NextInput()
         {
             if (thisCurrent < thisTable.Data.Length) thisCurrent++;
 
             if (thisCurrent < thisTable.Data.Length) return true;
             else return false;
         }
-        public virtual bool First()
+        public virtual bool FirstInput()
         {
             thisCurrent = 0;
 
             if (thisCurrent < thisTable.Data.Length) return true;
             else return false;
         }
-        public virtual bool Last()
+        public virtual bool LastInput()
         {
             thisCurrent = thisTable.Data.Length - 1;
 
@@ -66,18 +66,18 @@ namespace Com.Data.Eval
             // Write the result value to the function
             if (columnData != null)
             {
-                columnData.SetValue(thisCurrent, outputExpr.Result.GetValue());
+                columnData.SetValue(thisCurrent, outputExpr.OutputVariable.GetValue());
             }
 
-            return outputExpr.Result.GetValue();
+            return outputExpr.OutputVariable.GetValue();
         }
 
-        public virtual object GetResult() 
+        public virtual object GetOutput() 
         { 
-            return outputExpr.Result.GetValue(); 
+            return outputExpr.OutputVariable.GetValue(); 
         }
 
-        public IteratorExpr(DcColumn column)
+        public EvaluatorExpr(DcColumn column)
         {
             Workspace = column.Input.Schema.Workspace;
             columnData = column.Data;
@@ -118,15 +118,15 @@ namespace Com.Data.Eval
                 }
             }
 
-            outputExpr.Result.SchemaName = column.Output.Schema.Name;
-            outputExpr.Result.TypeName = column.Output.Name;
-            outputExpr.Result.TypeSchema = column.Output.Schema;
-            outputExpr.Result.TypeTable = column.Output;
+            outputExpr.OutputVariable.SchemaName = column.Output.Schema.Name;
+            outputExpr.OutputVariable.TypeName = column.Output.Name;
+            outputExpr.OutputVariable.TypeSchema = column.Output.Schema;
+            outputExpr.OutputVariable.TypeTable = column.Output;
 
             outputExpr.Resolve(Workspace, new List<DcVariable>() { thisVariable });
         }
 
-        public IteratorExpr(DcTable table)
+        public EvaluatorExpr(DcTable table)
         {
             Workspace = table.Schema.Workspace;
             columnData = null;
@@ -144,7 +144,7 @@ namespace Com.Data.Eval
             outputExpr.Resolve(Workspace, new List<DcVariable>() { thisVariable });
         }
 
-        public IteratorExpr()
+        public EvaluatorExpr()
         {
         }
     }

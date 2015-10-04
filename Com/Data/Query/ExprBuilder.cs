@@ -259,7 +259,7 @@ namespace Com.Data.Query
             }
 
             n.Name = name;
-            n.Result.TypeName = type;
+            n.OutputVariable.TypeName = type;
             n.Operation = OperationType.TUPLE;
             n.Action = ActionType.READ;
 

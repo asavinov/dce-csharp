@@ -28,7 +28,7 @@ namespace Com.Schema
         /// </summary>
         ExprNode OrderbyExpr { get; set; } // Here we should store something like Comparator
 
-        DcIterator GetWhereEvaluator(); // Get an object which is used to compute the where expression according to the formula
+        DcEvaluator GetWhereEvaluator(); // Get an object which is used to compute the where expression according to the formula
 
         /// <summary>
         /// Create all instances of this set. 

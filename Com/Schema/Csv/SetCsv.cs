@@ -80,7 +80,7 @@ namespace Com.Schema.Csv
         public override Rowid Append(ExprNode expr) // Identity dims must be set (for uniqueness). Entity dims are also used when appending.
         {
             Debug.Assert(!IsPrimitive, "Wrong use: cannot append to a primitive set. ");
-            Debug.Assert(expr.Result.TypeTable == this, "Wrong use: expression OutputSet must be equal to the set its value is appended/found.");
+            Debug.Assert(expr.OutputVariable.TypeTable == this, "Wrong use: expression OutputSet must be equal to the set its value is appended/found.");
             Debug.Assert(expr.Operation == OperationType.TUPLE, "Wrong use: operation type for appending has to be TUPLE. ");
 
 
@@ -98,7 +98,7 @@ namespace Com.Schema.Csv
                 object val = null;
                 if (childExpr != null) // Found. Value is present.
                 {
-                    val = childExpr.Result.GetValue();
+                    val = childExpr.OutputVariable.GetValue();
                     if (val != null)
                     {
                         record[i] = val.ToString();

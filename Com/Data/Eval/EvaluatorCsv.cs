@@ -10,7 +10,7 @@ using Rowid = System.Int32;
 
 namespace Com.Data.Eval
 {
-    public class IteratorCsv : IteratorExpr
+    public class EvaluatorCsv : EvaluatorExpr
     {
         protected string[] currentRecord;
         protected ConnectionCsv connectionCsv;
@@ -22,7 +22,7 @@ namespace Com.Data.Eval
         protected bool isUpdate;
         public bool IsUpdate { get { return isUpdate; } }
 
-        public override bool Next()
+        public override bool NextInput()
         {
             currentRecord = connectionCsv.CurrentRecord;
 
@@ -50,7 +50,7 @@ namespace Com.Data.Eval
             return null;
         }
 
-        public IteratorCsv(DcColumn column)
+        public EvaluatorCsv(DcColumn column)
             : base(column)
         {
             // Produce a result set that can be iterated through

@@ -105,9 +105,9 @@ namespace Com.Schema
             //
             // Analyze output structure of the definition and extract all tables that are used in its output
             //
-            if (FormulaExpr.Result.TypeTable == null)
+            if (FormulaExpr.OutputVariable.TypeTable == null)
             {
-                string outputTableName = FormulaExpr.Item.Result.TypeName;
+                string outputTableName = FormulaExpr.Item.OutputVariable.TypeName;
 
                 // Try to find this table and if found then assign to the column output
                 // If not found then create output table in the schema and assign to the column output
@@ -133,9 +133,9 @@ namespace Com.Schema
         //
 
         // Get an object which is used to compute the function values according to the formula
-        protected DcIterator GetIterator()
+        protected DcEvaluator GetIterator()
         {
-            DcIterator evaluator = null;
+            DcEvaluator evaluator = null;
 
             if (DefinitionType == DcColumnDefinitionType.FREE)
             {
@@ -143,23 +143,23 @@ namespace Com.Schema
             }
             else if (Dim.Input.Schema is SchemaCsv) // Import from CSV
             {
-                evaluator = new IteratorCsv(Dim);
+                evaluator = new EvaluatorCsv(Dim);
             }
             else if (Dim.Input.Schema is SchemaOledb) // Import from OLEDB
             {
-                evaluator = new IteratorOledb(Dim);
+                evaluator = new EvaluatorOledb(Dim);
             }
             else if (DefinitionType == DcColumnDefinitionType.AGGREGATION)
             {
-                evaluator = new IteratorAggr(Dim);
+                evaluator = new EvaluatorAggr(Dim);
             }
             else if (DefinitionType == DcColumnDefinitionType.ARITHMETIC)
             {
-                evaluator = new IteratorExpr(Dim);
+                evaluator = new EvaluatorExpr(Dim);
             }
             else if (DefinitionType == DcColumnDefinitionType.LINK)
             {
-                evaluator = new IteratorExpr(Dim);
+                evaluator = new EvaluatorExpr(Dim);
             }
             else
             {
@@ -225,14 +225,14 @@ namespace Com.Schema
 
         public void Evaluate()
         {
-            DcIterator evaluator = GetIterator();
+            DcEvaluator evaluator = GetIterator();
             if (evaluator == null) return;
 
             try
             {
                 EvaluateBegin();
 
-                while (evaluator.Next())
+                while (evaluator.NextInput())
                 {
                     evaluator.Evaluate();
                 }
@@ -290,7 +290,7 @@ namespace Com.Schema
             {
                 if (FormulaExpr != null) // Dependency information is stored in expression (formula)
                 {
-                    res = FormulaExpr.Find((DcTable)null).Select(x => x.Result.TypeTable).ToList();
+                    res = FormulaExpr.Find((DcTable)null).Select(x => x.OutputVariable.TypeTable).ToList();
                 }
             }
             else if (DefinitionType == DcColumnDefinitionType.AGGREGATION)

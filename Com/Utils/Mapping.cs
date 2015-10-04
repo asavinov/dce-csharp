@@ -347,10 +347,10 @@ namespace Com.Utils
             tupleExpr.Action = action;
             tupleExpr.Name = ""; // This tuple is not a member in any other tuple
 
-            tupleExpr.Result.SchemaName = TargetSet.Schema.Name;
-            tupleExpr.Result.TypeName = TargetSet.Name;
-            tupleExpr.Result.TypeSchema = TargetSet.Schema;
-            tupleExpr.Result.TypeTable = TargetSet; // This tuple is a member in the set
+            tupleExpr.OutputVariable.SchemaName = TargetSet.Schema.Name;
+            tupleExpr.OutputVariable.TypeName = TargetSet.Name;
+            tupleExpr.OutputVariable.TypeSchema = TargetSet.Schema;
+            tupleExpr.OutputVariable.TypeTable = TargetSet; // This tuple is a member in the set
 
             // For each match, add a tuple branch and then an access call
             foreach (PathMatch match in Matches)

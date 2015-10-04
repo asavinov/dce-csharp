@@ -60,9 +60,9 @@
     <Compile Include="Data\DimDataEmpty.cs" />
     <Compile Include="Data\Eval\ExprNodeCsv.cs" />
     <Compile Include="Data\Eval\ExprNodeOledb.cs" />
-    <Compile Include="Data\Eval\IteratorAggr.cs" />
-    <Compile Include="Data\Eval\IteratorCsv.cs" />
-    <Compile Include="Data\Eval\IteratorOledb.cs" />
+    <Compile Include="Data\Eval\EvaluatorAggr.cs" />
+    <Compile Include="Data\Eval\EvaluatorCsv.cs" />
+    <Compile Include="Data\Eval\EvaluatorOledb.cs" />
     <Compile Include="Data\Variable.cs" />
     <Compile Include="Data\DcColumnData.cs" />
     <Compile Include="Data\DcTableData.cs" />
@@ -74,7 +74,7 @@
     <Compile Include="Data\Aggregator.cs" />
     <Compile Include="Schema\DataCommandr.cs" />
     <Compile Include="Schema\DcColumn.cs" />
-    <Compile Include="Data\Eval\DcIterator.cs" />
+    <Compile Include="Data\Eval\DcEvaluator.cs" />
     <Compile Include="Schema\DcSchema.cs" />
     <Compile Include="Schema\DcTable.cs" />
     <Compile Include="Data\DcVariable.cs" />
@@ -91,7 +91,7 @@
     <Compile Include="Utils\DimTree.cs" />
     <Compile Include="Data\Eval\ExprNode.cs" />
     <Compile Include="Schema\DcWorkspace.cs" />
-    <Compile Include="Data\Eval\IteratorExpr.cs" />
+    <Compile Include="Data\Eval\EvaluatorExpr.cs" />
     <Compile Include="Utils\Mapper.cs" />
     <Compile Include="Utils\Mapping.cs" />
     <Compile Include="Schema\Set.cs" />
