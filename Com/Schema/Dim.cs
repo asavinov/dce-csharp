@@ -152,12 +152,6 @@ namespace Com.Schema
                     Definition.FormulaExpr.ToJson((JObject)columnDef["formula"]);
                 }
 
-                if (Definition.Mapping != null)
-                {
-                    columnDef["mapping"] = Utils.CreateJsonFromObject(Definition.Mapping);
-                    Definition.Mapping.ToJson((JObject)columnDef["mapping"]);
-                }
-
                 if (Definition.FactTable != null)
                 {
                     columnDef["fact_table"] = Utils.CreateJsonRef(Definition.FactTable);
@@ -216,16 +210,6 @@ namespace Com.Schema
                     {
                         node.FromJson((JObject)columnDef["formula"], ws);
                         Definition.FormulaExpr = node;
-                    }
-                }
-
-                if (columnDef["mapping"] != null)
-                {
-                    Mapping map = (Mapping)Utils.CreateObjectFromJson((JObject)columnDef["mapping"]);
-                    if (map != null)
-                    {
-                        map.FromJson((JObject)columnDef["mapping"], ws);
-                        Definition.Mapping = map;
                     }
                 }
 
@@ -390,14 +374,6 @@ namespace Com.Schema
             }
 
             return colData;
-        }
-
-        public Dim(Mapping mapping)
-            : this(mapping.SourceSet.Name, mapping.SourceSet, mapping.TargetSet, false, false)
-        {
-            Definition.Mapping = mapping;
-            _definition.IsAppendData = true;
-            if (Output != null) Output.Definition.DefinitionType = DcTableDefinitionType.PROJECTION;
         }
 
         public Dim(Dim dim)

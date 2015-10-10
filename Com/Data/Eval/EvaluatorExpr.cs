@@ -90,18 +90,7 @@ namespace Com.Data.Eval
             thisVariable.TypeTable = thisTable;
 
             // Output expression
-            if (column.Definition.Mapping != null)
-            {
-                if (column.Definition.IsAppendData)
-                {
-                    outputExpr = column.Definition.Mapping.BuildExpression(ActionType.APPEND);
-                }
-                else
-                {
-                    outputExpr = column.Definition.Mapping.BuildExpression(ActionType.READ);
-                }
-            }
-            else if (column.Definition.FormulaExpr != null)
+            if (column.Definition.FormulaExpr != null)
             {
                 outputExpr = column.Definition.FormulaExpr;
 

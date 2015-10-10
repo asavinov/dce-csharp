@@ -620,7 +620,7 @@ namespace Com.Utils
             mapping.AddTargetToSchema(targetSchema);
 
             // Define the column
-            DcColumn dimImport = new Dim(mapping);
+            DcColumn dimImport = null; // new Dim(mapping);
             dimImport.Add();
 
             // Define the table

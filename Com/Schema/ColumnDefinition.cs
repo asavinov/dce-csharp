@@ -49,8 +49,6 @@ namespace Com.Schema
 
         public ExprNode FormulaExpr { get; set; }
 
-        public Mapping Mapping { get; set; }
-
         //
         // Aggregation
         //

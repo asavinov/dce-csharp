@@ -221,16 +221,6 @@ namespace Com.Schema
                         foreach (var node in nodes) if (node.Parent != null) node.Parent.RemoveChild(node);
                     }
 
-                    if (col.Definition.Mapping != null)
-                    {
-                        foreach (var match in col.Definition.Mapping.Matches.ToList())
-                        {
-                            if (match.SourcePath.IndexOf(column) >= 0 || match.TargetPath.IndexOf(column) >= 0)
-                            {
-                                col.Definition.Mapping.Matches.Remove(match);
-                            }
-                        }
-                    }
                     if (col.Definition.GroupPaths != null)
                     {
                         foreach (var path in col.Definition.GroupPaths.ToList())
