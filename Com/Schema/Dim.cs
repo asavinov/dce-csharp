@@ -144,7 +144,7 @@ namespace Com.Schema
                 JObject columnDef = new JObject();
 
                 columnDef["generating"] = Definition.IsAppendData ? "true" : "false";
-                columnDef["definition_type"] = (int)Definition.DefinitionType;
+                //columnDef["definition_type"] = (int)Definition.DefinitionType;
 
                 if (Definition.FormulaExpr != null)
                 {
@@ -207,7 +207,7 @@ namespace Com.Schema
             if (columnDef != null && Definition != null)
             {
                 Definition.IsAppendData = columnDef["generating"] != null ? StringSimilarity.JsonTrue(columnDef["generating"]) : false;
-                Definition.DefinitionType = columnDef["definition_type"] != null ? (DcColumnDefinitionType)(int)columnDef["definition_type"] : DcColumnDefinitionType.FREE;
+                //Definition.DefinitionType = columnDef["definition_type"] != null ? (DcColumnDefinitionType)(int)columnDef["definition_type"] : DcColumnDefinitionType.FREE;
 
                 if (columnDef["formula"] != null)
                 {

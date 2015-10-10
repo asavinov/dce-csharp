@@ -22,8 +22,6 @@ namespace Com.Schema
 
         public bool IsAppendSchema { get; set; }
 
-        public DcColumnDefinitionType DefinitionType { get; set; }
-
         //
         // COEL (language) representation
         //
@@ -41,22 +39,7 @@ namespace Com.Schema
                 ExprBuilder exprBuilder = new ExprBuilder();
                 ExprNode expr = exprBuilder.Build(formula);
 
-                if (expr == null) return;
-
                 FormulaExpr = expr;
-
-                if (expr.Operation == OperationType.TUPLE)
-                {
-                    DefinitionType = DcColumnDefinitionType.LINK;
-                }
-                else if (expr.Operation == OperationType.CALL && expr.Name.Equals("AGGREGATE", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    DefinitionType = DcColumnDefinitionType.AGGREGATION;
-                }
-                else
-                {
-                    DefinitionType = DcColumnDefinitionType.ARITHMETIC;
-                }
             }
         }
 
@@ -91,16 +74,17 @@ namespace Com.Schema
         // Schema/structure operations
         //
 
+        [Obsolete("This method should be moved to table writer/appender object.")]
         public void Append()
         {
             if (Dim == null) return;
             if (Dim.Output == null) return;
             if (Dim.Output.IsPrimitive) return; // Primitive tables do not have structure
 
-            if (DefinitionType != DcColumnDefinitionType.AGGREGATION) return;
-            if (DefinitionType != DcColumnDefinitionType.ARITHMETIC) return;
-
             if (FormulaExpr == null) return;
+
+            if (FormulaExpr.DefinitionType == ColumnDefinitionType.AGGREGATION) return;
+            if (FormulaExpr.DefinitionType == ColumnDefinitionType.ARITHMETIC) return;
 
             //
             // Analyze output structure of the definition and extract all tables that are used in its output
@@ -137,7 +121,7 @@ namespace Com.Schema
         {
             DcEvaluator evaluator = null;
 
-            if (DefinitionType == DcColumnDefinitionType.FREE)
+            if (FormulaExpr == null || FormulaExpr.DefinitionType == ColumnDefinitionType.FREE)
             {
                 ; // Nothing to do
             }
@@ -149,15 +133,15 @@ namespace Com.Schema
             {
                 evaluator = new EvaluatorOledb(Dim);
             }
-            else if (DefinitionType == DcColumnDefinitionType.AGGREGATION)
+            else if (FormulaExpr.DefinitionType == ColumnDefinitionType.AGGREGATION)
             {
                 evaluator = new EvaluatorAggr(Dim);
             }
-            else if (DefinitionType == DcColumnDefinitionType.ARITHMETIC)
+            else if (FormulaExpr.DefinitionType == ColumnDefinitionType.ARITHMETIC)
             {
                 evaluator = new EvaluatorExpr(Dim);
             }
-            else if (DefinitionType == DcColumnDefinitionType.LINK)
+            else if (FormulaExpr.DefinitionType == ColumnDefinitionType.LINK)
             {
                 evaluator = new EvaluatorExpr(Dim);
             }
@@ -282,18 +266,18 @@ namespace Com.Schema
         {
             List<DcTable> res = new List<DcTable>();
 
-            if (DefinitionType == DcColumnDefinitionType.FREE)
+            if (FormulaExpr == null)
             {
                 ;
             }
-            else if (DefinitionType == DcColumnDefinitionType.ANY || DefinitionType == DcColumnDefinitionType.ARITHMETIC || DefinitionType == DcColumnDefinitionType.LINK)
+            else if (FormulaExpr.DefinitionType == ColumnDefinitionType.ANY || FormulaExpr.DefinitionType == ColumnDefinitionType.ARITHMETIC || FormulaExpr.DefinitionType == ColumnDefinitionType.LINK)
             {
                 if (FormulaExpr != null) // Dependency information is stored in expression (formula)
                 {
                     res = FormulaExpr.Find((DcTable)null).Select(x => x.OutputVariable.TypeTable).ToList();
                 }
             }
-            else if (DefinitionType == DcColumnDefinitionType.AGGREGATION)
+            else if (FormulaExpr.DefinitionType == ColumnDefinitionType.AGGREGATION)
             {
                 res.Add(FactTable); // This column depends on the fact table
 
@@ -339,18 +323,18 @@ namespace Com.Schema
         {
             List<DcColumn> res = new List<DcColumn>();
 
-            if (DefinitionType == DcColumnDefinitionType.FREE)
+            if (FormulaExpr == null)
             {
                 ;
             }
-            else if (DefinitionType == DcColumnDefinitionType.ANY || DefinitionType == DcColumnDefinitionType.ARITHMETIC || DefinitionType == DcColumnDefinitionType.LINK)
+            else if (FormulaExpr.DefinitionType == ColumnDefinitionType.ANY || FormulaExpr.DefinitionType == ColumnDefinitionType.ARITHMETIC || FormulaExpr.DefinitionType == ColumnDefinitionType.LINK)
             {
                 if (FormulaExpr != null) // Dependency information is stored in expression (formula)
                 {
                     res = FormulaExpr.Find((DcColumn)null).Select(x => x.Column).ToList();
                 }
             }
-            else if (DefinitionType == DcColumnDefinitionType.AGGREGATION)
+            else if (FormulaExpr.DefinitionType == ColumnDefinitionType.AGGREGATION)
             {
                 // Grouping and measure paths are used in this column
                 if (GroupPaths != null)
@@ -393,7 +377,6 @@ namespace Com.Schema
             Dim = dim;
 
             IsAppendData = false;
-            DefinitionType = DcColumnDefinitionType.FREE;
 
             GroupPaths = new List<DimPath>();
             MeasurePaths = new List<DimPath>();

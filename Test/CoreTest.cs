@@ -381,6 +381,7 @@ namespace Test
             //
             // Define aggregated column
             //
+            /* We do not use non-syntactic (object) formulas
             DcColumn c15 = schema.CreateColumn("Agg of Column 23", t1, schema.GetPrimitive("Double"), false);
             c15.Definition.DefinitionType = DcColumnDefinitionType.AGGREGATION;
 
@@ -400,6 +401,7 @@ namespace Test
             Assert.AreEqual(40.0, c15.Data.GetValue(0));
             Assert.AreEqual(140.0, c15.Data.GetValue(1));
             Assert.AreEqual(0.0, c15.Data.GetValue(2)); // In fact, it has to be NaN or null (no values have been aggregated)
+            */
 
             //
             // Aggregation via a syntactic formula
@@ -503,6 +505,7 @@ namespace Test
             c31.Add();
 
             // Manually define a mapping as the generating column definition by using one column only. And create a generating dimension with this mapping.
+            /*
             Mapping map24 = new Mapping(t2, t3);
             map24.AddMatch(new PathMatch(new DimPath(c21), new DimPath(c31)));
 
@@ -521,6 +524,7 @@ namespace Test
             Assert.AreEqual(0, c24.Data.GetValue(1));
             Assert.AreEqual(0, c24.Data.GetValue(2));
             Assert.AreEqual(1, c24.Data.GetValue(3));
+            */
 
             //
             // Defining a combination of "Column 21" and "Column 22" and project with 3 unique records in a new set
@@ -535,6 +539,7 @@ namespace Test
             c42.Add();
 
             // Manually define a mapping as the generating column definition by using one column only. And create a generating dimension with this mapping.
+            /*
             Mapping map25 = new Mapping(t2, t4);
             map25.AddMatch(new PathMatch(new DimPath(c21), new DimPath(c41)));
             map25.AddMatch(new PathMatch(new DimPath(c22), new DimPath(c42)));
@@ -554,6 +559,7 @@ namespace Test
             Assert.AreEqual(1, c25.Data.GetValue(1));
             Assert.AreEqual(1, c25.Data.GetValue(2));
             Assert.AreEqual(2, c25.Data.GetValue(3));
+            */
         }
 
         [TestMethod]
@@ -611,6 +617,7 @@ namespace Test
             map.Matches.ForEach(m => m.TargetPath.Segments.ForEach(p => p.Add()));
 
             // Create generating/import column
+            /*
             DcColumn dim = schema.CreateColumn(map.SourceSet.Name, map.SourceSet, map.TargetSet, false);
             dim.Definition.Mapping = map;
             dim.Definition.DefinitionType = DcColumnDefinitionType.LINK;
@@ -622,6 +629,7 @@ namespace Test
             orderDetailsTable.Definition.Populate();
 
             Assert.AreEqual(58, orderDetailsTable.Data.Length);
+            */
         }
 
         [TestMethod]
@@ -663,6 +671,7 @@ namespace Test
             map.Matches.ForEach(m => m.TargetPath.Segments.ForEach(p => p.Add()));
 
             // Create generating/import column
+            /*
             DcColumn dim = schema.CreateColumn(map.SourceSet.Name, map.SourceSet, map.TargetSet, false);
             dim.Definition.Mapping = map;
             dim.Definition.DefinitionType = DcColumnDefinitionType.LINK;
@@ -674,6 +683,7 @@ namespace Test
             productsTable.Definition.Populate();
 
             Assert.AreEqual(45, productsTable.Data.Length);
+            */
         }
 
         [TestMethod]
@@ -716,6 +726,7 @@ namespace Test
             map.Matches.ForEach(m => m.TargetPath.Segments.ForEach(p => p.Add()));
 
             // Create generating/import column
+            /*
             DcColumn dim = schema.CreateColumn(map.SourceSet.Name, map.SourceSet, map.TargetSet, false);
             dim.Definition.Mapping = map;
             dim.Definition.DefinitionType = DcColumnDefinitionType.LINK;
@@ -732,6 +743,7 @@ namespace Test
             //    --> These Append/Find are overriden in the SetCsv
 
             // TODO: We could test by reading the file manually
+            */
         }
 
         [TestMethod]
@@ -750,9 +762,7 @@ namespace Test
 
             // Add column definition 
             DcColumn c = t.GetColumn("Column 22");
-            c.Definition.DefinitionType = DcColumnDefinitionType.ARITHMETIC;
-            ast = ExprBuilder.Build("([Column 11]+10.0) * this.[Column 13]");
-            c.Definition.FormulaExpr = ast;
+            c.Definition.Formula = "([Column 11]+10.0) * this.[Column 13]";
 
             DcWorkspace ws = new Workspace();
             ws.Schemas.Add(schema);
@@ -783,7 +793,7 @@ namespace Test
             Assert.AreEqual(2, t.Definition.WhereExpr.Children.Count);
 
             c = t.GetColumn("Column 22");
-            Assert.AreEqual(DcColumnDefinitionType.ARITHMETIC, c.Definition.DefinitionType);
+            //Assert.AreEqual(DcColumnDefinitionType.ARITHMETIC, c.Definition.FormulaExpr.DefinitionType);
             Assert.AreEqual(2, c.Definition.FormulaExpr.Children.Count);
 
             //

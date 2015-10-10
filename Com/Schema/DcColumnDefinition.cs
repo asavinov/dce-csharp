@@ -32,11 +32,6 @@ namespace Com.Schema
 
         bool IsAppendSchema { get; set; }
 
-        /// <summary>
-        /// Restricts kind of formula used to define this column. 
-        /// </summary>
-        DcColumnDefinitionType DefinitionType { get; set; }
-
         //
         // COEL (language) representation
         //
@@ -136,16 +131,6 @@ namespace Com.Schema
 
         List<DcColumn> UsesColumns(bool recursive); // This element depends upon
         List<DcColumn> IsUsedInColumns(bool recursive); // Dependants
-    }
-
-    public enum DcColumnDefinitionType // Specific types of column formula
-    {
-        FREE, // No definition for the column (and cannot be defined). Example: key columns of a product table
-        ANY, // Arbitrary formula without constraints which can mix many other types of expressions
-        ARITHMETIC, // Column uses only other columns or paths of this same table as well as operations
-        LINK, // Column is defined via a mapping represented as a tuple with paths as leaves
-        AGGREGATION, // Column is defined via an updater (accumulator) function which is fed by facts using grouping and measure paths
-        CASE,
     }
 
 }

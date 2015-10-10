@@ -105,7 +105,7 @@ namespace Com.Data.Eval
             {
                 outputExpr = column.Definition.FormulaExpr;
 
-                if (column.Definition.DefinitionType == DcColumnDefinitionType.LINK)
+                if (outputExpr.DefinitionType == ColumnDefinitionType.LINK)
                 {
                     // Adjust the expression according to other parameters of the definition
                     if(column.Definition.IsAppendData) {

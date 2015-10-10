@@ -68,6 +68,31 @@ namespace Com.Data.Eval
         // Action type. A modifier that helps to choose the function variation
         public ActionType Action { get; set; }
 
+        // User-oriented types of columns: arithmetcis/primitive, link/non-primitive/tuple (mapping),, import/export/generation (link w. append), aggregation
+        [Obsolete("This annotation is reduntant at this level. Redesign. Maybe introduce higher level user-oriented annoations with some user-value: import/export etc.")]
+        public ColumnDefinitionType DefinitionType
+        {
+            get
+            {
+                // Currently, we use the following mapping:
+                // TUPLE -> LINK
+                // CALL AGGREGATE -> AGGREGATION
+                // else -> ARITHMETIC
+                if (Operation == OperationType.TUPLE)
+                {
+                    return ColumnDefinitionType.LINK;
+                }
+                else if (Operation == OperationType.CALL && Name.Equals("AGGREGATE", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    return ColumnDefinitionType.AGGREGATION;
+                }
+                else
+                {
+                    return ColumnDefinitionType.ARITHMETIC;
+                }
+            }
+        } 
+
         //
         // Result value computed at run-time
         //
@@ -1125,6 +1150,16 @@ namespace Com.Data.Eval
         COUNT,
         // ADD ("SUM")
         // MUL ("MUL")
+    }
+
+    public enum ColumnDefinitionType // Specific types of column formula
+    {
+        FREE, // No definition for the column (and cannot be defined). Example: key columns of a product table
+        ANY, // Arbitrary formula without constraints which can mix many other types of expressions
+        ARITHMETIC, // Column uses only other columns or paths of this same table as well as operations
+        LINK, // Column is defined via a mapping represented as a tuple with paths as leaves
+        AGGREGATION, // Column is defined via an updater (accumulator) function which is fed by facts using grouping and measure paths
+        CASE,
     }
 
 }
