@@ -135,11 +135,6 @@ namespace Com.Schema
                         nodes = col.Definition.FormulaExpr.Find((DcTable)table);
                         nodes.ForEach(x => x.Name = newName);
                     }
-                    if (col.Definition.WhereExpr != null)
-                    {
-                        nodes = col.Definition.WhereExpr.Find((DcTable)table);
-                        nodes.ForEach(x => x.Name = newName);
-                    }
                 }
 
                 if (tab.Definition == null) continue;
@@ -183,11 +178,6 @@ namespace Com.Schema
                         nodes = col.Definition.FormulaExpr.Find((DcColumn)column);
                         nodes.ForEach(x => x.Name = newName);
                     }
-                    if (col.Definition.WhereExpr != null)
-                    {
-                        nodes = col.Definition.WhereExpr.Find((DcColumn)column);
-                        nodes.ForEach(x => x.Name = newName);
-                    }
                 }
 
                 if (tab.Definition == null) continue;
@@ -228,11 +218,6 @@ namespace Com.Schema
                     if (col.Definition.FormulaExpr != null)
                     {
                         nodes = col.Definition.FormulaExpr.Find(column);
-                        foreach (var node in nodes) if (node.Parent != null) node.Parent.RemoveChild(node);
-                    }
-                    if (col.Definition.WhereExpr != null)
-                    {
-                        nodes = col.Definition.WhereExpr.Find(column);
                         foreach (var node in nodes) if (node.Parent != null) node.Parent.RemoveChild(node);
                     }
 

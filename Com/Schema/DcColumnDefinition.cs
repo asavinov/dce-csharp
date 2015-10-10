@@ -25,13 +25,6 @@ namespace Com.Schema
         // Join predicate (two loops over input and output sets)
 
 
-        /// <summary>
-        /// Whether output values are appended to the output set. 
-        /// </summary>
-        bool IsAppendData { get; set; }
-
-        bool IsAppendSchema { get; set; }
-
         //
         // COEL (language) representation
         //
@@ -51,6 +44,13 @@ namespace Com.Schema
         //
 
         /// <summary>
+        /// Whether output values are appended to the output set. 
+        /// </summary>
+        bool IsAppendData { get; set; }
+
+        bool IsAppendSchema { get; set; }
+
+        /// <summary>
         /// Represents a function definition in terms of other functions (select expression).
         /// When evaluated, it computes a value of the greater set for the identity value of the lesser set.
         /// For aggregated columns, it is an updater expression which computes a new value from the current value and a new fact (measure).
@@ -63,11 +63,6 @@ namespace Com.Schema
         /// The function computation procedure can transoform this mapping to a normal expression for evaluation in a loop or it can translate it to a join or other target engine formats.
         /// </summary>
         Mapping Mapping { get; set; }
-
-        /// <summary>
-        /// It describes the domain of the function or where the function returns null independent of other definitions
-        /// </summary>
-        ExprNode WhereExpr { get; set; }
 
         //
         // Aggregation
@@ -102,19 +97,6 @@ namespace Com.Schema
         /// Name of the function for accumulating facts.
         /// </summary>
         string Updater { get; set; }
-
-        //
-        // Schema/structure operations
-        //
-
-        /// <summary>
-        /// Analyze this definition by extracting the structure of its function output. 
-        /// Append these output columns from the definition of the output table. 
-        ///
-        /// The method guarantees that the function outputs (data) produced by this definition can be appended to the output table, that is, the output table is consistent with this definition. 
-        /// This method can be called before (or within) resolution procedure which can be viewed as a schema-level analogue of data population and which ensures that we have correct schema which is consistent with all formulas/definitions. 
-        /// </summary>
-        void Append();
 
         //
         // Compute. Data operations.

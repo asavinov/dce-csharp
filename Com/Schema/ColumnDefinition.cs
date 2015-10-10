@@ -18,10 +18,6 @@ namespace Com.Schema
 
         #region ComColumnDefinition interface
 
-        public bool IsAppendData { get; set; }
-
-        public bool IsAppendSchema { get; set; }
-
         //
         // COEL (language) representation
         //
@@ -43,17 +39,17 @@ namespace Com.Schema
             }
         }
 
-        //public AstNode FormulaAst { get; set; }
-
         //
         // Structured (object) representation
         //
 
+        public bool IsAppendData { get; set; }
+
+        public bool IsAppendSchema { get; set; }
+
         public ExprNode FormulaExpr { get; set; }
 
         public Mapping Mapping { get; set; }
-
-        public ExprNode WhereExpr { get; set; }
 
         //
         // Aggregation
@@ -66,55 +62,6 @@ namespace Com.Schema
         public List<DimPath> MeasurePaths { get; set; }
 
         public string Updater { get; set; }
-
-        // Aassert: FactTable.GroupFormula + ThisSet.ThisFunc = FactTable.MeasureFormula
-        // Aassert: if LoopSet == ThisSet then GroupCode = null, ThisFunc = MeasureCode
-
-        //
-        // Schema/structure operations
-        //
-
-        [Obsolete("This method should be moved to table writer/appender object.")]
-        public void Append()
-        {
-            if (Dim == null) return;
-            if (Dim.Output == null) return;
-            if (Dim.Output.IsPrimitive) return; // Primitive tables do not have structure
-
-            if (FormulaExpr == null) return;
-
-            if (FormulaExpr.DefinitionType == ColumnDefinitionType.AGGREGATION) return;
-            if (FormulaExpr.DefinitionType == ColumnDefinitionType.ARITHMETIC) return;
-
-            //
-            // Analyze output structure of the definition and extract all tables that are used in its output
-            //
-            if (FormulaExpr.OutputVariable.TypeTable == null)
-            {
-                string outputTableName = FormulaExpr.Item.OutputVariable.TypeName;
-
-                // Try to find this table and if found then assign to the column output
-                // If not found then create output table in the schema and assign to the column output
-            }
-
-            //
-            // Analyze output structure of the definition and extract all columns that are used in its output
-            //
-            if (FormulaExpr.Operation == OperationType.TUPLE)
-            {
-                foreach (var child in FormulaExpr.Children)
-                {
-                    string childName = child.Item.Name;
-                }
-            }
-
-            // Append the columns extracted from the definition to the output set
-
-        }
-
-        //
-        // Compute. Data operations.
-        //
 
         // Get an object which is used to compute the function values according to the formula
         protected DcEvaluator GetIterator()
@@ -155,6 +102,10 @@ namespace Com.Schema
 
         private void EvaluateBegin()
         {
+            // Aassert: FactTable.GroupFormula + ThisSet.ThisFunc = FactTable.MeasureFormula
+            // Aassert: if LoopSet == ThisSet then GroupCode = null, ThisFunc = MeasureCode
+
+
             //
             // Open files/databases
             //
