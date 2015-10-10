@@ -221,27 +221,6 @@ namespace Com.Schema
                         foreach (var node in nodes) if (node.Parent != null) node.Parent.RemoveChild(node);
                     }
 
-                    if (col.Definition.GroupPaths != null)
-                    {
-                        foreach (var path in col.Definition.GroupPaths.ToList())
-                        {
-                            if (path.IndexOf(column) >= 0)
-                            {
-                                col.Definition.GroupPaths.Remove(path);
-                            }
-                        }
-                    }
-                    if (col.Definition.MeasurePaths != null)
-                    {
-                        foreach (var path in col.Definition.MeasurePaths.ToList())
-                        {
-                            if (path.IndexOf(column) >= 0)
-                            {
-                                col.Definition.MeasurePaths.Remove(path);
-                            }
-                        }
-                    }
-
                 }
 
                 if (tab.Definition == null) continue;

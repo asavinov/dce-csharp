@@ -71,39 +71,7 @@ namespace Com.Data.Eval
             Workspace = column.Input.Schema.Workspace;
             columnData = column.Data;
 
-            if (column.Definition.FormulaExpr == null) // From structured definition (parameters)
-            {
-                // Facts
-                thisCurrent = -1;
-                thisTable = column.Definition.FactTable;
-
-                thisVariable = new Variable(thisTable.Schema.Name, thisTable.Name, "this");
-                thisVariable.TypeSchema = thisTable.Schema;
-                thisVariable.TypeTable = thisTable;
-
-                // Groups
-                groupExpr = ExprNode.CreateReader(column.Definition.GroupPaths[0], true); // Currently only one path is used
-                groupExpr = (ExprNode)groupExpr.Root;
-                groupExpr.Resolve(Workspace, new List<DcVariable>() { thisVariable });
-
-                groupVariable = new Variable(column.Input.Schema.Name, column.Input.Name, "this");
-                groupVariable.TypeSchema = column.Input.Schema;
-                groupVariable.TypeTable = column.Input;
-
-                // Measure
-                measureExpr = ExprNode.CreateReader(column.Definition.MeasurePaths[0], true);
-                measureExpr = (ExprNode)measureExpr.Root;
-                measureExpr.Resolve(Workspace, new List<DcVariable>() { thisVariable });
-
-                measureVariable = new Variable(column.Output.Schema.Name, column.Output.Name, "value");
-                measureVariable.TypeSchema = column.Output.Schema;
-                measureVariable.TypeTable = column.Output;
-
-                // Updater/aggregation function
-                outputExpr = ExprNode.CreateUpdater(column, column.Definition.Updater);
-                outputExpr.Resolve(Workspace, new List<DcVariable>() { groupVariable, measureVariable });
-            }
-            else // From expression
+            if(column.Definition.FormulaExpr != null) // From expression
             {
                 //
                 // Extract all aggregation components from expression (aggregation expression cannot be resolved)

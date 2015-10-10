@@ -49,55 +49,6 @@ namespace Com.Schema
 
         public ExprNode FormulaExpr { get; set; }
 
-        //
-        // Aggregation
-        //
-
-        public DcTable FactTable { get; set; }
-
-        public List<DimPath> GroupPaths { get; set; }
-
-        public List<DimPath> MeasurePaths { get; set; }
-
-        public string Updater { get; set; }
-
-        // Get an object which is used to compute the function values according to the formula
-        protected DcEvaluator GetIterator()
-        {
-            DcEvaluator evaluator = null;
-
-            if (FormulaExpr == null || FormulaExpr.DefinitionType == ColumnDefinitionType.FREE)
-            {
-                ; // Nothing to do
-            }
-            else if (Dim.Input.Schema is SchemaCsv) // Import from CSV
-            {
-                evaluator = new EvaluatorCsv(Dim);
-            }
-            else if (Dim.Input.Schema is SchemaOledb) // Import from OLEDB
-            {
-                evaluator = new EvaluatorOledb(Dim);
-            }
-            else if (FormulaExpr.DefinitionType == ColumnDefinitionType.AGGREGATION)
-            {
-                evaluator = new EvaluatorAggr(Dim);
-            }
-            else if (FormulaExpr.DefinitionType == ColumnDefinitionType.ARITHMETIC)
-            {
-                evaluator = new EvaluatorExpr(Dim);
-            }
-            else if (FormulaExpr.DefinitionType == ColumnDefinitionType.LINK)
-            {
-                evaluator = new EvaluatorExpr(Dim);
-            }
-            else
-            {
-                throw new NotImplementedException("This type of column definition is not implemented.");
-            }
-
-            return evaluator;
-        }
-
         private void EvaluateBegin()
         {
             // Aassert: FactTable.GroupFormula + ThisSet.ThisFunc = FactTable.MeasureFormula
@@ -158,8 +109,44 @@ namespace Com.Schema
 
         public void Evaluate()
         {
-            DcEvaluator evaluator = GetIterator();
+            //
+            // Get an object which is used to compute the function values according to the formula
+            //
+
+            DcEvaluator evaluator = null;
+            if (FormulaExpr == null || FormulaExpr.DefinitionType == ColumnDefinitionType.FREE)
+            {
+                ; // Nothing to do
+            }
+            else if (Dim.Input.Schema is SchemaCsv) // Import from CSV
+            {
+                evaluator = new EvaluatorCsv(Dim);
+            }
+            else if (Dim.Input.Schema is SchemaOledb) // Import from OLEDB
+            {
+                evaluator = new EvaluatorOledb(Dim);
+            }
+            else if (FormulaExpr.DefinitionType == ColumnDefinitionType.AGGREGATION)
+            {
+                evaluator = new EvaluatorAggr(Dim);
+            }
+            else if (FormulaExpr.DefinitionType == ColumnDefinitionType.ARITHMETIC)
+            {
+                evaluator = new EvaluatorExpr(Dim);
+            }
+            else if (FormulaExpr.DefinitionType == ColumnDefinitionType.LINK)
+            {
+                evaluator = new EvaluatorExpr(Dim);
+            }
+            else
+            {
+                throw new NotImplementedException("This type of column definition is not implemented.");
+            }
             if (evaluator == null) return;
+
+            //
+            // Evaluation loop: read next input, pass it to the expression and evaluate
+            //
 
             try
             {
@@ -228,6 +215,7 @@ namespace Com.Schema
             }
             else if (FormulaExpr.DefinitionType == ColumnDefinitionType.AGGREGATION)
             {
+                /*
                 res.Add(FactTable); // This column depends on the fact table
 
                 // Grouping and measure paths are used in this column
@@ -251,6 +239,7 @@ namespace Com.Schema
                         }
                     }
                 }
+                */
             }
 
             return res;
@@ -285,6 +274,7 @@ namespace Com.Schema
             }
             else if (FormulaExpr.DefinitionType == ColumnDefinitionType.AGGREGATION)
             {
+                /*
                 // Grouping and measure paths are used in this column
                 if (GroupPaths != null)
                 {
@@ -306,6 +296,7 @@ namespace Com.Schema
                         }
                     }
                 }
+                */
             }
 
             return res;
@@ -326,9 +317,7 @@ namespace Com.Schema
             Dim = dim;
 
             IsAppendData = false;
-
-            GroupPaths = new List<DimPath>();
-            MeasurePaths = new List<DimPath>();
+            IsAppendSchema = true;
 
             Dependencies = new List<Dim>();
         }

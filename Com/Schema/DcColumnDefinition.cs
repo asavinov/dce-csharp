@@ -58,40 +58,6 @@ namespace Com.Schema
         ExprNode FormulaExpr { get; set; }
 
         //
-        // Aggregation
-        //
-
-        // TODO: Conceptual:
-        // - Separating fact feeder from updater:
-        //   - Separate fact feeder description (fact table + group + measure) from updater expression.
-        //   - Aggr column has only updater + ref to a feeder object (by name or by ref.) Or a feeder referendes several aggr columns. 
-        //   - Several aggr columns can reference one feeder.
-        //   - Evaluation is done by running a loop over a feeder by filling several aggr columns
-        // - Add initializer and finalizer expressions:
-        //   - Initializer for aggr column before evaluation. Can be arbitrary complex expr. 
-        //   - Finalizer for aggre column after evaluation. Is a normal expr, also, quite complex, say, devide by another column (COUNT).
-
-        /// <summary>
-        /// Fact set is a set for looping through and providing input for measure and group functions. By default, it is this (lesser) set.
-        /// </summary>
-        DcTable FactTable { get; set; } // Dependency on a lesser set and lesser functions
-
-        /// <summary>
-        /// Computes a group (this column input) from the current fact (fact table input). Result of this expression is input for this column.
-        /// </summary>
-        List<DimPath> GroupPaths { get; set; }
-
-        /// <summary>
-        /// Computes a new value (this column output) from the current fact (fact table input). Result of this expression has to be aggregated with the current output stored in this column.
-        /// </summary>
-        List<DimPath> MeasurePaths { get; set; }
-
-        /// <summary>
-        /// Name of the function for accumulating facts.
-        /// </summary>
-        string Updater { get; set; }
-
-        //
         // Compute. Data operations.
         //
 

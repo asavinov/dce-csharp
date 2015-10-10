@@ -152,35 +152,6 @@ namespace Com.Schema
                     Definition.FormulaExpr.ToJson((JObject)columnDef["formula"]);
                 }
 
-                if (Definition.FactTable != null)
-                {
-                    columnDef["fact_table"] = Utils.CreateJsonRef(Definition.FactTable);
-                }
-
-                if (Definition.GroupPaths != null)
-                {
-                    JArray group_paths = new JArray();
-                    foreach (var path in Definition.GroupPaths)
-                    {
-                        JObject group_path = Utils.CreateJsonFromObject(path);
-                        path.ToJson(group_path);
-                        group_paths.Add(group_path);
-                    }
-                    columnDef["group_paths"] = group_paths;
-                }
-
-                if (Definition.MeasurePaths != null)
-                {
-                    JArray measure_paths = new JArray();
-                    foreach (var path in Definition.MeasurePaths)
-                    {
-                        JObject measure_path = Utils.CreateJsonFromObject(path);
-                        path.ToJson(measure_path);
-                        measure_paths.Add(measure_path);
-                    }
-                    columnDef["measure_paths"] = measure_paths;
-                }
-
                 json["definition"] = columnDef;
             }
 
@@ -210,44 +181,6 @@ namespace Com.Schema
                     {
                         node.FromJson((JObject)columnDef["formula"], ws);
                         Definition.FormulaExpr = node;
-                    }
-                }
-
-                if (columnDef["fact_table"] != null)
-                {
-                    DcTable facts = (DcTable)Utils.CreateObjectFromJson((JObject)columnDef["fact_table"]);
-                    if (facts != null)
-                    {
-                        facts.FromJson((JObject)columnDef["fact_table"], ws);
-                        Definition.FactTable = facts;
-                    }
-                }
-
-                if (columnDef["group_paths"] != null)
-                {
-                    if (Definition.GroupPaths == null) Definition.GroupPaths = new List<DimPath>();
-                    foreach (JObject group_path in columnDef["group_paths"])
-                    {
-                        DimPath path = (DimPath)Utils.CreateObjectFromJson(group_path);
-                        if (path != null)
-                        {
-                            path.FromJson(group_path, ws);
-                            Definition.GroupPaths.Add(path);
-                        }
-                    }
-                }
-
-                if (columnDef["measure_paths"] != null)
-                {
-                    if (Definition.MeasurePaths == null) Definition.MeasurePaths = new List<DimPath>();
-                    foreach (JObject measure_path in columnDef["measure_paths"])
-                    {
-                        DimPath path = (DimPath)Utils.CreateObjectFromJson(measure_path);
-                        if (path != null)
-                        {
-                            path.FromJson(measure_path, ws);
-                            Definition.MeasurePaths.Add(path);
-                        }
                     }
                 }
 
