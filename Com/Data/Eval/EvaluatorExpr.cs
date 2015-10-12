@@ -15,6 +15,7 @@ using Rowid = System.Int32;
 namespace Com.Data.Eval
 {
 
+    [Obsolete("Code of evaluators is directly included in ColumnDefinition Evaluation method and table data readers.")]
     public class EvaluatorExpr : DcEvaluator
     {
         protected DcColumnData columnData;

@@ -14,6 +14,7 @@ namespace Com.Data.Eval
     /// - distinguish between this table (where the aggregated column is defined, and a fact table which provides values to be aggregated where group and measure functions are defined.
     /// - the way of aggregation is defined as an updater expression which knows how to compute a new value given the old (current) value and a new measure.
     /// </summary>
+    [Obsolete("Code of evaluators is directly included in ColumnDefinition Evaluation method and table data readers.")]
     public class EvaluatorAggr : EvaluatorExpr
     {
         // base::columnData is the aggregated function to be computed

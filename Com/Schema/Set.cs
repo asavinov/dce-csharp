@@ -152,6 +152,11 @@ namespace Com.Schema
             return set;
         }
 
+        public DcTableReader GetTableReader()
+        {
+            return new TableReader(this);
+        }
+
         public DcTableData Data { get { return this; } }
 
         public DcTableDefinition Definition { get { return this; } }

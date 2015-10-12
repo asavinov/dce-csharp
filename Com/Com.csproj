@@ -57,6 +57,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Data\DcTableReader.cs" />
     <Compile Include="Data\DimDataEmpty.cs" />
     <Compile Include="Data\Eval\ExprNodeCsv.cs" />
     <Compile Include="Data\Eval\ExprNodeOledb.cs" />
