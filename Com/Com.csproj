@@ -57,18 +57,16 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Data\TableReader.cs" />
     <Compile Include="Data\DcTableReader.cs" />
     <Compile Include="Data\DimDataEmpty.cs" />
-    <Compile Include="Data\Eval\ExprNodeCsv.cs" />
-    <Compile Include="Data\Eval\ExprNodeOledb.cs" />
     <Compile Include="Data\Eval\EvaluatorAggr.cs" />
-    <Compile Include="Data\Eval\EvaluatorCsv.cs" />
-    <Compile Include="Data\Eval\EvaluatorOledb.cs" />
     <Compile Include="Data\Variable.cs" />
     <Compile Include="Data\DcColumnData.cs" />
     <Compile Include="Data\DcTableData.cs" />
     <Compile Include="Schema\ColumnDefinition.cs" />
     <Compile Include="Schema\Csv\ConnectionCsv.cs" />
+    <Compile Include="Schema\Csv\TableReaderCsv.cs" />
     <Compile Include="Schema\Csv\DimCsv.cs" />
     <Compile Include="Schema\Csv\SetCsv.cs" />
     <Compile Include="Schema\DcColumnDefinition.cs" />
@@ -87,6 +85,7 @@
     <Compile Include="Schema\Rel\DimRel.cs" />
     <Compile Include="Schema\Rel\SetRel.cs" />
     <Compile Include="Schema\DcJson.cs" />
+    <Compile Include="Schema\Rel\TableReaderOledb.cs" />
     <Compile Include="Utils\DimEnumerator.cs" />
     <Compile Include="Utils\DimPath.cs" />
     <Compile Include="Utils\DimTree.cs" />

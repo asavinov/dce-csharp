@@ -8,6 +8,7 @@ using System.Diagnostics;
 
 using Newtonsoft.Json.Linq;
 
+using Com.Data;
 using Com.Data.Eval;
 
 using Rowid = System.Int32;
@@ -65,7 +66,16 @@ namespace Com.Schema.Csv
             return columnNames;
         }
 
-        #region ComTableData interface
+        #region DcTable interface
+
+        public override DcTableReader GetTableReader()
+        {
+            return new TableReaderCsv(this);
+        }
+
+        #endregion
+
+        #region DcTableData interface
 
         public override Rowid Find(ExprNode expr) // Use only identity dims (for general case use Search which returns a subset of elements)
         {

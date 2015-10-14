@@ -663,27 +663,35 @@ namespace Test
             schema.Workspace = workspace;
 
             DcTable productsTable = schema.CreateTable("Products");
+            schema.AddTable(productsTable, null, null);
             productsTable.Definition.DefinitionType = DcTableDefinitionType.PROJECTION;
 
-            // Create mapping. 
-            Mapper mapper = new Mapper();
-            Mapping map = mapper.CreatePrimitive(top.GetSubTable("Products"), productsTable, schema); // It will map source String to different target types
-            map.Matches.ForEach(m => m.TargetPath.Segments.ForEach(p => p.Add()));
+            // Manually create column to be imported (we need an automatic mechanism for appending missing columns specified in the formula)
+            DcColumn p1 = schema.CreateColumn("ID", productsTable, schema.GetPrimitive("Integer"), true);
+            p1.Add();
+            DcColumn p2 = schema.CreateColumn("Product Code", productsTable, schema.GetPrimitive("String"), false);
+            p2.Add();
+            DcColumn p3 = schema.CreateColumn("Custom Product Name", productsTable, schema.GetPrimitive("String"), false);
+            p3.Add();
+            DcColumn p4 = schema.CreateColumn("List Price", productsTable, schema.GetPrimitive("Double"), false);
+            p4.Add();
+            DcColumn p5 = schema.CreateColumn("Constant Column", productsTable, schema.GetPrimitive("Double"), false);
+            p5.Add();
 
-            // Create generating/import column
-            /*
-            DcColumn dim = schema.CreateColumn(map.SourceSet.Name, map.SourceSet, map.TargetSet, false);
-            dim.Definition.Mapping = map;
-            dim.Definition.DefinitionType = DcColumnDefinitionType.LINK;
-            dim.Definition.IsAppendData = true;
-
+            // Define import column
+            DcColumn dim = schema.CreateColumn("Import", top.GetSubTable("Products"), productsTable, false);
             dim.Add();
+            dim.Definition.IsAppendData = true;
+            dim.Definition.Formula = "(( [Integer] [ID] = this.[ID], [String] [Product Code] = [Product Code], [String] [Custom Product Name] = [Product Name], [Double] [List Price] = [List Price], [Double] [Constant Column] = 20.0 ))"; // Tuple structure corresponds to output table
+            dim.Definition.IsAppendData = true;
+            dim.Definition.IsAppendSchema = true;
 
-            schema.AddTable(productsTable, null, null);
+            // NOTE: Maybe evaluate dim instead??? Do we need Populate for a table at all???
             productsTable.Definition.Populate();
 
             Assert.AreEqual(45, productsTable.Data.Length);
-            */
+            Assert.AreEqual("Northwind Traders Dried Pears", p3.Data.GetValue(5));
+            Assert.AreEqual(20.0, p5.Data.GetValue(5));
         }
 
         [TestMethod]

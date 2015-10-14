@@ -152,7 +152,7 @@ namespace Com.Schema
             return set;
         }
 
-        public DcTableReader GetTableReader()
+        public virtual DcTableReader GetTableReader()
         {
             return new TableReader(this);
         }

@@ -490,6 +490,8 @@ namespace Com.Data.Eval
                 }
                 else // Non-primitive/non-leaf TUPLE node is a complex value with a special operation
                 {
+                    // NOTE: tuple is never evaluated for relational, csv and other external tables
+
                     // Find, append or update an element in this set (depending on the action type)
                     if (Action == ActionType.READ) // Find the offset
                     {
@@ -546,7 +548,7 @@ namespace Com.Data.Eval
 
                 if (Action == ActionType.READ)
                 {
-                    if (this is ExprNodeCsv) // It is easier to do it here rather than (correctly) in the extension
+                    if (Column is DimCsv) // Access using Csv columnd in a Csv table
                     {
                         // Find current Row object
                         ExprNode thisNode = GetChild("this");
@@ -557,7 +559,7 @@ namespace Com.Data.Eval
                         object output = input[attributeIndex];
                         OutputVariable.SetValue(output);
                     }
-                    else if (this is ExprNodeOledb) // It is easier to do it here rather than (correctly) in the extension
+                    else if (false /* this is ExprNodeOledb */) // It is easier to do it here rather than (correctly) in the extension
                     {
                         // Find current Row object
                         ExprNode thisNode = GetChild("this");
@@ -864,7 +866,7 @@ namespace Com.Data.Eval
             {
                 DimCsv seg = (DimCsv)path.FirstSegment;
 
-                expr = new ExprNodeCsv();
+                expr = new ExprNode(); // Previously: ExprNodeCsv
                 expr.Operation = OperationType.CALL;
                 expr.Action = ActionType.READ;
                 expr.Name = seg.Name;
@@ -878,7 +880,7 @@ namespace Com.Data.Eval
             }
             else if (path.Input.Schema is SchemaOledb) // Access via relational attribute
             {
-                expr = new ExprNodeOledb();
+                expr = new ExprNode(); // Previously: ExprNodeOledb
                 expr.Operation = OperationType.CALL;
                 expr.Action = ActionType.READ;
                 expr.Name = path.Name;

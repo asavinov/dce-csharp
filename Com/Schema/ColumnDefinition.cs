@@ -123,11 +123,11 @@ namespace Com.Schema
             }
             else if (Dim.Input.Schema is SchemaCsv) // Import from CSV
             {
-                evaluator = new EvaluatorCsv(Dim);
+                //evaluator = new EvaluatorCsv(Dim);
             }
             else if (Dim.Input.Schema is SchemaOledb) // Import from OLEDB
             {
-                evaluator = new EvaluatorOledb(Dim);
+                //evaluator = new EvaluatorOledb(Dim);
             }
             else if (FormulaExpr.DefinitionType == ColumnDefinitionType.AGGREGATION)
             {
@@ -278,33 +278,46 @@ namespace Com.Schema
             FormulaExpr.OutputVariable.TypeTable = Dim.Output;
 
             FormulaExpr.Resolve(Workspace, new List<DcVariable>() { thisVariable });
+            // NOTE: This should be removed or moved to the expression. Here we store non-syntactic part of the definition in columndef and then set the expression. Maybe we should have syntactic annotation for APPEND flag (output result annotation, what to do with the output). 
+            if (FormulaExpr.DefinitionType == ColumnDefinitionType.LINK)
+            {
+                // Adjust the expression according to other parameters of the definition
+                if (IsAppendData)
+                {
+                    FormulaExpr.Action = ActionType.APPEND;
+                }
+                else
+                {
+                    FormulaExpr.Action = ActionType.READ;
+                }
+            }
 
-            // Prepare iterator to be used in the input loop
+            // Prepare iterator to be used in the input loop (reader implementation depends on the table class)
             DcTableReader tableReader = thisTable.GetTableReader();
             object thisCurrent = null;
 
             if (Dim.Input.Schema is SchemaCsv) // Import from CSV
             {
+                tableReader.Open();
+                while ((thisCurrent = tableReader.Next()) != null)
+                {
+                    thisVariable.SetValue(thisCurrent); // Set parameters of the expression
+
+                    FormulaExpr.Evaluate(); // Evaluate the expression
+
+                    if (columnData != null) // We do not store import functions (we do not need this data)
+                    {
+                        object newValue = FormulaExpr.OutputVariable.GetValue();
+                        //columnData.SetValue((Rowid)thisCurrent, newValue);
+                    }
+                }
+                tableReader.Close();
             }
             else if (Dim.Input.Schema is SchemaOledb) // Import from OLEDB
             {
             }
             else if (FormulaExpr.DefinitionType == ColumnDefinitionType.ARITHMETIC || FormulaExpr.DefinitionType == ColumnDefinitionType.LINK)
             {
-                // NOTE: This should be removed or moved to the expression. Here we store non-syntactic part of the definition in columndef and then set the expression. Maybe we should have syntactic annotation for APPEND flag (output result annotation, what to do with the output). 
-                if (FormulaExpr.DefinitionType == ColumnDefinitionType.LINK)
-                {
-                    // Adjust the expression according to other parameters of the definition
-                    if (IsAppendData)
-                    {
-                        FormulaExpr.Action = ActionType.APPEND;
-                    }
-                    else
-                    {
-                        FormulaExpr.Action = ActionType.READ;
-                    }
-                }
-
                 tableReader.Open();
                 while ((thisCurrent = tableReader.Next()) != null)
                 {
