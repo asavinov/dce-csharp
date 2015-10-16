@@ -68,6 +68,8 @@ namespace Com.Data.Eval
         // Action type. A modifier that helps to choose the function variation
         public ActionType Action { get; set; }
 
+        public DcTableWriter TableWriter { get; set; }
+
         // User-oriented types of columns: arithmetcis/primitive, link/non-primitive/tuple (mapping),, import/export/generation (link w. append), aggregation
         [Obsolete("This annotation is reduntant at this level. Redesign. Maybe introduce higher level user-oriented annoations with some user-value: import/export etc.")]
         public ColumnDefinitionType DefinitionType
@@ -118,6 +120,16 @@ namespace Com.Data.Eval
         /// <param name="variables"></param>
         public virtual void Resolve(DcWorkspace workspace, List<DcVariable> variables)
         {
+            // PROBLEM: tables in formula might have no direct indication of their schema which is needed to resolve table names
+            // Schema for nodes has to be derived from other nodes (before resovling the corresponding tables)
+            // Generally, schema is manually specified for 
+            // - 'this' variable which is then read by CALL columns with output in their known schema and set (according to the column spec). This propagates from children to parents
+            // - set in TUPLE node which is then used to resolve child nodes which provide schemas for their outputs. This propagates from parents to children. 
+            // TODO: We must set right schema before resolving the table in the variable because variable itself has no idea what is the schema of its table (type)
+            // Expressions (their result variable types) can belong to different schemas (for import/export). How can we specify different schemas for different nodes? 1. Inherit from parent TUPLE and eventually from root 'result' variable. 2. Inherit from child CALL and eventually from leaf 'this' variable 3. If it is constant value then we do not care what is the schema but maybe formally we have to set mashup.
+
+
+
             if (Operation == OperationType.VALUE)
             {
                 int intValue = 0;
@@ -153,12 +165,7 @@ namespace Com.Data.Eval
                 //
 
                 //
-                // 1. Resolve type table name 
-                //
-                OutputVariable.Resolve(workspace);
-
-                //
-                // 2. Resolve Name into a column object (a function from the parent to this node)
+                // Resolve Name into a column object (a function from the parent to this node)
                 //
                 ExprNode parentNode = (ExprNode)Parent;
                 if (parentNode == null)
@@ -201,6 +208,11 @@ namespace Com.Data.Eval
                 }
 
                 //
+                // Resolve type table name 
+                //
+                OutputVariable.Resolve(workspace);
+
+                //
                 // Resolve children (important: after the tuple itself, because this node will be used)
                 //
                 foreach (TreeNode<ExprNode> childNode in Children)
@@ -220,12 +232,12 @@ namespace Com.Data.Eval
                 }
 
                 //
-                // 1. Resolve type table name
+                // Resolve type table name
                 //
                 OutputVariable.Resolve(workspace);
 
                 //
-                // 2. Resolve Name into a column object, variable, procedure or whatever object that will return a result (children must be resolved before)
+                // Resolve Name into a column object, variable, procedure or whatever object that will return a result (children must be resolved before)
                 //
                 ExprNode methodChild = GetChild("method"); // Get column name
                 ExprNode thisChild = GetChild("this"); // Get column input (while this node is output)
@@ -418,6 +430,121 @@ namespace Com.Data.Eval
             }
         }
 
+        public virtual void EvaluateBegin()
+        {
+            if (Operation == OperationType.VALUE)
+            {
+
+            }
+            else if (Operation == OperationType.TUPLE) // SET, TABLE, NON-PRIMITIVE, ...
+            {
+                //
+                // Open files/databases used from within expressions.
+                //
+                if (OutputVariable.TypeTable != null && !OutputVariable.TypeTable.IsPrimitive && OutputVariable.TypeTable.Schema is SchemaCsv) // Prepare to writing to a csv file during evaluation
+                {
+                    SchemaCsv csvSchema = (SchemaCsv)OutputVariable.TypeTable.Schema;
+                    SetCsv csvOutput = (SetCsv)OutputVariable.TypeTable;
+
+                    // Ensure that all parameters are correct
+                    // Set index for all columns that have to written to the file
+                    int index = 0;
+                    for (int i = 0; i < csvOutput.Columns.Count; i++)
+                    {
+                        if (!(csvOutput.Columns[i] is DimCsv)) continue;
+
+                        DimCsv col = (DimCsv)csvOutput.Columns[i];
+                        if (col.IsSuper)
+                        {
+                            col.ColumnIndex = -1; // Will not be written 
+                        }
+                        else if (col.Output.Schema != col.Input.Schema) // Import/export columns do not store data
+                        {
+                            col.ColumnIndex = -1;
+                        }
+                        else
+                        {
+                            col.ColumnIndex = index;
+                            index++;
+                        }
+                    }
+                }
+                else if (OutputVariable.TypeTable != null && !OutputVariable.TypeTable.IsPrimitive && OutputVariable.TypeTable.Schema is SchemaOledb) // Prepare to writing to a database during evaluation
+                {
+                }
+
+                // Open file for writing
+                if (OutputVariable.TypeTable != null && !OutputVariable.TypeTable.IsPrimitive)
+                {
+                    TableWriter = OutputVariable.TypeTable.GetTableWriter();
+                    TableWriter.Open();
+                }
+
+                //
+                // Evaluate children
+                //
+                foreach (TreeNode<ExprNode> childNode in Children)
+                {
+                    childNode.Item.EvaluateBegin();
+                }
+            }
+            else if (Operation == OperationType.CALL) // FUNCTION, COLUMN, PRIMITIVE, ...
+            {
+                //
+                // Evaluate children
+                //
+                foreach (ExprNode childNode in Children)
+                {
+                    childNode.EvaluateBegin();
+                }
+
+            }
+        }
+
+        public virtual void EvaluateEnd()
+        {
+            if (Operation == OperationType.VALUE)
+            {
+
+            }
+            else if (Operation == OperationType.TUPLE) // SET, TABLE, NON-PRIMITIVE, ...
+            {
+                //
+                // Close files/databases
+                //
+                if (OutputVariable.TypeTable != null && !OutputVariable.TypeTable.IsPrimitive && OutputVariable.TypeTable.Schema is SchemaCsv)
+                {
+                    SchemaCsv csvSchema = (SchemaCsv)OutputVariable.TypeTable.Schema;
+                    SetCsv csvOutput = (SetCsv)OutputVariable.TypeTable;
+                }
+                else if (OutputVariable.TypeTable != null && !OutputVariable.TypeTable.IsPrimitive && OutputVariable.TypeTable.Schema is SchemaOledb)
+                {
+                }
+
+                // Close file
+                if (TableWriter != null) TableWriter.Close();
+
+                //
+                // Evaluate children
+                //
+                foreach (TreeNode<ExprNode> childNode in Children)
+                {
+                    childNode.Item.EvaluateEnd();
+                }
+            }
+            else if (Operation == OperationType.CALL) // FUNCTION, COLUMN, PRIMITIVE, ...
+            {
+                //
+                // Evaluate children
+                //
+                foreach (ExprNode childNode in Children)
+                {
+                    childNode.EvaluateEnd();
+                }
+
+            }
+        }
+
         /// <summary>
         /// 
         /// </summary>
@@ -431,7 +558,7 @@ namespace Com.Data.Eval
             {
 
             }
-            else if (Operation == OperationType.TUPLE)
+            else if (Operation == OperationType.TUPLE) // SET, TABLE, NON-PRIMITIVE, ...
             {
                 //
                 // Evaluate children
@@ -495,7 +622,7 @@ namespace Com.Data.Eval
                     // Find, append or update an element in this set (depending on the action type)
                     if (Action == ActionType.READ) // Find the offset
                     {
-                        Rowid input = OutputVariable.TypeTable.Data.Find(this);
+                        Rowid input = TableWriter.Find(this);
 
                         if (input < 0 || input >= OutputVariable.TypeTable.Data.Length) // Not found
                         {
@@ -511,11 +638,11 @@ namespace Com.Data.Eval
                     }
                     else if (Action == ActionType.APPEND) // Find, try to update and append if cannot be found
                     {
-                        Rowid input = OutputVariable.TypeTable.Data.Find(this); // Uniqueness constraint: check if it exists already
+                        Rowid input = TableWriter.Find(this); // Uniqueness constraint: check if it exists already
 
                         if (input < 0 || input >= OutputVariable.TypeTable.Data.Length) // Not found
                         {
-                            input = OutputVariable.TypeTable.Data.Append(this); // Append new
+                            input = TableWriter.Append(this); // Append new
                         }
 
                         OutputVariable.SetValue(input);
@@ -526,7 +653,7 @@ namespace Com.Data.Eval
                     }
                 }
             }
-            else if (Operation == OperationType.CALL)
+            else if (Operation == OperationType.CALL) // FUNCTION, COLUMN, PRIMITIVE, ...
             {
                 //
                 // Evaluate children

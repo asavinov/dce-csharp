@@ -57,10 +57,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Data\TableWriter.cs" />
+    <Compile Include="Data\DcTableWriter.cs" />
     <Compile Include="Data\TableReader.cs" />
     <Compile Include="Data\DcTableReader.cs" />
     <Compile Include="Data\DimDataEmpty.cs" />
-    <Compile Include="Data\Eval\EvaluatorAggr.cs" />
     <Compile Include="Data\Variable.cs" />
     <Compile Include="Data\DcColumnData.cs" />
     <Compile Include="Data\DcTableData.cs" />
@@ -69,6 +70,7 @@
     <Compile Include="Schema\Csv\TableReaderCsv.cs" />
     <Compile Include="Schema\Csv\DimCsv.cs" />
     <Compile Include="Schema\Csv\SetCsv.cs" />
+    <Compile Include="Schema\Csv\TableWriterCsv.cs" />
     <Compile Include="Schema\DcColumnDefinition.cs" />
     <Compile Include="Data\Aggregator.cs" />
     <Compile Include="Schema\DataCommandr.cs" />

@@ -51,150 +51,6 @@ namespace Com.Schema
 
         public ExprNode FormulaExpr { get; set; }
 
-        [Obsolete("Code included directly into the new Evaluate method.")]
-        private void EvaluateBegin()
-        {
-            // Aassert: FactTable.GroupFormula + ThisSet.ThisFunc = FactTable.MeasureFormula
-            // Aassert: if LoopSet == ThisSet then GroupCode = null, ThisFunc = MeasureCode
-
-            //
-            // EvaluateBegin. Open files/databases
-            //
-            if (Dim.Output.Schema is SchemaCsv) // Prepare to writing to a csv file during evaluation
-            {
-                SchemaCsv csvSchema = (SchemaCsv)Dim.Output.Schema;
-                SetCsv csvOutput = (SetCsv)Dim.Output;
-
-                // Ensure that all parameters are correct
-                // Set index for all columns that have to written to the file
-                int index = 0;
-                for (int i = 0; i < csvOutput.Columns.Count; i++)
-                {
-                    if (!(csvOutput.Columns[i] is DimCsv)) continue;
-
-                    DimCsv col = (DimCsv)csvOutput.Columns[i];
-                    if (col.IsSuper)
-                    {
-                        col.ColumnIndex = -1; // Will not be written 
-                    }
-                    else if (col.Output.Schema != col.Input.Schema) // Import/export columns do not store data
-                    {
-                        col.ColumnIndex = -1;
-                    }
-                    else
-                    {
-                        col.ColumnIndex = index;
-                        index++;
-                    }
-                }
-
-                // Open file for writing
-                if (csvSchema.connection != null)
-                {
-                    csvSchema.connection.OpenWriter(csvOutput);
-
-                    // Write header
-                    if (csvOutput.HasHeaderRecord)
-                    {
-                        var header = csvOutput.GetColumnNamesByIndex();
-                        csvSchema.connection.WriteNext(header);
-                    }
-                }
-            }
-            else if (Dim.Output.Schema is SchemaOledb) // Prepare to writing to a database during evaluation
-            {
-            }
-
-            Dim.Data.AutoIndex = false;
-            //Dim.Data.Nullify();
-        }
-
-        [Obsolete("Replaced by a new version which includes code from Evaluators. The evaluator classes are deleted.")]
-        public void Evaluate1()
-        {
-            //
-            // Get an object which is used to compute the function values according to the formula
-            //
-
-            DcEvaluator evaluator = null;
-            if (FormulaExpr == null || FormulaExpr.DefinitionType == ColumnDefinitionType.FREE)
-            {
-                ; // Nothing to do
-            }
-            else if (Dim.Input.Schema is SchemaCsv) // Import from CSV
-            {
-                //evaluator = new EvaluatorCsv(Dim);
-            }
-            else if (Dim.Input.Schema is SchemaOledb) // Import from OLEDB
-            {
-                //evaluator = new EvaluatorOledb(Dim);
-            }
-            else if (FormulaExpr.DefinitionType == ColumnDefinitionType.AGGREGATION)
-            {
-                evaluator = new EvaluatorAggr(Dim);
-            }
-            else if (FormulaExpr.DefinitionType == ColumnDefinitionType.ARITHMETIC)
-            {
-                evaluator = new EvaluatorExpr(Dim);
-            }
-            else if (FormulaExpr.DefinitionType == ColumnDefinitionType.LINK)
-            {
-                evaluator = new EvaluatorExpr(Dim);
-            }
-            else
-            {
-                throw new NotImplementedException("This type of column definition is not implemented.");
-            }
-            if (evaluator == null) return;
-
-            //
-            // Evaluation loop: read next input, pass it to the expression and evaluate
-            //
-
-            try
-            {
-                EvaluateBegin();
-
-                while (evaluator.NextInput())
-                {
-                    evaluator.Evaluate();
-                }
-            }
-            catch (System.Exception ex)
-            {
-                throw ex;
-            }
-            finally
-            {
-                EvaluateEnd();
-            }
-        }
-
-        [Obsolete("Code included directly into the new Evaluate method.")]
-        private void EvaluateEnd()
-        {
-            Dim.Data.Reindex();
-            Dim.Data.AutoIndex = true;
-
-            //
-            // Close files/databases
-            //
-            if (Dim.Output.Schema is SchemaCsv)
-            {
-                SchemaCsv csvSchema = (SchemaCsv)Dim.Output.Schema;
-                SetCsv csvOutput = (SetCsv)Dim.Output;
-
-                // Close file
-                if (csvSchema.connection != null)
-                {
-                    csvSchema.connection.CloseWriter();
-                }
-            }
-            else if (Dim.Output.Schema is SchemaOledb)
-            {
-            }
-        }
-
         public void Evaluate()
         {
             if (FormulaExpr == null || FormulaExpr.DefinitionType == ColumnDefinitionType.FREE)
@@ -202,82 +58,9 @@ namespace Com.Schema
                 return; // Nothing to evaluate
             }
 
-            Dim.Data.AutoIndex = false;
-            //Dim.Data.Nullify();
-
             // Aassert: FactTable.GroupFormula + ThisSet.ThisFunc = FactTable.MeasureFormula
             // Aassert: if LoopSet == ThisSet then GroupCode = null, ThisFunc = MeasureCode
 
-            //
-            // EvaluateBegin. Open files/databases
-            //
-            if (Dim.Output.Schema is SchemaCsv) // Prepare to writing to a csv file during evaluation
-            {
-                SchemaCsv csvSchema = (SchemaCsv)Dim.Output.Schema;
-                SetCsv csvOutput = (SetCsv)Dim.Output;
-
-                // Ensure that all parameters are correct
-                // Set index for all columns that have to written to the file
-                int index = 0;
-                for (int i = 0; i < csvOutput.Columns.Count; i++)
-                {
-                    if (!(csvOutput.Columns[i] is DimCsv)) continue;
-
-                    DimCsv col = (DimCsv)csvOutput.Columns[i];
-                    if (col.IsSuper)
-                    {
-                        col.ColumnIndex = -1; // Will not be written 
-                    }
-                    else if (col.Output.Schema != col.Input.Schema) // Import/export columns do not store data
-                    {
-                        col.ColumnIndex = -1;
-                    }
-                    else
-                    {
-                        col.ColumnIndex = index;
-                        index++;
-                    }
-                }
-
-                // Open file for writing
-                if (csvSchema.connection != null)
-                {
-                    csvSchema.connection.OpenWriter(csvOutput);
-
-                    // Write header
-                    if (csvOutput.HasHeaderRecord)
-                    {
-                        var header = csvOutput.GetColumnNamesByIndex();
-                        csvSchema.connection.WriteNext(header);
-                    }
-                }
-            }
-            else if (Dim.Output.Schema is SchemaOledb) // Prepare to writing to a database during evaluation
-            {
-            }
-
-
-            //
-            // Evaluate loop depends on the type of definition
-            //
-
-            // General parameters
-            DcWorkspace Workspace = Dim.Input.Schema.Workspace;
-            DcColumnData columnData = Dim.Data;
-
-            // Prepare parameter variables for the expression 
-            DcTable thisTable = Dim.Input;
-            DcVariable thisVariable = new Variable(thisTable.Schema.Name, thisTable.Name, "this");
-            thisVariable.TypeSchema = thisTable.Schema;
-            thisVariable.TypeTable = thisTable;
-
-            // Parameterize expression and resolve it (bind names to real objects) 
-            FormulaExpr.OutputVariable.SchemaName = Dim.Output.Schema.Name;
-            FormulaExpr.OutputVariable.TypeName = Dim.Output.Name;
-            FormulaExpr.OutputVariable.TypeSchema = Dim.Output.Schema;
-            FormulaExpr.OutputVariable.TypeTable = Dim.Output;
-
-            FormulaExpr.Resolve(Workspace, new List<DcVariable>() { thisVariable });
             // NOTE: This should be removed or moved to the expression. Here we store non-syntactic part of the definition in columndef and then set the expression. Maybe we should have syntactic annotation for APPEND flag (output result annotation, what to do with the output). 
             if (FormulaExpr.DefinitionType == ColumnDefinitionType.LINK)
             {
@@ -292,12 +75,36 @@ namespace Com.Schema
                 }
             }
 
-            // Prepare iterator to be used in the input loop (reader implementation depends on the table class)
-            DcTableReader tableReader = thisTable.GetTableReader();
+            //
+            // Evaluate loop depends on the type of definition
+            //
+
+            // General parameters
+            DcWorkspace Workspace = Dim.Input.Schema.Workspace;
+            DcColumnData columnData = Dim.Data;
+
+            Dim.Data.AutoIndex = false;
+            //Dim.Data.Nullify();
+
             object thisCurrent = null;
 
             if (Dim.Input.Schema is SchemaCsv) // Import from CSV
             {
+				// Prepare parameter variables for the expression 
+				DcTable thisTable = Dim.Input;
+				DcVariable thisVariable = new Variable(thisTable.Schema.Name, thisTable.Name, "this");
+				thisVariable.TypeSchema = thisTable.Schema;
+				thisVariable.TypeTable = thisTable;
+
+				// Parameterize expression and resolve it (bind names to real objects) 
+				FormulaExpr.OutputVariable.SchemaName = Dim.Output.Schema.Name;
+				FormulaExpr.OutputVariable.TypeName = Dim.Output.Name;
+				FormulaExpr.OutputVariable.TypeSchema = Dim.Output.Schema;
+				FormulaExpr.OutputVariable.TypeTable = Dim.Output;
+				FormulaExpr.Resolve(Workspace, new List<DcVariable>() { thisVariable });
+
+				FormulaExpr.EvaluateBegin();
+				DcTableReader tableReader = thisTable.GetTableReader();
                 tableReader.Open();
                 while ((thisCurrent = tableReader.Next()) != null)
                 {
@@ -312,13 +119,26 @@ namespace Com.Schema
                     }
                 }
                 tableReader.Close();
-            }
-            else if (Dim.Input.Schema is SchemaOledb) // Import from OLEDB
-            {
+				FormulaExpr.EvaluateEnd();
             }
             else if (FormulaExpr.DefinitionType == ColumnDefinitionType.ARITHMETIC || FormulaExpr.DefinitionType == ColumnDefinitionType.LINK)
             {
-                tableReader.Open();
+				// Prepare parameter variables for the expression 
+				DcTable thisTable = Dim.Input;
+				DcVariable thisVariable = new Variable(thisTable.Schema.Name, thisTable.Name, "this");
+				thisVariable.TypeSchema = thisTable.Schema;
+				thisVariable.TypeTable = thisTable;
+
+				// Parameterize expression and resolve it (bind names to real objects) 
+				FormulaExpr.OutputVariable.SchemaName = Dim.Output.Schema.Name;
+				FormulaExpr.OutputVariable.TypeName = Dim.Output.Name;
+				FormulaExpr.OutputVariable.TypeSchema = Dim.Output.Schema;
+				FormulaExpr.OutputVariable.TypeTable = Dim.Output;
+				FormulaExpr.Resolve(Workspace, new List<DcVariable>() { thisVariable });
+
+				FormulaExpr.EvaluateBegin();
+				DcTableReader tableReader = thisTable.GetTableReader();
+				tableReader.Open();
                 while ((thisCurrent = tableReader.Next()) != null)
                 {
                     thisVariable.SetValue(thisCurrent); // Set parameters of the expression
@@ -337,15 +157,17 @@ namespace Com.Schema
                     }
                 }
                 tableReader.Close();
+				FormulaExpr.EvaluateEnd();
             }
             else if (FormulaExpr.DefinitionType == ColumnDefinitionType.AGGREGATION)
             {
                 // Facts
                 ExprNode factsNode = FormulaExpr.GetChild("facts").GetChild(0);
-                string thisTableName = factsNode.Name;
-                thisTable = Dim.Input.Schema.GetSubTable(thisTableName);
 
-                thisVariable = new Variable(thisTable.Schema.Name, thisTable.Name, "this");
+                // This table and variable
+				string thisTableName = factsNode.Name;
+                DcTable thisTable = Dim.Input.Schema.GetSubTable(thisTableName);
+                DcVariable thisVariable = new Variable(thisTable.Schema.Name, thisTable.Name, "this");
                 thisVariable.TypeSchema = thisTable.Schema;
                 thisVariable.TypeTable = thisTable;
 
@@ -378,8 +200,8 @@ namespace Com.Schema
                 outputExpr = ExprNode.CreateUpdater(Dim, updaterExpr.Name);
                 outputExpr.Resolve(Workspace, new List<DcVariable>() { groupVariable, measureVariable });
 
-
-                tableReader = thisTable.GetTableReader();
+				FormulaExpr.EvaluateBegin();
+				DcTableReader tableReader = thisTable.GetTableReader();
                 tableReader.Open();
                 while ((thisCurrent = tableReader.Next()) != null)
                 {
@@ -403,29 +225,11 @@ namespace Com.Schema
                     }
                 }
                 tableReader.Close();
+				FormulaExpr.EvaluateEnd();
             }
             else
             {
                 throw new NotImplementedException("This type of column definition is not implemented.");
-            }
-
-
-            //
-            // EvaluateEnd. Close files/databases
-            //
-            if (Dim.Output.Schema is SchemaCsv)
-            {
-                SchemaCsv csvSchema = (SchemaCsv)Dim.Output.Schema;
-                SetCsv csvOutput = (SetCsv)Dim.Output;
-
-                // Close file
-                if (csvSchema.connection != null)
-                {
-                    csvSchema.connection.CloseWriter();
-                }
-            }
-            else if (Dim.Output.Schema is SchemaOledb)
-            {
             }
 
             Dim.Data.Reindex();

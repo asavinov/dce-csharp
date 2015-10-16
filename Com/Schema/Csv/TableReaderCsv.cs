@@ -54,7 +54,7 @@ namespace Com.Schema.Csv
         {
             this.table = table;
 
-            connectionCsv = ((SchemaCsv)this.table.Schema).connection;
+            connectionCsv = new ConnectionCsv();
         }
     }
 

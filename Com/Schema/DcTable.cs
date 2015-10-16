@@ -58,9 +58,10 @@ namespace Com.Schema
         DcTable GetTable(string name); // TODO: Greater table/type - not subtable
         DcTable GetSubTable(string name); // Subtable
 
-        DcTableReader GetTableReader();
         DcTableData Data { get; }
         DcTableDefinition Definition { get; }
+        DcTableReader GetTableReader();
+        DcTableWriter GetTableWriter();
     }
 
 }

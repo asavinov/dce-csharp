@@ -20,17 +20,17 @@ namespace Com.Data
         DcTable table;
         Rowid rowid = -1;
 
-        public void Open()
+        public virtual void Open()
         {
             rowid = -1;
         }
 
-        public void Close()
+        public virtual void Close()
         {
             rowid = table.Data.Length;
         }
 
-        public object Next()
+        public virtual object Next()
         {
             if (rowid < table.Data.Length-1)
             {

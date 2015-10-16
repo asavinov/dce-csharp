@@ -363,7 +363,7 @@ namespace Test
             Assert.AreEqual(0, link.Data.GetValue(0));
             Assert.AreEqual(2, link.Data.GetValue(1));
             Assert.AreEqual(2, link.Data.GetValue(2));
-            Assert.AreEqual(2, link.Data.GetValue(2));
+            Assert.AreEqual(2, link.Data.GetValue(3));
         }
 
         [TestMethod]
@@ -682,16 +682,15 @@ namespace Test
             DcColumn dim = schema.CreateColumn("Import", top.GetSubTable("Products"), productsTable, false);
             dim.Add();
             dim.Definition.IsAppendData = true;
-            dim.Definition.Formula = "(( [Integer] [ID] = this.[ID], [String] [Product Code] = [Product Code], [String] [Custom Product Name] = [Product Name], [Double] [List Price] = [List Price], [Double] [Constant Column] = 20.0 ))"; // Tuple structure corresponds to output table
+            dim.Definition.Formula = "(( [Integer] [ID] = this.[ID], [String] [Product Code] = [Product Code], [String] [Custom Product Name] = [Product Name], [Double] [List Price] = [List Price], [Double] [Constant Column] = 20.02 ))"; // Tuple structure corresponds to output table
             dim.Definition.IsAppendData = true;
             dim.Definition.IsAppendSchema = true;
 
-            // NOTE: Maybe evaluate dim instead??? Do we need Populate for a table at all???
             productsTable.Definition.Populate();
 
             Assert.AreEqual(45, productsTable.Data.Length);
             Assert.AreEqual("Northwind Traders Dried Pears", p3.Data.GetValue(5));
-            Assert.AreEqual(20.0, p5.Data.GetValue(5));
+            Assert.AreEqual(20.02, p5.Data.GetValue(5));
         }
 
         [TestMethod]
@@ -720,38 +719,29 @@ namespace Test
 
             // Create a remote file description
             SetCsv table = (SetCsv)top.CreateTable("Table_1");
+            top.AddTable(table, null, null);
             table.FilePath = CsvWrite;
             table.Definition.DefinitionType = DcTableDefinitionType.PROJECTION;
-            top.AddTable(table, null, null);
 
-            //
-            // Configure import 
-            //
+            // Manually create column to be imported (we need an automatic mechanism for appending missing columns specified in the formula)
+            DcColumn p1 = top.CreateColumn("Column 11", table, top.GetPrimitive("String"), true);
+            p1.Add();
+            DcColumn p2 = top.CreateColumn("Column 12", table, top.GetPrimitive("String"), true);
+            p2.Add();
+            DcColumn p3 = top.CreateColumn("Custom Column 13", table, top.GetPrimitive("String"), true);
+            p3.Add();
+            DcColumn p4 = top.CreateColumn("Constant Column", table, top.GetPrimitive("String"), true);
+            p4.Add();
 
-            // Create mapping. 
-            Mapper mapper = new Mapper();
-            Mapping map = mapper.CreatePrimitive(schema.GetSubTable("Table 1"), table, top); // It will map source String to different target types
-            map.Matches.ForEach(m => m.TargetPath.Segments.ForEach(p => p.Add()));
-
-            // Create generating/import column
-            /*
-            DcColumn dim = schema.CreateColumn(map.SourceSet.Name, map.SourceSet, map.TargetSet, false);
-            dim.Definition.Mapping = map;
-            dim.Definition.DefinitionType = DcColumnDefinitionType.LINK;
-            dim.Definition.IsAppendData = true;
-
+            // Define export column
+            DcColumn dim = schema.CreateColumn("Export", schema.GetSubTable("Table 1"), table, false);
             dim.Add();
+            dim.Definition.IsAppendData = true;
+            dim.Definition.Formula = "(( [String] [Column 11] = this.[Column 11], [String] [Column 12] = [Column 12], [String] [Custom Column 13] = [Column 13], [String] [Constant Column] = 20.02 ))"; // Tuple structure corresponds to output table
+            dim.Definition.IsAppendData = true;
+            dim.Definition.IsAppendSchema = true;
 
             table.Definition.Populate();
-            // 1. Create evaluator by generating Expr 
-            //    --> Here we need mapping and output (csv table) column structure. Do we need them? How can we generate them? 
-            //    --> Maybe here we need AppendStructure property and the corresponding method?
-            // 2. Iterate (through normal set) by calling Expr evaluate 
-            // 3. From Expr TUPLE (root), write records to the file by calling Append (and Find)
-            //    --> These Append/Find are overriden in the SetCsv
-
-            // TODO: We could test by reading the file manually
-            */
         }
 
         [TestMethod]
