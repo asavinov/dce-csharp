@@ -43,6 +43,19 @@ namespace Com.Data
         /// This method can be called before (or within) resolution procedure which can be viewed as a schema-level analogue of data population and which ensures that we have correct schema which is consistent with all formulas/definitions. 
         /// </summary>
         //object Append(); // Null if not appended
+
+
+        //
+        // Tuple (flat record) methods: append, insert, remove, read, write.
+        //
+        // Here we use TUPLE and its constituents as primitive types: Reference etc.
+        // Column names or references are important. Types (table references or names) are necessary and important. Maybe also flags like Super, Key would be useful. 
+        // TUPLE could be used as a set structure specification (e.g., param for set creation).
+        //
+
+        Rowid Find(DcColumn[] dims, object[] values);
+        Rowid Append(DcColumn[] dims, object[] values);
+        void Remove(int input);
     }
 
 }

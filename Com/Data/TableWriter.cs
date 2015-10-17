@@ -192,6 +192,65 @@ namespace Com.Data
         }
         */
 
+        public Rowid Find(DcColumn[] dims, object[] values) // Type of dimensions (super, id, non-id) is not important and is not used
+        {
+            Debug.Assert(dims != null && values != null && dims.Length == values.Length, "Wrong use: for each dimension, there has to be a value specified.");
+
+            Rowid[] result = Enumerable.Range(0, table.Data.Length).ToArray(); // All elements of this set (can be quite long)
+
+            bool hasBeenRestricted = false; // For the case where the Length==1, and no key columns are really provided, so we get at the end result.Length==1 which is misleading. Also, this fixes the problem of having no key dimensions.
+            for (int i = 0; i < dims.Length; i++)
+            {
+                hasBeenRestricted = true;
+                Rowid[] range = dims[i].Data.Deproject(values[i]); // Deproject one value
+                result = result.Intersect(range).ToArray();
+                // OPTIMIZE: Write our own implementation for various operations (intersection etc.). Use the fact that they are ordered.
+                // OPTIMIZE: Use statistics for column distribution to choose best order of de-projections. Alternatively, the order of dimensions can be set by the external procedure taking into account statistics. Say, there could be a special utility method like SortDimensionsAccordingDiscriminationFactor or SortDimsForFinding tuples.
+                // OPTIMIZE: Remember the position for the case this value will have to be inserted so we do not have again search for this positin during insertion. Maybe store it in a static field as part of last operation.
+
+                if (result.Length == 0) break; // Not found
+            }
+
+            if (result.Length == 0) // Not found
+            {
+                return -1;
+            }
+            else if (result.Length == 1) // Found single element - return its offset
+            {
+                if (hasBeenRestricted) return result[0];
+                else return -result.Length;
+            }
+            else // Many elements satisfy these properties (non-unique identities). Use other methods for getting these records (like de-projection)
+            {
+                return -result.Length;
+            }
+        }
+
+        public Rowid Append(DcColumn[] dims, object[] values) // Identity dims must be set (for uniqueness). Entity dims are also used when appending. Possibility to append (CanAppend) is not checked. 
+        {
+            Debug.Assert(dims != null && values != null && dims.Length == values.Length, "Wrong use: for each dimension, there has to be a value specified.");
+            Debug.Assert(!table.IsPrimitive, "Wrong use: cannot append to a primitive set. ");
+
+            for (int i = 0; i < dims.Length; i++)
+            {
+                dims[i].Data.Append(values[i]);
+            }
+
+            table.Data.Length = table.Data.Length + 1;
+            return table.Data.Length - 1;
+        }
+
+        public void Remove(Rowid input) // Propagation to lesser (referencing) sets is not checked - it is done by removal/nullifying by de-projection (all records that store some value in some function are removed)
+        {
+            foreach (DcColumn col in table.Columns)
+            {
+                col.Data.Remove(input);
+            }
+
+            table.Data.Length = table.Data.Length - 1;
+        }
+
+
         public TableWriter(DcTable table)
         {
             this.table = table;

@@ -123,6 +123,21 @@ namespace Com.Schema.Csv
             return columnNames;
         }
 
+        public Rowid Find(DcColumn[] dims, object[] values)
+        {
+            throw new NotImplementedException("Csv does not support record finding");
+        }
+
+        public Rowid Append(DcColumn[] dims, object[] values)
+        {
+            throw new NotImplementedException("TODO:");
+        }
+
+        public void Remove(Rowid input)
+        {
+            throw new NotImplementedException("Csv does not support record removal");
+        }
+
         public TableWriterCsv(DcTable table)
         {
             this.table = table;
@@ -130,5 +145,4 @@ namespace Com.Schema.Csv
             connectionCsv = connectionCsv = new ConnectionCsv();
         }
     }
-
 }

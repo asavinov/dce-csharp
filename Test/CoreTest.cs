@@ -105,24 +105,25 @@ namespace Test
 
             DcColumn[] cols = new DcColumn[] { c11, c12, c13, c14 };
             object[] vals = new object[4];
+            DcTableWriter w1 = t1.GetTableWriter();
 
             vals[0] = 20;
             vals[1] = "Record 0";
             vals[2] = 20.0;
             vals[3] = 20.0;
-            t1.Data.Append(cols, vals);
+            w1.Append(cols, vals);
 
             vals[0] = 10;
             vals[1] = "Record 1";
             vals[2] = 10.0;
             vals[3] = 20.0;
-            t1.Data.Append(cols, vals);
+            w1.Append(cols, vals);
 
             vals[0] = 30;
             vals[1] = "Record 2";
             vals[2] = 30.0;
             vals[3] = 20.0;
-            t1.Data.Append(cols, vals);
+            w1.Append(cols, vals);
 
             //
             // Fill sample data in "Table 2"
@@ -136,30 +137,31 @@ namespace Test
 
             cols = new DcColumn[] { c21, c22, c23, c24 };
             vals = new object[4];
+            DcTableWriter w2 = t2.GetTableWriter();
 
             vals[0] = "Value A";
             vals[1] = 20;
             vals[2] = 40.0;
             vals[3] = 0;
-            t2.Data.Append(cols, vals);
+            w2.Append(cols, vals);
 
             vals[0] = "Value A";
             vals[1] = 30;
             vals[2] = 40.0;
             vals[3] = 1;
-            t2.Data.Append(cols, vals);
+            w2.Append(cols, vals);
 
             vals[0] = "Value A";
             vals[1] = 30;
             vals[2] = 50.0;
             vals[3] = 1;
-            t2.Data.Append(cols, vals);
+            w2.Append(cols, vals);
 
             vals[0] = "Value B";
             vals[1] = 30;
             vals[2] = 50.0;
             vals[3] = 1;
-            t2.Data.Append(cols, vals);
+            w2.Append(cols, vals);
         }
 
         #endregion
@@ -247,18 +249,20 @@ namespace Test
             DcColumn c12 = t1.GetColumn("Column 12");
             DcColumn c13 = t1.GetColumn("Column 13");
 
+            DcTableWriter w1 = t1.GetTableWriter();
+
             //
             // Data manipulations
             //
             Assert.AreEqual(3, t1.Data.Length);
 
-            Offset input = t1.Data.Find(new DcColumn[] { c11 }, new object[] { 10 } );
+            Offset input = w1.Find(new DcColumn[] { c11 }, new object[] { 10 } );
             Assert.AreEqual(1, input);
 
-            input = t1.Data.Find(new DcColumn[] { c12 }, new object[] { "Record 1" });
+            input = w1.Find(new DcColumn[] { c12 }, new object[] { "Record 1" });
             Assert.AreEqual(1, input);
 
-            input = t1.Data.Find(new DcColumn[] { c12 }, new object[] { "Record Does Not Exist" });
+            input = w1.Find(new DcColumn[] { c12 }, new object[] { "Record Does Not Exist" });
             Assert.AreEqual(-1, input);
         }
         

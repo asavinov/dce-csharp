@@ -17,18 +17,6 @@ namespace Com.Data
         bool AutoIndex { set; }
         bool Indexed { get; }
         void Reindex();
-
-        //
-        // Tuple (flat record) methods: append, insert, remove, read, write.
-        //
-        // Here we use TUPLE and its constituents as primitive types: Reference etc.
-        // Column names or references are important. Types (table references or names) are necessary and important. Maybe also flags like Super, Key would be useful. 
-        // TUPLE could be used as a set structure specification (e.g., param for set creation).
-        //
-
-        Rowid Find(DcColumn[] dims, object[] values);
-        Rowid Append(DcColumn[] dims, object[] values);
-        void Remove(int input);
     }
 
 }
