@@ -12,7 +12,7 @@ namespace Com.Schema
         /// <summary>
         /// Specifies kind of formula used to define this table. 
         /// </summary>
-        DcTableDefinitionType DefinitionType { get; set; }
+        TableDefinitionType DefinitionType { get; }
 
         /// <summary>
         /// Constraints on all possible instances. 
@@ -54,16 +54,12 @@ namespace Com.Schema
         List<DcColumn> IsUsedInColumns(bool recursive); // Dependants
     }
 
-    public enum DcTableDefinitionType // Specific types of table formula
+    public enum TableDefinitionType // Specific types of table formula
     {
         FREE, // No definition for the table (and cannot be defined). 
         // Example: manually created table with primitive dimensions.
         // Maybe we should interpret it as MANUALly entered data (which is stored along with this table definition as a consequence)
         // Another possible interpretation is explicit population/definition by analogy with colums defined as an explicit array
-
-        ANY, // Arbitrary formula without constraints can be provided with a mix of various expression types
-        // It is introduced by analogy with columns but for tables we actually do not have definitions - they are always populated from columns
-        // Therefore, this option is not currently used
 
         PRODUCT, // Table contains all combinations of its greater (key) sets satsifying the constraints
         // An important parameter is which dimensions to vary: FREE or IsKey? So we need to define dependency between to be FREE (definition) and to be key (uniqueness constraint)
@@ -88,6 +84,10 @@ namespace Com.Schema
         // If cannot be added (does not satisfy constraints) then set values of the greater generating dimensions to null
 
         FILTER, // Tables contains a subset of elements from its super-set
+
+        ANY, // Arbitrary formula without constraints can be provided with a mix of various expression types
+        // It is introduced by analogy with columns but for tables we actually do not have definitions - they are always populated from columns
+        // Therefore, this option is not currently used
     }
 
 }

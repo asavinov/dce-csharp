@@ -181,7 +181,7 @@ namespace Com.Schema
             return ret;
         }
 
-        #region ComTableData interface
+        #region DcTableData interface
 
         /// <summary>
         /// How many instances this set has. Cardinality. Set power. Length (height) of instance set.
@@ -303,9 +303,31 @@ namespace Com.Schema
 
         #endregion
 
-        #region ComTableDefinition
+        #region DcTableDefinition
 
-        public DcTableDefinitionType DefinitionType { get; set; }
+        public TableDefinitionType DefinitionType {
+            get
+            {
+                if (IsPrimitive) return TableDefinitionType.FREE;
+
+                // Try to find incoming generating (append) columns. If they exist then table instances are populated as this dimension output tuples.
+                DcColumn[] inColumns = InputColumns.Where(d => d.Definition.IsAppendData).ToArray();
+                if(inColumns != null && inColumns.Length > 0)
+                {
+                    return TableDefinitionType.PROJECTION;
+                }
+
+                // Try to find outgoing key non-primitive columns. If they exist then table instances are populated as their combinations.
+                DcColumn[] outColumns = Columns.Where(x => x.IsKey && !x.IsPrimitive).ToArray();
+                if(outColumns != null && outColumns.Length > 0)
+                {
+                    return TableDefinitionType.PRODUCT;
+                }
+
+                // No instances can be created automatically. 
+                return TableDefinitionType.FREE;
+            }
+        }
 
         public string WhereFormula { get; set; }
         public ExprNode WhereExpr { get; set; }
@@ -320,14 +342,14 @@ namespace Com.Schema
 
         public void Populate() 
         {
-            if (DefinitionType == DcTableDefinitionType.FREE)
+            if (DefinitionType == TableDefinitionType.FREE)
             {
                 return; // Nothing to do
             }
 
             Length = 0;
 
-            if (DefinitionType == DcTableDefinitionType.PRODUCT) // Product of local sets (no project/de-project from another set)
+            if (DefinitionType == TableDefinitionType.PRODUCT) // Product of local sets (no project/de-project from another set)
             {
                 //
                 // Evaluator for where expression which will be used to check each new record before it is added
@@ -407,7 +429,7 @@ namespace Com.Schema
                 }
 
             }
-            else if (DefinitionType == DcTableDefinitionType.PROJECTION) // There are import dimensions so copy data from another set (projection of another set)
+            else if (DefinitionType == TableDefinitionType.PROJECTION) // There are import dimensions so copy data from another set (projection of another set)
             {
                 DcColumn projectDim = InputColumns.Where(d => d.Definition.IsAppendData).ToList()[0];
                 DcTable sourceSet = projectDim.Input;
@@ -612,8 +634,6 @@ namespace Com.Schema
             JObject tableDef = (JObject)json["definition"];
             if (tableDef != null && Definition != null)
             {
-                Definition.DefinitionType = tableDef["definition_type"] != null ? (DcTableDefinitionType)(int)tableDef["definition_type"] : DcTableDefinitionType.FREE;
-
                 if (tableDef["where"] != null)
                 {
                     ExprNode node = (ExprNode)Utils.CreateObjectFromJson((JObject)tableDef["where"]);
@@ -704,8 +724,6 @@ namespace Com.Schema
 
             greaterDims = new List<DcColumn>(); // Up arrows
             lesserDims = new List<DcColumn>();
-
-            DefinitionType = DcTableDefinitionType.FREE;
         }
 
         #endregion

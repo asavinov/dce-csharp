@@ -624,8 +624,6 @@ namespace Com.Utils
             dimImport.Add();
 
             // Define the table
-            dimImport.Output.Definition.DefinitionType = DcTableDefinitionType.PROJECTION;
-
             return mapping.TargetSet;
         }
 

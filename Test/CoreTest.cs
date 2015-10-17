@@ -432,7 +432,6 @@ namespace Test
             // Define a new product-set
             //
             DcTable t3 = schema.CreateTable("Table 3");
-            t3.Definition.DefinitionType = DcTableDefinitionType.PRODUCT;
             schema.AddTable(t3, null, null);
 
             DcColumn c31 = schema.CreateColumn(t1.Name, t3, t1, true); // {*20, 10, *30}
@@ -474,7 +473,6 @@ namespace Test
 
             ExprNode ast = ExprBuilder.Build("[Column 22] > 20.0 && this.Super.[Column 23] < 50");
             t3.Definition.WhereExpr = ast;
-            t3.Definition.DefinitionType = DcTableDefinitionType.PRODUCT;
 
             schema.AddTable(t3, t2, null);
 
@@ -498,7 +496,6 @@ namespace Test
             // Project "Table 2" along "Column 21" and get 2 unique records in a new set "Value A" (3 references) and "Value B" (1 reference)
             //
             DcTable t3 = schema.CreateTable("Table 3");
-            t3.Definition.DefinitionType = DcTableDefinitionType.PROJECTION;
             schema.AddTable(t3, null, null);
 
             DcColumn c31 = schema.CreateColumn(c21.Name, t3, c21.Output, true);
@@ -530,7 +527,6 @@ namespace Test
             // Defining a combination of "Column 21" and "Column 22" and project with 3 unique records in a new set
             //
             DcTable t4 = schema.CreateTable("Table 4");
-            t4.Definition.DefinitionType = DcTableDefinitionType.PROJECTION;
             schema.AddTable(t4, null, null);
 
             DcColumn c41 = schema.CreateColumn(c21.Name, t4, c21.Output, true);
@@ -609,7 +605,6 @@ namespace Test
             schema.Workspace = workspace;
 
             DcTable orderDetailsTable = schema.CreateTable("Order Details");
-            orderDetailsTable.Definition.DefinitionType = DcTableDefinitionType.PROJECTION;
             
             // Create mapping
             Mapper mapper = new Mapper();
@@ -664,7 +659,6 @@ namespace Test
 
             DcTable productsTable = schema.CreateTable("Products");
             schema.AddTable(productsTable, null, null);
-            productsTable.Definition.DefinitionType = DcTableDefinitionType.PROJECTION;
 
             // Manually create column to be imported (we need an automatic mechanism for appending missing columns specified in the formula)
             DcColumn p1 = schema.CreateColumn("ID", productsTable, schema.GetPrimitive("Integer"), true);
@@ -721,7 +715,6 @@ namespace Test
             SetCsv table = (SetCsv)top.CreateTable("Table_1");
             top.AddTable(table, null, null);
             table.FilePath = CsvWrite;
-            table.Definition.DefinitionType = DcTableDefinitionType.PROJECTION;
 
             // Manually create column to be imported (we need an automatic mechanism for appending missing columns specified in the formula)
             DcColumn p1 = top.CreateColumn("Column 11", table, top.GetPrimitive("String"), true);
@@ -754,7 +747,6 @@ namespace Test
 
             // Add table definition 
             DcTable t = schema.GetSubTable("Table 2");
-            t.Definition.DefinitionType = DcTableDefinitionType.PRODUCT;
             ExprNode ast = ExprBuilder.Build("[Column 22] > 20.0 && this.Super.[Column 23] < 50");
             t.Definition.WhereExpr = ast;
 
@@ -787,7 +779,7 @@ namespace Test
             Assert.AreEqual("Table 1", ws.Schemas[0].GetSubTable("Table 2").GetColumn("Table 1").Output.Name);
 
             t = ws.Schemas[0].GetSubTable("Table 2");
-            Assert.AreEqual(DcTableDefinitionType.PRODUCT, t.Definition.DefinitionType);
+            Assert.AreEqual(TableDefinitionType.PRODUCT, t.Definition.DefinitionType);
             Assert.AreEqual(2, t.Definition.WhereExpr.Children.Count);
 
             c = t.GetColumn("Column 22");
