@@ -15,7 +15,6 @@ using Newtonsoft.Json.Linq;
 using Com.Utils;
 using Com.Data;
 using Com.Data.Query;
-using Com.Data.Eval;
 
 using Rowid = System.Int32;
 
@@ -229,20 +228,6 @@ namespace Com.Schema
             }
         }
 
-        public object GetValue(string name, Rowid offset)
-        {
-            Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
-            DcColumn col = GetColumn(name);
-            return col.Data.GetValue(offset);
-        }
-
-        public void SetValue(string name, Rowid offset, object value)
-        {
-            Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
-            DcColumn col = GetColumn(name);
-            col.Data.SetValue(offset, value);
-        }
-
         public Rowid Find(DcColumn[] dims, object[] values) // Type of dimensions (super, id, non-id) is not important and is not used
         {
             Debug.Assert(dims != null && values != null && dims.Length == values.Length, "Wrong use: for each dimension, there has to be a value specified.");
@@ -311,15 +296,15 @@ namespace Com.Schema
                 if (IsPrimitive) return TableDefinitionType.FREE;
 
                 // Try to find incoming generating (append) columns. If they exist then table instances are populated as this dimension output tuples.
-                DcColumn[] inColumns = InputColumns.Where(d => d.Definition.IsAppendData).ToArray();
-                if(inColumns != null && inColumns.Length > 0)
+                List<DcColumn> inColumns = InputColumns.Where(d => d.Definition.IsAppendData).ToList();
+                if(inColumns != null && inColumns.Count > 0)
                 {
                     return TableDefinitionType.PROJECTION;
                 }
 
                 // Try to find outgoing key non-primitive columns. If they exist then table instances are populated as their combinations.
-                DcColumn[] outColumns = Columns.Where(x => x.IsKey && !x.IsPrimitive).ToArray();
-                if(outColumns != null && outColumns.Length > 0)
+                List<DcColumn> outColumns = Columns.Where(x => x.IsKey && !x.IsPrimitive).ToList();
+                if(outColumns != null && outColumns.Count > 0)
                 {
                     return TableDefinitionType.PRODUCT;
                 }
@@ -329,16 +314,25 @@ namespace Com.Schema
             }
         }
 
-        public string WhereFormula { get; set; }
+        protected string whereFormula;
+        public string WhereFormula
+        {
+            get { return whereFormula; }
+            set
+            {
+                whereFormula = value;
+
+                if (string.IsNullOrWhiteSpace(whereFormula)) return;
+
+                ExprBuilder exprBuilder = new ExprBuilder();
+                ExprNode expr = exprBuilder.Build(whereFormula);
+
+                WhereExpr = expr;
+            }
+        }
         public ExprNode WhereExpr { get; set; }
 
-        public ExprNode OrderbyExpr { get; set; }
-
-        public DcEvaluator GetWhereEvaluator()
-        {
-            DcEvaluator evaluator = new EvaluatorExpr(this);
-            return evaluator;
-        }
+        public string OrderbyFormula { get; set; }
 
         public void Populate() 
         {
@@ -349,15 +343,33 @@ namespace Com.Schema
 
             Length = 0;
 
-            if (DefinitionType == TableDefinitionType.PRODUCT) // Product of local sets (no project/de-project from another set)
+            if (DefinitionType == TableDefinitionType.PROJECTION) // There are import dimensions so copy data from another set (projection of another set)
             {
-                //
-                // Evaluator for where expression which will be used to check each new record before it is added
-                //
-                DcEvaluator eval = null;
-                if (Definition.WhereExpr != null)
+                List<DcColumn> inColumns = InputColumns.Where(d => d.Definition.IsAppendData).ToList();
+
+                foreach(DcColumn inColumn in inColumns)
                 {
-                    eval = GetWhereEvaluator();
+                    inColumn.Definition.Evaluate(); // Delegate to column evaluation - it will add records from column expression
+                }
+            }
+            else if (DefinitionType == TableDefinitionType.PRODUCT) // Product of local sets (no project/de-project from another set)
+            {
+                // Input variable for where formula
+                DcVariable thisVariable = new Variable(this.Schema.Name, this.Name, "this");
+                thisVariable.TypeSchema = this.Schema;
+                thisVariable.TypeTable = this;
+
+                // Evaluator expression for where formula
+                ExprNode outputExpr = this.Definition.WhereExpr;
+                if(outputExpr != null)
+                {
+                    outputExpr.OutputVariable.SchemaName = this.Schema.Name;
+                    outputExpr.OutputVariable.TypeName = "Boolean";
+                    outputExpr.OutputVariable.TypeSchema = this.Schema;
+                    outputExpr.OutputVariable.TypeTable = this.Schema.GetPrimitive("Boolean");
+                    outputExpr.Resolve(this.Schema.Workspace, new List<DcVariable>() { thisVariable });
+
+                    outputExpr.EvaluateBegin();
                 }
 
                 //
@@ -391,18 +403,22 @@ namespace Com.Schema
                         }
                         Rowid input = Append(dims, vals);
 
+                        //
                         // Now check if this appended element satisfies the where expression and if not then remove it
-                        if (eval != null)
+                        //
+                        if (outputExpr != null)
                         {
-                            bool satisfies = true;
+                            // Set 'this' variable to the last elements (that has been just appended) which will be read by the expression
+                            thisVariable.SetValue(this.Data.Length - 1);
 
-                            eval.LastInput();
-                            eval.Evaluate();
-                            satisfies = (bool)eval.GetOutput();
+                            // Evaluate expression
+                            outputExpr.Evaluate();
+
+                            bool satisfies = (bool)outputExpr.OutputVariable.GetValue();
 
                             if (!satisfies)
                             {
-                                Length = Length - 1;
+                                Length = Length - 1; // Remove elements
                             }
                         }
 
@@ -428,15 +444,10 @@ namespace Com.Schema
                     }
                 }
 
-            }
-            else if (DefinitionType == TableDefinitionType.PROJECTION) // There are import dimensions so copy data from another set (projection of another set)
-            {
-                DcColumn projectDim = InputColumns.Where(d => d.Definition.IsAppendData).ToList()[0];
-                DcTable sourceSet = projectDim.Input;
-                DcTable targetSet = projectDim.Output; // this set
-
-                // Delegate to column evaluation - it will add records from column expression
-                projectDim.Definition.Evaluate();
+                if (outputExpr != null)
+                {
+                    outputExpr.EvaluateEnd();
+                }
             }
             else
             {
@@ -599,7 +610,7 @@ namespace Com.Schema
         
         #endregion
 
-        #region ComJson serialization
+        #region DcJson serialization
 
         public virtual void ToJson(JObject json)
         {

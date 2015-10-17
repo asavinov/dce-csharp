@@ -7,8 +7,8 @@ using System.Diagnostics;
 
 using Newtonsoft.Json.Linq;
 
+using Com.Data;
 using Com.Data.Query;
-using Com.Data.Eval;
 
 using Rowid = System.Int32;
 
@@ -145,11 +145,6 @@ namespace Com.Schema
                     nodes = tab.Definition.WhereExpr.Find((DcTable)table);
                     nodes.ForEach(x => x.Name = newName);
                 }
-                if (tab.Definition.OrderbyExpr != null)
-                {
-                    nodes = tab.Definition.OrderbyExpr.Find((DcTable)table);
-                    nodes.ForEach(x => x.Name = newName);
-                }
             }
 
             table.Name = newName;
@@ -186,11 +181,6 @@ namespace Com.Schema
                 if (tab.Definition.WhereExpr != null)
                 {
                     nodes = tab.Definition.WhereExpr.Find((DcColumn)column);
-                    nodes.ForEach(x => x.Name = newName);
-                }
-                if (tab.Definition.OrderbyExpr != null)
-                {
-                    nodes = tab.Definition.OrderbyExpr.Find((DcColumn)column);
                     nodes.ForEach(x => x.Name = newName);
                 }
             }
@@ -231,17 +221,12 @@ namespace Com.Schema
                     nodes = tab.Definition.WhereExpr.Find(column);
                     foreach (var node in nodes) if (node.Parent != null) node.Parent.RemoveChild(node);
                 }
-                if (tab.Definition.OrderbyExpr != null)
-                {
-                    nodes = tab.Definition.OrderbyExpr.Find(column);
-                    foreach (var node in nodes) if (node.Parent != null) node.Parent.RemoveChild(node);
-                }
             }
         }
 
         public DataSourceType DataSourceType { get; protected set; } // Where data is stored and processed (engine). Replace class name
 
-        #region ComJson serialization
+        #region DcJson serialization
 
         public override void ToJson(JObject json)
         {

@@ -139,7 +139,7 @@ namespace Com.Schema.Rel
 
         #endregion
 
-        #region ComJson serialization
+        #region DcJson serialization
 
         public override void ToJson(JObject json)
         {

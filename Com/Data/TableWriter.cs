@@ -7,7 +7,6 @@ using System.Diagnostics;
 using Com.Utils;
 using Com.Schema;
 using Com.Data.Query;
-using Com.Data.Eval;
 
 using Rowid = System.Int32;
 

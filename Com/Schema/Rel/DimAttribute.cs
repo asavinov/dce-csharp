@@ -147,7 +147,7 @@ namespace Com.Schema.Rel
             }
         }
 
-        #region ComJson Serialization
+        #region DcJson Serialization
 
         public override void ToJson(JObject json) // Write fields to the json object
         {

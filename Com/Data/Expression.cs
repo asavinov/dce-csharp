@@ -7,7 +7,7 @@ using System.Diagnostics;
 
 using Rowid = System.Int32;
 
-namespace Com.Data.Eval
+namespace Com.Data
 {
     /// <summary>
     /// One node of a complex expression representing one operation on a single or sets of values.

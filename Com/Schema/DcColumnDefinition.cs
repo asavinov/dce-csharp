@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-using Com.Data.Query;
 using Com.Utils;
-using Com.Data.Eval;
+using Com.Data;
+using Com.Data.Query;
 
 namespace Com.Schema
 {

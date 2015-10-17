@@ -9,7 +9,6 @@ using System.Diagnostics;
 using Newtonsoft.Json.Linq;
 
 using Com.Data;
-using Com.Data.Eval;
 
 using Rowid = System.Int32;
 
@@ -49,7 +48,7 @@ namespace Com.Schema.Csv
 
         #endregion
 
-        #region ComJson serialization
+        #region DcJson serialization
 
         public override void ToJson(JObject json)
         {

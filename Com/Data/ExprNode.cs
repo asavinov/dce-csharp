@@ -17,7 +17,7 @@ using Com.Utils;
 
 using Rowid = System.Int32;
 
-namespace Com.Data.Eval
+namespace Com.Data
 {
     // Represents a function definition in terms of other functions and provides its run-time interface.
     // Main unit of the representation is a triple: (Type) Name = Value. 
@@ -1139,7 +1139,7 @@ namespace Com.Data.Eval
             return expr;
         }
 
-        #region ComJson serialization
+        #region DcJson serialization
 
         public virtual void ToJson(JObject json)
         {

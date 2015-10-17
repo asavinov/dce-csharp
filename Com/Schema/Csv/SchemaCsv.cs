@@ -117,7 +117,7 @@ namespace Com.Schema.Csv
 
         #endregion
 
-        #region ComJson serialization
+        #region DcJson serialization
 
         public override void ToJson(JObject json)
         {

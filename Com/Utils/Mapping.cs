@@ -6,9 +6,9 @@ using System.Linq;
 using System.Text;
 
 using Com.Utils;
+using Com.Data;
 using Com.Schema;
 using Com.Data.Query;
-using Com.Data.Eval;
 
 using Newtonsoft.Json.Linq;
 
@@ -386,7 +386,7 @@ namespace Com.Utils
             tree.AddToSchema(schema);
         }
 
-        #region ComJson serialization
+        #region DcJson serialization
 
         public virtual void ToJson(JObject json)
         {
@@ -519,7 +519,7 @@ namespace Com.Utils
             return true;
         }
 
-        #region ComJson serialization
+        #region DcJson serialization
 
         public virtual void ToJson(JObject json)
         {

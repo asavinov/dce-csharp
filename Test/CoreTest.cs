@@ -13,7 +13,6 @@ using Com.Schema.Rel;
 using Com.Schema.Csv;
 using Com.Data;
 using Com.Data.Query;
-using Com.Data.Eval;
 
 using Offset = System.Int32;
 
@@ -446,8 +445,7 @@ namespace Test
             // Add simple where expression
             //
 
-            ExprNode ast = ExprBuilder.Build("([Table 1].[Column 11] > 10) && this.[Table 2].[Column 23] == 50.0");
-            t3.Definition.WhereExpr = ast;
+            t3.Definition.WhereFormula = "([Table 1].[Column 11] > 10) && this.[Table 2].[Column 23] == 50.0";
 
             t3.Definition.Populate();
             Assert.AreEqual(4, t3.Data.Length);
@@ -470,10 +468,7 @@ namespace Test
             // Define a new filter-set
             //
             DcTable t3 = schema.CreateTable("Table 3");
-
-            ExprNode ast = ExprBuilder.Build("[Column 22] > 20.0 && this.Super.[Column 23] < 50");
-            t3.Definition.WhereExpr = ast;
-
+            t3.Definition.WhereFormula = "[Column 22] > 20.0 && this.Super.[Column 23] < 50";
             schema.AddTable(t3, t2, null);
 
             t3.Definition.Populate();
@@ -501,15 +496,9 @@ namespace Test
             DcColumn c31 = schema.CreateColumn(c21.Name, t3, c21.Output, true);
             c31.Add();
 
-            // Manually define a mapping as the generating column definition by using one column only. And create a generating dimension with this mapping.
-            /*
-            Mapping map24 = new Mapping(t2, t3);
-            map24.AddMatch(new PathMatch(new DimPath(c21), new DimPath(c31)));
-
             // Create a generating column
-            DcColumn c24 = schema.CreateColumn(map24.SourceSet.Name, map24.SourceSet, map24.TargetSet, false);
-            c24.Definition.Mapping = map24;
-            c24.Definition.DefinitionType = DcColumnDefinitionType.LINK;
+            DcColumn c24 = schema.CreateColumn("Project", t2, t3, false);
+            c24.Definition.Formula = "(( [String] [Column 21] = [Column 21] ))";
             c24.Definition.IsAppendData = true;
             c24.Add();
 
@@ -521,7 +510,6 @@ namespace Test
             Assert.AreEqual(0, c24.Data.GetValue(1));
             Assert.AreEqual(0, c24.Data.GetValue(2));
             Assert.AreEqual(1, c24.Data.GetValue(3));
-            */
 
             //
             // Defining a combination of "Column 21" and "Column 22" and project with 3 unique records in a new set
@@ -534,16 +522,8 @@ namespace Test
             DcColumn c42 = schema.CreateColumn(c22.Name, t4, c22.Output, true);
             c42.Add();
 
-            // Manually define a mapping as the generating column definition by using one column only. And create a generating dimension with this mapping.
-            /*
-            Mapping map25 = new Mapping(t2, t4);
-            map25.AddMatch(new PathMatch(new DimPath(c21), new DimPath(c41)));
-            map25.AddMatch(new PathMatch(new DimPath(c22), new DimPath(c42)));
-
-            // Create generating/import column
-            DcColumn c25 = schema.CreateColumn(map25.SourceSet.Name, map25.SourceSet, map25.TargetSet, false);
-            c25.Definition.Mapping = map25;
-            c25.Definition.DefinitionType = DcColumnDefinitionType.LINK;
+            DcColumn c25 = schema.CreateColumn("Project", t2, t4, false);
+            c25.Definition.Formula = "(( [String] [Column 21] = [Column 21], [Integer] [Column 22] = [Column 22] ))";
             c25.Definition.IsAppendData = true;
             c25.Add();
 
@@ -555,7 +535,6 @@ namespace Test
             Assert.AreEqual(1, c25.Data.GetValue(1));
             Assert.AreEqual(1, c25.Data.GetValue(2));
             Assert.AreEqual(2, c25.Data.GetValue(3));
-            */
         }
 
         [TestMethod]
@@ -747,8 +726,7 @@ namespace Test
 
             // Add table definition 
             DcTable t = schema.GetSubTable("Table 2");
-            ExprNode ast = ExprBuilder.Build("[Column 22] > 20.0 && this.Super.[Column 23] < 50");
-            t.Definition.WhereExpr = ast;
+            t.Definition.WhereFormula = "[Column 22] > 20.0 && this.Super.[Column 23] < 50";
 
             // Add column definition 
             DcColumn c = t.GetColumn("Column 22");
@@ -777,10 +755,6 @@ namespace Test
             Assert.AreEqual(5, ws.Schemas[0].GetSubTable("Table 2").Columns.Count);
 
             Assert.AreEqual("Table 1", ws.Schemas[0].GetSubTable("Table 2").GetColumn("Table 1").Output.Name);
-
-            t = ws.Schemas[0].GetSubTable("Table 2");
-            Assert.AreEqual(TableDefinitionType.PRODUCT, t.Definition.DefinitionType);
-            Assert.AreEqual(2, t.Definition.WhereExpr.Children.Count);
 
             c = t.GetColumn("Column 22");
             //Assert.AreEqual(DcColumnDefinitionType.ARITHMETIC, c.Definition.FormulaExpr.DefinitionType);

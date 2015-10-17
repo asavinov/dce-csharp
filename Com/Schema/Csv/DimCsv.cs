@@ -19,7 +19,7 @@ namespace Com.Schema.Csv
 
         public int ColumnIndex { get; set; } // Zero-based sequential column number in the file
 
-        #region ComJson serialization
+        #region DcJson serialization
 
         public override void ToJson(JObject json)
         {

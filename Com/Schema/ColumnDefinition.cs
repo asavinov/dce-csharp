@@ -8,7 +8,6 @@ using Com.Schema.Csv;
 using Com.Schema.Rel;
 using Com.Data;
 using Com.Data.Query;
-using Com.Data.Eval;
 
 using Rowid = System.Int32;
 
@@ -40,6 +39,7 @@ namespace Com.Schema
                 FormulaExpr = expr;
             }
         }
+        public ExprNode FormulaExpr { get; set; }
 
         //
         // Structured (object) representation
@@ -49,7 +49,6 @@ namespace Com.Schema
 
         public bool IsAppendSchema { get; set; }
 
-        public ExprNode FormulaExpr { get; set; }
 
         public void Evaluate()
         {

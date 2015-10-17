@@ -5,7 +5,6 @@ using System.Text;
 
 using Com.Schema;
 using Com.Data.Query;
-using Com.Data.Eval;
 
 using Rowid = System.Int32;
 
@@ -18,13 +17,6 @@ namespace Com.Data
         bool AutoIndex { set; }
         bool Indexed { get; }
         void Reindex();
-
-        //
-        // Value methods (convenience, probably should be removed and replaced by manual access to dimensions)
-        //
-
-        object GetValue(string name, Rowid offset);
-        void SetValue(string name, Rowid offset, object value);
 
         //
         // Tuple (flat record) methods: append, insert, remove, read, write.

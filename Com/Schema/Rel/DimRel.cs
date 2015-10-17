@@ -19,7 +19,7 @@ namespace Com.Schema.Rel
         /// </summary>
         public string RelationalFkName { get; set; } // The original FK name this dimension was created from
 
-        #region ComJson serialization
+        #region DcJson serialization
 
         public override void ToJson(JObject json)
         {

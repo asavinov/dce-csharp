@@ -75,7 +75,6 @@
     <Compile Include="Data\Aggregator.cs" />
     <Compile Include="Schema\DataCommandr.cs" />
     <Compile Include="Schema\DcColumn.cs" />
-    <Compile Include="Data\Eval\DcEvaluator.cs" />
     <Compile Include="Schema\DcSchema.cs" />
     <Compile Include="Schema\DcTable.cs" />
     <Compile Include="Data\DcVariable.cs" />
@@ -91,9 +90,8 @@
     <Compile Include="Utils\DimEnumerator.cs" />
     <Compile Include="Utils\DimPath.cs" />
     <Compile Include="Utils\DimTree.cs" />
-    <Compile Include="Data\Eval\ExprNode.cs" />
+    <Compile Include="Data\ExprNode.cs" />
     <Compile Include="Schema\DcWorkspace.cs" />
-    <Compile Include="Data\Eval\EvaluatorExpr.cs" />
     <Compile Include="Utils\Mapper.cs" />
     <Compile Include="Utils\Mapping.cs" />
     <Compile Include="Schema\Set.cs" />

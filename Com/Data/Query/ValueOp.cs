@@ -6,7 +6,6 @@ using System.Text;
 
 using Com.Utils;
 using Com.Schema;
-using Com.Data.Eval;
 
 using Rowid = System.Int32;
 

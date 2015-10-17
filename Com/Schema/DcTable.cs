@@ -5,7 +5,6 @@ using System.Text;
 
 using Com.Data;
 using Com.Data.Query;
-using Com.Data.Eval;
 
 using Rowid = System.Int32;
 

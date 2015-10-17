@@ -9,7 +9,6 @@ using Newtonsoft.Json.Linq;
 
 using Com.Utils;
 using Com.Data;
-using Com.Data.Eval;
 
 using Rowid = System.Int32;
 
@@ -125,7 +124,7 @@ namespace Com.Schema
 
         #endregion
 
-        #region ComJson serialization
+        #region DcJson serialization
 
         public virtual void ToJson(JObject json) // Write fields to the json object
         {

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-using Com.Data.Eval;
+using Com.Data;
 
 namespace Com.Schema
 {
@@ -25,10 +25,9 @@ namespace Com.Schema
         /// <summary>
         /// Ordering of the instances. 
         /// Here again we have a choice: it is how source elements are sorted or it is how elements of this set have to be sorted. 
+        /// Expression should be something like Comparator
         /// </summary>
-        ExprNode OrderbyExpr { get; set; } // Here we should store something like Comparator
-
-        DcEvaluator GetWhereEvaluator(); // Get an object which is used to compute the where expression according to the formula
+        string OrderbyFormula { get; set; }
 
         /// <summary>
         /// Create all instances of this set. 
