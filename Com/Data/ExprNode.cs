@@ -476,7 +476,7 @@ namespace Com.Data
                 // Open file for writing
                 if (OutputVariable.TypeTable != null && !OutputVariable.TypeTable.IsPrimitive)
                 {
-                    TableWriter = OutputVariable.TypeTable.GetTableWriter();
+                    TableWriter = OutputVariable.TypeTable.GetData().GetTableWriter();
                     TableWriter.Open();
                 }
 
@@ -624,7 +624,7 @@ namespace Com.Data
                     {
                         Rowid input = TableWriter.Find(this);
 
-                        if (input < 0 || input >= OutputVariable.TypeTable.Data.Length) // Not found
+                        if (input < 0 || input >= OutputVariable.TypeTable.GetData().Length) // Not found
                         {
                             OutputVariable.SetValue(null);
                         }
@@ -640,7 +640,7 @@ namespace Com.Data
                     {
                         Rowid input = TableWriter.Find(this); // Uniqueness constraint: check if it exists already
 
-                        if (input < 0 || input >= OutputVariable.TypeTable.Data.Length) // Not found
+                        if (input < 0 || input >= OutputVariable.TypeTable.GetData().Length) // Not found
                         {
                             input = TableWriter.Append(this); // Append new
                         }
@@ -701,7 +701,7 @@ namespace Com.Data
                     {
                         ExprNode prevOutput = child1;
                         Rowid input = (Rowid)prevOutput.OutputVariable.GetValue();
-                        object output = Column.Data.GetValue(input);
+                        object output = Column.GetData().GetValue(input);
                         OutputVariable.SetValue(output);
                     }
                     else if (Variable != null)

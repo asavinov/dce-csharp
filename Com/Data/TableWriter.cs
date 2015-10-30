@@ -24,7 +24,7 @@ namespace Com.Data
 
         public virtual void Close()
         {
-            rowid = table.Data.Length;
+            rowid = table.GetData().Length;
         }
 
         public virtual Rowid Find(ExprNode expr) // Use only identity dims (for general case use Search which returns a subset of elements)
@@ -35,7 +35,7 @@ namespace Com.Data
             Debug.Assert(expr.OutputVariable.TypeTable == table, "Wrong use: expression OutputSet must be equal to the set its value is appended/found.");
             Debug.Assert(expr.Operation == OperationType.TUPLE, "Wrong use: operation type for appending has to be TUPLE. ");
 
-            Rowid[] result = Enumerable.Range(0, table.Data.Length).ToArray(); // All elements of this set (can be quite long)
+            Rowid[] result = Enumerable.Range(0, table.GetData().Length).ToArray(); // All elements of this set (can be quite long)
             bool hasBeenRestricted = false; // For the case where the Length==1, and no key columns are really provided, so we get at the end result.Length==1 which is misleading. Also, this fixes the problem of having no key dimensions.
 
             List<DcColumn> dims = new List<DcColumn>();
@@ -51,7 +51,7 @@ namespace Com.Data
                     val = childExpr.OutputVariable.GetValue();
 
                     hasBeenRestricted = true;
-                    Rowid[] range = dim.Data.Deproject(val); // Deproject the value
+                    Rowid[] range = dim.GetData().Deproject(val); // Deproject the value
                     result = result.Intersect(range).ToArray(); // Intersect with previous de-projections
                     // OPTIMIZE: Write our own implementation for intersection and other operations. Assume that they are ordered.
                     // OPTIMIZE: Remember the position for the case this value will have to be inserted so we do not have again search for this positin during insertion (optimization)
@@ -142,15 +142,15 @@ namespace Com.Data
                 {
                     val = childExpr.OutputVariable.GetValue();
                 }
-                dim.Data.Append(val);
+                dim.GetData().Append(val);
             }
 
             //
             // TODO: Check other constraints (for example, where constraint). Remove if not satisfies and return status.
             //
 
-            table.Data.Length = table.Data.Length + 1;
-            return table.Data.Length - 1;
+            table.GetData().Length = table.GetData().Length + 1;
+            return table.GetData().Length - 1;
         }
 
         /*
@@ -196,13 +196,13 @@ namespace Com.Data
         {
             Debug.Assert(dims != null && values != null && dims.Length == values.Length, "Wrong use: for each dimension, there has to be a value specified.");
 
-            Rowid[] result = Enumerable.Range(0, table.Data.Length).ToArray(); // All elements of this set (can be quite long)
+            Rowid[] result = Enumerable.Range(0, table.GetData().Length).ToArray(); // All elements of this set (can be quite long)
 
             bool hasBeenRestricted = false; // For the case where the Length==1, and no key columns are really provided, so we get at the end result.Length==1 which is misleading. Also, this fixes the problem of having no key dimensions.
             for (int i = 0; i < dims.Length; i++)
             {
                 hasBeenRestricted = true;
-                Rowid[] range = dims[i].Data.Deproject(values[i]); // Deproject one value
+                Rowid[] range = dims[i].GetData().Deproject(values[i]); // Deproject one value
                 result = result.Intersect(range).ToArray();
                 // OPTIMIZE: Write our own implementation for various operations (intersection etc.). Use the fact that they are ordered.
                 // OPTIMIZE: Use statistics for column distribution to choose best order of de-projections. Alternatively, the order of dimensions can be set by the external procedure taking into account statistics. Say, there could be a special utility method like SortDimensionsAccordingDiscriminationFactor or SortDimsForFinding tuples.
@@ -233,21 +233,21 @@ namespace Com.Data
 
             for (int i = 0; i < dims.Length; i++)
             {
-                dims[i].Data.Append(values[i]);
+                dims[i].GetData().Append(values[i]);
             }
 
-            table.Data.Length = table.Data.Length + 1;
-            return table.Data.Length - 1;
+            table.GetData().Length = table.GetData().Length + 1;
+            return table.GetData().Length - 1;
         }
 
         public void Remove(Rowid input) // Propagation to lesser (referencing) sets is not checked - it is done by removal/nullifying by de-projection (all records that store some value in some function are removed)
         {
             foreach (DcColumn col in table.Columns)
             {
-                col.Data.Remove(input);
+                col.GetData().Remove(input);
             }
 
-            table.Data.Length = table.Data.Length - 1;
+            table.GetData().Length = table.GetData().Length - 1;
         }
 
 

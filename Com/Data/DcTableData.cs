@@ -17,6 +17,10 @@ namespace Com.Data
         bool AutoIndex { set; }
         bool Indexed { get; }
         void Reindex();
+
+        DcTableReader GetTableReader();
+        DcTableWriter GetTableWriter();
+        DcTableDefinition GetDefinition();
     }
 
 }

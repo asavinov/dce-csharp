@@ -32,7 +32,7 @@ namespace Com.Schema.Csv
 
         public void Close()
         {
-            rowid = table.Data.Length;
+            rowid = table.GetData().Length;
 
             connectionCsv.CloseReader();
         }

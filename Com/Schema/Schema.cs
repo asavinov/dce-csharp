@@ -128,21 +128,22 @@ namespace Com.Schema
 
                 foreach (var col in tab.Columns)
                 {
-                    if (col.Definition == null) continue;
+                    if (col.GetData() == null || col.GetData().GetDefinition() == null) continue;
+                    DcColumnDefinition def = col.GetData().GetDefinition();
 
-                    if (col.Definition.FormulaExpr != null)
+                    if (def.FormulaExpr != null)
                     {
-                        nodes = col.Definition.FormulaExpr.Find((DcTable)table);
+                        nodes = def.FormulaExpr.Find((DcTable)table);
                         nodes.ForEach(x => x.Name = newName);
                     }
                 }
 
-                if (tab.Definition == null) continue;
+                if (tab.GetData().GetDefinition() == null) continue;
 
                 // Update table definitions by finding the uses of the specified column
-                if (tab.Definition.WhereExpr != null)
+                if (tab.GetData().GetDefinition().WhereExpr != null)
                 {
-                    nodes = tab.Definition.WhereExpr.Find((DcTable)table);
+                    nodes = tab.GetData().GetDefinition().WhereExpr.Find((DcTable)table);
                     nodes.ForEach(x => x.Name = newName);
                 }
             }
@@ -166,21 +167,22 @@ namespace Com.Schema
 
                 foreach (var col in tab.Columns)
                 {
-                    if (col.Definition == null) continue;
+                    if (col.GetData() == null || col.GetData().GetDefinition() == null) continue;
+                    DcColumnDefinition def = col.GetData().GetDefinition();
 
-                    if (col.Definition.FormulaExpr != null)
+                    if (def.FormulaExpr != null)
                     {
-                        nodes = col.Definition.FormulaExpr.Find((DcColumn)column);
+                        nodes = def.FormulaExpr.Find((DcColumn)column);
                         nodes.ForEach(x => x.Name = newName);
                     }
                 }
 
-                if (tab.Definition == null) continue;
+                if (tab.GetData().GetDefinition() == null) continue;
 
                 // Update table definitions by finding the uses of the specified column
-                if (tab.Definition.WhereExpr != null)
+                if (tab.GetData().GetDefinition().WhereExpr != null)
                 {
-                    nodes = tab.Definition.WhereExpr.Find((DcColumn)column);
+                    nodes = tab.GetData().GetDefinition().WhereExpr.Find((DcColumn)column);
                     nodes.ForEach(x => x.Name = newName);
                 }
             }
@@ -203,22 +205,23 @@ namespace Com.Schema
 
                 foreach (var col in tab.Columns)
                 {
-                    if (col.Definition == null) continue;
+                    if (col.GetData() == null || col.GetData().GetDefinition() == null) continue;
+                    DcColumnDefinition def = col.GetData().GetDefinition();
 
-                    if (col.Definition.FormulaExpr != null)
+                    if (def.FormulaExpr != null)
                     {
-                        nodes = col.Definition.FormulaExpr.Find(column);
+                        nodes = def.FormulaExpr.Find(column);
                         foreach (var node in nodes) if (node.Parent != null) node.Parent.RemoveChild(node);
                     }
 
                 }
 
-                if (tab.Definition == null) continue;
+                if (tab.GetData().GetDefinition() == null) continue;
 
                 // Update table definitions by finding the uses of the specified column
-                if (tab.Definition.WhereExpr != null)
+                if (tab.GetData().GetDefinition().WhereExpr != null)
                 {
-                    nodes = tab.Definition.WhereExpr.Find(column);
+                    nodes = tab.GetData().GetDefinition().WhereExpr.Find(column);
                     foreach (var node in nodes) if (node.Parent != null) node.Parent.RemoveChild(node);
                 }
             }

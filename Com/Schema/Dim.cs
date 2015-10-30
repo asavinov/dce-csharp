@@ -117,10 +117,7 @@ namespace Com.Schema
 
 
         protected DcColumnData _data;
-        public virtual DcColumnData Data { get { return _data; } }
-
-        protected DcColumnDefinition _definition;
-        public virtual DcColumnDefinition Definition { get { return _definition; } }
+        public virtual DcColumnData GetData() { return _data; }
 
         #endregion
 
@@ -137,23 +134,6 @@ namespace Com.Schema
             json["lesser_table"] = Utils.CreateJsonRef(Input);
             json["greater_table"] = Utils.CreateJsonRef(Output);
 
-            // Column definition
-            if (Definition != null)
-            {
-                JObject columnDef = new JObject();
-
-                columnDef["generating"] = Definition.IsAppendData ? "true" : "false";
-                //columnDef["definition_type"] = (int)Definition.DefinitionType;
-
-                if (Definition.FormulaExpr != null)
-                {
-                    columnDef["formula"] = Utils.CreateJsonFromObject(Definition.FormulaExpr);
-                    Definition.FormulaExpr.ToJson((JObject)columnDef["formula"]);
-                }
-
-                json["definition"] = columnDef;
-            }
-
         }
         public virtual void FromJson(JObject json, DcWorkspace ws) // Init this object fields by using json object
         {
@@ -166,25 +146,6 @@ namespace Com.Schema
             Input = (DcTable)Utils.ResolveJsonRef((JObject)json["lesser_table"], ws);
             Output = (DcTable)Utils.ResolveJsonRef((JObject)json["greater_table"], ws);
 
-            // Column definition
-            JObject columnDef = (JObject)json["definition"];
-            if (columnDef != null && Definition != null)
-            {
-                Definition.IsAppendData = columnDef["generating"] != null ? StringSimilarity.JsonTrue(columnDef["generating"]) : false;
-                //Definition.DefinitionType = columnDef["definition_type"] != null ? (DcColumnDefinitionType)(int)columnDef["definition_type"] : DcColumnDefinitionType.FREE;
-
-                if (columnDef["formula"] != null)
-                {
-                    ExprNode node = (ExprNode)Utils.CreateObjectFromJson((JObject)columnDef["formula"]);
-                    if (node != null)
-                    {
-                        node.FromJson((JObject)columnDef["formula"], ws);
-                        Definition.FormulaExpr = node;
-                    }
-                }
-
-            }
-        
         }
 
         #endregion
@@ -319,8 +280,6 @@ namespace Com.Schema
             Output = dim.Output;
 
             _data = CreateColumnData(_output, this);
-            _definition = new ColumnDefinition(this);
-            // TODO: Copy definition
         }
 
         public Dim(DcTable set) // Empty dimension
@@ -359,7 +318,6 @@ namespace Com.Schema
             // Creae storage for the function and its definition depending on the output set type
             //
             _data = CreateColumnData(output, this);
-            _definition = new ColumnDefinition(this);
         }
 
         #endregion

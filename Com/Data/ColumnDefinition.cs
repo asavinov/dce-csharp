@@ -4,14 +4,14 @@ using System.Linq;
 using System.Text;
 
 using Com.Utils;
+using Com.Schema;
 using Com.Schema.Csv;
 using Com.Schema.Rel;
-using Com.Data;
 using Com.Data.Query;
 
 using Rowid = System.Int32;
 
-namespace Com.Schema
+namespace Com.Data
 {
     public class ColumnDefinition : DcColumnDefinition
     {
@@ -80,9 +80,9 @@ namespace Com.Schema
 
             // General parameters
             DcWorkspace Workspace = Dim.Input.Schema.Workspace;
-            DcColumnData columnData = Dim.Data;
+            DcColumnData columnData = Dim.GetData();
 
-            Dim.Data.AutoIndex = false;
+            Dim.GetData().AutoIndex = false;
             //Dim.Data.Nullify();
 
             object thisCurrent = null;
@@ -103,7 +103,7 @@ namespace Com.Schema
 				FormulaExpr.Resolve(Workspace, new List<DcVariable>() { thisVariable });
 
 				FormulaExpr.EvaluateBegin();
-				DcTableReader tableReader = thisTable.GetTableReader();
+				DcTableReader tableReader = thisTable.GetData().GetTableReader();
                 tableReader.Open();
                 while ((thisCurrent = tableReader.Next()) != null)
                 {
@@ -136,7 +136,7 @@ namespace Com.Schema
 				FormulaExpr.Resolve(Workspace, new List<DcVariable>() { thisVariable });
 
 				FormulaExpr.EvaluateBegin();
-				DcTableReader tableReader = thisTable.GetTableReader();
+				DcTableReader tableReader = thisTable.GetData().GetTableReader();
 				tableReader.Open();
                 while ((thisCurrent = tableReader.Next()) != null)
                 {
@@ -200,7 +200,7 @@ namespace Com.Schema
                 outputExpr.Resolve(Workspace, new List<DcVariable>() { groupVariable, measureVariable });
 
 				FormulaExpr.EvaluateBegin();
-				DcTableReader tableReader = thisTable.GetTableReader();
+				DcTableReader tableReader = thisTable.GetData().GetTableReader();
                 tableReader.Open();
                 while ((thisCurrent = tableReader.Next()) != null)
                 {
@@ -231,8 +231,8 @@ namespace Com.Schema
                 throw new NotImplementedException("This type of column definition is not implemented.");
             }
 
-            Dim.Data.Reindex();
-            Dim.Data.AutoIndex = true;
+            Dim.GetData().Reindex();
+            Dim.GetData().AutoIndex = true;
         }
 
         //

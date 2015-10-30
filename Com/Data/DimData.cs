@@ -4,7 +4,10 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
+using Newtonsoft.Json.Linq;
+
 using Com.Utils;
+using Com.Data;
 using Com.Schema;
 using Com.Data.Query;
 
@@ -319,6 +322,60 @@ namespace Com.Data
             }
         }
 
+        protected DcColumnDefinition _definition;
+        public virtual DcColumnDefinition GetDefinition() { return _definition; }
+
+        #endregion
+
+        #region DcJson serialization
+
+        public virtual void ToJson(JObject json) // Write fields to the json object
+        {
+            // No super-object
+
+            // Column definition
+            if (GetDefinition() != null)
+            {
+                JObject columnDef = new JObject();
+
+                columnDef["generating"] = GetDefinition().IsAppendData ? "true" : "false";
+                //columnDef["definition_type"] = (int)Definition.DefinitionType;
+
+                if (GetDefinition().FormulaExpr != null)
+                {
+                    columnDef["formula"] = Com.Schema.Utils.CreateJsonFromObject(GetDefinition().FormulaExpr);
+                    GetDefinition().FormulaExpr.ToJson((JObject)columnDef["formula"]);
+                }
+
+                json["definition"] = columnDef;
+            }
+
+        }
+        public virtual void FromJson(JObject json, DcWorkspace ws) // Init this object fields by using json object
+        {
+            // No super-object
+
+            // Column definition
+            JObject columnDef = (JObject)json["definition"];
+            if (columnDef != null && GetDefinition() != null)
+            {
+                GetDefinition().IsAppendData = columnDef["generating"] != null ? StringSimilarity.JsonTrue(columnDef["generating"]) : false;
+                //Definition.DefinitionType = columnDef["definition_type"] != null ? (DcColumnDefinitionType)(int)columnDef["definition_type"] : DcColumnDefinitionType.FREE;
+
+                if (columnDef["formula"] != null)
+                {
+                    ExprNode node = (ExprNode)Com.Schema.Utils.CreateObjectFromJson((JObject)columnDef["formula"]);
+                    if (node != null)
+                    {
+                        node.FromJson((JObject)columnDef["formula"], ws);
+                        GetDefinition().FormulaExpr = node;
+                    }
+                }
+
+            }
+
+        }
+
         #endregion
 
         #region Protected data methods (index, sorting, projecting etc.)
@@ -617,10 +674,13 @@ namespace Com.Data
 
             _length = 0;
             Length = 0;
-            if (dim.Input != null && dim.Input.Data != null)
+            if (dim.Input != null && dim.Input.GetData() != null)
             {
-                Length = dim.Input.Data.Length;
+                Length = dim.Input.GetData().Length;
             }
+
+            _definition = new ColumnDefinition(dim);
+            // TODO: Copy definition
         }
 
         #endregion

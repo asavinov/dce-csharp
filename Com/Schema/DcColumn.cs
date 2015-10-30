@@ -27,8 +27,7 @@ namespace Com.Schema
         void Add(); // Add to schema
         void Remove(); // Remove from schema
 
-        DcColumnData Data { get; }
-        DcColumnDefinition Definition { get; }
+        DcColumnData GetData();
     }
 
 }

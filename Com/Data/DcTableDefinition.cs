@@ -4,8 +4,9 @@ using System.Linq;
 using System.Text;
 
 using Com.Data;
+using Com.Schema;
 
-namespace Com.Schema
+namespace Com.Data
 {
     public interface DcTableDefinition
     {

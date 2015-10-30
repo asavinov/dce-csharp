@@ -26,12 +26,12 @@ namespace Com.Data
 
         public virtual void Close()
         {
-            rowid = table.Data.Length;
+            rowid = table.GetData().Length;
         }
 
         public virtual object Next()
         {
-            if (rowid < table.Data.Length-1)
+            if (rowid < table.GetData().Length-1)
             {
                 rowid++;
                 return rowid;

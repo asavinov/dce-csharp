@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
+using Com.Schema;
+
 using Rowid = System.Int32;
 
 namespace Com.Data
 {
-    public interface DcColumnData // It is interface for managing function data as a mapping to output values (implemented by some kind of storage manager). Input always offset. Output type is a parameter.
+    public interface DcColumnData : DcJson // It is interface for managing function data as a mapping to output values (implemented by some kind of storage manager). Input always offset. Output type is a parameter.
     {
         Rowid Length { get; set; }
 
@@ -51,6 +53,8 @@ namespace Com.Data
         // bool IsAutoIndexed { get; set; } // Index is maintained automatically
         // void Index(); // Index all and build new index
         // void Index(Offset start, Offset end); // The specified interval has been changed (or inserted?)
+
+        DcColumnDefinition GetDefinition();
     }
 
 }

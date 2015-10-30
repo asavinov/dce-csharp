@@ -258,7 +258,7 @@ namespace Com.Utils
                     case DimensionType.IDENTITY: return Output.Columns.Where(x => x.IsKey && x.Input.Schema == x.Output.Schema).ToList();
                     case DimensionType.ENTITY: return Output.Columns.Where(x => !x.IsKey && x.Input.Schema == x.Output.Schema).ToList();
 
-                    case DimensionType.GENERATING: return Output.Columns.Where(x => (x.Definition != null && x.Definition.IsAppendData) && x.Input.Schema == x.Output.Schema).ToList();
+                    case DimensionType.GENERATING: return Output.Columns.Where(x => (x.GetData().GetDefinition() != null && x.GetData().GetDefinition().IsAppendData) && x.Input.Schema == x.Output.Schema).ToList();
                 }
             }
             else
@@ -269,7 +269,7 @@ namespace Com.Utils
                     case DimensionType.IDENTITY: return Input.InputColumns.Where(x => x.IsKey && x.Input.Schema == x.Output.Schema).ToList();
                     case DimensionType.ENTITY: return Input.InputColumns.Where(x => !x.IsKey && x.Input.Schema == x.Output.Schema).ToList();
 
-                    case DimensionType.GENERATING: return Input.InputColumns.Where(x => (x.Definition != null && x.Definition.IsAppendData) && x.Input.Schema == x.Output.Schema).ToList();
+                    case DimensionType.GENERATING: return Input.InputColumns.Where(x => (x.GetData().GetDefinition() != null && x.GetData().GetDefinition().IsAppendData) && x.Input.Schema == x.Output.Schema).ToList();
                 }
             }
 

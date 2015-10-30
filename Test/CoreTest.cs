@@ -105,7 +105,7 @@ namespace Test
 
             DcColumn[] cols = new DcColumn[] { c11, c12, c13, c14 };
             object[] vals = new object[4];
-            DcTableWriter w1 = t1.GetTableWriter();
+            DcTableWriter w1 = t1.GetData().GetTableWriter();
 
             vals[0] = 20;
             vals[1] = "Record 0";
@@ -137,7 +137,7 @@ namespace Test
 
             cols = new DcColumn[] { c21, c22, c23, c24 };
             vals = new object[4];
-            DcTableWriter w2 = t2.GetTableWriter();
+            DcTableWriter w2 = t2.GetData().GetTableWriter();
 
             vals[0] = "Value A";
             vals[1] = 20;
@@ -208,34 +208,34 @@ namespace Test
             // Data
             //
 
-            t1.Data.Length = 3;
+            t1.GetData().Length = 3;
 
             // 2. Write/read individual column data by using column data methods (not table methods)
 
-            Assert.AreEqual(true, c11.Data.IsNull(1)); // Initially, all outputs must be null
-            c11.Data.SetValue(1, 10);
-            c11.Data.SetValue(0, 20);
-            c11.Data.SetValue(2, 30);
-            Assert.AreEqual(false, c11.Data.IsNull(1));
-            Assert.AreEqual(10, c11.Data.GetValue(1));
+            Assert.AreEqual(true, c11.GetData().IsNull(1)); // Initially, all outputs must be null
+            c11.GetData().SetValue(1, 10);
+            c11.GetData().SetValue(0, 20);
+            c11.GetData().SetValue(2, 30);
+            Assert.AreEqual(false, c11.GetData().IsNull(1));
+            Assert.AreEqual(10, c11.GetData().GetValue(1));
 
-            Assert.AreEqual(true, c13.Data.IsNull(2)); // Initially, all outputs must be null
-            c13.Data.SetValue(1, 10.0);
-            c13.Data.SetValue(0, 20.0);
-            c13.Data.SetValue(2, 30.0);
-            Assert.AreEqual(false, c13.Data.IsNull(1));
-            Assert.AreEqual(10.0, c13.Data.GetValue(1));
+            Assert.AreEqual(true, c13.GetData().IsNull(2)); // Initially, all outputs must be null
+            c13.GetData().SetValue(1, 10.0);
+            c13.GetData().SetValue(0, 20.0);
+            c13.GetData().SetValue(2, 30.0);
+            Assert.AreEqual(false, c13.GetData().IsNull(1));
+            Assert.AreEqual(10.0, c13.GetData().GetValue(1));
 
-            t2.Data.Length = 2;
+            t2.GetData().Length = 2;
 
-            c21.Data.SetValue(0, "Value A");
-            c21.Data.SetValue(1, "Value B");
+            c21.GetData().SetValue(0, "Value A");
+            c21.GetData().SetValue(1, "Value B");
 
-            c22.Data.SetValue(0, 10);
-            c22.Data.SetValue(1, 20);
+            c22.GetData().SetValue(0, 10);
+            c22.GetData().SetValue(1, 20);
 
-            Assert.AreEqual(10, c22.Data.GetValue(0));
-            Assert.AreEqual(20, c22.Data.GetValue(1));
+            Assert.AreEqual(10, c22.GetData().GetValue(0));
+            Assert.AreEqual(20, c22.GetData().GetValue(1));
         }
 
         [TestMethod]
@@ -249,12 +249,12 @@ namespace Test
             DcColumn c12 = t1.GetColumn("Column 12");
             DcColumn c13 = t1.GetColumn("Column 13");
 
-            DcTableWriter w1 = t1.GetTableWriter();
+            DcTableWriter w1 = t1.GetData().GetTableWriter();
 
             //
             // Data manipulations
             //
-            Assert.AreEqual(3, t1.Data.Length);
+            Assert.AreEqual(3, t1.GetData().Length);
 
             Offset input = w1.Find(new DcColumn[] { c11 }, new object[] { 10 } );
             Assert.AreEqual(1, input);
@@ -283,16 +283,16 @@ namespace Test
             //
             DcColumn c15 = schema.CreateColumn("Column 15", t1, schema.GetPrimitive("Double"), false);
 
-            c15.Definition.Formula = "([Column 11]+10.0) * this.[Column 13]";
+            c15.GetData().GetDefinition().Formula = "([Column 11]+10.0) * this.[Column 13]";
 
             c15.Add();
 
             // Evaluate column
-            c15.Definition.Evaluate();
+            c15.GetData().GetDefinition().Evaluate();
 
-            Assert.AreEqual(600.0, c15.Data.GetValue(0));
-            Assert.AreEqual(200.0, c15.Data.GetValue(1));
-            Assert.AreEqual(1200.0, c15.Data.GetValue(2));
+            Assert.AreEqual(600.0, c15.GetData().GetValue(0));
+            Assert.AreEqual(200.0, c15.GetData().GetValue(1));
+            Assert.AreEqual(1200.0, c15.GetData().GetValue(2));
         }
 
         [TestMethod]
@@ -312,31 +312,31 @@ namespace Test
             //
             DcColumn c15 = schema.CreateColumn("Column 15", t1, schema.GetPrimitive("String"), false);
 
-            c15.Definition.Formula = "call:System.String.Substring( [Column 12], 7, 1 )";
+            c15.GetData().GetDefinition().Formula = "call:System.String.Substring( [Column 12], 7, 1 )";
 
             c15.Add();
 
             // Evaluate column
-            c15.Definition.Evaluate();
+            c15.GetData().GetDefinition().Evaluate();
 
-            Assert.AreEqual("0", c15.Data.GetValue(0));
-            Assert.AreEqual("1", c15.Data.GetValue(1));
-            Assert.AreEqual("2", c15.Data.GetValue(2));
+            Assert.AreEqual("0", c15.GetData().GetValue(0));
+            Assert.AreEqual("1", c15.GetData().GetValue(1));
+            Assert.AreEqual("2", c15.GetData().GetValue(2));
 
             //
             // Define a derived column with a definition
             //
             DcColumn c16 = schema.CreateColumn("Column 15", t1, schema.GetPrimitive("Double"), false);
 
-            c16.Definition.Formula = "call:System.Math.Pow( [Column 11] / 10.0, [Column 13] / 10.0 )";
+            c16.GetData().GetDefinition().Formula = "call:System.Math.Pow( [Column 11] / 10.0, [Column 13] / 10.0 )";
 
             c16.Add();
 
-            c16.Definition.Evaluate();
+            c16.GetData().GetDefinition().Evaluate();
 
-            Assert.AreEqual(4.0, c16.Data.GetValue(0));
-            Assert.AreEqual(1.0, c16.Data.GetValue(1));
-            Assert.AreEqual(27.0, c16.Data.GetValue(2));
+            Assert.AreEqual(4.0, c16.GetData().GetValue(0));
+            Assert.AreEqual(1.0, c16.GetData().GetValue(1));
+            Assert.AreEqual(27.0, c16.GetData().GetValue(2));
         }
 
         [TestMethod]
@@ -356,17 +356,17 @@ namespace Test
 
             DcColumn link = schema.CreateColumn("Column Link", t2, t1, false);
 
-            link.Definition.Formula = "(( [Integer] [Column 11] = this.[Column 22], [Double] [Column 14] = 20.0 ))"; // Tuple structure corresponds to output table
+            link.GetData().GetDefinition().Formula = "(( [Integer] [Column 11] = this.[Column 22], [Double] [Column 14] = 20.0 ))"; // Tuple structure corresponds to output table
 
             link.Add();
 
             // Evaluate column
-            link.Definition.Evaluate();
+            link.GetData().GetDefinition().Evaluate();
 
-            Assert.AreEqual(0, link.Data.GetValue(0));
-            Assert.AreEqual(2, link.Data.GetValue(1));
-            Assert.AreEqual(2, link.Data.GetValue(2));
-            Assert.AreEqual(2, link.Data.GetValue(3));
+            Assert.AreEqual(0, link.GetData().GetValue(0));
+            Assert.AreEqual(2, link.GetData().GetValue(1));
+            Assert.AreEqual(2, link.GetData().GetValue(2));
+            Assert.AreEqual(2, link.GetData().GetValue(3));
         }
 
         [TestMethod]
@@ -411,16 +411,16 @@ namespace Test
             //
             DcColumn c16 = schema.CreateColumn("Agg2 of Column 23", t1, schema.GetPrimitive("Double"), false);
 
-            c16.Definition.Formula = "AGGREGATE(facts=[Table 2], groups=[Table 1], measure=[Column 23]*2.0 + 1, aggregator=SUM)";
+            c16.GetData().GetDefinition().Formula = "AGGREGATE(facts=[Table 2], groups=[Table 1], measure=[Column 23]*2.0 + 1, aggregator=SUM)";
 
             c16.Add();
 
-            c16.Data.SetValue(0.0);
-            c16.Definition.Evaluate(); // {40, 140, 0}
+            c16.GetData().SetValue(0.0);
+            c16.GetData().GetDefinition().Evaluate(); // {40, 140, 0}
 
-            Assert.AreEqual(81.0, c16.Data.GetValue(0));
-            Assert.AreEqual(283.0, c16.Data.GetValue(1));
-            Assert.AreEqual(0.0, c16.Data.GetValue(2));
+            Assert.AreEqual(81.0, c16.GetData().GetValue(0));
+            Assert.AreEqual(283.0, c16.GetData().GetValue(1));
+            Assert.AreEqual(0.0, c16.GetData().GetValue(2));
         }
 
         [TestMethod]
@@ -442,23 +442,23 @@ namespace Test
             DcColumn c32 = schema.CreateColumn(t2.Name, t3, t2, true); // {40, 40, *50, *50}
             c32.Add();
 
-            t3.Definition.Populate();
-            Assert.AreEqual(12, t3.Data.Length);
+            t3.GetData().GetDefinition().Populate();
+            Assert.AreEqual(12, t3.GetData().Length);
 
             //
             // Add simple where expression
             //
 
-            t3.Definition.WhereFormula = "([Table 1].[Column 11] > 10) && this.[Table 2].[Column 23] == 50.0";
+            t3.GetData().GetDefinition().WhereFormula = "([Table 1].[Column 11] > 10) && this.[Table 2].[Column 23] == 50.0";
 
-            t3.Definition.Populate();
-            Assert.AreEqual(4, t3.Data.Length);
+            t3.GetData().GetDefinition().Populate();
+            Assert.AreEqual(4, t3.GetData().Length);
 
-            Assert.AreEqual(0, c31.Data.GetValue(0));
-            Assert.AreEqual(2, c32.Data.GetValue(0));
+            Assert.AreEqual(0, c31.GetData().GetValue(0));
+            Assert.AreEqual(2, c32.GetData().GetValue(0));
 
-            Assert.AreEqual(0, c31.Data.GetValue(1));
-            Assert.AreEqual(3, c32.Data.GetValue(1));
+            Assert.AreEqual(0, c31.GetData().GetValue(1));
+            Assert.AreEqual(3, c32.GetData().GetValue(1));
         }
 
         [TestMethod]
@@ -472,12 +472,12 @@ namespace Test
             // Define a new filter-set
             //
             DcTable t3 = schema.CreateTable("Table 3");
-            t3.Definition.WhereFormula = "[Column 22] > 20.0 && this.Super.[Column 23] < 50";
+            t3.GetData().GetDefinition().WhereFormula = "[Column 22] > 20.0 && this.Super.[Column 23] < 50";
             schema.AddTable(t3, t2, null);
 
-            t3.Definition.Populate();
-            Assert.AreEqual(1, t3.Data.Length);
-            Assert.AreEqual(1, t3.SuperColumn.Data.GetValue(0));
+            t3.GetData().GetDefinition().Populate();
+            Assert.AreEqual(1, t3.GetData().Length);
+            Assert.AreEqual(1, t3.SuperColumn.GetData().GetValue(0));
         }
 
         [TestMethod]
@@ -502,18 +502,18 @@ namespace Test
 
             // Create a generating column
             DcColumn c24 = schema.CreateColumn("Project", t2, t3, false);
-            c24.Definition.Formula = "(( [String] [Column 21] = [Column 21] ))";
-            c24.Definition.IsAppendData = true;
+            c24.GetData().GetDefinition().Formula = "(( [String] [Column 21] = [Column 21] ))";
+            c24.GetData().GetDefinition().IsAppendData = true;
             c24.Add();
 
-            t3.Definition.Populate();
+            t3.GetData().GetDefinition().Populate();
 
-            Assert.AreEqual(2, t3.Data.Length);
+            Assert.AreEqual(2, t3.GetData().Length);
 
-            Assert.AreEqual(0, c24.Data.GetValue(0));
-            Assert.AreEqual(0, c24.Data.GetValue(1));
-            Assert.AreEqual(0, c24.Data.GetValue(2));
-            Assert.AreEqual(1, c24.Data.GetValue(3));
+            Assert.AreEqual(0, c24.GetData().GetValue(0));
+            Assert.AreEqual(0, c24.GetData().GetValue(1));
+            Assert.AreEqual(0, c24.GetData().GetValue(2));
+            Assert.AreEqual(1, c24.GetData().GetValue(3));
 
             //
             // Defining a combination of "Column 21" and "Column 22" and project with 3 unique records in a new set
@@ -527,18 +527,18 @@ namespace Test
             c42.Add();
 
             DcColumn c25 = schema.CreateColumn("Project", t2, t4, false);
-            c25.Definition.Formula = "(( [String] [Column 21] = [Column 21], [Integer] [Column 22] = [Column 22] ))";
-            c25.Definition.IsAppendData = true;
+            c25.GetData().GetDefinition().Formula = "(( [String] [Column 21] = [Column 21], [Integer] [Column 22] = [Column 22] ))";
+            c25.GetData().GetDefinition().IsAppendData = true;
             c25.Add();
 
-            t4.Definition.Populate();
+            t4.GetData().GetDefinition().Populate();
 
-            Assert.AreEqual(3, t4.Data.Length);
+            Assert.AreEqual(3, t4.GetData().Length);
 
-            Assert.AreEqual(0, c25.Data.GetValue(0));
-            Assert.AreEqual(1, c25.Data.GetValue(1));
-            Assert.AreEqual(1, c25.Data.GetValue(2));
-            Assert.AreEqual(2, c25.Data.GetValue(3));
+            Assert.AreEqual(0, c25.GetData().GetValue(0));
+            Assert.AreEqual(1, c25.GetData().GetValue(1));
+            Assert.AreEqual(1, c25.GetData().GetValue(2));
+            Assert.AreEqual(2, c25.GetData().GetValue(3));
         }
 
         [TestMethod]
@@ -658,16 +658,16 @@ namespace Test
             // Define import column
             DcColumn dim = schema.CreateColumn("Import", top.GetSubTable("Products"), productsTable, false);
             dim.Add();
-            dim.Definition.IsAppendData = true;
-            dim.Definition.Formula = "(( [Integer] [ID] = this.[ID], [String] [Product Code] = [Product Code], [String] [Custom Product Name] = [Product Name], [Double] [List Price] = [List Price], [Double] [Constant Column] = 20.02 ))"; // Tuple structure corresponds to output table
-            dim.Definition.IsAppendData = true;
-            dim.Definition.IsAppendSchema = true;
+            dim.GetData().GetDefinition().IsAppendData = true;
+            dim.GetData().GetDefinition().Formula = "(( [Integer] [ID] = this.[ID], [String] [Product Code] = [Product Code], [String] [Custom Product Name] = [Product Name], [Double] [List Price] = [List Price], [Double] [Constant Column] = 20.02 ))"; // Tuple structure corresponds to output table
+            dim.GetData().GetDefinition().IsAppendData = true;
+            dim.GetData().GetDefinition().IsAppendSchema = true;
 
-            productsTable.Definition.Populate();
+            productsTable.GetData().GetDefinition().Populate();
 
-            Assert.AreEqual(45, productsTable.Data.Length);
-            Assert.AreEqual("Northwind Traders Dried Pears", p3.Data.GetValue(5));
-            Assert.AreEqual(20.02, p5.Data.GetValue(5));
+            Assert.AreEqual(45, productsTable.GetData().Length);
+            Assert.AreEqual("Northwind Traders Dried Pears", p3.GetData().GetValue(5));
+            Assert.AreEqual(20.02, p5.GetData().GetValue(5));
         }
 
         [TestMethod]
@@ -712,12 +712,12 @@ namespace Test
             // Define export column
             DcColumn dim = schema.CreateColumn("Export", schema.GetSubTable("Table 1"), table, false);
             dim.Add();
-            dim.Definition.IsAppendData = true;
-            dim.Definition.Formula = "(( [String] [Column 11] = this.[Column 11], [String] [Column 12] = [Column 12], [String] [Custom Column 13] = [Column 13], [String] [Constant Column] = 20.02 ))"; // Tuple structure corresponds to output table
-            dim.Definition.IsAppendData = true;
-            dim.Definition.IsAppendSchema = true;
+            dim.GetData().GetDefinition().IsAppendData = true;
+            dim.GetData().GetDefinition().Formula = "(( [String] [Column 11] = this.[Column 11], [String] [Column 12] = [Column 12], [String] [Custom Column 13] = [Column 13], [String] [Constant Column] = 20.02 ))"; // Tuple structure corresponds to output table
+            dim.GetData().GetDefinition().IsAppendData = true;
+            dim.GetData().GetDefinition().IsAppendSchema = true;
 
-            table.Definition.Populate();
+            table.GetDefinition().Populate();
         }
 
         [TestMethod]
@@ -730,11 +730,11 @@ namespace Test
 
             // Add table definition 
             DcTable t = schema.GetSubTable("Table 2");
-            t.Definition.WhereFormula = "[Column 22] > 20.0 && this.Super.[Column 23] < 50";
+            t.GetData().GetDefinition().WhereFormula = "[Column 22] > 20.0 && this.Super.[Column 23] < 50";
 
             // Add column definition 
             DcColumn c = t.GetColumn("Column 22");
-            c.Definition.Formula = "([Column 11]+10.0) * this.[Column 13]";
+            c.GetData().GetDefinition().Formula = "([Column 11]+10.0) * this.[Column 13]";
 
             DcWorkspace ws = new Workspace();
             ws.Schemas.Add(schema);
@@ -762,7 +762,7 @@ namespace Test
 
             c = t.GetColumn("Column 22");
             //Assert.AreEqual(DcColumnDefinitionType.ARITHMETIC, c.Definition.FormulaExpr.DefinitionType);
-            Assert.AreEqual(2, c.Definition.FormulaExpr.Children.Count);
+            Assert.AreEqual(2, c.GetData().GetDefinition().FormulaExpr.Children.Count);
 
             //
             // 2. Another sample schema with several schemas and inter-schema columns

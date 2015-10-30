@@ -34,7 +34,7 @@ namespace Com.Schema.Csv
         public CultureInfo CultureInfo { get; set; }
         public Encoding Encoding { get; set; }
 
-        #region DcTable interface
+        #region DcTableData interface
 
         public override DcTableReader GetTableReader()
         {

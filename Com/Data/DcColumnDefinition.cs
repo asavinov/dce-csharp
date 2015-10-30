@@ -4,10 +4,10 @@ using System.Linq;
 using System.Text;
 
 using Com.Utils;
-using Com.Data;
+using Com.Schema;
 using Com.Data.Query;
 
-namespace Com.Schema
+namespace Com.Data
 {
     public interface DcColumnDefinition // How a function is represented and evaluated. It uses API of the column storage like read, write (typed or untyped).
     {

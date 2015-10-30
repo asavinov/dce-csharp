@@ -37,7 +37,7 @@ namespace Com.Schema.Csv
 
         public void Close()
         {
-            rowid = table.Data.Length;
+            rowid = table.GetData().Length;
 
             connectionCsv.CloseWriter();
         }
@@ -88,8 +88,8 @@ namespace Com.Schema.Csv
             // Really append record to the file
             connectionCsv.WriteNext(record);
 
-            table.Data.Length = table.Data.Length + 1;
-            return table.Data.Length - 1;
+            table.GetData().Length = table.GetData().Length + 1;
+            return table.GetData().Length - 1;
         }
 
         public DcColumn[] GetColumnsByIndex() // Return an array of columns with indexes starting from 0 and ending with last index

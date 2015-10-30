@@ -151,19 +151,7 @@ namespace Com.Schema
             return set;
         }
 
-        public DcTableData Data { get { return this; } }
-
-        public DcTableDefinition Definition { get { return this; } }
-
-        public virtual DcTableReader GetTableReader()
-        {
-            return new TableReader(this);
-        }
-
-        public virtual DcTableWriter GetTableWriter()
-        {
-            return new TableWriter(this);
-        }
+        public DcTableData GetData() { return this; }
 
         #endregion
 
@@ -194,7 +182,7 @@ namespace Com.Schema
                 length = value;
                 foreach (DcColumn col in Columns)
                 {
-                    col.Data.Length = value;
+                    col.GetData().Length = value;
                 }
             }
         }
@@ -205,7 +193,7 @@ namespace Com.Schema
             { 
                 foreach(DcColumn column in Columns) 
                 {
-                    column.Data.AutoIndex = value;
+                    column.GetData().AutoIndex = value;
                 }
             }
         }
@@ -215,7 +203,7 @@ namespace Com.Schema
             {
                 foreach (DcColumn column in Columns)
                 {
-                    if (!column.Data.Indexed) return false;
+                    if (!column.GetData().Indexed) return false;
                 }
                 return true;
             }
@@ -224,9 +212,21 @@ namespace Com.Schema
         {
             foreach (DcColumn column in Columns)
             {
-                column.Data.Reindex();
+                column.GetData().Reindex();
             }
         }
+
+        public virtual DcTableReader GetTableReader()
+        {
+            return new TableReader(this);
+        }
+
+        public virtual DcTableWriter GetTableWriter()
+        {
+            return new TableWriter(this);
+        }
+
+        public DcTableDefinition GetDefinition() { return this; }
 
         #endregion
 
@@ -238,7 +238,7 @@ namespace Com.Schema
                 if (IsPrimitive) return TableDefinitionType.FREE;
 
                 // Try to find incoming generating (append) columns. If they exist then table instances are populated as this dimension output tuples.
-                List<DcColumn> inColumns = InputColumns.Where(d => d.Definition.IsAppendData).ToList();
+                List<DcColumn> inColumns = InputColumns.Where(d => d.GetData().GetDefinition().IsAppendData).ToList();
                 if(inColumns != null && inColumns.Count > 0)
                 {
                     return TableDefinitionType.PROJECTION;
@@ -287,11 +287,11 @@ namespace Com.Schema
 
             if (DefinitionType == TableDefinitionType.PROJECTION) // There are import dimensions so copy data from another set (projection of another set)
             {
-                List<DcColumn> inColumns = InputColumns.Where(d => d.Definition.IsAppendData).ToList();
+                List<DcColumn> inColumns = InputColumns.Where(d => d.GetData().GetDefinition().IsAppendData).ToList();
 
                 foreach(DcColumn inColumn in inColumns)
                 {
-                    inColumn.Definition.Evaluate(); // Delegate to column evaluation - it will add records from column expression
+                    inColumn.GetData().GetDefinition().Evaluate(); // Delegate to column evaluation - it will add records from column expression
                 }
             }
             else if (DefinitionType == TableDefinitionType.PRODUCT) // Product of local sets (no project/de-project from another set)
@@ -302,7 +302,7 @@ namespace Com.Schema
                 thisVariable.TypeTable = this;
 
                 // Evaluator expression for where formula
-                ExprNode outputExpr = this.Definition.WhereExpr;
+                ExprNode outputExpr = this.GetDefinition().WhereExpr;
                 if(outputExpr != null)
                 {
                     outputExpr.OutputVariable.SchemaName = this.Schema.Name;
@@ -328,7 +328,7 @@ namespace Com.Schema
                 // The current state of the search procedure
                 //
                 Rowid[] lengths = new Rowid[dimCount]; // Size of each dimension being varied (how many offsets in each dimension)
-                for (int i = 0; i < dimCount; i++) lengths[i] = dims[i].Output.Data.Length;
+                for (int i = 0; i < dimCount; i++) lengths[i] = dims[i].Output.GetData().Length;
 
                 Rowid[] offsets = new Rowid[dimCount]; // The current point/offset for each dimensions during search
                 for (int i = 0; i < dimCount; i++) offsets[i] = -1;
@@ -354,7 +354,7 @@ namespace Com.Schema
                         if (outputExpr != null)
                         {
                             // Set 'this' variable to the last elements (that has been just appended) which will be read by the expression
-                            thisVariable.SetValue(this.Data.Length - 1);
+                            thisVariable.SetValue(this.GetData().Length - 1);
 
                             // Evaluate expression
                             outputExpr.Evaluate();
@@ -437,7 +437,7 @@ namespace Com.Schema
 
             foreach (DcColumn col in InputColumns) // If a generating source set has changed then this set has to be populated
             {
-                if (!col.Definition.IsAppendData) continue;
+                if (!col.GetData().GetDefinition().IsAppendData) continue;
                 res.Add(col.Input);
             }
 
@@ -448,7 +448,7 @@ namespace Com.Schema
             {
                 foreach (DcTable tab in res.ToList())
                 {
-                    var list = tab.Definition.UsesTables(recursive); // Recusrion
+                    var list = tab.GetData().GetDefinition().UsesTables(recursive); // Recusrion
                     foreach (DcTable table in list)
                     {
                         Debug.Assert(!res.Contains(table), "Cyclic dependence in tables.");
@@ -471,7 +471,7 @@ namespace Com.Schema
 
             foreach (DcColumn col in Columns) // If this table has changed then output tables of generating dimensions have to be populated
             {
-                if (!col.Definition.IsAppendData) continue;
+                if (!col.GetData().GetDefinition().IsAppendData) continue;
                 res.Add(col.Output);
             }
 
@@ -480,7 +480,7 @@ namespace Com.Schema
             {
                 foreach (DcTable tab in res.ToList())
                 {
-                    var list = tab.Definition.IsUsedInTables(recursive); // Recusrion
+                    var list = tab.GetData().GetDefinition().IsUsedInTables(recursive); // Recusrion
                     foreach (DcTable table in list)
                     {
                         Debug.Assert(!res.Contains(table), "Cyclic dependence in tables.");
@@ -501,7 +501,7 @@ namespace Com.Schema
 
             foreach (DcColumn col in InputColumns) // If a generating source column (definition) has changed then this set has to be updated
             {
-                if (!col.Definition.IsAppendData) continue;
+                if (!col.GetData().GetDefinition().IsAppendData) continue;
                 res.Add(col);
             }
 
@@ -512,7 +512,7 @@ namespace Com.Schema
             {
                 foreach (DcColumn col in res.ToList())
                 {
-                    var list = col.Definition.UsesColumns(recursive); // Recursion
+                    var list = col.GetData().GetDefinition().UsesColumns(recursive); // Recursion
                     foreach (DcColumn column in list)
                     {
                         Debug.Assert(!res.Contains(column), "Cyclic dependence in columns.");
@@ -534,7 +534,7 @@ namespace Com.Schema
 
             foreach (DcColumn col in Columns) // If this set has changed then all greater generating columns have to be updated
             {
-                if (!col.Definition.IsAppendData) continue;
+                if (!col.GetData().GetDefinition().IsAppendData) continue;
                 res.Add(col);
             }
 
@@ -545,7 +545,7 @@ namespace Com.Schema
             {
                 foreach (DcColumn col in res.ToList())
                 {
-                    var list = col.Definition.IsUsedInColumns(recursive); // Recursion
+                    var list = col.GetData().GetDefinition().IsUsedInColumns(recursive); // Recursion
                     foreach (DcColumn column in list)
                     {
                         Debug.Assert(!res.Contains(column), "Cyclic dependence in columns.");
@@ -568,16 +568,16 @@ namespace Com.Schema
             json["name"] = Name;
 
             // Table definition
-            if (Definition != null)
+            if (GetDefinition() != null)
             {
                 JObject tableDef = new JObject();
 
-                tableDef["definition_type"] = (int)Definition.DefinitionType;
+                tableDef["definition_type"] = (int)GetDefinition().DefinitionType;
 
-                if (Definition.WhereExpr != null)
+                if (GetDefinition().WhereExpr != null)
                 {
-                    tableDef["where"] = Utils.CreateJsonFromObject(Definition.WhereExpr);
-                    Definition.WhereExpr.ToJson((JObject)tableDef["where"]);
+                    tableDef["where"] = Utils.CreateJsonFromObject(GetDefinition().WhereExpr);
+                    GetDefinition().WhereExpr.ToJson((JObject)tableDef["where"]);
                 }
 
                 json["definition"] = tableDef;
@@ -592,7 +592,7 @@ namespace Com.Schema
 
             // Table definition
             JObject tableDef = (JObject)json["definition"];
-            if (tableDef != null && Definition != null)
+            if (tableDef != null && GetDefinition() != null)
             {
                 if (tableDef["where"] != null)
                 {
@@ -600,7 +600,7 @@ namespace Com.Schema
                     if (node != null)
                     {
                         node.FromJson((JObject)tableDef["where"], ws);
-                        Definition.WhereExpr = node;
+                        GetDefinition().WhereExpr = node;
                     }
                 }
             }
