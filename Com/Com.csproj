@@ -78,7 +78,6 @@
     <Compile Include="Schema\DcSchema.cs" />
     <Compile Include="Schema\DcTable.cs" />
     <Compile Include="Data\DcVariable.cs" />
-    <Compile Include="Data\DcTableDefinition.cs" />
     <Compile Include="Schema\Dim.cs" />
     <Compile Include="Data\DimData.cs" />
     <Compile Include="Schema\Rel\ConnectionOledb.cs" />

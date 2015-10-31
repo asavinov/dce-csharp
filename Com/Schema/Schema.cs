@@ -138,12 +138,10 @@ namespace Com.Schema
                     }
                 }
 
-                if (tab.GetData().GetDefinition() == null) continue;
-
                 // Update table definitions by finding the uses of the specified column
-                if (tab.GetData().GetDefinition().WhereExpr != null)
+                if (tab.GetData().WhereExpr != null)
                 {
-                    nodes = tab.GetData().GetDefinition().WhereExpr.Find((DcTable)table);
+                    nodes = tab.GetData().WhereExpr.Find((DcTable)table);
                     nodes.ForEach(x => x.Name = newName);
                 }
             }
@@ -177,12 +175,10 @@ namespace Com.Schema
                     }
                 }
 
-                if (tab.GetData().GetDefinition() == null) continue;
-
                 // Update table definitions by finding the uses of the specified column
-                if (tab.GetData().GetDefinition().WhereExpr != null)
+                if (tab.GetData().WhereExpr != null)
                 {
-                    nodes = tab.GetData().GetDefinition().WhereExpr.Find((DcColumn)column);
+                    nodes = tab.GetData().WhereExpr.Find((DcColumn)column);
                     nodes.ForEach(x => x.Name = newName);
                 }
             }
@@ -216,12 +212,10 @@ namespace Com.Schema
 
                 }
 
-                if (tab.GetData().GetDefinition() == null) continue;
-
                 // Update table definitions by finding the uses of the specified column
-                if (tab.GetData().GetDefinition().WhereExpr != null)
+                if (tab.GetData().WhereExpr != null)
                 {
-                    nodes = tab.GetData().GetDefinition().WhereExpr.Find(column);
+                    nodes = tab.GetData().WhereExpr.Find(column);
                     foreach (var node in nodes) if (node.Parent != null) node.Parent.RemoveChild(node);
                 }
             }

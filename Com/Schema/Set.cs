@@ -26,7 +26,7 @@ namespace Com.Schema
     /// A set is also characterized by width and length of its members. 
     /// And a set provides methods for manipulating its structure and intances. 
     /// </summary>
-    public class Set : INotifyCollectionChanged, INotifyPropertyChanged, DcTable, DcTableData, DcTableDefinition
+    public class Set : INotifyCollectionChanged, INotifyPropertyChanged, DcTable, DcTableData 
     {
         /// <summary>
         /// Unique set id (in this database) . In C++, this Id field would be used as a reference filed
@@ -226,11 +226,9 @@ namespace Com.Schema
             return new TableWriter(this);
         }
 
-        public DcTableDefinition GetDefinition() { return this; }
-
         #endregion
 
-        #region DcTableDefinition
+        #region The former DcTableDefinition - Now part of DcTableData
 
         public TableDefinitionType DefinitionType {
             get
@@ -302,7 +300,7 @@ namespace Com.Schema
                 thisVariable.TypeTable = this;
 
                 // Evaluator expression for where formula
-                ExprNode outputExpr = this.GetDefinition().WhereExpr;
+                ExprNode outputExpr = this.WhereExpr;
                 if(outputExpr != null)
                 {
                     outputExpr.OutputVariable.SchemaName = this.Schema.Name;
@@ -448,7 +446,7 @@ namespace Com.Schema
             {
                 foreach (DcTable tab in res.ToList())
                 {
-                    var list = tab.GetData().GetDefinition().UsesTables(recursive); // Recusrion
+                    var list = tab.GetData().UsesTables(recursive); // Recusrion
                     foreach (DcTable table in list)
                     {
                         Debug.Assert(!res.Contains(table), "Cyclic dependence in tables.");
@@ -480,7 +478,7 @@ namespace Com.Schema
             {
                 foreach (DcTable tab in res.ToList())
                 {
-                    var list = tab.GetData().GetDefinition().IsUsedInTables(recursive); // Recusrion
+                    var list = tab.GetData().IsUsedInTables(recursive); // Recusrion
                     foreach (DcTable table in list)
                     {
                         Debug.Assert(!res.Contains(table), "Cyclic dependence in tables.");
@@ -567,21 +565,7 @@ namespace Com.Schema
 
             json["name"] = Name;
 
-            // Table definition
-            if (GetDefinition() != null)
-            {
-                JObject tableDef = new JObject();
-
-                tableDef["definition_type"] = (int)GetDefinition().DefinitionType;
-
-                if (GetDefinition().WhereExpr != null)
-                {
-                    tableDef["where"] = Utils.CreateJsonFromObject(GetDefinition().WhereExpr);
-                    GetDefinition().WhereExpr.ToJson((JObject)tableDef["where"]);
-                }
-
-                json["definition"] = tableDef;
-            }
+            json["where"] = WhereFormula;
         }
 
         public virtual void FromJson(JObject json, DcWorkspace ws)
@@ -590,20 +574,7 @@ namespace Com.Schema
 
             Name = (string)json["name"];
 
-            // Table definition
-            JObject tableDef = (JObject)json["definition"];
-            if (tableDef != null && GetDefinition() != null)
-            {
-                if (tableDef["where"] != null)
-                {
-                    ExprNode node = (ExprNode)Utils.CreateObjectFromJson((JObject)tableDef["where"]);
-                    if (node != null)
-                    {
-                        node.FromJson((JObject)tableDef["where"], ws);
-                        GetDefinition().WhereExpr = node;
-                    }
-                }
-            }
+            WhereFormula = (string)json["where"];
         }
 
         #endregion

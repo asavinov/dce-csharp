@@ -442,16 +442,16 @@ namespace Test
             DcColumn c32 = schema.CreateColumn(t2.Name, t3, t2, true); // {40, 40, *50, *50}
             c32.Add();
 
-            t3.GetData().GetDefinition().Populate();
+            t3.GetData().Populate();
             Assert.AreEqual(12, t3.GetData().Length);
 
             //
             // Add simple where expression
             //
 
-            t3.GetData().GetDefinition().WhereFormula = "([Table 1].[Column 11] > 10) && this.[Table 2].[Column 23] == 50.0";
+            t3.GetData().WhereFormula = "([Table 1].[Column 11] > 10) && this.[Table 2].[Column 23] == 50.0";
 
-            t3.GetData().GetDefinition().Populate();
+            t3.GetData().Populate();
             Assert.AreEqual(4, t3.GetData().Length);
 
             Assert.AreEqual(0, c31.GetData().GetValue(0));
@@ -472,10 +472,10 @@ namespace Test
             // Define a new filter-set
             //
             DcTable t3 = schema.CreateTable("Table 3");
-            t3.GetData().GetDefinition().WhereFormula = "[Column 22] > 20.0 && this.Super.[Column 23] < 50";
+            t3.GetData().WhereFormula = "[Column 22] > 20.0 && this.Super.[Column 23] < 50";
             schema.AddTable(t3, t2, null);
 
-            t3.GetData().GetDefinition().Populate();
+            t3.GetData().Populate();
             Assert.AreEqual(1, t3.GetData().Length);
             Assert.AreEqual(1, t3.SuperColumn.GetData().GetValue(0));
         }
@@ -506,7 +506,7 @@ namespace Test
             c24.GetData().GetDefinition().IsAppendData = true;
             c24.Add();
 
-            t3.GetData().GetDefinition().Populate();
+            t3.GetData().Populate();
 
             Assert.AreEqual(2, t3.GetData().Length);
 
@@ -531,7 +531,7 @@ namespace Test
             c25.GetData().GetDefinition().IsAppendData = true;
             c25.Add();
 
-            t4.GetData().GetDefinition().Populate();
+            t4.GetData().Populate();
 
             Assert.AreEqual(3, t4.GetData().Length);
 
@@ -663,7 +663,7 @@ namespace Test
             dim.GetData().GetDefinition().IsAppendData = true;
             dim.GetData().GetDefinition().IsAppendSchema = true;
 
-            productsTable.GetData().GetDefinition().Populate();
+            productsTable.GetData().Populate();
 
             Assert.AreEqual(45, productsTable.GetData().Length);
             Assert.AreEqual("Northwind Traders Dried Pears", p3.GetData().GetValue(5));
@@ -717,7 +717,7 @@ namespace Test
             dim.GetData().GetDefinition().IsAppendData = true;
             dim.GetData().GetDefinition().IsAppendSchema = true;
 
-            table.GetDefinition().Populate();
+            table.Populate();
         }
 
         [TestMethod]
@@ -730,7 +730,7 @@ namespace Test
 
             // Add table definition 
             DcTable t = schema.GetSubTable("Table 2");
-            t.GetData().GetDefinition().WhereFormula = "[Column 22] > 20.0 && this.Super.[Column 23] < 50";
+            t.GetData().WhereFormula = "[Column 22] > 20.0 && this.Super.[Column 23] < 50";
 
             // Add column definition 
             DcColumn c = t.GetColumn("Column 22");
