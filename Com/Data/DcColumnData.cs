@@ -54,7 +54,53 @@ namespace Com.Data
         // void Index(); // Index all and build new index
         // void Index(Offset start, Offset end); // The specified interval has been changed (or inserted?)
 
-        DcColumnDefinition GetDefinition();
+        //
+        // The former DcColumnDefinition 
+        //
+
+        /// <summary>
+        /// Formula in COEL with the function definition
+        /// </summary>
+        string Formula { get; set; }
+
+        /// <summary>
+        /// Source (user, non-executable) formula for computing this function consisting of value-operations
+        /// </summary>
+        //AstNode FormulaAst { get; set; }
+
+        //
+        // Structured (object) representation
+        //
+
+        /// <summary>
+        /// Whether output values are appended to the output set. 
+        /// </summary>
+        bool IsAppendData { get; set; }
+
+        bool IsAppendSchema { get; set; }
+
+        /// <summary>
+        /// Represents a function definition in terms of other functions (select expression).
+        /// When evaluated, it computes a value of the greater set for the identity value of the lesser set.
+        /// For aggregated columns, it is an updater expression which computes a new value from the current value and a new fact (measure).
+        /// </summary>
+        ExprNode FormulaExpr { get; set; }
+
+        //
+        // Compute. Data operations.
+        //
+
+        void Evaluate();
+
+        //
+        // Dependencies. The order is important and corresponds to dependency chain
+        //
+
+        List<DcTable> UsesTables(bool recursive); // This element depends upon
+        List<DcTable> IsUsedInTables(bool recursive); // Dependants
+
+        List<DcColumn> UsesColumns(bool recursive); // This element depends upon
+        List<DcColumn> IsUsedInColumns(bool recursive); // Dependants
     }
 
 }

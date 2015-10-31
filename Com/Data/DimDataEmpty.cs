@@ -57,9 +57,6 @@ namespace Com.Data
 
         public Rowid[] Deproject(object value) { return null; } // Or empty array 
 
-        protected DcColumnDefinition _definition;
-        public virtual DcColumnDefinition GetDefinition() { return _definition; }
-
         #endregion
 
         #region DcJson serialization
@@ -69,47 +66,37 @@ namespace Com.Data
             // No super-object
 
             // Column definition
-            if (GetDefinition() != null)
-            {
-                JObject columnDef = new JObject();
-
-                columnDef["generating"] = GetDefinition().IsAppendData ? "true" : "false";
-                //columnDef["definition_type"] = (int)Definition.DefinitionType;
-
-                if (GetDefinition().FormulaExpr != null)
-                {
-                    columnDef["formula"] = Com.Schema.Utils.CreateJsonFromObject(GetDefinition().FormulaExpr);
-                    GetDefinition().FormulaExpr.ToJson((JObject)columnDef["formula"]);
-                }
-
-                json["definition"] = columnDef;
-            }
-
         }
         public virtual void FromJson(JObject json, DcWorkspace ws) // Init this object fields by using json object
         {
             // No super-object
 
             // Column definition
-            JObject columnDef = (JObject)json["definition"];
-            if (columnDef != null && GetDefinition() != null)
-            {
-                GetDefinition().IsAppendData = columnDef["generating"] != null ? StringSimilarity.JsonTrue(columnDef["generating"]) : false;
-                //Definition.DefinitionType = columnDef["definition_type"] != null ? (DcColumnDefinitionType)(int)columnDef["definition_type"] : DcColumnDefinitionType.FREE;
-
-                if (columnDef["formula"] != null)
-                {
-                    ExprNode node = (ExprNode)Com.Schema.Utils.CreateObjectFromJson((JObject)columnDef["formula"]);
-                    if (node != null)
-                    {
-                        node.FromJson((JObject)columnDef["formula"], ws);
-                        GetDefinition().FormulaExpr = node;
-                    }
-                }
-
-            }
-
         }
+
+        #endregion
+
+        #region The former DcColumnDefinition. Now part of DcColumnData
+
+        public string Formula { get; set; }
+
+        public bool IsAppendData { get; set; }
+
+        public bool IsAppendSchema { get; set; }
+
+        public ExprNode FormulaExpr { get; set; }
+
+        public void Evaluate() { }
+
+        //
+        // Dependencies. The order is important and corresponds to dependency chain
+        //
+
+        public List<DcTable> UsesTables(bool recursive) { return null; } // This element depends upon
+        public List<DcTable> IsUsedInTables(bool recursive) { return null; } // Dependants
+
+        public List<DcColumn> UsesColumns(bool recursive) { return null; } // This element depends upon
+        public List<DcColumn> IsUsedInColumns(bool recursive) { return null; } // Dependants
 
         #endregion
 

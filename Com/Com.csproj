@@ -65,13 +65,11 @@
     <Compile Include="Data\Variable.cs" />
     <Compile Include="Data\DcColumnData.cs" />
     <Compile Include="Data\DcTableData.cs" />
-    <Compile Include="Data\ColumnDefinition.cs" />
     <Compile Include="Schema\Csv\ConnectionCsv.cs" />
     <Compile Include="Schema\Csv\TableReaderCsv.cs" />
     <Compile Include="Schema\Csv\DimCsv.cs" />
     <Compile Include="Schema\Csv\SetCsv.cs" />
     <Compile Include="Schema\Csv\TableWriterCsv.cs" />
-    <Compile Include="Data\DcColumnDefinition.cs" />
     <Compile Include="Data\Aggregator.cs" />
     <Compile Include="Schema\DataCommandr.cs" />
     <Compile Include="Schema\DcColumn.cs" />

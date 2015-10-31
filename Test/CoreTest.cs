@@ -283,12 +283,12 @@ namespace Test
             //
             DcColumn c15 = schema.CreateColumn("Column 15", t1, schema.GetPrimitive("Double"), false);
 
-            c15.GetData().GetDefinition().Formula = "([Column 11]+10.0) * this.[Column 13]";
+            c15.GetData().Formula = "([Column 11]+10.0) * this.[Column 13]";
 
             c15.Add();
 
             // Evaluate column
-            c15.GetData().GetDefinition().Evaluate();
+            c15.GetData().Evaluate();
 
             Assert.AreEqual(600.0, c15.GetData().GetValue(0));
             Assert.AreEqual(200.0, c15.GetData().GetValue(1));
@@ -312,12 +312,12 @@ namespace Test
             //
             DcColumn c15 = schema.CreateColumn("Column 15", t1, schema.GetPrimitive("String"), false);
 
-            c15.GetData().GetDefinition().Formula = "call:System.String.Substring( [Column 12], 7, 1 )";
+            c15.GetData().Formula = "call:System.String.Substring( [Column 12], 7, 1 )";
 
             c15.Add();
 
             // Evaluate column
-            c15.GetData().GetDefinition().Evaluate();
+            c15.GetData().Evaluate();
 
             Assert.AreEqual("0", c15.GetData().GetValue(0));
             Assert.AreEqual("1", c15.GetData().GetValue(1));
@@ -328,11 +328,11 @@ namespace Test
             //
             DcColumn c16 = schema.CreateColumn("Column 15", t1, schema.GetPrimitive("Double"), false);
 
-            c16.GetData().GetDefinition().Formula = "call:System.Math.Pow( [Column 11] / 10.0, [Column 13] / 10.0 )";
+            c16.GetData().Formula = "call:System.Math.Pow( [Column 11] / 10.0, [Column 13] / 10.0 )";
 
             c16.Add();
 
-            c16.GetData().GetDefinition().Evaluate();
+            c16.GetData().Evaluate();
 
             Assert.AreEqual(4.0, c16.GetData().GetValue(0));
             Assert.AreEqual(1.0, c16.GetData().GetValue(1));
@@ -356,12 +356,12 @@ namespace Test
 
             DcColumn link = schema.CreateColumn("Column Link", t2, t1, false);
 
-            link.GetData().GetDefinition().Formula = "(( [Integer] [Column 11] = this.[Column 22], [Double] [Column 14] = 20.0 ))"; // Tuple structure corresponds to output table
+            link.GetData().Formula = "(( [Integer] [Column 11] = this.[Column 22], [Double] [Column 14] = 20.0 ))"; // Tuple structure corresponds to output table
 
             link.Add();
 
             // Evaluate column
-            link.GetData().GetDefinition().Evaluate();
+            link.GetData().Evaluate();
 
             Assert.AreEqual(0, link.GetData().GetValue(0));
             Assert.AreEqual(2, link.GetData().GetValue(1));
@@ -411,12 +411,12 @@ namespace Test
             //
             DcColumn c16 = schema.CreateColumn("Agg2 of Column 23", t1, schema.GetPrimitive("Double"), false);
 
-            c16.GetData().GetDefinition().Formula = "AGGREGATE(facts=[Table 2], groups=[Table 1], measure=[Column 23]*2.0 + 1, aggregator=SUM)";
+            c16.GetData().Formula = "AGGREGATE(facts=[Table 2], groups=[Table 1], measure=[Column 23]*2.0 + 1, aggregator=SUM)";
 
             c16.Add();
 
             c16.GetData().SetValue(0.0);
-            c16.GetData().GetDefinition().Evaluate(); // {40, 140, 0}
+            c16.GetData().Evaluate(); // {40, 140, 0}
 
             Assert.AreEqual(81.0, c16.GetData().GetValue(0));
             Assert.AreEqual(283.0, c16.GetData().GetValue(1));
@@ -502,8 +502,8 @@ namespace Test
 
             // Create a generating column
             DcColumn c24 = schema.CreateColumn("Project", t2, t3, false);
-            c24.GetData().GetDefinition().Formula = "(( [String] [Column 21] = [Column 21] ))";
-            c24.GetData().GetDefinition().IsAppendData = true;
+            c24.GetData().Formula = "(( [String] [Column 21] = [Column 21] ))";
+            c24.GetData().IsAppendData = true;
             c24.Add();
 
             t3.GetData().Populate();
@@ -527,8 +527,8 @@ namespace Test
             c42.Add();
 
             DcColumn c25 = schema.CreateColumn("Project", t2, t4, false);
-            c25.GetData().GetDefinition().Formula = "(( [String] [Column 21] = [Column 21], [Integer] [Column 22] = [Column 22] ))";
-            c25.GetData().GetDefinition().IsAppendData = true;
+            c25.GetData().Formula = "(( [String] [Column 21] = [Column 21], [Integer] [Column 22] = [Column 22] ))";
+            c25.GetData().IsAppendData = true;
             c25.Add();
 
             t4.GetData().Populate();
@@ -658,10 +658,10 @@ namespace Test
             // Define import column
             DcColumn dim = schema.CreateColumn("Import", top.GetSubTable("Products"), productsTable, false);
             dim.Add();
-            dim.GetData().GetDefinition().IsAppendData = true;
-            dim.GetData().GetDefinition().Formula = "(( [Integer] [ID] = this.[ID], [String] [Product Code] = [Product Code], [String] [Custom Product Name] = [Product Name], [Double] [List Price] = [List Price], [Double] [Constant Column] = 20.02 ))"; // Tuple structure corresponds to output table
-            dim.GetData().GetDefinition().IsAppendData = true;
-            dim.GetData().GetDefinition().IsAppendSchema = true;
+            dim.GetData().IsAppendData = true;
+            dim.GetData().Formula = "(( [Integer] [ID] = this.[ID], [String] [Product Code] = [Product Code], [String] [Custom Product Name] = [Product Name], [Double] [List Price] = [List Price], [Double] [Constant Column] = 20.02 ))"; // Tuple structure corresponds to output table
+            dim.GetData().IsAppendData = true;
+            dim.GetData().IsAppendSchema = true;
 
             productsTable.GetData().Populate();
 
@@ -712,10 +712,10 @@ namespace Test
             // Define export column
             DcColumn dim = schema.CreateColumn("Export", schema.GetSubTable("Table 1"), table, false);
             dim.Add();
-            dim.GetData().GetDefinition().IsAppendData = true;
-            dim.GetData().GetDefinition().Formula = "(( [String] [Column 11] = this.[Column 11], [String] [Column 12] = [Column 12], [String] [Custom Column 13] = [Column 13], [String] [Constant Column] = 20.02 ))"; // Tuple structure corresponds to output table
-            dim.GetData().GetDefinition().IsAppendData = true;
-            dim.GetData().GetDefinition().IsAppendSchema = true;
+            dim.GetData().IsAppendData = true;
+            dim.GetData().Formula = "(( [String] [Column 11] = this.[Column 11], [String] [Column 12] = [Column 12], [String] [Custom Column 13] = [Column 13], [String] [Constant Column] = 20.02 ))"; // Tuple structure corresponds to output table
+            dim.GetData().IsAppendData = true;
+            dim.GetData().IsAppendSchema = true;
 
             table.Populate();
         }
@@ -734,7 +734,7 @@ namespace Test
 
             // Add column definition 
             DcColumn c = t.GetColumn("Column 22");
-            c.GetData().GetDefinition().Formula = "([Column 11]+10.0) * this.[Column 13]";
+            c.GetData().Formula = "([Column 11]+10.0) * this.[Column 13]";
 
             DcWorkspace ws = new Workspace();
             ws.Schemas.Add(schema);
@@ -762,7 +762,7 @@ namespace Test
 
             c = t.GetColumn("Column 22");
             //Assert.AreEqual(DcColumnDefinitionType.ARITHMETIC, c.Definition.FormulaExpr.DefinitionType);
-            Assert.AreEqual(2, c.GetData().GetDefinition().FormulaExpr.Children.Count);
+            Assert.AreEqual(2, c.GetData().FormulaExpr.Children.Count);
 
             //
             // 2. Another sample schema with several schemas and inter-schema columns

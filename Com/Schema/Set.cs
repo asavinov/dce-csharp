@@ -236,7 +236,7 @@ namespace Com.Schema
                 if (IsPrimitive) return TableDefinitionType.FREE;
 
                 // Try to find incoming generating (append) columns. If they exist then table instances are populated as this dimension output tuples.
-                List<DcColumn> inColumns = InputColumns.Where(d => d.GetData().GetDefinition().IsAppendData).ToList();
+                List<DcColumn> inColumns = InputColumns.Where(d => d.GetData().IsAppendData).ToList();
                 if(inColumns != null && inColumns.Count > 0)
                 {
                     return TableDefinitionType.PROJECTION;
@@ -285,11 +285,11 @@ namespace Com.Schema
 
             if (DefinitionType == TableDefinitionType.PROJECTION) // There are import dimensions so copy data from another set (projection of another set)
             {
-                List<DcColumn> inColumns = InputColumns.Where(d => d.GetData().GetDefinition().IsAppendData).ToList();
+                List<DcColumn> inColumns = InputColumns.Where(d => d.GetData().IsAppendData).ToList();
 
                 foreach(DcColumn inColumn in inColumns)
                 {
-                    inColumn.GetData().GetDefinition().Evaluate(); // Delegate to column evaluation - it will add records from column expression
+                    inColumn.GetData().Evaluate(); // Delegate to column evaluation - it will add records from column expression
                 }
             }
             else if (DefinitionType == TableDefinitionType.PRODUCT) // Product of local sets (no project/de-project from another set)
@@ -435,7 +435,7 @@ namespace Com.Schema
 
             foreach (DcColumn col in InputColumns) // If a generating source set has changed then this set has to be populated
             {
-                if (!col.GetData().GetDefinition().IsAppendData) continue;
+                if (!col.GetData().IsAppendData) continue;
                 res.Add(col.Input);
             }
 
@@ -469,7 +469,7 @@ namespace Com.Schema
 
             foreach (DcColumn col in Columns) // If this table has changed then output tables of generating dimensions have to be populated
             {
-                if (!col.GetData().GetDefinition().IsAppendData) continue;
+                if (!col.GetData().IsAppendData) continue;
                 res.Add(col.Output);
             }
 
@@ -499,7 +499,7 @@ namespace Com.Schema
 
             foreach (DcColumn col in InputColumns) // If a generating source column (definition) has changed then this set has to be updated
             {
-                if (!col.GetData().GetDefinition().IsAppendData) continue;
+                if (!col.GetData().IsAppendData) continue;
                 res.Add(col);
             }
 
@@ -510,7 +510,7 @@ namespace Com.Schema
             {
                 foreach (DcColumn col in res.ToList())
                 {
-                    var list = col.GetData().GetDefinition().UsesColumns(recursive); // Recursion
+                    var list = col.GetData().UsesColumns(recursive); // Recursion
                     foreach (DcColumn column in list)
                     {
                         Debug.Assert(!res.Contains(column), "Cyclic dependence in columns.");
@@ -532,7 +532,7 @@ namespace Com.Schema
 
             foreach (DcColumn col in Columns) // If this set has changed then all greater generating columns have to be updated
             {
-                if (!col.GetData().GetDefinition().IsAppendData) continue;
+                if (!col.GetData().IsAppendData) continue;
                 res.Add(col);
             }
 
@@ -543,7 +543,7 @@ namespace Com.Schema
             {
                 foreach (DcColumn col in res.ToList())
                 {
-                    var list = col.GetData().GetDefinition().IsUsedInColumns(recursive); // Recursion
+                    var list = col.GetData().IsUsedInColumns(recursive); // Recursion
                     foreach (DcColumn column in list)
                     {
                         Debug.Assert(!res.Contains(column), "Cyclic dependence in columns.");
@@ -565,7 +565,9 @@ namespace Com.Schema
 
             json["name"] = Name;
 
-            json["where"] = WhereFormula;
+            JObject tableDef = new JObject();
+            tableDef["whereFormula"] = WhereFormula;
+            json["definition"] = tableDef;
         }
 
         public virtual void FromJson(JObject json, DcWorkspace ws)
@@ -574,7 +576,12 @@ namespace Com.Schema
 
             Name = (string)json["name"];
 
-            WhereFormula = (string)json["where"];
+            // TODO: JSON object for DcTableData including definition
+            JObject tableDef = (JObject)json["definition"];
+            if (tableDef != null)
+            {
+                WhereFormula = (string)tableDef["whereFormula"];
+            }
         }
 
         #endregion

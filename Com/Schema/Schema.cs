@@ -128,12 +128,12 @@ namespace Com.Schema
 
                 foreach (var col in tab.Columns)
                 {
-                    if (col.GetData() == null || col.GetData().GetDefinition() == null) continue;
-                    DcColumnDefinition def = col.GetData().GetDefinition();
+                    if (col.GetData() == null) continue;
+                    DcColumnData data = col.GetData();
 
-                    if (def.FormulaExpr != null)
+                    if (data.FormulaExpr != null)
                     {
-                        nodes = def.FormulaExpr.Find((DcTable)table);
+                        nodes = data.FormulaExpr.Find((DcTable)table);
                         nodes.ForEach(x => x.Name = newName);
                     }
                 }
@@ -165,12 +165,12 @@ namespace Com.Schema
 
                 foreach (var col in tab.Columns)
                 {
-                    if (col.GetData() == null || col.GetData().GetDefinition() == null) continue;
-                    DcColumnDefinition def = col.GetData().GetDefinition();
+                    if (col.GetData() == null) continue;
+                    DcColumnData data = col.GetData();
 
-                    if (def.FormulaExpr != null)
+                    if (data.FormulaExpr != null)
                     {
-                        nodes = def.FormulaExpr.Find((DcColumn)column);
+                        nodes = data.FormulaExpr.Find((DcColumn)column);
                         nodes.ForEach(x => x.Name = newName);
                     }
                 }
@@ -201,12 +201,12 @@ namespace Com.Schema
 
                 foreach (var col in tab.Columns)
                 {
-                    if (col.GetData() == null || col.GetData().GetDefinition() == null) continue;
-                    DcColumnDefinition def = col.GetData().GetDefinition();
+                    if (col.GetData() == null) continue;
+                    DcColumnData data = col.GetData();
 
-                    if (def.FormulaExpr != null)
+                    if (data.FormulaExpr != null)
                     {
-                        nodes = def.FormulaExpr.Find(column);
+                        nodes = data.FormulaExpr.Find(column);
                         foreach (var node in nodes) if (node.Parent != null) node.Parent.RemoveChild(node);
                     }
 

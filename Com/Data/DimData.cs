@@ -9,6 +9,7 @@ using Newtonsoft.Json.Linq;
 using Com.Utils;
 using Com.Data;
 using Com.Schema;
+using Com.Schema.Csv;
 using Com.Data.Query;
 
 using Rowid = System.Int32;
@@ -56,7 +57,7 @@ namespace Com.Data
             }
         }
 
-        #region ComColumnData interface
+        #region DcColumnData interface
 
         protected Rowid _length; // It is only used if lesser set is not set, that is, for hanging dimension (theoretically, we should not use hanging dimensions and do not need then this field)
         public Rowid Length
@@ -322,8 +323,340 @@ namespace Com.Data
             }
         }
 
-        protected DcColumnDefinition _definition;
-        public virtual DcColumnDefinition GetDefinition() { return _definition; }
+        #endregion
+
+        #region The former DcColumnDefinition. Now part of DcColumnData
+
+        protected string formula;
+        public String Formula
+        {
+            get { return formula; }
+            set
+            {
+                formula = value;
+
+                if (string.IsNullOrWhiteSpace(formula)) return;
+
+                ExprBuilder exprBuilder = new ExprBuilder();
+                ExprNode expr = exprBuilder.Build(formula);
+
+                FormulaExpr = expr;
+            }
+        }
+        public ExprNode FormulaExpr { get; set; }
+
+        //
+        // Structured (object) representation
+        //
+
+        public bool IsAppendData { get; set; }
+
+        public bool IsAppendSchema { get; set; }
+
+
+        public void Evaluate()
+        {
+            if (FormulaExpr == null || FormulaExpr.DefinitionType == ColumnDefinitionType.FREE)
+            {
+                return; // Nothing to evaluate
+            }
+
+            // Aassert: FactTable.GroupFormula + ThisSet.ThisFunc = FactTable.MeasureFormula
+            // Aassert: if LoopSet == ThisSet then GroupCode = null, ThisFunc = MeasureCode
+
+            // NOTE: This should be removed or moved to the expression. Here we store non-syntactic part of the definition in columndef and then set the expression. Maybe we should have syntactic annotation for APPEND flag (output result annotation, what to do with the output). 
+            if (FormulaExpr.DefinitionType == ColumnDefinitionType.LINK)
+            {
+                // Adjust the expression according to other parameters of the definition
+                if (IsAppendData)
+                {
+                    FormulaExpr.Action = ActionType.APPEND;
+                }
+                else
+                {
+                    FormulaExpr.Action = ActionType.READ;
+                }
+            }
+
+            //
+            // Evaluate loop depends on the type of definition
+            //
+
+            // General parameters
+            DcWorkspace Workspace = Dim.Input.Schema.Workspace;
+            DcColumnData columnData = Dim.GetData();
+
+            Dim.GetData().AutoIndex = false;
+            //Dim.Data.Nullify();
+
+            object thisCurrent = null;
+
+            if (Dim.Input.Schema is SchemaCsv) // Import from CSV
+            {
+                // Prepare parameter variables for the expression 
+                DcTable thisTable = Dim.Input;
+                DcVariable thisVariable = new Variable(thisTable.Schema.Name, thisTable.Name, "this");
+                thisVariable.TypeSchema = thisTable.Schema;
+                thisVariable.TypeTable = thisTable;
+
+                // Parameterize expression and resolve it (bind names to real objects) 
+                FormulaExpr.OutputVariable.SchemaName = Dim.Output.Schema.Name;
+                FormulaExpr.OutputVariable.TypeName = Dim.Output.Name;
+                FormulaExpr.OutputVariable.TypeSchema = Dim.Output.Schema;
+                FormulaExpr.OutputVariable.TypeTable = Dim.Output;
+                FormulaExpr.Resolve(Workspace, new List<DcVariable>() { thisVariable });
+
+                FormulaExpr.EvaluateBegin();
+                DcTableReader tableReader = thisTable.GetData().GetTableReader();
+                tableReader.Open();
+                while ((thisCurrent = tableReader.Next()) != null)
+                {
+                    thisVariable.SetValue(thisCurrent); // Set parameters of the expression
+
+                    FormulaExpr.Evaluate(); // Evaluate the expression
+
+                    if (columnData != null) // We do not store import functions (we do not need this data)
+                    {
+                        object newValue = FormulaExpr.OutputVariable.GetValue();
+                        //columnData.SetValue((Rowid)thisCurrent, newValue);
+                    }
+                }
+                tableReader.Close();
+                FormulaExpr.EvaluateEnd();
+            }
+            else if (FormulaExpr.DefinitionType == ColumnDefinitionType.ARITHMETIC || FormulaExpr.DefinitionType == ColumnDefinitionType.LINK)
+            {
+                // Prepare parameter variables for the expression 
+                DcTable thisTable = Dim.Input;
+                DcVariable thisVariable = new Variable(thisTable.Schema.Name, thisTable.Name, "this");
+                thisVariable.TypeSchema = thisTable.Schema;
+                thisVariable.TypeTable = thisTable;
+
+                // Parameterize expression and resolve it (bind names to real objects) 
+                FormulaExpr.OutputVariable.SchemaName = Dim.Output.Schema.Name;
+                FormulaExpr.OutputVariable.TypeName = Dim.Output.Name;
+                FormulaExpr.OutputVariable.TypeSchema = Dim.Output.Schema;
+                FormulaExpr.OutputVariable.TypeTable = Dim.Output;
+                FormulaExpr.Resolve(Workspace, new List<DcVariable>() { thisVariable });
+
+                FormulaExpr.EvaluateBegin();
+                DcTableReader tableReader = thisTable.GetData().GetTableReader();
+                tableReader.Open();
+                while ((thisCurrent = tableReader.Next()) != null)
+                {
+                    thisVariable.SetValue(thisCurrent); // Set parameters of the expression
+
+                    FormulaExpr.Evaluate(); // Evaluate the expression
+
+                    // Write the result value to the function
+                    // NOTE: We want to implement write operations with functions in the expression itself, particularly, because this might be done by intermediate nodes each of them having also APPEND flag
+                    // NOTE: when writing or find/append output to a table, an expression needs a TableWriter (or reader) object which is specific to the expression node (also intermediate)
+                    // NOTE: it could be meaningful to implement separately TUPLE (DOWN, NON-PRIMITIVE) nodes and CALL (UP, PRIMITIVE) expression classes since their general logic/purpose is quite different, particularly, for table writing. 
+                    // NOTE: where expression (in tables) is evaluated without writing to column
+                    if (columnData != null)
+                    {
+                        object newValue = FormulaExpr.OutputVariable.GetValue();
+                        columnData.SetValue((Rowid)thisCurrent, newValue);
+                    }
+                }
+                tableReader.Close();
+                FormulaExpr.EvaluateEnd();
+            }
+            else if (FormulaExpr.DefinitionType == ColumnDefinitionType.AGGREGATION)
+            {
+                // Facts
+                ExprNode factsNode = FormulaExpr.GetChild("facts").GetChild(0);
+
+                // This table and variable
+                string thisTableName = factsNode.Name;
+                DcTable thisTable = Dim.Input.Schema.GetSubTable(thisTableName);
+                DcVariable thisVariable = new Variable(thisTable.Schema.Name, thisTable.Name, "this");
+                thisVariable.TypeSchema = thisTable.Schema;
+                thisVariable.TypeTable = thisTable;
+
+                // Groups
+                ExprNode groupExpr; // Returns a group this fact belongs to, is stored in the group variable
+                ExprNode groupsNode = FormulaExpr.GetChild("groups").GetChild(0);
+                groupExpr = groupsNode;
+                groupExpr.Resolve(Workspace, new List<DcVariable>() { thisVariable });
+
+                DcVariable groupVariable; // Stores current group (input for the aggregated function)
+                groupVariable = new Variable(Dim.Input.Schema.Name, Dim.Input.Name, "this");
+                groupVariable.TypeSchema = Dim.Input.Schema;
+                groupVariable.TypeTable = Dim.Input;
+
+                // Measure
+                ExprNode measureExpr; // Returns a new value to be aggregated with the old value, is stored in the measure variable
+                ExprNode measureNode = FormulaExpr.GetChild("measure").GetChild(0);
+                measureExpr = measureNode;
+                measureExpr.Resolve(Workspace, new List<DcVariable>() { thisVariable });
+
+                DcVariable measureVariable; // Stores new value (output for the aggregated function)
+                measureVariable = new Variable(Dim.Output.Schema.Name, Dim.Output.Name, "value");
+                measureVariable.TypeSchema = Dim.Output.Schema;
+                measureVariable.TypeTable = Dim.Output;
+
+                // Updater/aggregation function
+                ExprNode updaterExpr = FormulaExpr.GetChild("aggregator").GetChild(0);
+
+                ExprNode outputExpr;
+                outputExpr = ExprNode.CreateUpdater(Dim, updaterExpr.Name);
+                outputExpr.Resolve(Workspace, new List<DcVariable>() { groupVariable, measureVariable });
+
+                FormulaExpr.EvaluateBegin();
+                DcTableReader tableReader = thisTable.GetData().GetTableReader();
+                tableReader.Open();
+                while ((thisCurrent = tableReader.Next()) != null)
+                {
+                    thisVariable.SetValue(thisCurrent); // Set parameters of the expression
+
+                    groupExpr.Evaluate();
+                    Rowid groupElement = (Rowid)groupExpr.OutputVariable.GetValue();
+                    groupVariable.SetValue(groupElement);
+
+                    measureExpr.Evaluate();
+                    object measureValue = measureExpr.OutputVariable.GetValue();
+                    measureVariable.SetValue(measureValue);
+
+                    outputExpr.Evaluate(); // Evaluate the expression
+
+                    // Write the result value to the function
+                    if (columnData != null)
+                    {
+                        object newValue = outputExpr.OutputVariable.GetValue();
+                        columnData.SetValue(groupElement, newValue);
+                    }
+                }
+                tableReader.Close();
+                FormulaExpr.EvaluateEnd();
+            }
+            else
+            {
+                throw new NotImplementedException("This type of column definition is not implemented.");
+            }
+
+            Dim.GetData().Reindex();
+            Dim.GetData().AutoIndex = true;
+        }
+
+        //
+        // Dependencies
+        //
+
+        public List<Dim> Dependencies { get; set; } // Other functions this function directly depends upon. Computed from the definition of this function.
+        // Find and store all outputs of this function by evaluating (executing) its definition in a loop for all input elements of the fact set (not necessarily this set)
+
+        public List<DcTable> UsesTables(bool recursive) // This element depends upon
+        {
+            List<DcTable> res = new List<DcTable>();
+
+            if (FormulaExpr == null)
+            {
+                ;
+            }
+            else if (FormulaExpr.DefinitionType == ColumnDefinitionType.ANY || FormulaExpr.DefinitionType == ColumnDefinitionType.ARITHMETIC || FormulaExpr.DefinitionType == ColumnDefinitionType.LINK)
+            {
+                if (FormulaExpr != null) // Dependency information is stored in expression (formula)
+                {
+                    res = FormulaExpr.Find((DcTable)null).Select(x => x.OutputVariable.TypeTable).ToList();
+                }
+            }
+            else if (FormulaExpr.DefinitionType == ColumnDefinitionType.AGGREGATION)
+            {
+                /*
+                res.Add(FactTable); // This column depends on the fact table
+
+                // Grouping and measure paths are used in this column
+                if (GroupPaths != null)
+                {
+                    foreach (DimPath path in GroupPaths)
+                    {
+                        foreach (DcColumn seg in path.Segments)
+                        {
+                            if (!res.Contains(seg.Output)) res.Add(seg.Output);
+                        }
+                    }
+                }
+                if (MeasurePaths != null)
+                {
+                    foreach (DimPath path in MeasurePaths)
+                    {
+                        foreach (DcColumn seg in path.Segments)
+                        {
+                            if (!res.Contains(seg.Output)) res.Add(seg.Output);
+                        }
+                    }
+                }
+                */
+            }
+
+            return res;
+        }
+        public List<DcTable> IsUsedInTables(bool recursive) // Dependants
+        {
+            List<DcTable> res = new List<DcTable>();
+
+            // TODO: Which other sets use this function for their content? Say, if it is a generating function. Or it is a group/measure function.
+            // Analyze other function definitions and check if this function is used there directly. 
+            // If such a function has been found, then make the same call for it, that is find other functins where it is used.
+
+            // A function can be used in Filter expression and Sort expression
+
+            return res;
+        }
+
+        public List<DcColumn> UsesColumns(bool recursive) // This element depends upon
+        {
+            List<DcColumn> res = new List<DcColumn>();
+
+            if (FormulaExpr == null)
+            {
+                ;
+            }
+            else if (FormulaExpr.DefinitionType == ColumnDefinitionType.ANY || FormulaExpr.DefinitionType == ColumnDefinitionType.ARITHMETIC || FormulaExpr.DefinitionType == ColumnDefinitionType.LINK)
+            {
+                if (FormulaExpr != null) // Dependency information is stored in expression (formula)
+                {
+                    res = FormulaExpr.Find((DcColumn)null).Select(x => x.Column).ToList();
+                }
+            }
+            else if (FormulaExpr.DefinitionType == ColumnDefinitionType.AGGREGATION)
+            {
+                /*
+                // Grouping and measure paths are used in this column
+                if (GroupPaths != null)
+                {
+                    foreach (var path in GroupPaths)
+                    {
+                        foreach (var seg in path.Segments)
+                        {
+                            if (!res.Contains(seg)) res.Add(seg);
+                        }
+                    }
+                }
+                if (MeasurePaths != null)
+                {
+                    foreach (var path in MeasurePaths)
+                    {
+                        foreach (var seg in path.Segments)
+                        {
+                            if (!res.Contains(seg)) res.Add(seg);
+                        }
+                    }
+                }
+                */
+            }
+
+            return res;
+        }
+        public List<DcColumn> IsUsedInColumns(bool recursive) // Dependants
+        {
+            List<DcColumn> res = new List<DcColumn>();
+
+            // TODO: Find which other columns use this column in the definition
+
+            return res;
+        }
 
         #endregion
 
@@ -334,46 +667,14 @@ namespace Com.Data
             // No super-object
 
             // Column definition
-            if (GetDefinition() != null)
-            {
-                JObject columnDef = new JObject();
-
-                columnDef["generating"] = GetDefinition().IsAppendData ? "true" : "false";
-                //columnDef["definition_type"] = (int)Definition.DefinitionType;
-
-                if (GetDefinition().FormulaExpr != null)
-                {
-                    columnDef["formula"] = Com.Schema.Utils.CreateJsonFromObject(GetDefinition().FormulaExpr);
-                    GetDefinition().FormulaExpr.ToJson((JObject)columnDef["formula"]);
-                }
-
-                json["definition"] = columnDef;
-            }
-
+            json["formula"] = Formula;
         }
         public virtual void FromJson(JObject json, DcWorkspace ws) // Init this object fields by using json object
         {
             // No super-object
 
             // Column definition
-            JObject columnDef = (JObject)json["definition"];
-            if (columnDef != null && GetDefinition() != null)
-            {
-                GetDefinition().IsAppendData = columnDef["generating"] != null ? StringSimilarity.JsonTrue(columnDef["generating"]) : false;
-                //Definition.DefinitionType = columnDef["definition_type"] != null ? (DcColumnDefinitionType)(int)columnDef["definition_type"] : DcColumnDefinitionType.FREE;
-
-                if (columnDef["formula"] != null)
-                {
-                    ExprNode node = (ExprNode)Com.Schema.Utils.CreateObjectFromJson((JObject)columnDef["formula"]);
-                    if (node != null)
-                    {
-                        node.FromJson((JObject)columnDef["formula"], ws);
-                        GetDefinition().FormulaExpr = node;
-                    }
-                }
-
-            }
-
+            json["formula"] = Formula;
         }
 
         #endregion
@@ -679,8 +980,7 @@ namespace Com.Data
                 Length = dim.Input.GetData().Length;
             }
 
-            _definition = new ColumnDefinition(dim);
-            // TODO: Copy definition
+            Dependencies = new List<Schema.Dim>();
         }
 
         #endregion
