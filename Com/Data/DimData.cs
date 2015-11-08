@@ -404,7 +404,7 @@ namespace Com.Data
                 FormulaExpr.OutputVariable.TypeName = Dim.Output.Name;
                 FormulaExpr.OutputVariable.TypeSchema = Dim.Output.Schema;
                 FormulaExpr.OutputVariable.TypeTable = Dim.Output;
-                FormulaExpr.Resolve(Workspace, new List<DcVariable>() { thisVariable });
+                FormulaExpr.EvaluateAndResolveSchema(Workspace, new List<DcVariable>() { thisVariable });
 
                 FormulaExpr.EvaluateBegin();
                 DcTableReader tableReader = thisTable.GetData().GetTableReader();
@@ -437,7 +437,7 @@ namespace Com.Data
                 FormulaExpr.OutputVariable.TypeName = Dim.Output.Name;
                 FormulaExpr.OutputVariable.TypeSchema = Dim.Output.Schema;
                 FormulaExpr.OutputVariable.TypeTable = Dim.Output;
-                FormulaExpr.Resolve(Workspace, new List<DcVariable>() { thisVariable });
+                FormulaExpr.EvaluateAndResolveSchema(Workspace, new List<DcVariable>() { thisVariable });
 
                 FormulaExpr.EvaluateBegin();
                 DcTableReader tableReader = thisTable.GetData().GetTableReader();
@@ -478,7 +478,7 @@ namespace Com.Data
                 ExprNode groupExpr; // Returns a group this fact belongs to, is stored in the group variable
                 ExprNode groupsNode = FormulaExpr.GetChild("groups").GetChild(0);
                 groupExpr = groupsNode;
-                groupExpr.Resolve(Workspace, new List<DcVariable>() { thisVariable });
+                groupExpr.EvaluateAndResolveSchema(Workspace, new List<DcVariable>() { thisVariable });
 
                 DcVariable groupVariable; // Stores current group (input for the aggregated function)
                 groupVariable = new Variable(Dim.Input.Schema.Name, Dim.Input.Name, "this");
@@ -489,7 +489,7 @@ namespace Com.Data
                 ExprNode measureExpr; // Returns a new value to be aggregated with the old value, is stored in the measure variable
                 ExprNode measureNode = FormulaExpr.GetChild("measure").GetChild(0);
                 measureExpr = measureNode;
-                measureExpr.Resolve(Workspace, new List<DcVariable>() { thisVariable });
+                measureExpr.EvaluateAndResolveSchema(Workspace, new List<DcVariable>() { thisVariable });
 
                 DcVariable measureVariable; // Stores new value (output for the aggregated function)
                 measureVariable = new Variable(Dim.Output.Schema.Name, Dim.Output.Name, "value");
@@ -501,7 +501,7 @@ namespace Com.Data
 
                 ExprNode outputExpr;
                 outputExpr = ExprNode.CreateUpdater(Dim, updaterExpr.Name);
-                outputExpr.Resolve(Workspace, new List<DcVariable>() { groupVariable, measureVariable });
+                outputExpr.EvaluateAndResolveSchema(Workspace, new List<DcVariable>() { groupVariable, measureVariable });
 
                 FormulaExpr.EvaluateBegin();
                 DcTableReader tableReader = thisTable.GetData().GetTableReader();

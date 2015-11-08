@@ -102,23 +102,18 @@ namespace Com.Data
         // Return run-time value after processing this node to be used by the parent. It must have the specified type.
         public DcVariable OutputVariable { get; set; }
 
-        //
-        // Maybe we need a method for retrieving dependency information, that is, a list of other functions (with their sets) used in the formula, including maybe system functions, variables and other context objects
-        // Such expressions could be generated from our own source code, and they could be translated in the native source code (or even directly to byte-code without source code)
-        //
-
         /// <summary>
-        /// Resolve the name and type name against the storage elements (schema, variables).
-        /// The resolved object references are stored in the fields and will be used during evaluation without name resolution.
+        /// Create or update all the schema elements that are used in this expression. 
+        /// Store direct object references to these named elements so that they can be directly accessed during data evaluation without name resolution. 
+        /// Element that needs to be created/updated or resolved: tables (types), columns (functions), variables, procedures, operators. 
         /// Notes:
-        /// - Names that need to be resolved: type names, function (column) names, variable names, system procedure names, operator names (plus, minus etc.)
+        /// - Schema elements are created only if they are used in tuples which is treated as a table structure specification 
+        /// - Resolution starts from some well-known point and then propagates along the structure. For example, it is specified for 'this' (input) variable read by CALL nodes by propagating to parent nodes, and 'result' (output) in TUPLE nodes which is then propagated to its child nodes. 
         /// - An expression can be resolved against two schemas (not one) because it connects two sets (input and output) that can belong to different schemas. Particularly, it happens for import/export dimensions. 
+        ///   - Types in tuples depend on the parent type. Columns (variables, procedures etc.) depend on the children. 
         /// - Types can be already resolved during expression creation. Particularly, in the case if it is created from a mapping object. 
-        /// - Resolution starts from some well-known point and then propagates along the structure.
-        /// - Types in tuples depend on the parent type. Columns (variables, procedures etc.) depend on the children. 
         /// </summary>
-        /// <param name="variables"></param>
-        public virtual void Resolve(DcWorkspace workspace, List<DcVariable> variables)
+        public virtual void EvaluateAndResolveSchema(DcWorkspace workspace, List<DcVariable> variables)
         {
             // PROBLEM: tables in formula might have no direct indication of their schema which is needed to resolve table names
             // Schema for nodes has to be derived from other nodes (before resovling the corresponding tables)
@@ -128,12 +123,12 @@ namespace Com.Data
             // TODO: We must set right schema before resolving the table in the variable because variable itself has no idea what is the schema of its table (type)
             // Expressions (their result variable types) can belong to different schemas (for import/export). How can we specify different schemas for different nodes? 1. Inherit from parent TUPLE and eventually from root 'result' variable. 2. Inherit from child CALL and eventually from leaf 'this' variable 3. If it is constant value then we do not care what is the schema but maybe formally we have to set mashup.
 
-
-
             if (Operation == OperationType.VALUE)
             {
                 int intValue = 0;
                 double doubleValue = 0.0;
+
+                OutputVariable.Resolve(workspace);
 
                 //
                 // Resolve string into object and store in the result. Derive the type from the format. 
@@ -154,8 +149,6 @@ namespace Com.Data
                     OutputVariable.TypeName = "String";
                     OutputVariable.SetValue(Name);
                 }
-
-                OutputVariable.Resolve(workspace);
             }
             else if (Operation == OperationType.TUPLE)
             {
@@ -163,6 +156,11 @@ namespace Com.Data
                 // Resolve this (tuples are resolved through the parent which must be resolved before children)
                 // In TUPLE, Name denotes a function from the parent (input) to this node (output) 
                 //
+
+                //
+                // Resolve type table name 
+                //
+                OutputVariable.Resolve(workspace);
 
                 //
                 // Resolve Name into a column object (a function from the parent to this node)
@@ -180,8 +178,6 @@ namespace Com.Data
 
                         if (col != null) // Column resolved 
                         {
-                            Column = col;
-
                             // Check and process type information 
                             if (OutputVariable.TypeTable == null)
                             {
@@ -197,9 +193,16 @@ namespace Com.Data
                         }
                         else // Column not found 
                         {
-                            // Append a new column (schema change, e.g., if function output structure has to be propagated)
-                            // TODO:
+                                // Append a new column (schema change, e.g., if function output structure has to be propagated)
+                                DcTable input = parentNode.OutputVariable.TypeTable;
+                                DcTable output = OutputVariable.TypeTable;
+                                string columnName = Name;
+
+                                col = input.Schema.CreateColumn(columnName, input, output, false);
+                                col.Add();
                         }
+
+                        Column = col;
                     }
                 }
                 else // This tuple in some other node, e.g, argument or value
@@ -208,16 +211,11 @@ namespace Com.Data
                 }
 
                 //
-                // Resolve type table name 
-                //
-                OutputVariable.Resolve(workspace);
-
-                //
                 // Resolve children (important: after the tuple itself, because this node will be used)
                 //
                 foreach (TreeNode<ExprNode> childNode in Children)
                 {
-                    childNode.Item.Resolve(workspace, variables);
+                    childNode.Item.EvaluateAndResolveSchema(workspace, variables);
                 }
             }
             else if (Operation == OperationType.CALL)
@@ -228,7 +226,7 @@ namespace Com.Data
                 //
                 foreach (TreeNode<ExprNode> childNode in Children)
                 {
-                    childNode.Item.Resolve(workspace, variables);
+                    childNode.Item.EvaluateAndResolveSchema(workspace, variables);
                 }
 
                 //
@@ -243,36 +241,42 @@ namespace Com.Data
                 ExprNode thisChild = GetChild("this"); // Get column input (while this node is output)
                 int childCount = Children.Count;
 
-                if( !string.IsNullOrEmpty(NameSpace) ) // External name space (java call, c# call etc.) 
+                if (!string.IsNullOrEmpty(NameSpace)) // External name space (java call, c# call etc.) 
                 {
                     string className = NameSpace.Trim();
-                    if(NameSpace.StartsWith("call:")) 
+                    if (NameSpace.StartsWith("call:"))
                     {
                         className = className.Substring(3).Trim();
                     }
                     Type clazz = null;
-                    try {
+                    try
+                    {
                         clazz = Type.GetType(className);
-                    } catch (Exception e) {
+                    }
+                    catch (Exception e)
+                    {
                         Console.WriteLine(e.StackTrace);
                     }
-                
+
                     string methodName = Name;
-                    MethodInfo[]  methods = null;
+                    MethodInfo[] methods = null;
                     methods = clazz.GetMethods(); // BindingFlags.Public
-                    foreach(MethodInfo m in methods) {
-                        if(!m.Name.Equals(methodName)) continue;
-                        if(m.IsStatic) {
-                            if(m.GetParameters().Length != childCount) continue;
+                    foreach (MethodInfo m in methods)
+                    {
+                        if (!m.Name.Equals(methodName)) continue;
+                        if (m.IsStatic)
+                        {
+                            if (m.GetParameters().Length != childCount) continue;
                         }
-                        else {
-                            if(m.GetParameters().Length + 1 != childCount) continue;
+                        else
+                        {
+                            if (m.GetParameters().Length + 1 != childCount) continue;
                         }
-                    
+
                         Method = m;
                         break;
                     }
-                }	
+                }
                 else if (childCount == 0) // It is a variable (or it is a function but a child is ommited and has to be reconstructed)
                 {
                     // Try to resolve as a variable (including this variable). If success then finish.
