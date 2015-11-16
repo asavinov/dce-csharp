@@ -18,7 +18,7 @@ namespace Com.Schema.Csv
 
         public string[] CurrentRecord { get { return csvReader.CurrentRecord; } }
 
-        public void OpenReader(SetCsv table)
+        public void OpenReader(TableCsv table)
         {
             // Open file
             System.IO.StreamReader textReader = File.OpenText(table.FilePath);
@@ -96,7 +96,7 @@ namespace Com.Schema.Csv
 
         private CsvHelper.CsvWriter csvWriter;
 
-        public void OpenWriter(SetCsv table)
+        public void OpenWriter(TableCsv table)
         {
             // Open file
             //System.IO.StreamWriter textWriter = File.OpenWrite(table.FilePath);

@@ -10,7 +10,7 @@ using Com.Utils;
 
 namespace Com.Schema
 {
-    public interface DcWorkspace : DcJson
+    public interface DcSpace : DcJson
     {
         ObservableCollection<DcSchema> Schemas { get; set; }
 

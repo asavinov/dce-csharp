@@ -14,28 +14,28 @@ namespace Com.Schema.Rel
     /// <summary>
     /// Relational attribute to be used in relational schemas (relational table and column classes). It is a primitive path - a sequence of normal dimensions leading to a primitive type. 
     /// </summary>
-    public class DimAttribute : DimPath
+    public class ColumnAtt : ColumnPath
     {
         #region ComColumn interface
 
         public override void Add()
         {
-            //if (Output != null) ((SetRel)Output).AddLesserPath(this);
-            if (Input != null) ((SetRel)Input).AddGreaterPath(this);
+            //if (Output != null) ((TableRel)Output).AddLesserPath(this);
+            if (Input != null) ((TableRel)Input).AddGreaterPath(this);
 
             // Notify that a new child has been added
-            //if (Input != null) ((Set)Input).NotifyAdd(this);
-            //if (Output != null) ((Set)Output).NotifyAdd(this);
+            //if (Input != null) ((Table)Input).NotifyAdd(this);
+            //if (Output != null) ((Table)Output).NotifyAdd(this);
         }
 
         public override void Remove()
         {
-            //if (Output != null) ((SetRel)Output).RemoveLesserPath(this);
-            if (Input != null) ((SetRel)Input).RemoveGreaterPath(this);
+            //if (Output != null) ((TableRel)Output).RemoveLesserPath(this);
+            if (Input != null) ((TableRel)Input).RemoveGreaterPath(this);
 
             // Notify that a new child has been removed
-            //if (Input != null) ((Set)Input).NotifyRemove(this);
-            //if (Output != null) ((Set)Output).NotifyRemove(this);
+            //if (Input != null) ((Table)Input).NotifyRemove(this);
+            //if (Output != null) ((Table)Output).NotifyRemove(this);
         }
 
         #endregion
@@ -54,9 +54,9 @@ namespace Com.Schema.Rel
         /// Use the provided list of attributes for expansion recursively. This list essentially represents a schema.
         /// Also, adjust path names in special cases like empty name or simple structure. 
         /// </summary>
-        public void ExpandAttribute(List<DimAttribute> attributes, List<DcColumn> columns) // Add and resolve attributes by creating dimension structure from FKs
+        public void ExpandAttribute(List<ColumnAtt> attributes, List<DcColumn> columns) // Add and resolve attributes by creating dimension structure from FKs
         {
-            DimAttribute att = this;
+            ColumnAtt att = this;
 
             if (att.Segments.Count > 0) return; // Already expanded (because of recursion)
 
@@ -65,11 +65,11 @@ namespace Com.Schema.Rel
             if (string.IsNullOrEmpty(att.RelationalFkName)) // No FK - primitive column - end of recursion
             {
                 // Find or create a primitive dim segment
-                DcColumn seg = columns.FirstOrDefault(c => c.Input == att.Input && StringSimilarity.SameColumnName(((DimRel)c).RelationalFkName, att.RelationalFkName));
+                DcColumn seg = columns.FirstOrDefault(c => c.Input == att.Input && StringSimilarity.SameColumnName(((ColumnRel)c).RelationalFkName, att.RelationalFkName));
                 if (seg == null)
                 {
-                    seg = new DimRel(att.RelationalColumnName, att.Input, att.Output, isKey, false); // Maybe copy constructor?
-                    ((DimRel)seg).RelationalFkName = att.RelationalFkName;
+                    seg = new ColumnRel(att.RelationalColumnName, att.Input, att.Output, isKey, false); // Maybe copy constructor?
+                    ((ColumnRel)seg).RelationalFkName = att.RelationalFkName;
                     columns.Add(seg);
                 }
 
@@ -78,15 +78,15 @@ namespace Com.Schema.Rel
             else
             { // There is FK - non-primitive column
                 // Find target set and target attribute (name resolution)
-                DimAttribute tailAtt = attributes.FirstOrDefault(a => StringSimilarity.SameTableName(a.Input.Name, att.RelationalTargetTableName) && StringSimilarity.SameColumnName(a.Name, att.RelationalTargetColumnName));
-                DcTable gSet = tailAtt.Input;
+                ColumnAtt tailAtt = attributes.FirstOrDefault(a => StringSimilarity.SameTableName(a.Input.Name, att.RelationalTargetTableName) && StringSimilarity.SameColumnName(a.Name, att.RelationalTargetColumnName));
+                DcTable gTab = tailAtt.Input;
 
                 // Find or create a dim segment
-                DcColumn seg = columns.FirstOrDefault(c => c.Input == att.Input && StringSimilarity.SameColumnName(((DimRel)c).RelationalFkName, att.RelationalFkName));
+                DcColumn seg = columns.FirstOrDefault(c => c.Input == att.Input && StringSimilarity.SameColumnName(((ColumnRel)c).RelationalFkName, att.RelationalFkName));
                 if (seg == null)
                 {
-                    seg = new DimRel(att.RelationalFkName, att.Input, gSet, isKey, false);
-                    ((DimRel)seg).RelationalFkName = att.RelationalFkName;
+                    seg = new ColumnRel(att.RelationalFkName, att.Input, gTab, isKey, false);
+                    ((ColumnRel)seg).RelationalFkName = att.RelationalFkName;
                     columns.Add(seg);
                 }
 
@@ -99,7 +99,7 @@ namespace Com.Schema.Rel
                 att.InsertLast(tailAtt);
 
                 // Adjust name. How many attributes belong to the same FK as this attribute (FK composition)
-                List<DimAttribute> fkAtts = attributes.Where(a => a.Input == att.Input && StringSimilarity.SameColumnName(att.RelationalFkName, a.RelationalFkName)).ToList();
+                List<ColumnAtt> fkAtts = attributes.Where(a => a.Input == att.Input && StringSimilarity.SameColumnName(att.RelationalFkName, a.RelationalFkName)).ToList();
                 if (fkAtts.Count == 1)
                 {
                     seg.Name = att.RelationalColumnName; // Adjust name. For 1-column FK, name of the FK-dim is the column name (not the FK name)
@@ -151,7 +151,7 @@ namespace Com.Schema.Rel
 
         public override void ToJson(JObject json) // Write fields to the json object
         {
-            base.ToJson(json); // DimPath
+            base.ToJson(json); // ColumnPath
 
             json["RelationalColumnName"] = RelationalColumnName;
             json["RelationalPkName"] = RelationalPkName;
@@ -159,9 +159,9 @@ namespace Com.Schema.Rel
             json["RelationalTargetTableName"] = RelationalTargetTableName;
             json["RelationalTargetColumnName"] = RelationalTargetColumnName;
         }
-        public override void FromJson(JObject json, DcWorkspace ws) // Init this object fields by using json object
+        public override void FromJson(JObject json, DcSpace ws) // Init this object fields by using json object
         {
-            base.FromJson(json, ws); // DimPath
+            base.FromJson(json, ws); // ColumnPath
 
             RelationalColumnName = (string)json["RelationalColumnName"];
             RelationalPkName = (string)json["RelationalPkName"];
@@ -172,22 +172,22 @@ namespace Com.Schema.Rel
 
         #endregion
 
-        public DimAttribute()
+        public ColumnAtt()
             : base()
         {
         }
 
-        public DimAttribute(string name)
+        public ColumnAtt(string name)
             : base(name)
         {
         }
 
-        public DimAttribute(DimPath path)
+        public ColumnAtt(ColumnPath path)
             : base(path)
         {
         }
 
-        public DimAttribute(string name, DcTable input, DcTable output)
+        public ColumnAtt(string name, DcTable input, DcTable output)
             : base(name, input, output)
         {
         }

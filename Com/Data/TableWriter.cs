@@ -85,8 +85,8 @@ namespace Com.Data
             //
             // Check that real (non-null) values are available for all identity dimensions
             //
-            PathEnumerator primPaths = new PathEnumerator(table, DimensionType.IDENTITY);
-            foreach (DimPath path in primPaths) // Find all primitive identity paths
+            PathEnumerator primPaths = new PathEnumerator(table, ColumnType.IDENTITY);
+            foreach (ColumnPath path in primPaths) // Find all primitive identity paths
             {
                 // Try to find at least one node with non-null value on the path
                 bool valueFound = false;

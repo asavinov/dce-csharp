@@ -26,7 +26,7 @@ namespace Com.Schema
     /// A set is also characterized by width and length of its members. 
     /// And a set provides methods for manipulating its structure and intances. 
     /// </summary>
-    public class Set : INotifyCollectionChanged, INotifyPropertyChanged, DcTable, DcTableData 
+    public class Table : DcTable, DcTableData, INotifyCollectionChanged, INotifyPropertyChanged 
     {
         /// <summary>
         /// Unique set id (in this database) . In C++, this Id field would be used as a reference filed
@@ -42,8 +42,8 @@ namespace Com.Schema
         //
         // Outputs
         //
-        protected List<DcColumn> greaterDims;
-        public List<DcColumn> Columns { get { return greaterDims; } } // Outgoing up arrows. Outputs
+        protected List<DcColumn> greaterTabs;
+        public List<DcColumn> Columns { get { return greaterTabs; } } // Outgoing up arrows. Outputs
 
         public DcColumn SuperColumn { get { return Columns.FirstOrDefault(x => x.IsSuper); } }
         public DcTable SuperTable { get { return SuperColumn != null ? SuperColumn.Output : null; } }
@@ -51,9 +51,9 @@ namespace Com.Schema
         {
             get
             {
-                DcTable set = this;
-                while (set.SuperTable != null) set = set.SuperTable;
-                return set is Schema ? (Schema)set : null; // A set which is not integrated in the schema does not have top
+                DcTable tab = this;
+                while (tab.SuperTable != null) tab = tab.SuperTable;
+                return tab is Schema ? (Schema)tab : null; // A set which is not integrated in the schema does not have top
             }
         }
 
@@ -61,8 +61,8 @@ namespace Com.Schema
         // Inputs
         //
 
-        protected List<DcColumn> lesserDims;
-        public List<DcColumn> InputColumns { get { return lesserDims; } } // Incoming arrows. Inputs
+        protected List<DcColumn> lesserTabs;
+        public List<DcColumn> InputColumns { get { return lesserTabs; } } // Incoming arrows. Inputs
 
         public List<DcColumn> SubColumns { get { return InputColumns.Where(x => x.IsSuper).ToList(); } }
         public List<DcTable> SubTables { get { return SubColumns.Select(x => x.Input).ToList(); } }
@@ -96,16 +96,16 @@ namespace Com.Schema
         // Return true if this set is included in the specified set, that is, the specified set is a direct or indirect super-set of this set
         public bool IsSubTable(DcTable parent) // IsSub
         {
-            for (DcTable set = this; set != null; set = set.SuperTable)
+            for (DcTable tab = this; tab != null; tab = tab.SuperTable)
             {
-                if (set == parent) return true;
+                if (tab == parent) return true;
             }
             return false;
         }
 
-        public bool IsInput(DcTable set) // IsLess
+        public bool IsInput(DcTable tab) // IsLess
         {
-            var paths = new PathEnumerator(this, set, DimensionType.IDENTITY_ENTITY);
+            var paths = new PathEnumerator(this, tab, ColumnType.IDENTITY_ENTITY);
             return paths.Count() > 0;
         }
 
@@ -136,33 +136,33 @@ namespace Com.Schema
 
         public DcTable GetSubTable(string name)
         {
-            DcTable set = null;
+            DcTable tab = null;
             if (StringSimilarity.SameTableName(Name, name))
             {
-                set = this;
+                tab = this;
             }
 
-            foreach (Dim d in SubColumns)
+            foreach (Column col in SubColumns)
             {
-                if (set != null) break;
-                set = d.Input.GetSubTable(name);
+                if (tab != null) break;
+                tab = col.Input.GetSubTable(name);
             }
 
-            return set;
+            return tab;
         }
 
         public DcTableData GetData() { return this; }
 
         #endregion
 
-        public List<DimPath> GetOutputPaths(Set output) // Differences between this set and the specified set
+        public List<ColumnPath> GetOutputPaths(Table output) // Differences between this set and the specified set
         {
             if (output == null) return null;
-            var paths = new PathEnumerator(this, output, DimensionType.IDENTITY_ENTITY);
-            var ret = new List<DimPath>();
+            var paths = new PathEnumerator(this, output, ColumnType.IDENTITY_ENTITY);
+            var ret = new List<ColumnPath>();
             foreach (var p in paths)
             {
-                ret.Add(new DimPath(p)); // Create a path for each list of dimensions
+                ret.Add(new ColumnPath(p)); // Create a path for each list of dimensions
             }
 
             return ret;
@@ -307,7 +307,7 @@ namespace Com.Schema
                     outputExpr.OutputVariable.TypeName = "Boolean";
                     outputExpr.OutputVariable.TypeSchema = this.Schema;
                     outputExpr.OutputVariable.TypeTable = this.Schema.GetPrimitive("Boolean");
-                    outputExpr.EvaluateAndResolveSchema(this.Schema.Workspace, new List<DcVariable>() { thisVariable });
+                    outputExpr.EvaluateAndResolveSchema(this.Schema.Space, new List<DcVariable>() { thisVariable });
 
                     outputExpr.EvaluateBegin();
                 }
@@ -318,33 +318,33 @@ namespace Com.Schema
                 //
                 // Find all local greater dimensions to be varied (including the super-dim)
                 //
-                DcColumn[] dims = Columns.Where(x => x.IsKey).ToArray();
-                int dimCount = dims.Length; // Dimensionality - how many free dimensions
-                object[] vals = new object[dimCount]; // A record with values for each free dimension being varied
+                DcColumn[] cols = Columns.Where(x => x.IsKey).ToArray();
+                int colCount = cols.Length; // Dimensionality - how many free dimensions
+                object[] vals = new object[colCount]; // A record with values for each free dimension being varied
 
                 //
                 // The current state of the search procedure
                 //
-                Rowid[] lengths = new Rowid[dimCount]; // Size of each dimension being varied (how many offsets in each dimension)
-                for (int i = 0; i < dimCount; i++) lengths[i] = dims[i].Output.GetData().Length;
+                Rowid[] lengths = new Rowid[colCount]; // Size of each dimension being varied (how many offsets in each dimension)
+                for (int i = 0; i < colCount; i++) lengths[i] = cols[i].Output.GetData().Length;
 
-                Rowid[] offsets = new Rowid[dimCount]; // The current point/offset for each dimensions during search
-                for (int i = 0; i < dimCount; i++) offsets[i] = -1;
+                Rowid[] offsets = new Rowid[colCount]; // The current point/offset for each dimensions during search
+                for (int i = 0; i < colCount; i++) offsets[i] = -1;
 
                 int top = -1; // The current level/top where we change the offset. Depth of recursion.
-                do ++top; while (top < dimCount && lengths[top] == 0);
+                do ++top; while (top < colCount && lengths[top] == 0);
 
                 // Alternative recursive iteration: http://stackoverflow.com/questions/13655299/c-sharp-most-efficient-way-to-iterate-through-multiple-arrays-list
                 while (top >= 0)
                 {
-                    if (top == dimCount) // New element is ready. Process it.
+                    if (top == colCount) // New element is ready. Process it.
                     {
                         // Initialize a record and append it
-                        for (int i = 0; i < dimCount; i++)
+                        for (int i = 0; i < colCount; i++)
                         {
                             vals[i] = offsets[i];
                         }
-                        Rowid input = tableWriter.Append(dims, vals);
+                        Rowid input = tableWriter.Append(cols, vals);
 
                         //
                         // Now check if this appended element satisfies the where expression and if not then remove it
@@ -377,7 +377,7 @@ namespace Com.Schema
                         if (offsets[top] < lengths[top]) // Offset chosen
                         {
                             do ++top;
-                            while (top < dimCount && lengths[top] == 0); // Go up (forward) by skipping empty dimensions
+                            while (top < colCount && lengths[top] == 0); // Go up (forward) by skipping empty dimensions
                         }
                         else // Level is finished. Go back.
                         {
@@ -407,7 +407,7 @@ namespace Com.Schema
         {
             // TODO: SuperDim.Length = 0;
 
-            foreach(Dim d in Columns) 
+            foreach(Column col in Columns) 
             {
                 // TODO: d.Length = 0;
             }
@@ -570,7 +570,7 @@ namespace Com.Schema
             json["definition"] = tableDef;
         }
 
-        public virtual void FromJson(JObject json, DcWorkspace ws)
+        public virtual void FromJson(JObject json, DcSpace ws)
         {
             // No super-object
 
@@ -596,15 +596,15 @@ namespace Com.Schema
                 CollectionChanged(this, e);
             }
         }
-        public virtual void NotifyAdd(Dim dim) // Convenience method: notifying about adding
+        public virtual void NotifyAdd(Column col) // Convenience method: notifying about adding
         {
-            if (dim == null) return;
-            OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, dim));
+            if (col == null) return;
+            OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, col));
         }
-        public virtual void NotifyRemove(Dim dim) // Convenience method: notifying about removing
+        public virtual void NotifyRemove(Column col) // Convenience method: notifying about removing
         {
-            if (dim == null) return;
-            OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, dim));
+            if (col == null) return;
+            OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, col));
         }
 
         //
@@ -634,8 +634,8 @@ namespace Com.Schema
             if (Object.ReferenceEquals(this, obj)) return true;
             if (this.GetType() != obj.GetType()) return false;
 
-            Set set = (Set)obj;
-            if (Id.Equals(set.Id)) return true;
+            Table tab = (Table)obj;
+            if (Id.Equals(tab.Id)) return true;
 
             return false;
         }
@@ -649,19 +649,19 @@ namespace Com.Schema
 
         #region Constructors and initializers.
 
-        public Set()
+        public Table()
             : this("")
         {
         }
 
-        public Set(string name)
+        public Table(string name)
         {
             Id = Guid.NewGuid();
 
             Name = name;
 
-            greaterDims = new List<DcColumn>(); // Up arrows
-            lesserDims = new List<DcColumn>();
+            greaterTabs = new List<DcColumn>(); // Up arrows
+            lesserTabs = new List<DcColumn>();
         }
 
         #endregion

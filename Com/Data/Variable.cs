@@ -20,7 +20,7 @@ namespace Com.Data
         public string SchemaName { get; set; }
         public string TypeName { get; set; }
 
-        public void Resolve(DcWorkspace workspace)
+        public void Resolve(DcSpace workspace)
         {
             if (!string.IsNullOrEmpty(SchemaName))
             {

@@ -15,7 +15,7 @@ namespace Com.Data
     /// Empty data.
     /// 
     /// </summary>
-    public class DimDataEmpty : DcColumnData
+    public class ColumnDataEmpty : DcColumnData
     {
 
         #region ComColumnData interface
@@ -67,7 +67,7 @@ namespace Com.Data
 
             // Column definition
         }
-        public virtual void FromJson(JObject json, DcWorkspace ws) // Init this object fields by using json object
+        public virtual void FromJson(JObject json, DcSpace ws) // Init this object fields by using json object
         {
             // No super-object
 

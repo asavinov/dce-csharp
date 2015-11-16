@@ -40,7 +40,7 @@ namespace Com.Schema.Csv
 
         #region Schema methods
 
-        public List<DcColumn> LoadSchema(SetCsv table) // Table object is created to store all necessary parameters which are individual for each table
+        public List<DcColumn> LoadSchema(TableCsv table) // Table object is created to store all necessary parameters which are individual for each table
         {
             List<DcColumn> columns = new List<DcColumn>();
 
@@ -57,7 +57,7 @@ namespace Com.Schema.Csv
             {
                 string columnName = names[i];
                 DcTable type = this.GetPrimitive("String");
-                DimCsv column = (DimCsv)this.CreateColumn(columnName, table, type, false);
+                ColumnCsv column = (ColumnCsv)this.CreateColumn(columnName, table, type, false);
                 column.ColumnIndex = i;
                 columns.Add(column);
                 //column.Add();
@@ -84,7 +84,7 @@ namespace Com.Schema.Csv
 
         public override DcTable CreateTable(String name)
         {
-            DcTable table = new SetCsv(name);
+            DcTable table = new TableCsv(name);
             return table;
         }
 
@@ -99,9 +99,9 @@ namespace Com.Schema.Csv
                 superName = "Super";
             }
 
-            Dim dim = new DimCsv(superName, table, parent, true, true);
+            Column col = new ColumnCsv(superName, table, parent, true, true);
 
-            dim.Add();
+            col.Add();
 
             return table;
         }
@@ -110,9 +110,9 @@ namespace Com.Schema.Csv
         {
             Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
 
-            DcColumn dim = new DimCsv(name, input, output, isKey, false);
+            DcColumn col = new ColumnCsv(name, input, output, isKey, false);
 
-            return dim;
+            return col;
         }
 
         #endregion
@@ -125,7 +125,7 @@ namespace Com.Schema.Csv
 
         }
 
-        public override void FromJson(JObject json, DcWorkspace ws)
+        public override void FromJson(JObject json, DcSpace ws)
         {
             base.FromJson(json, ws); // Schema
 
@@ -135,17 +135,17 @@ namespace Com.Schema.Csv
 
         protected override void CreateDataTypes() // Create all primitive data types from some specification like Enum, List or XML
         {
-            Set set;
-            Dim dim;
+            Table tab;
+            Column col;
 
-            set = new Set("Root");
-            dim = new Dim("Top", set, this, true, true);
-            dim.Add();
+            tab = new Table("Root");
+            col = new Column("Top", tab, this, true, true);
+            col.Add();
 
             // Text files have only one type - String.
-            set = new Set("String");
-            dim = new Dim("Top", set, this, true, true);
-            dim.Add();
+            tab = new Table("String");
+            col = new Column("Top", tab, this, true, true);
+            col.Add();
         }
 
         public SchemaCsv()

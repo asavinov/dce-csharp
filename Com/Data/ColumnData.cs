@@ -22,9 +22,9 @@ namespace Com.Data
     /// One array of type T stores elements in their original order without sorting. 
     /// Second array stores indexes (offsets) of elements in the first array in sorted order.
     /// </summary>
-    public class DimData<T> : DcColumnData
+    public class ColumnData<T> : DcColumnData
     {
-        protected DcColumn Dim { get; set; }
+        protected DcColumn Column { get; set; }
 
         // Memory management parameters for instances (used by extensions and in future will be removed from this class).
         protected static int initialSize = 1024 * 10; // In elements
@@ -383,27 +383,27 @@ namespace Com.Data
             //
 
             // General parameters
-            DcWorkspace Workspace = Dim.Input.Schema.Workspace;
-            DcColumnData columnData = Dim.GetData();
+            DcSpace Workspace = Column.Input.Schema.Space;
+            DcColumnData columnData = Column.GetData();
 
-            Dim.GetData().AutoIndex = false;
-            //Dim.Data.Nullify();
+            Column.GetData().AutoIndex = false;
+            //Column.Data.Nullify();
 
             object thisCurrent = null;
 
-            if (Dim.Input.Schema is SchemaCsv) // Import from CSV
+            if (Column.Input.Schema is SchemaCsv) // Import from CSV
             {
                 // Prepare parameter variables for the expression 
-                DcTable thisTable = Dim.Input;
+                DcTable thisTable = Column.Input;
                 DcVariable thisVariable = new Variable(thisTable.Schema.Name, thisTable.Name, "this");
                 thisVariable.TypeSchema = thisTable.Schema;
                 thisVariable.TypeTable = thisTable;
 
                 // Parameterize expression and resolve it (bind names to real objects) 
-                FormulaExpr.OutputVariable.SchemaName = Dim.Output.Schema.Name;
-                FormulaExpr.OutputVariable.TypeName = Dim.Output.Name;
-                FormulaExpr.OutputVariable.TypeSchema = Dim.Output.Schema;
-                FormulaExpr.OutputVariable.TypeTable = Dim.Output;
+                FormulaExpr.OutputVariable.SchemaName = Column.Output.Schema.Name;
+                FormulaExpr.OutputVariable.TypeName = Column.Output.Name;
+                FormulaExpr.OutputVariable.TypeSchema = Column.Output.Schema;
+                FormulaExpr.OutputVariable.TypeTable = Column.Output;
                 FormulaExpr.EvaluateAndResolveSchema(Workspace, new List<DcVariable>() { thisVariable });
 
                 FormulaExpr.EvaluateBegin();
@@ -427,16 +427,16 @@ namespace Com.Data
             else if (FormulaExpr.DefinitionType == ColumnDefinitionType.ARITHMETIC || FormulaExpr.DefinitionType == ColumnDefinitionType.LINK)
             {
                 // Prepare parameter variables for the expression 
-                DcTable thisTable = Dim.Input;
+                DcTable thisTable = Column.Input;
                 DcVariable thisVariable = new Variable(thisTable.Schema.Name, thisTable.Name, "this");
                 thisVariable.TypeSchema = thisTable.Schema;
                 thisVariable.TypeTable = thisTable;
 
                 // Parameterize expression and resolve it (bind names to real objects) 
-                FormulaExpr.OutputVariable.SchemaName = Dim.Output.Schema.Name;
-                FormulaExpr.OutputVariable.TypeName = Dim.Output.Name;
-                FormulaExpr.OutputVariable.TypeSchema = Dim.Output.Schema;
-                FormulaExpr.OutputVariable.TypeTable = Dim.Output;
+                FormulaExpr.OutputVariable.SchemaName = Column.Output.Schema.Name;
+                FormulaExpr.OutputVariable.TypeName = Column.Output.Name;
+                FormulaExpr.OutputVariable.TypeSchema = Column.Output.Schema;
+                FormulaExpr.OutputVariable.TypeTable = Column.Output;
                 FormulaExpr.EvaluateAndResolveSchema(Workspace, new List<DcVariable>() { thisVariable });
 
                 FormulaExpr.EvaluateBegin();
@@ -469,7 +469,7 @@ namespace Com.Data
 
                 // This table and variable
                 string thisTableName = factsNode.Name;
-                DcTable thisTable = Dim.Input.Schema.GetSubTable(thisTableName);
+                DcTable thisTable = Column.Input.Schema.GetSubTable(thisTableName);
                 DcVariable thisVariable = new Variable(thisTable.Schema.Name, thisTable.Name, "this");
                 thisVariable.TypeSchema = thisTable.Schema;
                 thisVariable.TypeTable = thisTable;
@@ -481,9 +481,9 @@ namespace Com.Data
                 groupExpr.EvaluateAndResolveSchema(Workspace, new List<DcVariable>() { thisVariable });
 
                 DcVariable groupVariable; // Stores current group (input for the aggregated function)
-                groupVariable = new Variable(Dim.Input.Schema.Name, Dim.Input.Name, "this");
-                groupVariable.TypeSchema = Dim.Input.Schema;
-                groupVariable.TypeTable = Dim.Input;
+                groupVariable = new Variable(Column.Input.Schema.Name, Column.Input.Name, "this");
+                groupVariable.TypeSchema = Column.Input.Schema;
+                groupVariable.TypeTable = Column.Input;
 
                 // Measure
                 ExprNode measureExpr; // Returns a new value to be aggregated with the old value, is stored in the measure variable
@@ -492,15 +492,15 @@ namespace Com.Data
                 measureExpr.EvaluateAndResolveSchema(Workspace, new List<DcVariable>() { thisVariable });
 
                 DcVariable measureVariable; // Stores new value (output for the aggregated function)
-                measureVariable = new Variable(Dim.Output.Schema.Name, Dim.Output.Name, "value");
-                measureVariable.TypeSchema = Dim.Output.Schema;
-                measureVariable.TypeTable = Dim.Output;
+                measureVariable = new Variable(Column.Output.Schema.Name, Column.Output.Name, "value");
+                measureVariable.TypeSchema = Column.Output.Schema;
+                measureVariable.TypeTable = Column.Output;
 
                 // Updater/aggregation function
                 ExprNode updaterExpr = FormulaExpr.GetChild("aggregator").GetChild(0);
 
                 ExprNode outputExpr;
-                outputExpr = ExprNode.CreateUpdater(Dim, updaterExpr.Name);
+                outputExpr = ExprNode.CreateUpdater(Column, updaterExpr.Name);
                 outputExpr.EvaluateAndResolveSchema(Workspace, new List<DcVariable>() { groupVariable, measureVariable });
 
                 FormulaExpr.EvaluateBegin();
@@ -535,15 +535,15 @@ namespace Com.Data
                 throw new NotImplementedException("This type of column definition is not implemented.");
             }
 
-            Dim.GetData().Reindex();
-            Dim.GetData().AutoIndex = true;
+            Column.GetData().Reindex();
+            Column.GetData().AutoIndex = true;
         }
 
         //
         // Dependencies
         //
 
-        public List<Dim> Dependencies { get; set; } // Other functions this function directly depends upon. Computed from the definition of this function.
+        public List<Column> Dependencies { get; set; } // Other functions this function directly depends upon. Computed from the definition of this function.
         // Find and store all outputs of this function by evaluating (executing) its definition in a loop for all input elements of the fact set (not necessarily this set)
 
         public List<DcTable> UsesTables(bool recursive) // This element depends upon
@@ -569,7 +569,7 @@ namespace Com.Data
                 // Grouping and measure paths are used in this column
                 if (GroupPaths != null)
                 {
-                    foreach (DimPath path in GroupPaths)
+                    foreach (ColumnPath path in GroupPaths)
                     {
                         foreach (DcColumn seg in path.Segments)
                         {
@@ -579,7 +579,7 @@ namespace Com.Data
                 }
                 if (MeasurePaths != null)
                 {
-                    foreach (DimPath path in MeasurePaths)
+                    foreach (ColumnPath path in MeasurePaths)
                     {
                         foreach (DcColumn seg in path.Segments)
                         {
@@ -669,7 +669,7 @@ namespace Com.Data
             // Column definition
             json["formula"] = Formula;
         }
-        public virtual void FromJson(JObject json, DcWorkspace ws) // Init this object fields by using json object
+        public virtual void FromJson(JObject json, DcSpace ws) // Init this object fields by using json object
         {
             // No super-object
 
@@ -914,11 +914,11 @@ namespace Com.Data
 
         #region Constructors
 
-        public DimData(DcColumn dim)
+        public ColumnData(DcColumn col)
         {
             // TODO: Check if output (greater) set is of correct type
 
-            Dim = dim;
+            Column = col;
 
             allocatedSize = initialSize;
             _cells = new T[allocatedSize];
@@ -975,12 +975,12 @@ namespace Com.Data
 
             _length = 0;
             Length = 0;
-            if (dim.Input != null && dim.Input.GetData() != null)
+            if (col.Input != null && col.Input.GetData() != null)
             {
-                Length = dim.Input.GetData().Length;
+                Length = col.Input.GetData().Length;
             }
 
-            Dependencies = new List<Schema.Dim>();
+            Dependencies = new List<Schema.Column>();
         }
 
         #endregion

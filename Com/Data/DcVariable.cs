@@ -22,7 +22,7 @@ namespace Com.Data
         string SchemaName { get; set; }
         string TypeName { get; set; }
 
-        void Resolve(DcWorkspace workspace); // Resolve schema name and table name (type) into object references
+        void Resolve(DcSpace workspace); // Resolve schema name and table name (type) into object references
 
         DcSchema TypeSchema { get; set; } // Resolved schema name
         DcTable TypeTable { get; set; } // Resolved table name

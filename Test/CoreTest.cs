@@ -42,19 +42,19 @@ namespace Test
             ExprBuilder = new ExprBuilder();
         }
         
-        DcWorkspace workspace { get; set; }
+        DcSpace space { get; set; }
         DcSchema schema { get; set; }
 
         [TestInitialize()]
         public void SetUp() {
-            workspace = new Workspace();
+            space = new Space();
 
             //
             // Prepare schema
             //
             schema = CreateSampleSchema();
-            workspace.Schemas.Add(schema);
-            schema.Workspace = workspace;
+            space.Schemas.Add(schema);
+            schema.Space = space;
         }
     
         protected DcSchema CreateSampleSchema()
@@ -187,7 +187,7 @@ namespace Test
             Assert.AreEqual(t2.SuperColumn.Output, schema.Root);
 
             // Test path enumerator
-            var pathEnum = new PathEnumerator(t2, t1, DimensionType.IDENTITY_ENTITY);
+            var pathEnum = new PathEnumerator(t2, t1, ColumnType.IDENTITY_ENTITY);
             Assert.AreEqual(1, pathEnum.Count());
         }
 
@@ -557,13 +557,13 @@ namespace Test
 
             Assert.AreEqual(20, tables.Count);
 
-            DcWorkspace workspace = new Workspace();
+            DcSpace space = new Space();
 
             // Db
             SchemaOledb top = new SchemaOledb("");
             top.connection = conn;
-            workspace.Schemas.Add(top);
-            top.Workspace = workspace;
+            space.Schemas.Add(top);
+            top.Space = space;
 
             //
             // Load schema
@@ -576,7 +576,7 @@ namespace Test
             Assert.AreEqual("Orders", top.GetSubTable("Order Details").GetColumn("Order ID").Output.Name);
 
             // Load data manually
-            DataTable dataTable = top.LoadTable((SetRel)top.GetSubTable("Order Details"));
+            System.Data.DataTable dataTable = top.LoadTable((TableRel)top.GetSubTable("Order Details"));
             Assert.AreEqual(58, dataTable.Rows.Count);
             Assert.AreEqual(37, dataTable.Rows[10][2]);
 
@@ -584,8 +584,8 @@ namespace Test
             // Configure import 
             //
             DcSchema schema = new Schema("My Schema");
-            workspace.Schemas.Add(schema);
-            schema.Workspace = workspace;
+            space.Schemas.Add(schema);
+            schema.Space = space;
 
             DcTable orderDetailsTable = schema.CreateTable("Order Details");
             
@@ -613,15 +613,15 @@ namespace Test
         [TestMethod]
         public void CsvReadTest() // Load Csv schema and data as a result of evaluation
         {
-            DcWorkspace workspace = new Workspace();
+            DcSpace space = new Space();
 
             // Create schema for a remote db
             SchemaCsv top = new SchemaCsv("My Files");
-            workspace.Schemas.Add(top);
-            top.Workspace = workspace;
+            space.Schemas.Add(top);
+            top.Space = space;
 
             // Create a remote file description
-            SetCsv table = (SetCsv)top.CreateTable("Products");
+            TableCsv table = (TableCsv)top.CreateTable("Products");
             table.FilePath = CsvRead;
             var columns = top.LoadSchema(table);
             columns.ForEach(x => x.Add());
@@ -631,14 +631,14 @@ namespace Test
             Assert.AreEqual(15, top.GetSubTable("Products").Columns.Count);
 
             Assert.AreEqual("String", top.GetSubTable("Products").GetColumn("Product Name").Output.Name);
-            Assert.AreEqual("3", ((DimCsv)top.GetSubTable("Products").GetColumn("ID")).SampleValues[1]);
+            Assert.AreEqual("3", ((ColumnCsv)top.GetSubTable("Products").GetColumn("ID")).SampleValues[1]);
 
             //
             // Configure import 
             //
             DcSchema schema = new Schema("My Schema");
-            workspace.Schemas.Add(schema);
-            schema.Workspace = workspace;
+            space.Schemas.Add(schema);
+            schema.Space = space;
 
             DcTable productsTable = schema.CreateTable("Products");
             schema.AddTable(productsTable, null, null);
@@ -656,12 +656,12 @@ namespace Test
             p5.Add();
 
             // Define import column
-            DcColumn dim = schema.CreateColumn("Import", top.GetSubTable("Products"), productsTable, false);
-            dim.Add();
-            dim.GetData().IsAppendData = true;
-            dim.GetData().Formula = "(( [Integer] [ID] = this.[ID], [String] [Product Code] = [Product Code], [String] [Custom Product Name] = [Product Name], [Double] [List Price] = [List Price], [Double] [Constant Column] = 20.02 ))"; // Tuple structure corresponds to output table
-            dim.GetData().IsAppendData = true;
-            dim.GetData().IsAppendSchema = true;
+            DcColumn col = schema.CreateColumn("Import", top.GetSubTable("Products"), productsTable, false);
+            col.Add();
+            col.GetData().IsAppendData = true;
+            col.GetData().Formula = "(( [Integer] [ID] = this.[ID], [String] [Product Code] = [Product Code], [String] [Custom Product Name] = [Product Name], [Double] [List Price] = [List Price], [Double] [Constant Column] = 20.02 ))"; // Tuple structure corresponds to output table
+            col.GetData().IsAppendData = true;
+            col.GetData().IsAppendSchema = true;
 
             productsTable.GetData().Populate();
 
@@ -673,11 +673,11 @@ namespace Test
         [TestMethod]
         public void CsvWriteTest() // Store schema and data to a CSV file as a result of evaluation
         {
-            DcWorkspace workspace = new Workspace();
+            DcSpace space = new Space();
 
             DcSchema schema = CreateSampleSchema();
-            workspace.Schemas.Add(schema);
-            schema.Workspace = workspace;
+            space.Schemas.Add(schema);
+            schema.Space = space;
 
             CreateSampleData(schema);
 
@@ -691,11 +691,11 @@ namespace Test
             // Create schema for a remote db
             //
             SchemaCsv top = new SchemaCsv("My Files");
-            workspace.Schemas.Add(top);
-            top.Workspace = workspace;
+            space.Schemas.Add(top);
+            top.Space = space;
 
             // Create a remote file description
-            SetCsv table = (SetCsv)top.CreateTable("Table_1");
+            TableCsv table = (TableCsv)top.CreateTable("Table_1");
             top.AddTable(table, null, null);
             table.FilePath = CsvWrite;
 
@@ -710,12 +710,12 @@ namespace Test
             p4.Add();
 
             // Define export column
-            DcColumn dim = schema.CreateColumn("Export", schema.GetSubTable("Table 1"), table, false);
-            dim.Add();
-            dim.GetData().IsAppendData = true;
-            dim.GetData().Formula = "(( [String] [Column 11] = this.[Column 11], [String] [Column 12] = [Column 12], [String] [Custom Column 13] = [Column 13], [String] [Constant Column] = 20.02 ))"; // Tuple structure corresponds to output table
-            dim.GetData().IsAppendData = true;
-            dim.GetData().IsAppendSchema = true;
+            DcColumn col = schema.CreateColumn("Export", schema.GetSubTable("Table 1"), table, false);
+            col.Add();
+            col.GetData().IsAppendData = true;
+            col.GetData().Formula = "(( [String] [Column 11] = this.[Column 11], [String] [Column 12] = [Column 12], [String] [Custom Column 13] = [Column 13], [String] [Constant Column] = 20.02 ))"; // Tuple structure corresponds to output table
+            col.GetData().IsAppendData = true;
+            col.GetData().IsAppendSchema = true;
 
             table.Populate();
         }
@@ -724,9 +724,9 @@ namespace Test
         public void JsonTest() // Serialize/deserialize schema elements
         {
             DcSchema schema = CreateSampleSchema();
-            DcWorkspace sampleWs = new Workspace();
+            DcSpace sampleWs = new Space();
             sampleWs.Schemas.Add(schema);
-            schema.Workspace = sampleWs;
+            schema.Space = sampleWs;
 
             // Add table definition 
             DcTable t = schema.GetSubTable("Table 2");
@@ -736,14 +736,14 @@ namespace Test
             DcColumn c = t.GetColumn("Column 22");
             c.GetData().Formula = "([Column 11]+10.0) * this.[Column 13]";
 
-            DcWorkspace ws = new Workspace();
+            DcSpace ws = new Space();
             ws.Schemas.Add(schema);
 
-            JObject workspace = Utils.CreateJsonFromObject(ws);
-            ws.ToJson(workspace);
+            JObject space = Utils.CreateJsonFromObject(ws);
+            ws.ToJson(space);
 
             // Serialize into json string
-            string jsonWs = JsonConvert.SerializeObject(workspace, Newtonsoft.Json.Formatting.Indented, new Newtonsoft.Json.JsonSerializerSettings { });
+            string jsonWs = JsonConvert.SerializeObject(space, Newtonsoft.Json.Formatting.Indented, new Newtonsoft.Json.JsonSerializerSettings { });
 
             // De-serialize from json string: http://weblog.west-wind.com/posts/2012/Aug/30/Using-JSONNET-for-dynamic-JSON-parsing
             dynamic objWs = JsonConvert.DeserializeObject(jsonWs);
@@ -752,8 +752,8 @@ namespace Test
             //
             // Instantiate and initialize
             //
-            ws = (Workspace)Utils.CreateObjectFromJson(objWs);
-            ((Workspace)ws).FromJson(objWs, ws);
+            ws = (Space)Utils.CreateObjectFromJson(objWs);
+            ((Space)ws).FromJson(objWs, ws);
 
             Assert.AreEqual(5, ws.Schemas[0].GetSubTable("Table 1").Columns.Count);
             Assert.AreEqual(5, ws.Schemas[0].GetSubTable("Table 2").Columns.Count);

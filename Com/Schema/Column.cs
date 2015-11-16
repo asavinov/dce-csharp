@@ -20,7 +20,7 @@ namespace Com.Schema
     /// Extensions also can define functions defined via a formula or a query to an external database.
     /// It is only important that a function somehow impplements a mapping from its lesser set to its greater set. 
     /// </summary>
-    public class Dim : INotifyPropertyChanged, DcColumn
+    public class Column : INotifyPropertyChanged, DcColumn
     {
         private static int uniqueId;
 
@@ -82,7 +82,7 @@ namespace Com.Schema
 
         /// <summary>
         /// Add (attach) to its lesser and greater sets if not added yet. 
-        /// Dimension type is important because different dimensions are stored in different collections.
+        /// Dimension type is important because different columns are stored in different collections.
         /// </summary>
         public virtual void Add()
         {
@@ -98,8 +98,8 @@ namespace Com.Schema
             if (Input != null) Input.Columns.Add(this);
 
             // Notify that a new child has been added
-            if (Input != null) ((Set)Input).NotifyAdd(this);
-            if (Output != null) ((Set)Output).NotifyAdd(this);
+            if (Input != null) ((Table)Input).NotifyAdd(this);
+            if (Output != null) ((Table)Output).NotifyAdd(this);
         }
 
         /// <summary>
@@ -111,8 +111,8 @@ namespace Com.Schema
             if (Input != null) Input.Columns.Remove(this);
 
             // Notify that a new child has been removed
-            if (Input != null) ((Set)Input).NotifyRemove(this);
-            if (Output != null) ((Set)Output).NotifyRemove(this);
+            if (Input != null) ((Table)Input).NotifyRemove(this);
+            if (Output != null) ((Table)Output).NotifyRemove(this);
         }
 
 
@@ -135,7 +135,7 @@ namespace Com.Schema
             json["greater_table"] = Utils.CreateJsonRef(Output);
 
         }
-        public virtual void FromJson(JObject json, DcWorkspace ws) // Init this object fields by using json object
+        public virtual void FromJson(JObject json, DcSpace ws) // Init this object fields by using json object
         {
             // No super-object
 
@@ -178,15 +178,15 @@ namespace Com.Schema
             if (obj == null) return false;
             if (Object.ReferenceEquals(this, obj)) return true;
 
-            if (obj is List<Dim>)
+            if (obj is List<Column>)
             {
                 // ***
             }
 
             if (this.GetType() != obj.GetType()) return false;
 
-            Dim dim = (Dim)obj;
-            if (Id.Equals(dim.Id)) return true;
+            Column col = (Column)obj;
+            if (Id.Equals(col.Id)) return true;
 
             return false;
         }
@@ -206,13 +206,13 @@ namespace Com.Schema
         /// <returns></returns>
         public static DcColumnData CreateColumnData(DcTable type, DcColumn column)
         {
-            DcColumnData colData = new DimDataEmpty();
+            DcColumnData colData = new ColumnDataEmpty();
 
             /*
-            if (column.Input != null && column.Input.Schema != null && column.Input.Schema.GetType() != typeof(Schema)) // Import dim
+            if (column.Input != null && column.Input.Schema != null && column.Input.Schema.GetType() != typeof(Schema)) // Import col
             {
             }
-            else if (column.Output != null && column.Output.Schema != null && column.Output.Schema.GetType() != typeof(Schema)) // Output dim
+            else if (column.Output != null && column.Output.Schema != null && column.Output.Schema.GetType() != typeof(Schema)) // Output col
             {
             }
             */
@@ -236,73 +236,73 @@ namespace Com.Schema
             }
             else if (StringSimilarity.SameTableName(type.Name, "Integer"))
             {
-                colData = new DimData<int>(column);
+                colData = new ColumnData<int>(column);
             }
             else if (StringSimilarity.SameTableName(type.Name, "Double"))
             {
-                colData = new DimData<double>(column);
+                colData = new ColumnData<double>(column);
             }
             else if (StringSimilarity.SameTableName(type.Name, "Decimal"))
             {
-                colData = new DimData<decimal>(column);
+                colData = new ColumnData<decimal>(column);
             }
             else if (StringSimilarity.SameTableName(type.Name, "String"))
             {
-                colData = new DimData<string>(column);
+                colData = new ColumnData<string>(column);
             }
             else if (StringSimilarity.SameTableName(type.Name, "Boolean"))
             {
-                colData = new DimData<bool>(column);
+                colData = new ColumnData<bool>(column);
             }
             else if (StringSimilarity.SameTableName(type.Name, "DateTime"))
             {
-                colData = new DimData<DateTime>(column);
+                colData = new ColumnData<DateTime>(column);
             }
             else if (StringSimilarity.SameTableName(type.Name, "Set"))
             {
             }
             else // User (non-primitive) set
             {
-                colData = new DimData<int>(column);
+                colData = new ColumnData<int>(column);
             }
 
             return colData;
         }
 
-        public Dim(Dim dim)
+        public Column(Column col)
             : this()
         {
-            Name = dim.Name;
+            Name = col.Name;
 
-            IsKey = dim.IsKey;
+            IsKey = col.IsKey;
 
-            Input = dim.Input;
-            Output = dim.Output;
+            Input = col.Input;
+            Output = col.Output;
 
             _data = CreateColumnData(_output, this);
         }
 
-        public Dim(DcTable set) // Empty dimension
-            : this("", set, set)
+        public Column(DcTable tab) // Empty column
+            : this("", tab, tab)
         {
         }
 
-        public Dim()
+        public Column()
             : this("")
         {
         }
 
-        public Dim(string name)
+        public Column(string name)
             : this(name, null, null)
         {
         }
 
-        public Dim(string name, DcTable input, DcTable output)
+        public Column(string name, DcTable input, DcTable output)
             : this(name, input, output, false, false)
         {
         }
 
-        public Dim(string name, DcTable input, DcTable output, bool isIdentity, bool isSuper)
+        public Column(string name, DcTable input, DcTable output, bool isIdentity, bool isSuper)
         {
             Id = Guid.NewGuid();
 

@@ -113,7 +113,7 @@ namespace Com.Data
         ///   - Types in tuples depend on the parent type. Columns (variables, procedures etc.) depend on the children. 
         /// - Types can be already resolved during expression creation. Particularly, in the case if it is created from a mapping object. 
         /// </summary>
-        public virtual void EvaluateAndResolveSchema(DcWorkspace workspace, List<DcVariable> variables)
+        public virtual void EvaluateAndResolveSchema(DcSpace workspace, List<DcVariable> variables)
         {
             // PROBLEM: tables in formula might have no direct indication of their schema which is needed to resolve table names
             // Schema for nodes has to be derived from other nodes (before resovling the corresponding tables)
@@ -448,16 +448,16 @@ namespace Com.Data
                 if (OutputVariable.TypeTable != null && !OutputVariable.TypeTable.IsPrimitive && OutputVariable.TypeTable.Schema is SchemaCsv) // Prepare to writing to a csv file during evaluation
                 {
                     SchemaCsv csvSchema = (SchemaCsv)OutputVariable.TypeTable.Schema;
-                    SetCsv csvOutput = (SetCsv)OutputVariable.TypeTable;
+                    TableCsv csvOutput = (TableCsv)OutputVariable.TypeTable;
 
                     // Ensure that all parameters are correct
                     // Set index for all columns that have to written to the file
                     int index = 0;
                     for (int i = 0; i < csvOutput.Columns.Count; i++)
                     {
-                        if (!(csvOutput.Columns[i] is DimCsv)) continue;
+                        if (!(csvOutput.Columns[i] is ColumnCsv)) continue;
 
-                        DimCsv col = (DimCsv)csvOutput.Columns[i];
+                        ColumnCsv col = (ColumnCsv)csvOutput.Columns[i];
                         if (col.IsSuper)
                         {
                             col.ColumnIndex = -1; // Will not be written 
@@ -519,7 +519,7 @@ namespace Com.Data
                 if (OutputVariable.TypeTable != null && !OutputVariable.TypeTable.IsPrimitive && OutputVariable.TypeTable.Schema is SchemaCsv)
                 {
                     SchemaCsv csvSchema = (SchemaCsv)OutputVariable.TypeTable.Schema;
-                    SetCsv csvOutput = (SetCsv)OutputVariable.TypeTable;
+                    TableCsv csvOutput = (TableCsv)OutputVariable.TypeTable;
                 }
                 else if (OutputVariable.TypeTable != null && !OutputVariable.TypeTable.IsPrimitive && OutputVariable.TypeTable.Schema is SchemaOledb)
                 {
@@ -679,14 +679,14 @@ namespace Com.Data
 
                 if (Action == ActionType.READ)
                 {
-                    if (Column is DimCsv) // Access using Csv columnd in a Csv table
+                    if (Column is ColumnCsv) // Access using Csv columnd in a Csv table
                     {
                         // Find current Row object
                         ExprNode thisNode = GetChild("this");
                         string[] input = (string[])thisNode.OutputVariable.GetValue();
 
                         // Use attribute name or number by applying it to the current Row object (offset is not used)
-                        int attributeIndex = ((DimCsv)Column).ColumnIndex;
+                        int attributeIndex = ((ColumnCsv)Column).ColumnIndex;
                         object output = input[attributeIndex];
                         OutputVariable.SetValue(output);
                     }
@@ -929,7 +929,7 @@ namespace Com.Data
         /// Ensure that the specified path exists in the tuple expression tree by finding and creating if not found the nodes corresponding to path segments.
         /// Return the leaf node of the tuple branch (this variable if it is requested) which correponds to the first segment in the path.
         /// </summary>
-        public ExprNode AddToTuple(DimPath path, bool withThisVariable) 
+        public ExprNode AddToTuple(ColumnPath path, bool withThisVariable) 
         {
             // Question: what operation whould be in the leaf: TUPLE, VALUE or whatever
 
@@ -989,13 +989,13 @@ namespace Com.Data
         /// If this variable is requested then the return expression will create at one node. 
         /// Return the last node of the expression (this node if requested) which corresponds to the first segment of the path.
         /// </summary>
-        public static ExprNode CreateReader(DimPath path, bool withThisVariable) 
+        public static ExprNode CreateReader(ColumnPath path, bool withThisVariable) 
         {
             ExprNode expr = null;
 
             if (path.Input.Schema is SchemaCsv) // Access via column index
             {
-                DimCsv seg = (DimCsv)path.FirstSegment;
+                ColumnCsv seg = (ColumnCsv)path.FirstSegment;
 
                 expr = new ExprNode(); // Previously: ExprNodeCsv
                 expr.Operation = OperationType.CALL;
@@ -1007,7 +1007,7 @@ namespace Com.Data
                 expr.OutputVariable.TypeSchema = seg.Output.Schema;
                 expr.OutputVariable.TypeTable = seg.Output;
 
-                expr.CultureInfo = ((SetCsv)seg.Input).CultureInfo;
+                expr.CultureInfo = ((TableCsv)seg.Input).CultureInfo;
             }
             else if (path.Input.Schema is SchemaOledb) // Access via relational attribute
             {
@@ -1078,7 +1078,7 @@ namespace Com.Data
         /// </summary>
         public static ExprNode CreateReader(DcColumn column, bool withThisVariable)
         {
-            return CreateReader(new DimPath(column), withThisVariable);
+            return CreateReader(new ColumnPath(column), withThisVariable);
         }
 
         /// <summary>
@@ -1176,7 +1176,7 @@ namespace Com.Data
             }
         }
 
-        public virtual void FromJson(JObject json, DcWorkspace ws)
+        public virtual void FromJson(JObject json, DcSpace ws)
         {
             // We do not use the base TreeNode serialization
 

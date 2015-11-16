@@ -29,7 +29,7 @@ namespace Com.Data.Query
          */
         public ActionType ActionType { get; set; } // Read, write, call, value etc. It is an additional specifier for the action. 
         public string Name { get; set; } // Action/accessor name relative to the execution context. 
-        public Dim Action { get; set; } // Action/accessor run-time object resolved from the name. It can be a context variable, dimension, set etc.
+        public Column Action { get; set; } // Action/accessor run-time object resolved from the name. It can be a context variable, dimension, set etc.
 
 
         /**
@@ -42,7 +42,7 @@ namespace Com.Data.Query
          */
         // TO_DELETE
         public object Value { get; set; }
-        public Set ValueType { get; set; }
+        public Table ValueType { get; set; }
 
         /// <summary>
         /// Resolve names of accessors and types (all uses) to object references representing storage elements (dimensions or variables). 
@@ -144,7 +144,7 @@ namespace Com.Data.Query
         public ValVariableClass Class { get; set; } // Kind of object represented by the variable like Schema, Set, Function, Value, Tuple, Array etc.
 
         public string TypeName { get; set; } // Name of the set the represented element is a member in. 
-        public Set Type { get; set; } // Set object the represented element is a member in. 
+        public Table Type { get; set; } // Set object the represented element is a member in. 
         // For values it is a concrete set, for functions it is the output set, for sets it is the set itself.
 
         public string Name { get; set; } // Name of the variable. It is also used as a role relative to the context where it is used like tuple or argument list. For example, it could be 'return' or 'this'.

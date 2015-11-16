@@ -140,16 +140,16 @@ namespace Com.Data.Query
                         }
                         else { break; } // ERROR: parameter wrong or not found
 
-                        Set set = null; // Mapper.ImportSet(db.FindSubset(table), top);
+                        Table set = null; // Mapper.ImportSet(db.FindSubset(table), top);
                         Result.Value = set;
                     }
                     else if (Name == "AddFunction")
                     {
                         ScriptOp child = GetChild("this");
-                        Set set = null;
+                        Table set = null;
                         if (child != null)
                         {
-                            set = (Set)child.Result.Value;
+                            set = (Table)child.Result.Value;
                         }
                         else { break; } // ERROR: parameter wrong or not found
 
@@ -181,8 +181,8 @@ namespace Com.Data.Query
                         else { break; } // ERROR: parameter wrong or not found
 
                         // TOD: Really add a new function with this definition
-                        Set typeSet = (Set) top.GetSubTable(type);
-                        Dim dim = (Dim)((DcSchema)top).CreateColumn(name, set, typeSet, true);
+                        Table typeSet = (Table) top.GetSubTable(type);
+                        Column dim = (Column)((DcSchema)top).CreateColumn(name, set, typeSet, true);
                         //dim.FormulaAst = formula;
                         dim.Add();
 
@@ -339,7 +339,7 @@ namespace Com.Data.Query
         public VariableClass Class { get; set; } // Kind of object represented by the variable like Schema, Set, Function, Value, Tuple, Array etc.
 
         public string TypeName { get; set; } // Name of the set the represented element is a member in. 
-        public Set Type { get; set; } // Set object the represented element is a member in. 
+        public Table Type { get; set; } // Set object the represented element is a member in. 
         // For values it is a concrete set, for functions it is the output set, for sets it is the set itself.
 
         public string Name { get; set; } // Name of the variable. It is also used as a role relative to the context where it is used like tuple or argument list. For example, it could be 'return' or 'this'.

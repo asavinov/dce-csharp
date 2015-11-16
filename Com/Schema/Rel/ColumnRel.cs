@@ -12,7 +12,7 @@ namespace Com.Schema.Rel
     /// <summary>
     /// Relational dimension representing a foreign key as a whole (without its attributes) or a primitive non-FK attribute. 
     /// </summary>
-    public class DimRel : Dim
+    public class ColumnRel : Column
     {
         /// <summary>
         /// Additional names specific to the relational model and imported from a relational schema. 
@@ -23,36 +23,36 @@ namespace Com.Schema.Rel
 
         public override void ToJson(JObject json)
         {
-            base.ToJson(json); // Dim
+            base.ToJson(json); // Column
 
             json["RelationalFkName"] = RelationalFkName;
         }
 
-        public override void FromJson(JObject json, DcWorkspace ws)
+        public override void FromJson(JObject json, DcSpace ws)
         {
-            base.FromJson(json, ws); // Dim
+            base.FromJson(json, ws); // Column
 
             RelationalFkName = (string)json["RelationalFkName"];
         }
 
         #endregion
 
-        public DimRel()
+        public ColumnRel()
             : base(null, null, null)
         {
         }
 
-        public DimRel(string name)
+        public ColumnRel(string name)
             : this(name, null, null)
         {
         }
 
-        public DimRel(string name, DcTable input, DcTable output)
+        public ColumnRel(string name, DcTable input, DcTable output)
             : this(name, input, output, false, false)
         {
         }
 
-        public DimRel(string name, DcTable input, DcTable output, bool isIdentity, bool isSuper)
+        public ColumnRel(string name, DcTable input, DcTable output, bool isIdentity, bool isSuper)
             : base(name, input, output, isIdentity, isSuper)
         {
         }

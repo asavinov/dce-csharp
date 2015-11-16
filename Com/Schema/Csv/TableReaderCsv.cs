@@ -27,7 +27,7 @@ namespace Com.Schema.Csv
         {
             rowid = -1;
 
-            connectionCsv.OpenReader((SetCsv)table);
+            connectionCsv.OpenReader((TableCsv)table);
         }
 
         public void Close()

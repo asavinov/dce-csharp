@@ -17,7 +17,7 @@ namespace Com.Schema.Csv
     /// <summary>
     /// A table stored as a text file.
     /// </summary>
-    public class SetCsv : Set
+    public class TableCsv : Table
     {
         /// <summary>
         /// Complete file name for this table (where this table is stored).
@@ -52,7 +52,7 @@ namespace Com.Schema.Csv
 
         public override void ToJson(JObject json)
         {
-            base.ToJson(json); // Set
+            base.ToJson(json); // Table
 
             json["file_path"] = FilePath;
 
@@ -62,9 +62,9 @@ namespace Com.Schema.Csv
             json["Encoding"] = this.Encoding.EncodingName;
         }
 
-        public override void FromJson(JObject json, DcWorkspace ws)
+        public override void FromJson(JObject json, DcSpace ws)
         {
-            base.FromJson(json, ws); // Set
+            base.FromJson(json, ws); // Table
 
             FilePath = (string)json["file_path"];
 
@@ -86,12 +86,12 @@ namespace Com.Schema.Csv
 
         #region Constructors and initializers.
 
-        public SetCsv()
+        public TableCsv()
             : this("")
         {
         }
 
-        public SetCsv(string name)
+        public TableCsv(string name)
             : base(name)
         {
             HasHeaderRecord = true;

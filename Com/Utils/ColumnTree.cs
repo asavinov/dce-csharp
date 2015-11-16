@@ -12,46 +12,46 @@ using Com.Schema;
 
 namespace Com.Utils
 {
-    public class DimTree : IEnumerable<DimTree>, INotifyCollectionChanged, INotifyPropertyChanged
+    public class ColumnTree : IEnumerable<ColumnTree>, INotifyCollectionChanged, INotifyPropertyChanged
     {
         /// <summary>
-        /// It is one element of the tree. It is null for the bottom (root) and its direct children which do not have lesser dimensions.
+        /// It is one element of the tree. It is null for the bottom (root) and its direct children which do not have lesser columns.
         /// </summary>
-        private DcColumn _dim;
-        public DcColumn Dim { get { return _dim; } set { _dim = value; } }
+        private DcColumn _col;
+        public DcColumn Column { get { return _col; } set { _col = value; } }
 
         /// <summary>
-        /// It is a set corresponding to the node. If dimension is present then it is equal to the greater set.  
-        /// It is null only for the bottom (root). It can be set only if dimension is null (otherwise set the dimension). 
+        /// It is a set corresponding to the node. If column is present then it is equal to the greater set.  
+        /// It is null only for the bottom (root). It can be set only if column is null (otherwise set the column). 
         /// </summary>
         public DcTable Set
         {
-            get { return Dim != null ? Dim.Output : null; }
+            get { return Column != null ? Column.Output : null; }
         }
 
         public bool IsEmpty
         {
-            get { return Dim == null || Dim.Output == null || Dim.Input == null || Dim.Output == Dim.Input; }
+            get { return Column == null || Column.Output == null || Column.Input == null || Column.Output == Column.Input; }
         }
 
         //
         // Tree methods
         //
-        public DimTree Parent { get; set; }
+        public ColumnTree Parent { get; set; }
         public bool IsRoot { get { return Parent == null; } }
 
-        public List<DimTree> Children { get; set; }
+        public List<ColumnTree> Children { get; set; }
         public bool IsLeaf { get { return Children == null || Children.Count == 0; } }
-        public void AddChild(DimTree child)
+        public void AddChild(ColumnTree child)
         {
             Debug.Assert(!Children.Contains(child), "Wrong use: this child node already exists in the tree.");
-            Debug.Assert(Set == null || child.IsEmpty || child.Dim.Input == Set, "Wrong use: a new dimension must start from this set.");
+            Debug.Assert(Set == null || child.IsEmpty || child.Column.Input == Set, "Wrong use: a new column must start from this set.");
             Children.Add(child);
             child.Parent = this;
 
             OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, child));
         }
-        public bool RemoveChild(DimTree child)
+        public bool RemoveChild(ColumnTree child)
         {
             int pos = Children.IndexOf(child);
             bool ret = Children.Remove(child);
@@ -73,54 +73,54 @@ namespace Com.Utils
         {
             return Children.Exists(c => c.Set == set);
         }
-        public bool ExistsChild(DcColumn dim)
+        public bool ExistsChild(DcColumn col)
         {
-            return Children.Exists(c => c.Dim == dim);
+            return Children.Exists(c => c.Column == col);
         }
-        public DimTree GetChild(DcColumn dim)
+        public ColumnTree GetChild(DcColumn col)
         {
-            return Children.FirstOrDefault(c => c.Dim == dim);
+            return Children.FirstOrDefault(c => c.Column == col);
         }
-        public IEnumerable<DimTree> Flatten() // Including this element
+        public IEnumerable<ColumnTree> Flatten() // Including this element
         {
             return new[] { this }.Union(Children.SelectMany(x => x.Flatten()));
         }
 
-        public DimTree Root // Find the tree root
+        public ColumnTree Root // Find the tree root
         {
             get
             {
-                DimTree node = this;
+                ColumnTree node = this;
                 while (node.Parent != null) node = node.Parent;
                 return node;
             }
         }
-        public DimTree SetRoot
+        public ColumnTree SetRoot
         {
             get
             {
-                DimTree node = this;
+                ColumnTree node = this;
                 while (node.Parent != null && node.Parent.Set != null) node = node.Parent;
                 if (node == this || node.Set == null) return null;
                 return node;
             }
         }
-        public int DimRank
+        public int ColRank
         {
             get
             {
                 int rank = 0;
-                for (DimTree node = this; !node.IsEmpty && node.Parent != null; node = node.Parent) rank++;
+                for (ColumnTree node = this; !node.IsEmpty && node.Parent != null; node = node.Parent) rank++;
                 return rank;
             }
         }
-        public DimPath DimPath
+        public ColumnPath ColPath
         {
             get
             {
-                DimPath path = new DimPath(Set);
+                ColumnPath path = new ColumnPath(Set);
                 if (IsEmpty) return path;
-                for (DimTree node = this; !node.IsEmpty && node.Parent != null; node = node.Parent) path.InsertFirst(node.Dim);
+                for (ColumnTree node = this; !node.IsEmpty && node.Parent != null; node = node.Parent) path.InsertFirst(node.Column);
                 return path;
             }
         }
@@ -130,25 +130,25 @@ namespace Com.Utils
             {
                 var leaves = Flatten().Where(s => s.IsLeaf);
                 int maxRank = 0;
-                foreach (DimTree n in leaves)
+                foreach (ColumnTree n in leaves)
                 {
                     int r = 0;
-                    for (DimTree t = n; t != this; t = t.Parent) r++;
+                    for (ColumnTree t = n; t != this; t = t.Parent) r++;
                     maxRank = r > maxRank ? r : maxRank;
                 }
                 return maxRank;
             }
         }
 
-        public List<List<DimTree>> GetRankedNodes() // Return a list where element n is a list of nodes with rank n (n=0 means a leaf with a primitive set)
+        public List<List<ColumnTree>> GetRankedNodes() // Return a list where element n is a list of nodes with rank n (n=0 means a leaf with a primitive set)
         {
             int maxRank = MaxLeafRank;
-            List<List<DimTree>> res = new List<List<DimTree>>();
-            for (int r = 0; r < maxRank; r++) res.Add(new List<DimTree>());
+            List<List<ColumnTree>> res = new List<List<ColumnTree>>();
+            for (int r = 0; r < maxRank; r++) res.Add(new List<ColumnTree>());
 
-            List<DimTree> all = Flatten().ToList();
+            List<ColumnTree> all = Flatten().ToList();
 
-            foreach (DimTree node in all)
+            foreach (ColumnTree node in all)
             {
                 res[node.MaxLeafRank].Add(node);
             }
@@ -156,22 +156,22 @@ namespace Com.Utils
             return res;
         }
 
-        public List<List<DcTable>> GetRankedSets() // A list of lists where each internal list corresponds to one rank starting from 0 (primitive sets) for the first list.
+        public List<List<DcTable>> GetRankedTables() // A list of lists where each internal list corresponds to one rank starting from 0 (primitive tables) for the first list.
         {
-            List<List<DimTree>> rankedNodes = GetRankedNodes();
+            List<List<ColumnTree>> rankedNodes = GetRankedNodes();
 
-            List<List<DcTable>> rankedSets = new List<List<DcTable>>();
-            for (int r = 0; r < rankedNodes.Count; r++) rankedSets.Add(new List<DcTable>());
+            List<List<DcTable>> rankedTabs = new List<List<DcTable>>();
+            for (int r = 0; r < rankedNodes.Count; r++) rankedTabs.Add(new List<DcTable>());
 
             for (int r = 0; r < rankedNodes.Count; r++)
             {
-                rankedSets[r] = rankedNodes[r].Select(n => n.Set).Distinct().ToList(); // Only unique sets for each level of nodes
+                rankedTabs[r] = rankedNodes[r].Select(n => n.Set).Distinct().ToList(); // Only unique tables for each level of nodes
             }
 
-            return rankedSets;
+            return rankedTabs;
         }
 
-        public List<DcTable> GetSets()
+        public List<DcTable> GetTables()
         {
             return Flatten().Select(n => n.Set).Distinct().ToList();
         }
@@ -179,7 +179,7 @@ namespace Com.Utils
         //
         // IEnumerable for accessing children (is needed for the root to serve as ItemsSource)
         //
-        IEnumerator<DimTree> IEnumerable<DimTree>.GetEnumerator()
+        IEnumerator<ColumnTree> IEnumerable<ColumnTree>.GetEnumerator()
         {
             return Children.GetEnumerator();
         }
@@ -217,18 +217,18 @@ namespace Com.Utils
             Children.ForEach(c => c.NotifyAllOnPropertyChanged(propertyName));
         }
 
-        public DimTree FindPath(DimPath path) // Find a node corresponding to the path.
+        public ColumnTree FindPath(ColumnPath path) // Find a node corresponding to the path.
         {
             Debug.Assert(path != null && path.Input == Set, "Wrong use: path must start from the node it is added to.");
 
             if (path.Segments == null || path.Segments.Count == 0) return null;
 
             DcColumn seg;
-            DimTree node = this;
+            ColumnTree node = this;
             for (int i = 0; i < path.Segments.Count; i++) // We try to find segments sequentially
             {
                 seg = path.Segments[i];
-                DimTree child = node.GetChild(seg); // Find a child corresponding to this segment
+                ColumnTree child = node.GetChild(seg); // Find a child corresponding to this segment
 
                 if (child == null) // Add a new child corresponding to this segment
                 {
@@ -241,23 +241,23 @@ namespace Com.Utils
             return node;
         }
 
-        public DimTree AddPath(DimPath path) // Find or create nodes corresponding to the path.
+        public ColumnTree AddPath(ColumnPath path) // Find or create nodes corresponding to the path.
         {
             Debug.Assert(path != null && path.Input == Set, "Wrong use: path must start from the node it is added to.");
 
             if (path.Segments == null || path.Segments.Count == 0) return null;
 
             DcColumn seg;
-            DimTree node = this;
+            ColumnTree node = this;
             for (int i = 0; i < path.Segments.Count; i++) // We add all segments sequentially
             {
                 seg = path.Segments[i];
-                DimTree child = node.GetChild(seg); // Find a child corresponding to this segment
+                ColumnTree child = node.GetChild(seg); // Find a child corresponding to this segment
 
                 if (child == null) // Add a new child corresponding to this segment
                 {
-                    child = (DimTree)Activator.CreateInstance(node.GetType());
-                    child.Dim = seg;
+                    child = (ColumnTree)Activator.CreateInstance(node.GetType());
+                    child.Column = seg;
                     node.AddChild(child);
                 }
 
@@ -278,7 +278,7 @@ namespace Com.Utils
         }
 
         /// <summary>
-        /// Create and add child nodes for all greater dimensions of this set. 
+        /// Create and add child nodes for all greater columns of this set. 
         /// </summary>
         public void ExpandTree(bool recursively = true)
         {
@@ -289,20 +289,20 @@ namespace Com.Utils
                 return;
             }
 
-            if (Set.IsGreatest) return; // No greater sets - nothing to expand
+            if (Set.IsGreatest) return; // No greater tables - nothing to expand
 
-            List<DcTable> sets = new List<DcTable>(new[] { Set });
-            sets.AddRange(Set.AllSubTables);
+            List<DcTable> tabs = new List<DcTable>(new[] { Set });
+            tabs.AddRange(Set.AllSubTables);
 
-            foreach (DcTable s in sets)
+            foreach (DcTable s in tabs)
             {
                 foreach (DcColumn d in s.Columns)
                 {
                     if (d.IsSuper) continue;
                     if (ExistsChild(d)) continue;
                     // New child instances need to have the type of this instance (this instance can be an extension of this class so we do not know it)
-                    DimTree child = (DimTree)Activator.CreateInstance(this.GetType());
-                    child.Dim = d;
+                    ColumnTree child = (ColumnTree)Activator.CreateInstance(this.GetType());
+                    child.Column = d;
                     this.AddChild(child);
                     if (recursively) child.ExpandTree(recursively);
                 }
@@ -310,17 +310,17 @@ namespace Com.Utils
         }
 
         /// <summary>
-        /// Whether this dimension node is integrated into the schema. 
+        /// Whether this column node is integrated into the schema. 
         /// </summary>
         public bool IsInSchema()
         {
-            bool isAdded = Dim.Output.InputColumns.Contains(Dim) && Dim.Input.Columns.Contains(Dim);
+            bool isAdded = Column.Output.InputColumns.Contains(Column) && Column.Input.Columns.Contains(Column);
             return !IsEmpty ? !isAdded : true;
         }
 
         /// <summary>
-        /// If a set is not included in the schema then include it. Inclusion is performed by storing all dimensions into the set including (a new) super-dimension. 
-        /// TODO: In fact, all elements should have super-dimensions which specify the parent set or the root of the schema to include into, and then the parameter is not needed. 
+        /// If a set is not included in the schema then include it. Inclusion is performed by storing all columns into the set including (a new) super-column. 
+        /// TODO: In fact, all elements should have super-columns which specify the parent set or the root of the schema to include into, and then the parameter is not needed. 
         /// </summary>
         public void AddToSchema(DcSchema top)
         {
@@ -336,74 +336,74 @@ namespace Com.Utils
                 }
             }
 
-            if (Dim != null && Dim.Input != Dim.Output)
+            if (Column != null && Column.Input != Column.Output)
             {
-                Dim.Add();
+                Column.Add();
             }
 
-            foreach (DimTree node in Children)
+            foreach (ColumnTree node in Children)
             {
-                if (node.IsEmpty) continue; // Root has no dimension
+                if (node.IsEmpty) continue; // Root has no column
 
                 node.AddToSchema(top); // Recursion
             }
         }
 
-        public DimTree(DcColumn dim, DimTree parent = null)
+        public ColumnTree(DcColumn col, ColumnTree parent = null)
         {
-            Dim = dim;
-            Children = new List<DimTree>();
+            Column = col;
+            Children = new List<ColumnTree>();
             if (parent != null) parent.AddChild(this);
         }
 
-        public DimTree(DcTable set, DimTree parent = null)
+        public ColumnTree(DcTable set, ColumnTree parent = null)
         {
-            Dim = new Dim(set);
-            Children = new List<DimTree>();
+            Column = new Column(set);
+            Children = new List<ColumnTree>();
             if (parent != null) parent.AddChild(this);
         }
 
-        public DimTree()
+        public ColumnTree()
         {
-            Children = new List<DimTree>();
+            Children = new List<ColumnTree>();
         }
     }
 
     
     /// <summary>
-    /// It is a representative of one dimension and a basic element of a tree composed of dimensions.
-    /// This class does not specify what kind of tree is created from dimensions and how dimensions are interpreted - it is specified in subclasses.
+    /// It is a representative of one column and a basic element of a tree composed of columns.
+    /// This class does not specify what kind of tree is created from columns and how columns are interpreted - it is specified in subclasses.
     /// It inherits from ObservableCollection because we want it to notify TreeView (alternatively, we need to implement numerous interfaces manually). 
     /// </summary>
-    public class DimNode : ObservableCollection<DimNode>
+    public class ColumnNode : ObservableCollection<ColumnNode>
     {
         /// <summary>
-        /// It can be null for special nodes representing non-existing dimensions like bottom or top dimensions (normally root of the tree).
+        /// It can be null for special nodes representing non-existing columns like bottom or top columns (normally root of the tree).
         /// </summary>
-        private DcColumn _dim;
-        public DcColumn Dim { get { return _dim; } protected set { _dim = value; } }
+        private DcColumn _col;
+        public DcColumn Column { get { return _col; } protected set { _col = value; } }
 
-        public DcTable Output { get { return Dim != null ? Dim.Output : null; } }
-        public DcTable Input { get { return Dim != null ? Dim.Input : null; } }
+        public DcTable Output { get { return Column != null ? Column.Output : null; } }
+        public DcTable Input { get { return Column != null ? Column.Input : null; } }
 
         //
         // Tree methods
         //
 
-        public DimNode Parent { get; protected set; }
+        public ColumnNode Parent { get; protected set; }
         public bool IsRoot { get { return Parent == null; } }
-        public DimNode Root // Find the tree root
+        public ColumnNode Root // Find the tree root
         {
             get
             {
-                DimNode node = this;
+                ColumnNode node = this;
                 while (node.Parent != null) node = node.Parent;
                 return node;
             }
         }
 
         public bool IsLeaf { get { return Count == 0; } }
-        public void AddChild(DimNode child)
+        public void AddChild(ColumnNode child)
         {
             Debug.Assert(!Contains(child), "Wrong use: this child node already exists in the tree.");
 
@@ -417,7 +417,7 @@ namespace Com.Utils
 
             // this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, (object)child));
         }
-        public bool RemoveChild(DimNode child)
+        public bool RemoveChild(ColumnNode child)
         {
             child.Parent = null;
             bool ret = this.Remove(child); // Notification will be sent by the base class
@@ -426,15 +426,15 @@ namespace Com.Utils
 
             return ret;
         }
-        public bool ExistsChild(DcColumn dim)
+        public bool ExistsChild(DcColumn col)
         {
-            return GetChild(dim) != null;
+            return GetChild(col) != null;
         }
-        public DimNode GetChild(DcColumn dim)
+        public ColumnNode GetChild(DcColumn col)
         {
-            return this.FirstOrDefault(c => c.Dim == dim);
+            return this.FirstOrDefault(c => c.Column == col);
         }
-        public IEnumerable<DimNode> Flatten() // All direct and indirect children (including this element)
+        public IEnumerable<ColumnNode> Flatten() // All direct and indirect children (including this element)
         {
             return new[] { this }.Union(this.SelectMany(x => x.Flatten()));
         }
@@ -444,10 +444,10 @@ namespace Com.Utils
             {
                 var leaves = Flatten().Where(s => s.IsLeaf);
                 int maxRank = 0;
-                foreach (DimNode n in leaves)
+                foreach (ColumnNode n in leaves)
                 {
                     int r = 0;
-                    for (DimNode t = n; t != this; t = t.Parent) r++;
+                    for (ColumnNode t = n; t != this; t = t.Parent) r++;
                     maxRank = r > maxRank ? r : maxRank;
                 }
                 return maxRank;
@@ -464,8 +464,8 @@ namespace Com.Utils
 
         public void UnregisterListeners()
         {
-            if (Dim.Input != null) ((Set)Dim.Input).CollectionChanged -= Input_CollectionChanged;
-            if (Dim.Output != null) ((Set)Dim.Output).CollectionChanged -= Output_CollectionChanged;
+            if (Column.Input != null) ((Table)Column.Input).CollectionChanged -= Input_CollectionChanged;
+            if (Column.Output != null) ((Table)Column.Output).CollectionChanged -= Output_CollectionChanged;
         }
 
         public void NotifyAllOnPropertyChanged(string propertyName)
@@ -474,39 +474,39 @@ namespace Com.Utils
             foreach (var c in this) c.NotifyAllOnPropertyChanged(propertyName);
         }
 
-        public DimNode(DcColumn dim, DimNode parent = null)
+        public ColumnNode(DcColumn col, ColumnNode parent = null)
         {
-            Dim = dim;
+            Column = col;
             if (parent != null) parent.AddChild(this);
-            if (Dim != null)
+            if (Column != null)
             {
-                if (Dim.Input != null) ((Set)Dim.Input).CollectionChanged += Input_CollectionChanged;
-                if (Dim.Output != null) ((Set)Dim.Output).CollectionChanged += Output_CollectionChanged;
+                if (Column.Input != null) ((Table)Column.Input).CollectionChanged += Input_CollectionChanged;
+                if (Column.Output != null) ((Table)Column.Output).CollectionChanged += Output_CollectionChanged;
             }
         }
 
     }
 
     /// <summary>
-    /// It is an element of a subset (inclusion) tree with only direct greater dimensions (attributes).
-    /// Two kinds of children: subsets (reference super-dimensions), and direct attributes (reference greater dimensions). 
+    /// It is an element of a subset (inclusion) tree with only direct greater columns (attributes).
+    /// Two kinds of children: subtables (reference super-columns), and direct attributes (reference greater columns). 
     /// </summary>
-    public class SubsetTree : DimNode
+    public class SubtableTree : ColumnNode
     {
 
-        public IEnumerable<DimNode> SubsetChildren
+        public IEnumerable<ColumnNode> SubsetChildren
         {
             get
             {
-                return this.Where(c => ((SubsetTree)c).IsSubsetNode);
+                return this.Where(c => ((SubtableTree)c).IsSubsetNode);
             }
         }
 
-        public IEnumerable<DimNode> DimensionChildren
+        public IEnumerable<ColumnNode> ColumnChildren
         {
             get
             {
-                return this.Where(c => ((SubsetTree)c).IsDimensionNode);
+                return this.Where(c => ((SubtableTree)c).IsColumnNode);
             }
         }
 
@@ -514,11 +514,11 @@ namespace Com.Utils
         {
             get
             {
-                return Dim != null && (Dim.IsSuper);
+                return Column != null && (Column.IsSuper);
             }
         }
 
-        public bool IsDimensionNode // Does it represent a dimension node in the tree?
+        public bool IsColumnNode // Does it represent a column node in the tree?
         {
             get
             {
@@ -528,36 +528,36 @@ namespace Com.Utils
 
         protected override void Input_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e) // Changes in our lesser set
         {
-            if (!IsSubsetNode) return; // Child nodes are added/deleted for only super-dimensions (for subset trees)
+            if (!IsSubsetNode) return; // Child nodes are added/deleted for only super-columns (for subset trees)
 
-            DcColumn dim = null;
+            DcColumn col = null;
             if (e.Action == NotifyCollectionChangedAction.Add) // Decide if this node has to add a new child node
             {
-                dim = e.NewItems != null && e.NewItems.Count > 0 ? (Dim)e.NewItems[0] : null;
-                if (dim == null) return;
+                col = e.NewItems != null && e.NewItems.Count > 0 ? (Column)e.NewItems[0] : null;
+                if (col == null) return;
 
-                if (dim.IsSuper) // Inclusion
+                if (col.IsSuper) // Inclusion
                 {
-                    if (dim.Output == Dim.Input) // Add a subset child node (recursively)
+                    if (col.Output == Column.Input) // Add a subset child node (recursively)
                     {
-                        if (!ExistsChild(dim))
+                        if (!ExistsChild(col))
                         {
                             // New child instances need to have the type of this instance (this instance can be an extension of this class so we do not know it)
-                            DimNode child = (DimNode)Activator.CreateInstance(this.GetType(), new Object[] { dim, null });
+                            ColumnNode child = (ColumnNode)Activator.CreateInstance(this.GetType(), new Object[] { col, null });
                             AddChild(child);
 
-                            if (child is SubsetTree) ((SubsetTree)child).ExpandTree(true);
+                            if (child is SubtableTree) ((SubtableTree)child).ExpandTree(true);
                         }
                     }
                 }
                 else // Poset
                 {
-                    if (dim.Input == Dim.Input) // Add an attribute child node (non-recursively)
+                    if (col.Input == Column.Input) // Add an attribute child node (non-recursively)
                     {
-                        if (!ExistsChild(dim))
+                        if (!ExistsChild(col))
                         {
                             // New child instances need to have the type of this instance (this instance can be an extension of this class so we do not know it)
-                            DimNode child = (DimNode)Activator.CreateInstance(this.GetType(), new Object[] { dim, null });
+                            ColumnNode child = (ColumnNode)Activator.CreateInstance(this.GetType(), new Object[] { col, null });
                             AddChild(child);
                         }
                     }
@@ -565,14 +565,14 @@ namespace Com.Utils
             }
             else if (e.Action == NotifyCollectionChangedAction.Remove)
             {
-                dim = e.OldItems != null && e.OldItems.Count > 0 ? (Dim)e.OldItems[0] : null;
-                if (dim == null) return;
+                col = e.OldItems != null && e.OldItems.Count > 0 ? (Column)e.OldItems[0] : null;
+                if (col == null) return;
 
-                if (dim.IsSuper) // Inclusion
+                if (col.IsSuper) // Inclusion
                 {
-                    if (dim.Output == Dim.Input) // Remove a subset child node (recursively)
+                    if (col.Output == Column.Input) // Remove a subset child node (recursively)
                     {
-                        DimNode child = GetChild(dim);
+                        ColumnNode child = GetChild(col);
                         if (child != null)
                         {
                             RemoveChild(child);
@@ -581,9 +581,9 @@ namespace Com.Utils
                 }
                 else // Poset
                 {
-                    if (dim.Input == Dim.Input) // Add an attribute child node (non-recursively)
+                    if (col.Input == Column.Input) // Add an attribute child node (non-recursively)
                     {
-                        DimNode child = GetChild(dim);
+                        ColumnNode child = GetChild(col);
                         if (child != null)
                         {
                             RemoveChild(child);
@@ -598,17 +598,17 @@ namespace Com.Utils
         }
 
         /// <summary>
-        /// Create and add child nodes for subsets of this node and direct greater dimensions. 
+        /// Create and add child nodes for subtables of this node and direct greater columns. 
         /// </summary>
         public void ExpandTree(bool recursively = true)
         {
             if (Input == null) // We cannot expand the set but try to expand the existing children
             {
                 if (!recursively) return;
-                foreach (DimNode c in this)
+                foreach (ColumnNode c in this)
                 {
-                    if (!(c is SubsetTree)) continue;
-                    ((SubsetTree)c).ExpandTree(recursively);
+                    if (!(c is SubtableTree)) continue;
+                    ((SubtableTree)c).ExpandTree(recursively);
                 }
                 return;
             }
@@ -618,26 +618,26 @@ namespace Com.Utils
                 if (ExistsChild(sd)) continue;
 
                 // New child instances need to have the type of this instance (this instance can be an extension of this class so we do not know it)
-                DimNode child = (DimNode)Activator.CreateInstance(this.GetType(), new Object[] { sd, null });
+                ColumnNode child = (ColumnNode)Activator.CreateInstance(this.GetType(), new Object[] { sd, null });
                 this.AddChild(child);
 
-                if (recursively && (child is SubsetTree)) ((SubsetTree)child).ExpandTree(recursively);
+                if (recursively && (child is SubtableTree)) ((SubtableTree)child).ExpandTree(recursively);
             }
 
-            // Add child nodes for greater dimension (no recursion)
+            // Add child nodes for greater column (no recursion)
             foreach (DcColumn gd in Input.Columns)
             {
                 if (gd.IsSuper) continue;
                 if (ExistsChild(gd)) continue;
 
                 // New child instances need to have the type of this instance (this instance can be an extension of this class so we do not know it)
-                DimNode child = (DimNode)Activator.CreateInstance(this.GetType(), new Object[] { gd, null });
+                ColumnNode child = (ColumnNode)Activator.CreateInstance(this.GetType(), new Object[] { gd, null });
                 this.AddChild(child);
             }
         }
 
-        public SubsetTree(DcColumn dim, DimNode parent = null)
-            : base(dim, parent)
+        public SubtableTree(DcColumn col, ColumnNode parent = null)
+            : base(col, parent)
         {
             // Register for events from the schema (or inside constructor?)
         }

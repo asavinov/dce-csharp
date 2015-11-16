@@ -25,10 +25,10 @@ namespace Com.Schema.Csv
         {
             rowid = -1;
 
-            connectionCsv.OpenWriter((SetCsv)table);
+            connectionCsv.OpenWriter((TableCsv)table);
 
             // Write header
-            if (((SetCsv)table).HasHeaderRecord)
+            if (((TableCsv)table).HasHeaderRecord)
             {
                 var header = GetColumnNamesByIndex();
                 connectionCsv.WriteNext(header);
@@ -99,9 +99,9 @@ namespace Com.Schema.Csv
 
             foreach (DcColumn col in table.Columns)
             {
-                if (!(col is DimCsv)) continue;
+                if (!(col is ColumnCsv)) continue;
 
-                int colIdx = ((DimCsv)col).ColumnIndex;
+                int colIdx = ((ColumnCsv)col).ColumnIndex;
                 if (colIdx < 0) continue;
 
                 if (colIdx >= columns.Count) // Ensure that this index exists 
@@ -123,12 +123,12 @@ namespace Com.Schema.Csv
             return columnNames;
         }
 
-        public Rowid Find(DcColumn[] dims, object[] values)
+        public Rowid Find(DcColumn[] cols, object[] values)
         {
             throw new NotImplementedException("Csv does not support record finding");
         }
 
-        public Rowid Append(DcColumn[] dims, object[] values)
+        public Rowid Append(DcColumn[] cols, object[] values)
         {
             throw new NotImplementedException("TODO:");
         }

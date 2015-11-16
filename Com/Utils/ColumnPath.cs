@@ -14,12 +14,12 @@ using Rowid = System.Int32;
 namespace Com.Utils
 {
     /// <summary>
-    /// A sequence of simple dimensions (segments). 
+    /// A sequence of simple columns (segments). 
     /// </summary>
-    public class DimPath : Dim
+    public class ColumnPath : Column
     {
         /// <summary>
-        /// A dimension can be defined as a sequence of other dimensions. For simple dimensions the path is empty.
+        /// A column can be defined as a sequence of other columns. For simple columns the path is empty.
         /// </summary>
         public List<DcColumn> Segments { get; set; }
 
@@ -51,11 +51,11 @@ namespace Com.Utils
         {
             get
             {
-                if (Size == 0) return 1; // Simple dimension
+                if (Size == 0) return 1; // Simple column
                 int r = 0;
-                foreach (DcColumn dim in Segments)
+                foreach (DcColumn col in Segments)
                 {
-                    r += 1; // dim.Rank;
+                    r += 1; // col.Rank;
                 }
                 return r;
             }
@@ -69,37 +69,37 @@ namespace Com.Utils
             }
         }
 
-        public int IndexOfGreater(DcTable set) // Return index of the dimension with this greater set
+        public int IndexOfGreater(DcTable tab) // Return index of the column with this greater table
         {
             for (int i = 0; i < Segments.Count; i++)
             {
-                if (Segments[i].Output == set) return i;
+                if (Segments[i].Output == tab) return i;
             }
             return -1;
         }
-        public int IndexOfLesser(DcTable set) // Return index of the dimension with this lesser set
+        public int IndexOfLesser(DcTable tab) // Return index of the column with this lesser table
         {
             for (int i = 0; i < Segments.Count; i++)
             {
-                if (Segments[i].Input == set) return i;
+                if (Segments[i].Input == tab) return i;
             }
             return -1;
         }
-        public int IndexOf(DcColumn dim) // Return index of the specified dimension in this path
+        public int IndexOf(DcColumn col) // Return index of the specified column in this path
         {
-            return Segments.IndexOf(dim);
+            return Segments.IndexOf(col);
         }
-        public int IndexOf(DimPath path) // Return index of the beginning of the specified path in this path
+        public int IndexOf(ColumnPath path) // Return index of the beginning of the specified path in this path
         {
             throw new NotImplementedException();
         }
 
-        public bool StartsWith(DcColumn dim)
+        public bool StartsWith(DcColumn col)
         {
             if(Size == 0) return false;
-            return Segments[0] == dim;
+            return Segments[0] == col;
         }
-        public bool StartsWith(DimPath path)
+        public bool StartsWith(ColumnPath path)
         {
             return StartsWith(path.Segments);
         }
@@ -113,7 +113,7 @@ namespace Com.Utils
             return true;
         }
 
-        public bool SamePath(DimPath path) // Equals (the same segments)
+        public bool SamePath(ColumnPath path) // Equals (the same segments)
         {
             return SamePath(path.Segments);
         }
@@ -130,9 +130,9 @@ namespace Com.Utils
             return true;
         }
 
-        public DimPath SubPath(int index, int count = 0) // Return a new path consisting of the specified segments
+        public ColumnPath SubPath(int index, int count = 0) // Return a new path consisting of the specified segments
         {
-            DimPath ret = new DimPath();
+            ColumnPath ret = new ColumnPath();
 
             if (count == 0) count = Segments.Count - index;
 
@@ -149,24 +149,24 @@ namespace Com.Utils
 
         #region Add segments
 
-        public void InsertAt(DcColumn dim) // Insert a new segment at the specified position
+        public void InsertAt(DcColumn col) // Insert a new segment at the specified position
         {
             throw new NotImplementedException();
         }
-        public void InsertAt(DimPath path) // Insert a new segment at the specified position
+        public void InsertAt(ColumnPath path) // Insert a new segment at the specified position
         {
             throw new NotImplementedException();
         }
 
-        public void InsertFirst(DcColumn dim) // Insert a new segment at the beginning of the path
+        public void InsertFirst(DcColumn col) // Insert a new segment at the beginning of the path
         {
-            Debug.Assert(Size == 0 || dim.Output == Input, "A path must continue the first segment inserted in the beginning.");
+            Debug.Assert(Size == 0 || col.Output == Input, "A path must continue the first segment inserted in the beginning.");
 
-            Segments.Insert(0, dim);
-            Input = dim.Input;
-            if (Output == null) Output = dim.Output;
+            Segments.Insert(0, col);
+            Input = col.Input;
+            if (Output == null) Output = col.Output;
         }
-        public void InsertFirst(DimPath path) // Insert new segments from the specified path at the beginning of the path
+        public void InsertFirst(ColumnPath path) // Insert new segments from the specified path at the beginning of the path
         {
             Debug.Assert(Size == 0 || path.Output == Input, "A path must continue the first segment inserted in the beginning.");
 
@@ -175,15 +175,15 @@ namespace Com.Utils
             if (Output == null) Output = path.Output;
         }
 
-        public void InsertLast(DcColumn dim) // Append a new segment to the end of the path
+        public void InsertLast(DcColumn col) // Append a new segment to the end of the path
         {
-            Debug.Assert(Size == 0 || dim.Input == Output, "A new segment appended to a path must continue the previous segments");
+            Debug.Assert(Size == 0 || col.Input == Output, "A new segment appended to a path must continue the previous segments");
 
-            Segments.Add(dim);
-            Output = dim.Output;
-            if (Input == null) Input = dim.Input;
+            Segments.Add(col);
+            Output = col.Output;
+            if (Input == null) Input = col.Input;
         }
-        public void InsertLast(DimPath path) // Append all segments of the specified path to the end of this path
+        public void InsertLast(ColumnPath path) // Append all segments of the specified path to the end of this path
         {
             Debug.Assert(Size == 0 || path.Input == Output, "A an appended path must continue this path.");
 
@@ -217,7 +217,7 @@ namespace Com.Utils
             }
             else
             {
-                // Note: Input table and Output table are not set - this must be done in public methods and depends on whether it is removed as first or last segment (it is important for some algorithms)
+                // Note: Input table and Output table are not table - this must be done in public methods and depends on whether it is removed as first or last segment (it is important for some algorithms)
             }
 
             return result;
@@ -240,7 +240,7 @@ namespace Com.Utils
 
             return result;
         }
-        public void RemoveFirst(DimPath path) // Remove first segments
+        public void RemoveFirst(ColumnPath path) // Remove first segments
         {
             if (Segments.Count < path.Segments.Count) return; // Nothing to remove
             if (!this.StartsWith(path)) return;
@@ -250,12 +250,12 @@ namespace Com.Utils
             if (Segments.Count > 0) Input = Segments[0].Input;
             else Input = Output;
         }
-        public void RemoveFirst(DcTable set) // Remove first segments till this set (the new path will start from the specified set if trimmed)
+        public void RemoveFirst(DcTable tab) // Remove first segments till this table (the new path will start from the specified table if trimmed)
         {
-            if (Input == set) return; // Already here
+            if (Input == tab) return; // Already here
 
-            // Find a path to the specified set
-            int index = this.IndexOfGreater(set);
+            // Find a path to the specified table
+            int index = this.IndexOfGreater(tab);
             if (index < 0) return;
 
             Segments.RemoveRange(0, index+1);
@@ -281,11 +281,11 @@ namespace Com.Utils
 
             return result;
         }
-        public void RemoveLast(DimPath path) // Remove last segments (suffix)
+        public void RemoveLast(ColumnPath path) // Remove last segments (suffix)
         {
             throw new NotImplementedException();
         }
-        public void RemoveLast(DcTable set) // Remove last segments starting from this set (the new path will end with the specified set if trimmed)
+        public void RemoveLast(DcTable tab) // Remove last segments starting from this table (the new path will end with the specified table if trimmed)
         {
             throw new NotImplementedException();
         }
@@ -297,9 +297,9 @@ namespace Com.Utils
             List<DcColumn> result = new List<DcColumn>();
             for (int i = 0; i < Segments.Count; i++)
             {
-                if (Segments[i] is DimPath && ((DimPath)Segments[i]).IsComplex)
+                if (Segments[i] is ColumnPath && ((ColumnPath)Segments[i]).IsComplex)
                 {
-                    result.AddRange(((DimPath)Segments[i]).GetAllSegments());
+                    result.AddRange(((ColumnPath)Segments[i]).GetAllSegments());
                 }
                 else // Simple segment - nothing to expand
                 {
@@ -322,7 +322,7 @@ namespace Com.Utils
         public DcColumn GetSegment(int rank)
         {
             Debug.Assert(rank >= 0, "Wrong use of method parameter. Rank cannot be negative.");
-            return rank < Segments.Count ? Segments[rank] : null; // TODO: take into account the nested structure of complex dimensions
+            return rank < Segments.Count ? Segments[rank] : null; // TODO: take into account the nested structure of complex columns
         }
 
         /// <summary>
@@ -339,7 +339,7 @@ namespace Com.Utils
 
         public override void ToJson(JObject json) // Write fields to the json object
         {
-            base.ToJson(json); // Dim
+            base.ToJson(json); // Column
 
             JArray segments = (JArray)json["segments"];
             if (segments == null)
@@ -355,9 +355,9 @@ namespace Com.Utils
 
             json["segments"] = segments;
         }
-        public override void FromJson(JObject json, DcWorkspace ws) // Init this object fields by using json object
+        public override void FromJson(JObject json, DcSpace ws) // Init this object fields by using json object
         {
-            base.FromJson(json, ws); // Dim
+            base.FromJson(json, ws); // Column
 
             var segs = new List<DcColumn>();
             JArray segments = (JArray)json["segments"];
@@ -413,9 +413,9 @@ namespace Com.Utils
             if (Object.ReferenceEquals(this, obj)) return true;
             //if (this.GetType() != obj.GetType()) return false;
 
-            if (obj is DimPath)
+            if (obj is ColumnPath)
             {
-                List<DcColumn> objSegs = ((DimPath)obj).Segments;
+                List<DcColumn> objSegs = ((ColumnPath)obj).Segments;
 
                 if (Size != objSegs.Count) return false;
                 for (int i = 0; i < Size; i++) if (Segments[i] != objSegs[i]) return false;
@@ -462,25 +462,25 @@ namespace Com.Utils
 
         #region Constructors and initializers.
 
-        public DimPath()
+        public ColumnPath()
         {
             Segments = new List<DcColumn>();
         }
 
-        public DimPath(DcTable set)
+        public ColumnPath(DcTable tab)
             : this()
         {
-            Input = set;
-            Output = set;
+            Input = tab;
+            Output = tab;
         }
 
-        public DimPath(string name)
+        public ColumnPath(string name)
             : base(name)
         {
             Segments = new List<DcColumn>();
         }
 
-        public DimPath(DcColumn seg)
+        public ColumnPath(DcColumn seg)
             : this()
         {
             if (seg == null) return;
@@ -490,7 +490,7 @@ namespace Com.Utils
             Output = Segments[Segments.Count - 1].Output;
         }
 
-        public DimPath(List<DcColumn> segs)
+        public ColumnPath(List<DcColumn> segs)
             : this()
         {
             if(segs == null || segs.Count == 0) return;
@@ -500,14 +500,14 @@ namespace Com.Utils
             Output = Segments[Segments.Count - 1].Output;
         }
 
-        public DimPath(DimPath path)
+        public ColumnPath(ColumnPath path)
             : base(path)
         {
             Segments = new List<DcColumn>();
             Segments.AddRange(path.Segments);
         }
 
-        public DimPath(string name, DcTable input, DcTable output)
+        public ColumnPath(string name, DcTable input, DcTable output)
             : base(name, input, output)
         {
             Segments = new List<DcColumn>();
@@ -519,7 +519,7 @@ namespace Com.Utils
 
     // TODO: We probably should introduce a bit mask instead of the enumerator
     // Bits: isIdentity, isPoset (exclude isSuper), isInclusion (exclude isPoset), isInterschema (greater != lesser), isInverse, Definition.isGenerating
-    public enum DimensionType
+    public enum ColumnType
     {
         INCLUSION, // Both super and sub
         SUPER, // 

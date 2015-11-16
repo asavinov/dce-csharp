@@ -20,17 +20,17 @@ namespace Com.Schema
     /// Top set is used to represent a whole database like a local mash up or a remote database. 
     /// It also can describe how its instances are loaded from a remote source and stored.
     /// </summary>
-    public class Schema : Set, DcSchema
+    public class Schema : Table, DcSchema
     {
 
         #region ComSchema interface
 
-        public DcWorkspace Workspace { get; set; }
+        public DcSpace Space { get; set; }
         
         public DcTable GetPrimitive(string name)
         {
-            DcColumn dim = SubColumns.FirstOrDefault(x => StringSimilarity.SameTableName(x.Input.Name, name));
-            return dim != null ? dim.Input : null;
+            DcColumn col = SubColumns.FirstOrDefault(x => StringSimilarity.SameTableName(x.Input.Name, name));
+            return col != null ? col.Input : null;
         }
 
         public DcTable Root { get { return GetPrimitive("Root"); } }
@@ -42,7 +42,7 @@ namespace Com.Schema
 
         public virtual DcTable CreateTable(String name) 
         {
-            DcTable table = new Set(name);
+            DcTable table = new Table(name);
             return table;
         }
 
@@ -57,9 +57,9 @@ namespace Com.Schema
                 superName = "Super";
             }
 
-            Dim dim = new Dim(superName, table, parent, true, true);
+            Column col = new Column(superName, table, parent, true, true);
 
-            dim.Add();
+            col.Add();
 
             return table;
         }
@@ -91,9 +91,9 @@ namespace Com.Schema
         {
             Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
 
-            DcColumn dim = new Dim(name, input, output, isKey, false);
+            DcColumn col = new Column(name, input, output, isKey, false);
 
-            return dim;
+            return col;
         }
 
         public virtual void DeleteColumn(DcColumn column)
@@ -254,7 +254,7 @@ namespace Com.Schema
             json["columns"] = columns;
         }
 
-        public override void FromJson(JObject json, DcWorkspace ws)
+        public override void FromJson(JObject json, DcSpace ws)
         {
             base.FromJson(json, ws); // Set
 
@@ -280,36 +280,36 @@ namespace Com.Schema
 
         protected virtual void CreateDataTypes() // Create all primitive data types from some specification like Enum, List or XML
         {
-            Set set;
-            Dim dim;
+            Table tab;
+            Column col;
 
-            set = new Set("Root");
-            dim = new Dim("Top", set, this, true, true);
-            dim.Add();
+            tab = new Table("Root");
+            col = new Column("Top", tab, this, true, true);
+            col.Add();
 
-            set = new Set("Integer");
-            dim = new Dim("Top", set, this, true, true);
-            dim.Add();
+            tab = new Table("Integer");
+            col = new Column("Top", tab, this, true, true);
+            col.Add();
 
-            set = new Set("Double");
-            dim = new Dim("Top", set, this, true, true);
-            dim.Add();
+            tab = new Table("Double");
+            col = new Column("Top", tab, this, true, true);
+            col.Add();
 
-            set = new Set("Decimal");
-            dim = new Dim("Top", set, this, true, true);
-            dim.Add();
+            tab = new Table("Decimal");
+            col = new Column("Top", tab, this, true, true);
+            col.Add();
 
-            set = new Set("String");
-            dim = new Dim("Top", set, this, true, true);
-            dim.Add();
+            tab = new Table("String");
+            col = new Column("Top", tab, this, true, true);
+            col.Add();
 
-            set = new Set("Boolean");
-            dim = new Dim("Top", set, this, true, true);
-            dim.Add();
+            tab = new Table("Boolean");
+            col = new Column("Top", tab, this, true, true);
+            col.Add();
 
-            set = new Set("DateTime");
-            dim = new Dim("Top", set, this, true, true);
-            dim.Add();
+            tab = new Table("DateTime");
+            col = new Column("Top", tab, this, true, true);
+            col.Add();
         }
 
         public Schema()

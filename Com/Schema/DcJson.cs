@@ -20,7 +20,7 @@ namespace Com.Schema
     public interface DcJson
     {
         void ToJson(JObject json);
-        void FromJson(JObject json, DcWorkspace ws);
+        void FromJson(JObject json, DcSpace ws);
 
         //
         // Json.Net usage

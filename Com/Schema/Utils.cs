@@ -87,7 +87,7 @@ namespace Com.Schema
 
             return json;
         }
-        public static object ResolveJsonRef(JObject json, DcWorkspace ws) // Resolve a json reference to a real object
+        public static object ResolveJsonRef(JObject json, DcSpace ws) // Resolve a json reference to a real object
         {
             if (json == null) return null;
 
@@ -141,7 +141,7 @@ namespace Com.Schema
             {
                 json["element_type"] = "table";
             }
-            else if (obj is DimPath)
+            else if (obj is ColumnPath)
             {
                 json["element_type"] = "path";
             }
@@ -372,15 +372,15 @@ namespace Com.Schema
             return grams;
         }
 
-        public static double ComputePathSimilarity(DimPath source, DimPath target)
+        public static double ComputePathSimilarity(ColumnPath source, ColumnPath target)
         {
             if (source == null || target == null || source.Size == 0 || target.Size == 0) return 0;
 
             double rankFactor1 = 0.5;
             double rankFactor2 = 0.5;
 
-            double sumDim = 0.0;
-            double sumSet = 0.0;
+            double sumCol = 0.0;
+            double sumTab = 0.0;
             double w1 = 1.0;
             for (int i = source.Segments.Count - 1; i >= 0; i--)
             {
@@ -393,13 +393,13 @@ namespace Com.Schema
                     string d2 = target.Segments[j].Name;
                     string s2 = target.Segments[j].Output.Name;
 
-                    double simDim = ComputeStringSimilarity(d1, d2, 3);
-                    simDim *= (w1 * w2);
-                    sumDim += simDim;
+                    double simCol = ComputeStringSimilarity(d1, d2, 3);
+                    simCol *= (w1 * w2);
+                    sumCol += simCol;
 
-                    double simSet = ComputeStringSimilarity(s1, s2, 3);
-                    simSet *= (w1 * w2);
-                    sumSet += simSet;
+                    double simTab = ComputeStringSimilarity(s1, s2, 3);
+                    simTab *= (w1 * w2);
+                    sumTab += simTab;
 
                     w2 *= rankFactor1; // Decrease the weight
                 }
@@ -407,10 +407,10 @@ namespace Com.Schema
                 w1 *= rankFactor2; // Decrease the weight
             }
 
-            sumDim /= (source.Segments.Count * target.Segments.Count);
-            sumSet /= (source.Segments.Count * target.Segments.Count);
+            sumCol /= (source.Segments.Count * target.Segments.Count);
+            sumTab /= (source.Segments.Count * target.Segments.Count);
 
-            return (sumDim + sumSet) / 2;
+            return (sumCol + sumTab) / 2;
         }
 
     }

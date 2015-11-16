@@ -10,7 +10,7 @@ namespace Com.Schema.Csv
     /// <summary>
     /// Dimension representing a column in a text file. 
     /// </summary>
-    public class DimCsv : Dim
+    public class ColumnCsv : Column
     {
         /// <summary>
         /// Sample values. 
@@ -23,36 +23,36 @@ namespace Com.Schema.Csv
 
         public override void ToJson(JObject json)
         {
-            base.ToJson(json); // Dim
+            base.ToJson(json); // Column
 
             json["ColumnIndex"] = ColumnIndex;
         }
 
-        public override void FromJson(JObject json, DcWorkspace ws)
+        public override void FromJson(JObject json, DcSpace ws)
         {
-            base.FromJson(json, ws); // Dim
+            base.FromJson(json, ws); // Column
 
             ColumnIndex = (int)json["ColumnIndex"];
         }
 
         #endregion
 
-        public DimCsv()
+        public ColumnCsv()
             : base(null, null, null)
         {
         }
 
-        public DimCsv(string name)
+        public ColumnCsv(string name)
             : this(name, null, null)
         {
         }
 
-        public DimCsv(string name, DcTable input, DcTable output)
+        public ColumnCsv(string name, DcTable input, DcTable output)
             : this(name, input, output, false, false)
         {
         }
 
-        public DimCsv(string name, DcTable input, DcTable output, bool isIdentity, bool isSuper)
+        public ColumnCsv(string name, DcTable input, DcTable output, bool isIdentity, bool isSuper)
             : base(name, input, output, isIdentity, isSuper)
         {
             SampleValues = new List<string>();

@@ -11,7 +11,7 @@ namespace Com.Schema
     /// <summary>
     /// Workspace is a number of schemas as well as parameters for their management. 
     /// </summary>
-    public class Workspace : DcWorkspace
+    public class Space : DcSpace
     {
 
         #region DcWorkspace
@@ -66,7 +66,7 @@ namespace Com.Schema
             json["schemas"] = schemas;
         }
 
-        public virtual void FromJson(JObject json, DcWorkspace ws)
+        public virtual void FromJson(JObject json, DcSpace ws)
         {
             // List of schemas
             foreach (JObject schema in json["schemas"])
@@ -117,7 +117,7 @@ namespace Com.Schema
 
         #endregion
 
-        public Workspace()
+        public Space()
         {
             Schemas = new ObservableCollection<DcSchema>();
         }

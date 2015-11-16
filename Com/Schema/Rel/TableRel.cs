@@ -14,7 +14,7 @@ namespace Com.Schema.Rel
     /// <summary>
     /// A relational table.
     /// </summary>
-    public class SetRel : Set
+    public class TableRel : Table
     {
         /// <summary>
         /// Additional names specific to the relational model and maybe other PK-FK-based models.
@@ -23,56 +23,56 @@ namespace Com.Schema.Rel
         public string RelationalTableName { get; set; }
         public string RelationalPkName { get; set; } // Note that the same field exists also in Dim
 
-        public DcColumn GetGreaterDimByFkName(string name)
+        public DcColumn GetGreaterColByFkName(string name)
         {
-            return Columns.FirstOrDefault(d => StringSimilarity.SameColumnName(((DimRel)d).RelationalFkName, name));
+            return Columns.FirstOrDefault(d => StringSimilarity.SameColumnName(((ColumnRel)d).RelationalFkName, name));
         }
 
         #region Paths = relational attributes
 
-        public List<DimAttribute> SuperPaths { get; private set; }
-        public List<DimAttribute> SubPaths { get; private set; }
-        public List<DimAttribute> GreaterPaths { get; private set; }
-        public List<DimAttribute> LesserPaths { get; private set; }
+        public List<ColumnAtt> SuperPaths { get; private set; }
+        public List<ColumnAtt> SubPaths { get; private set; }
+        public List<ColumnAtt> GreaterPaths { get; private set; }
+        public List<ColumnAtt> LesserPaths { get; private set; }
 
-        public void AddGreaterPath(DimAttribute path)
+        public void AddGreaterPath(ColumnAtt path)
         {
             Debug.Assert(path.Output != null && path.Input != null, "Wrong use: path must specify a lesser and greater sets before it can be added to a set.");
             RemoveGreaterPath(path);
-            if (path.Output is SetRel) ((SetRel)path.Output).LesserPaths.Add(path);
-            if (path.Input is SetRel) ((SetRel)path.Input).GreaterPaths.Add(path);
+            if (path.Output is TableRel) ((TableRel)path.Output).LesserPaths.Add(path);
+            if (path.Input is TableRel) ((TableRel)path.Input).GreaterPaths.Add(path);
         }
-        public void RemoveGreaterPath(DimAttribute path)
+        public void RemoveGreaterPath(ColumnAtt path)
         {
             Debug.Assert(path.Output != null && path.Input != null, "Wrong use: path must specify a lesser and greater sets before it can be removed from a set.");
-            if (path.Output is SetRel) ((SetRel)path.Output).LesserPaths.Remove(path);
-            if (path.Input is SetRel) ((SetRel)path.Input).GreaterPaths.Remove(path);
+            if (path.Output is TableRel) ((TableRel)path.Output).LesserPaths.Remove(path);
+            if (path.Input is TableRel) ((TableRel)path.Input).GreaterPaths.Remove(path);
         }
         public void RemoveGreaterPath(string name)
         {
-            DimAttribute path = GetGreaterPath(name);
+            ColumnAtt path = GetGreaterPath(name);
             if (path != null)
             {
                 RemoveGreaterPath(path);
             }
         }
-        public DimAttribute GetGreaterPath(string name)
+        public ColumnAtt GetGreaterPath(string name)
         {
             return GreaterPaths.FirstOrDefault(d => StringSimilarity.SameColumnName(d.Name, name));
         }
-        public DimAttribute GetGreaterPathByColumnName(string name)
+        public ColumnAtt GetGreaterPathByColumnName(string name)
         {
             return GreaterPaths.FirstOrDefault(d => StringSimilarity.SameColumnName(d.RelationalColumnName, name));
         }
-        public DimAttribute GetGreaterPath(DimAttribute path)
+        public ColumnAtt GetGreaterPath(ColumnAtt path)
         {
             if (path == null || path.Segments == null) return null;
             return GetGreaterPath(path.Segments);
         }
-        public DimAttribute GetGreaterPath(List<DcColumn> path)
+        public ColumnAtt GetGreaterPath(List<DcColumn> path)
         {
             if (path == null) return null;
-            foreach (DimAttribute p in GreaterPaths)
+            foreach (ColumnAtt p in GreaterPaths)
             {
                 if (p.Segments == null) continue;
                 if (p.Segments.Count != path.Count) continue; // Different lengths => not equal
@@ -87,15 +87,15 @@ namespace Com.Schema.Rel
             }
             return null;
         }
-        public List<DimAttribute> GetGreaterPathsStartingWith(DimAttribute path)
+        public List<ColumnAtt> GetGreaterPathsStartingWith(ColumnAtt path)
         {
-            if (path == null || path.Segments == null) return new List<DimAttribute>();
+            if (path == null || path.Segments == null) return new List<ColumnAtt>();
             return GetGreaterPathsStartingWith(path.Segments);
         }
-        public List<DimAttribute> GetGreaterPathsStartingWith(List<DcColumn> path)
+        public List<ColumnAtt> GetGreaterPathsStartingWith(List<DcColumn> path)
         {
-            var result = new List<DimAttribute>();
-            foreach (DimAttribute p in GreaterPaths)
+            var result = new List<ColumnAtt>();
+            foreach (ColumnAtt p in GreaterPaths)
             {
                 if (p.Segments == null) continue;
                 if (p.Segments.Count < path.Count) continue; // Too short path (cannot include the input path)
@@ -113,9 +113,9 @@ namespace Com.Schema.Rel
             // The method adds entity (non-PK) columns from referenced (by FK) tables (recursively).
             int pathCounter = 0;
 
-            DimAttribute path = new DimAttribute("");
-            PathEnumerator primPaths = new PathEnumerator(this, DimensionType.IDENTITY_ENTITY);
-            foreach (DimAttribute p in primPaths)
+            ColumnAtt path = new ColumnAtt("");
+            PathEnumerator primPaths = new PathEnumerator(this, ColumnType.IDENTITY_ENTITY);
+            foreach (ColumnAtt p in primPaths)
             {
                 if (p.Size < 2) continue; // All primitive paths are stored in this set. We need at least 2 segments.
 
@@ -125,7 +125,7 @@ namespace Com.Schema.Rel
 
                 string pathName = "__inherited__" + ++pathCounter;
 
-                DimAttribute newPath = new DimAttribute(pathName);
+                ColumnAtt newPath = new ColumnAtt(pathName);
                 newPath.Segments = new List<DcColumn>(p.Segments);
                 newPath.RelationalColumnName = newPath.Name; // It actually will be used for relational queries
                 newPath.RelationalFkName = path.RelationalFkName; // Belongs to the same FK
@@ -143,7 +143,7 @@ namespace Com.Schema.Rel
 
         public override void ToJson(JObject json)
         {
-            base.ToJson(json); // Set
+            base.ToJson(json); // Table
 
             json["RelationalTableName"] = RelationalTableName;
             json["RelationalPkName"] = RelationalPkName;
@@ -163,9 +163,9 @@ namespace Com.Schema.Rel
 
         }
 
-        public override void FromJson(JObject json, DcWorkspace ws)
+        public override void FromJson(JObject json, DcSpace ws)
         {
-            base.FromJson(json, ws); // Set
+            base.FromJson(json, ws); // Table
 
             RelationalTableName = (string)json["RelationalTableName"];
             RelationalPkName = (string)json["RelationalPkName"];
@@ -173,10 +173,10 @@ namespace Com.Schema.Rel
             // List of greater paths (relational attributes)
             if (json["greater_paths"] != null)
             {
-                if (GreaterPaths == null) GreaterPaths = new List<DimAttribute>();
+                if (GreaterPaths == null) GreaterPaths = new List<ColumnAtt>();
                 foreach (JObject greater_path in json["greater_paths"])
                 {
-                    DimAttribute path = (DimAttribute)Utils.CreateObjectFromJson(greater_path);
+                    ColumnAtt path = (ColumnAtt)Utils.CreateObjectFromJson(greater_path);
                     if (path != null)
                     {
                         path.FromJson(greater_path, ws);
@@ -190,18 +190,18 @@ namespace Com.Schema.Rel
 
         #region Constructors and initializers.
 
-        public SetRel()
+        public TableRel()
             : this("")
         {
         }
 
-        public SetRel(string name)
+        public TableRel(string name)
             : base(name)
         {
-            SuperPaths = new List<DimAttribute>();
-            SubPaths = new List<DimAttribute>();
-            GreaterPaths = new List<DimAttribute>();
-            LesserPaths = new List<DimAttribute>();
+            SuperPaths = new List<ColumnAtt>();
+            SubPaths = new List<ColumnAtt>();
+            GreaterPaths = new List<ColumnAtt>();
+            LesserPaths = new List<ColumnAtt>();
         }
 
         #endregion

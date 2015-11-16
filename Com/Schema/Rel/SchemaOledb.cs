@@ -41,11 +41,11 @@ namespace Com.Schema.Rel
             //
             foreach (string tableName in tableNames)
             {
-                SetRel set = new SetRel(tableName); // Create a set 
-                set.RelationalTableName = tableName;
+                TableRel tab = new TableRel(tableName); // Create a set 
+                tab.RelationalTableName = tableName;
                 // Relational PK name will be set during column loading
 
-                tables.Add(set);
+                tables.Add(tab);
             }
 
             //
@@ -65,11 +65,11 @@ namespace Com.Schema.Rel
 
             List<DcTable> tables = LoadTables();
 
-            List<DimAttribute> attributes = new List<DimAttribute>();
+            List<ColumnAtt> attributes = new List<ColumnAtt>();
 
-            foreach (SetRel table in tables)
+            foreach (TableRel table in tables)
             {
-                List<DimAttribute> atts = LoadAttributes(table);
+                List<ColumnAtt> atts = LoadAttributes(table);
                 attributes.AddRange(atts);
             }
 
@@ -125,15 +125,15 @@ namespace Com.Schema.Rel
         }
 */
 
-        protected List<DimAttribute> LoadAttributes(SetRel tableSet) 
+        protected List<ColumnAtt> LoadAttributes(TableRel table) 
         {
             // The created paths will be not be added to the schema (should be added manually)
             // The created paths are empty and do not store any dimensions (should be done/expanded separately by using the meta-data about PKs, FKs etc.)
-            Debug.Assert(!tableSet.IsPrimitive, "Wrong use: cannot load structure for primitive set.");
+            Debug.Assert(!table.IsPrimitive, "Wrong use: cannot load structure for primitive set.");
 
-            List<DimAttribute> attributes = new List<DimAttribute>();
+            List<ColumnAtt> attributes = new List<ColumnAtt>();
 
-            string tableName = tableSet.RelationalTableName;
+            string tableName = table.RelationalTableName;
 
             DataTable pks = connection.GetPks(tableName);
             DataTable fks = connection.GetFks(tableName);
@@ -148,10 +148,10 @@ namespace Com.Schema.Rel
                 //
                 // Create an attribute object representing this column
                 //
-                DimAttribute path = tableSet.GetGreaterPathByColumnName(columnName); // It might have been already created (when processing other tables)
+                ColumnAtt path = table.GetGreaterPathByColumnName(columnName); // It might have been already created (when processing other tables)
                 if (path != null) continue;
 
-                path = new DimAttribute(columnName, tableSet, typeTable);
+                path = new ColumnAtt(columnName, table, typeTable);
 
                 //
                 // Set relational attribute of the object
@@ -166,7 +166,7 @@ namespace Com.Schema.Rel
 
                     // Found PK this column belongs to
                     path.RelationalPkName = (string)pk["PK_NAME"];
-                    tableSet.RelationalPkName = path.RelationalPkName; // OPTIMIZE: try to do it only once rather than for each attribute and try to identify and exclude multiple PKs (error)
+                    table.RelationalPkName = path.RelationalPkName; // OPTIMIZE: try to do it only once rather than for each attribute and try to identify and exclude multiple PKs (error)
 
                     //path.IsIdentity = true; // We simply have to override this property as "RelationalPkName != null" or "RelationalPkName == table.RelationalPkName"
                     break; // Assume that a column can belong to only one PK 
@@ -348,19 +348,19 @@ namespace Com.Schema.Rel
         /// <returns></returns>
         public DataTable LoadTable(DcTable table) // Load data for only this table (without greater tables connected via FKs)
         {
-            SetRel set = (SetRel)table;
+            TableRel tab = (TableRel)table;
 
             string select = "";
-            List<DimAttribute> attributes = set.GreaterPaths;
-            foreach (DimAttribute att in attributes)
+            List<ColumnAtt> attributes = tab.GreaterPaths;
+            foreach (ColumnAtt att in attributes)
             {
                 select += "[" + att.RelationalColumnName + "]" + ", ";
             }
             select = select.Substring(0, select.Length - 2);
 
-            string from = "[" + set.RelationalTableName + "]";
-            string where = ""; // set.WhereExpression
-            string orderby = ""; // set.OrderbyExpression
+            string from = "[" + tab.RelationalTableName + "]";
+            string where = ""; // tab.WhereExpression
+            string orderby = ""; // tab.OrderbyExpression
 
             // Send query to the remote database for execution
             string query = "SELECT " + select + " FROM " + from + " ";
@@ -611,7 +611,7 @@ namespace Com.Schema.Rel
 
         public override DcTable CreateTable(String name)
         {
-            DcTable table = new SetRel(name);
+            DcTable table = new TableRel(name);
             return table;
         }
 
@@ -619,7 +619,7 @@ namespace Com.Schema.Rel
         {
             Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
 
-            DcColumn dim = new DimRel(name, input, output, isKey, false);
+            DcColumn dim = new ColumnRel(name, input, output, isKey, false);
 
             return dim;
         }
@@ -628,20 +628,20 @@ namespace Com.Schema.Rel
 
         protected override void CreateDataTypes() // Create all primitive data types from some specification like Enum, List or XML
         {
-            Set set;
-            Dim dim;
+            Table tab;
+            Column col;
 
-            set = new Set("Root");
-            dim = new Dim("Top", set, this, true, true);
-            dim.Add();
+            tab = new Table("Root");
+            col = new Column("Top", tab, this, true, true);
+            col.Add();
 
             // Either use Ole DB standard or System.Data.OleDb.OleDbType.* (or maybe they are the same). 
             // Type names must correspond to what we see in SQL queries (or other syntactic expressions expected by OleDb driver)
             foreach (OleDbType dataType in (OleDbType[])Enum.GetValues(typeof(OleDbType)))
             {
-                set = new Set(dataType.ToString());
-                dim = new Dim("Top", set, this, true, true);
-                dim.Add();
+                tab = new Table(dataType.ToString());
+                col = new Column("Top", tab, this, true, true);
+                col.Add();
             }
         }
 
