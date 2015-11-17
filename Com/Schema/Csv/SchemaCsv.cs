@@ -156,7 +156,7 @@ namespace Com.Schema.Csv
         public SchemaCsv(string name)
             : base(name)
         {
-            DataSourceType = DataSourceType.CSV;
+            _schemaKind = DcSchemaKind.Csv;
             connection = new ConnectionCsv();
         }
 

@@ -653,7 +653,7 @@ namespace Com.Schema.Rel
         public SchemaOledb(string name)
             : base(name)
         {
-            DataSourceType = DataSourceType.OLEDB;
+            _schemaKind = DcSchemaKind.Oledb;
         }
 
     }

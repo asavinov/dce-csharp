@@ -33,7 +33,7 @@ namespace Com.Schema
         /// </summary>
         public Guid Id { get; private set; }
 
-        #region ComTable interface
+        #region DcTable interface
 
         public string Name { get; set; }
 
@@ -53,7 +53,7 @@ namespace Com.Schema
             {
                 DcTable tab = this;
                 while (tab.SuperTable != null) tab = tab.SuperTable;
-                return tab is Schema ? (Schema)tab : null; // A set which is not integrated in the schema does not have top
+                return tab is DcSchema ? (DcSchema)tab : null; // A set which is not integrated in the schema does not have top
             }
         }
 
@@ -142,7 +142,7 @@ namespace Com.Schema
                 tab = this;
             }
 
-            foreach (Column col in SubColumns)
+            foreach (DcColumn col in SubColumns)
             {
                 if (tab != null) break;
                 tab = col.Input.GetSubTable(name);

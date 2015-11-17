@@ -29,7 +29,7 @@ namespace Com.Schema
         /// </summary>
         public Guid Id { get; private set; }
 
-        #region ComColumn interface
+        #region DcColumn interface
 
         /// <summary>
         /// This name is unique within the lesser set.

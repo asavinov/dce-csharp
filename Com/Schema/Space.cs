@@ -1,10 +1,13 @@
-﻿using System; 
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Collections.ObjectModel;
 using System.Text;
 
 using Newtonsoft.Json.Linq;
+
+using Com.Schema.Csv;
+using Com.Schema.Rel;
 
 namespace Com.Schema
 {
@@ -13,14 +16,16 @@ namespace Com.Schema
     /// </summary>
     public class Space : DcSpace
     {
-
-        #region DcWorkspace
-
+        #region DcSpace (OLD)
+        /*
         public ObservableCollection<DcSchema> Schemas { get; set; }
 
-        public void AddSchema(DcSchema schema)
+        public virtual void AddSchema(DcSchema schema)
         {
-            Schemas.Add(schema);
+            if(!_schemas.Contains(schema))
+            {
+                _schemas.Add(schema);
+            }
         }
         public void RemoveSchema(DcSchema schema)
         {
@@ -35,16 +40,165 @@ namespace Com.Schema
             Schemas.Remove(schema);
         }
 
-        public DcSchema GetSchema(string name)
-        {
-            return Schemas.FirstOrDefault(x => StringSimilarity.SameColumnName(x.Name, name));
-        }
-
         protected DcSchema _mashup;
         public DcSchema Mashup 
         {
             get { return _mashup; }
             set { _mashup = value; }
+        }
+        */
+        #endregion
+
+        #region DcSpace
+
+        //
+        // Schemas
+        //
+
+        protected List<DcSchema> _schemas;
+
+        public virtual DcSchema CreateSchema(string name, DcSchemaKind schemaType)
+        {
+            DcSchema schema;
+
+            if (schemaType == DcSchemaKind.Dc)
+            {
+                schema = new Schema(name);
+            }
+            else if (schemaType == DcSchemaKind.Csv)
+            {
+                schema = new SchemaCsv(name);
+            }
+            else if (schemaType == DcSchemaKind.Oledb)
+            {
+                schema = new SchemaOledb(name);
+            }
+            else if (schemaType == DcSchemaKind.Rel)
+            {
+                throw new NotImplementedException("This schema type is not implemented.");
+            }
+            else
+            {
+                throw new NotImplementedException("This schema type is not implemented.");
+            }
+
+            schema.Space = this;
+
+            _schemas.Add(schema);
+
+            return schema;
+        }
+
+        public virtual void DeleteSchema(DcSchema schema)
+        {
+
+        }
+        public virtual List<DcSchema> GetSchemas()
+        {
+            return new List<DcSchema>(_schemas);
+        }
+        public DcSchema GetSchema(string name)
+        {
+            return _schemas.FirstOrDefault(x => StringSimilarity.SameTableName(x.Name, name));
+        }
+
+        //
+        // Tables
+        //
+
+        protected List<DcTable> _tables;
+
+        public virtual DcTable CreateTable(string name, DcTable parent)
+        {
+            DcSchema schema = parent.Schema;
+            DcSchemaKind schemaType = schema.GetSchemaKind();
+
+            DcTable table;
+
+            if (schemaType == DcSchemaKind.Dc)
+            {
+                table = new Table(name);
+            }
+            else if (schemaType == DcSchemaKind.Csv)
+            {
+                table = new TableCsv(name);
+            }
+            else if (schemaType == DcSchemaKind.Oledb)
+            {
+                throw new NotImplementedException("This schema type is not implemented.");
+            }
+            else if (schemaType == DcSchemaKind.Rel)
+            {
+                table = new TableRel(name);
+            }
+            else
+            {
+                throw new NotImplementedException("This schema type is not implemented.");
+            }
+
+            _tables.Add(table);
+
+            return table;
+        }
+
+        public virtual void DeleteTable(DcTable table)
+        {
+
+        }
+        public virtual List<DcTable> GetTables(DcSchema schema)
+        {
+            if(schema == null)
+            {
+                return new List<DcTable>(_tables);
+            }
+            else
+            {
+                return _tables.Where(x => x.Schema == schema).ToList();
+            }
+        }
+
+        //
+        // Columns
+        //
+
+        protected List<DcColumn> _columns;
+
+        public virtual DcColumn CreateColumn(string name, DcTable input, DcTable output)
+        {
+            DcSchema inSchema = input.Schema;
+            DcSchemaKind inSchemaType = inSchema.GetSchemaKind();
+
+            DcColumn column;
+
+            if (inSchemaType == DcSchemaKind.Dc)
+            {
+                column = new Column(name, input, output);
+            }
+            else if (inSchemaType == DcSchemaKind.Csv)
+            {
+                column = new ColumnCsv(name, input, output);
+            }
+            else if (inSchemaType == DcSchemaKind.Oledb)
+            {
+                throw new NotImplementedException("This schema type is not implemented.");
+            }
+            else if (inSchemaType == DcSchemaKind.Rel)
+            {
+                column = new ColumnRel(name, input, output);
+            }
+            else
+            {
+                throw new NotImplementedException("This schema type is not implemented.");
+            }
+
+            _columns.Add(column);
+
+            return column;
+        }
+
+        public virtual void DeleteColumn(DcColumn column)
+        {
+
         }
 
         #endregion
@@ -53,14 +207,12 @@ namespace Com.Schema
 
         public virtual void ToJson(JObject json)
         {
-            if (Mashup != null) json["mashup"] = Utils.CreateJsonRef(Mashup);
-
             // List of schemas
             JArray schemas = new JArray();
-            foreach (DcSchema comSchema in Schemas)
+            foreach (DcSchema sch in GetSchemas())
             {
-                JObject schema = Utils.CreateJsonFromObject(comSchema);
-                comSchema.ToJson(schema);
+                JObject schema = Utils.CreateJsonFromObject(sch);
+                sch.ToJson(schema);
                 schemas.Add(schema);
             }
             json["schemas"] = schemas;
@@ -71,11 +223,11 @@ namespace Com.Schema
             // List of schemas
             foreach (JObject schema in json["schemas"])
             {
-                DcSchema comSchema = (DcSchema)Utils.CreateObjectFromJson(schema);
-                if (comSchema != null)
+                DcSchema sch = (DcSchema)Utils.CreateObjectFromJson(schema);
+                if (sch != null)
                 {
-                    comSchema.FromJson(schema, this);
-                    this.Schemas.Add(comSchema);
+                    sch.FromJson(schema, this);
+                    this._schemas.Add(sch);
                 }
             }
 
@@ -84,11 +236,11 @@ namespace Com.Schema
             {
                 foreach (JObject column in schema["columns"]) // List of columns
                 {
-                    DcColumn comColumn = (DcColumn)Utils.CreateObjectFromJson(column);
-                    if (comColumn != null)
+                    DcColumn col = (DcColumn)Utils.CreateObjectFromJson(column);
+                    if (col != null)
                     {
-                        comColumn.FromJson(column, this);
-                        comColumn.Add();
+                        col.FromJson(column, this);
+                        col.Add();
                     }
                 }
             }
@@ -98,13 +250,13 @@ namespace Com.Schema
             {
                 foreach (JObject column in schema["columns"]) // List of columns
                 {
-                    DcColumn comColumn = (DcColumn)Utils.CreateObjectFromJson(column);
-                    if (comColumn != null)
+                    DcColumn col = (DcColumn)Utils.CreateObjectFromJson(column);
+                    if (col != null)
                     {
-                        comColumn.FromJson(column, this);
+                        col.FromJson(column, this);
 
                         // Find the same existing column (possibly without a definition)
-                        DcColumn existing = comColumn.Input.GetColumn(comColumn.Name);
+                        DcColumn existing = col.Input.GetColumn(col.Name);
 
                         // Copy the definition
                         existing.FromJson(column, this);
@@ -112,15 +264,17 @@ namespace Com.Schema
                 }
             }
 
-            Mashup = (DcSchema)Utils.ResolveJsonRef((JObject)json["mashup"], this);
         }
 
         #endregion
 
         public Space()
         {
-            Schemas = new ObservableCollection<DcSchema>();
+            _schemas = new List<DcSchema>();
+            _tables = new List<DcTable>();
+            _columns = new List<DcColumn>();
         }
+
     }
 
 }

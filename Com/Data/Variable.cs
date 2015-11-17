@@ -20,12 +20,12 @@ namespace Com.Data
         public string SchemaName { get; set; }
         public string TypeName { get; set; }
 
-        public void Resolve(DcSpace workspace)
+        public void Resolve(DcSpace space)
         {
             if (!string.IsNullOrEmpty(SchemaName))
             {
                 // 1. Resolve schema name
-                TypeSchema = workspace.GetSchema(SchemaName);
+                TypeSchema = space.GetSchema(SchemaName);
                 if (TypeSchema == null) return; // Cannot resolve
 
                 // 2. Resolve table name
@@ -35,19 +35,20 @@ namespace Com.Data
             else if (!string.IsNullOrEmpty(TypeName)) // No schema name (imcomplete info)
             {
                 // 1. try to find the table in the mashup 
-                if (workspace.Mashup != null)
+                DcSchema mashup = space.GetSchemas().FirstOrDefault(x => x.GetSchemaKind() == DcSchemaKind.Dc);
+                if (mashup != null)
                 {
-                    TypeTable = workspace.Mashup.GetSubTable(TypeName);
+                    TypeTable = mashup.GetSubTable(TypeName);
                     if (TypeTable != null)
                     {
-                        TypeSchema = workspace.Mashup;
+                        TypeSchema = mashup;
                         SchemaName = TypeSchema.Name; // We also reconstruct the name
                         return;
                     }
                 }
 
                 // 2. try to find the table in any other schema
-                foreach (DcSchema schema in workspace.Schemas)
+                foreach (DcSchema schema in space.GetSchemas())
                 {
                     TypeTable = schema.GetSubTable(TypeName);
                     if (TypeTable != null)

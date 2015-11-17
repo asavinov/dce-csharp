@@ -9,6 +9,8 @@ namespace Com.Schema
 {
     public interface DcSchema : DcTable
     {
+        DcSchemaKind GetSchemaKind();
+
         DcSpace Space { get; set; }
 
         DcTable GetPrimitive(string dataType);
@@ -36,7 +38,7 @@ namespace Com.Schema
     /// Primitive data types used in our local database system. 
     /// We need to enumerate data types for each kind of database along with the primitive mappings to other databases.
     /// </summary>
-    public enum DcDataType
+    public enum DcPrimitiveType
     {
         // Built-in types in C#: http://msdn.microsoft.com/en-us/library/vstudio/ya5y69ds.aspx
         Void, // Null, Nothing, Empty no value. Can be equivalent to Top.
@@ -49,7 +51,7 @@ namespace Com.Schema
         String,
         Boolean,
         DateTime,
-        Set, // User-defined. It is any set that is not root (non-primititve type). Arbitrary user-defined name.
+        Table, // User-defined. It is any set that is not root (non-primititve type). Arbitrary user-defined name.
     }
 
 }

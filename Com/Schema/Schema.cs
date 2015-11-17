@@ -23,7 +23,10 @@ namespace Com.Schema
     public class Schema : Table, DcSchema
     {
 
-        #region ComSchema interface
+        #region DcSchema interface
+
+        protected DcSchemaKind _schemaKind;
+        public virtual DcSchemaKind GetSchemaKind() { return _schemaKind; }
 
         public DcSpace Space { get; set; }
         
@@ -221,15 +224,13 @@ namespace Com.Schema
             }
         }
 
-        public DataSourceType DataSourceType { get; protected set; } // Where data is stored and processed (engine). Replace class name
-
         #region DcJson serialization
 
         public override void ToJson(JObject json)
         {
             base.ToJson(json); // Set
 
-            json["DataSourceType"] = (int)DataSourceType;
+            json["SchemaKind"] = (int)_schemaKind;
 
             // List of all tables
             JArray tables = new JArray();
@@ -258,7 +259,7 @@ namespace Com.Schema
         {
             base.FromJson(json, ws); // Set
 
-            DataSourceType = json["DataSourceType"] != null ? (DataSourceType)(int)json["DataSourceType"] : DataSourceType.LOCAL;
+            _schemaKind = json["SchemaKind"] != null ? (DcSchemaKind)(int)json["SchemaKind"] : DcSchemaKind.Dc;
 
             // List of tables
             JArray tables = (JArray)json["tables"];
@@ -320,19 +321,11 @@ namespace Com.Schema
         public Schema(string name)
             : base(name)
         {
+            _schemaKind = DcSchemaKind.Dc;
+
             CreateDataTypes(); // Generate all predefined primitive sets as subsets
         }
 
     }
 
-    public enum DataSourceType // Essentially, it a marker for a subclass of Schema
-    {
-        LOCAL, // This database
-        ACCESS,
-        OLEDB,
-        SQL, // Generic (standard) SQL
-        CSV,
-        ODATA,
-        EXCEL
-    }
 }
