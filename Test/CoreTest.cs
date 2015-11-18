@@ -4,9 +4,6 @@ using System.Linq;
 using System.Data;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-
 using Com.Utils;
 using Com.Schema;
 using Com.Schema.Rel;
@@ -23,12 +20,6 @@ namespace Test
     [TestClass]
     public class CoreTest
     {
-        public static string Northwind = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\\Users\\savinov\\git\\dce-csharp\\Test\\Northwind.accdb";
-        public static string TextDbConnection = "Provider=Microsoft.ACE.OLEDB.12.0; Data Source=C:\\Users\\savinov\\git\\dce-csharp\\Test; Extended Properties='Text;Excel 12.0;HDR=Yes;FMT=CSVDelimited;'";
-
-        public static string CsvRead = "C:\\Users\\savinov\\git\\dce-csharp\\Test\\Products.csv";
-        public static string CsvWrite = "C:\\Users\\savinov\\git\\dce-csharp\\Test\\_temp_test_output.csv";
-
         public static ExprBuilder ExprBuilder { get; set; }
 
         private static TestContext context;
@@ -48,40 +39,31 @@ namespace Test
         [TestInitialize()]
         public void SetUp() {
             space = new Space();
-            DcSchema schema = space.CreateSchema("My Schema", DcSchemaKind.Dc);
+            schema = space.CreateSchema("My Schema", DcSchemaKind.Dc);
             CreateSampleSchema(schema);
         }
     
-        protected void CreateSampleSchema(DcSchema schema)
+        public static void CreateSampleSchema(DcSchema schema)
         {
+            DcSpace space = schema.Space;
             // Table 1
-            DcTable t1 = schema.CreateTable("Table 1");
-            schema.AddTable(t1, schema.Root, null);
+            DcTable t1 = space.CreateTable("Table 1", schema.Root);
 
-            DcColumn c11 = schema.CreateColumn("Column 11", t1, schema.GetPrimitive("Integer"), true);
-            c11.Add();
-            DcColumn c12 = schema.CreateColumn("Column 12", t1, schema.GetPrimitive("String"), true);
-            c12.Add();
-            DcColumn c13 = schema.CreateColumn("Column 13", t1, schema.GetPrimitive("Double"), false);
-            c13.Add();
-            DcColumn c14 = schema.CreateColumn("Column 14", t1, schema.GetPrimitive("Decimal"), false);
-            c14.Add();
+            DcColumn c11 = space.CreateColumn("Column 11", t1, schema.GetPrimitive("Integer"), true);
+            DcColumn c12 = space.CreateColumn("Column 12", t1, schema.GetPrimitive("String"), true);
+            DcColumn c13 = space.CreateColumn("Column 13", t1, schema.GetPrimitive("Double"), false);
+            DcColumn c14 = space.CreateColumn("Column 14", t1, schema.GetPrimitive("Decimal"), false);
 
             // Table 2
-            DcTable t2 = schema.CreateTable("Table 2");
-            schema.AddTable(t2, schema.Root, null);
+            DcTable t2 = space.CreateTable("Table 2", schema.Root);
 
-            DcColumn c21 = schema.CreateColumn("Column 21", t2, schema.GetPrimitive("String"), true);
-            c21.Add();
-            DcColumn c22 = schema.CreateColumn("Column 22", t2, schema.GetPrimitive("Integer"), true);
-            c22.Add();
-            DcColumn c23 = schema.CreateColumn("Column 23", t2, schema.GetPrimitive("Double"), false);
-            c23.Add();
-            DcColumn c24 = schema.CreateColumn("Table 1", t2, t1, false);
-            c24.Add();
+            DcColumn c21 = space.CreateColumn("Column 21", t2, schema.GetPrimitive("String"), true);
+            DcColumn c22 = space.CreateColumn("Column 22", t2, schema.GetPrimitive("Integer"), true);
+            DcColumn c23 = space.CreateColumn("Column 23", t2, schema.GetPrimitive("Double"), false);
+            DcColumn c24 = space.CreateColumn("Table 1", t2, t1, false);
         }
 
-        protected void CreateSampleData(DcSchema schema)
+        public static void CreateSampleData(DcSchema schema)
         {
             //
             // Fill sample data in "Table 1"
@@ -271,11 +253,9 @@ namespace Test
             //
             // Define a derived column with a definition
             //
-            DcColumn c15 = schema.CreateColumn("Column 15", t1, schema.GetPrimitive("Double"), false);
+            DcColumn c15 = space.CreateColumn("Column 15", t1, schema.GetPrimitive("Double"), false);
 
             c15.GetData().Formula = "([Column 11]+10.0) * this.[Column 13]";
-
-            c15.Add();
 
             // Evaluate column
             c15.GetData().Evaluate();
@@ -300,11 +280,9 @@ namespace Test
             //
             // Define a derived column with a definition
             //
-            DcColumn c15 = schema.CreateColumn("Column 15", t1, schema.GetPrimitive("String"), false);
+            DcColumn c15 = space.CreateColumn("Column 15", t1, schema.GetPrimitive("String"), false);
 
             c15.GetData().Formula = "call:System.String.Substring( [Column 12], 7, 1 )";
-
-            c15.Add();
 
             // Evaluate column
             c15.GetData().Evaluate();
@@ -316,11 +294,9 @@ namespace Test
             //
             // Define a derived column with a definition
             //
-            DcColumn c16 = schema.CreateColumn("Column 15", t1, schema.GetPrimitive("Double"), false);
+            DcColumn c16 = space.CreateColumn("Column 15", t1, schema.GetPrimitive("Double"), false);
 
             c16.GetData().Formula = "call:System.Math.Pow( [Column 11] / 10.0, [Column 13] / 10.0 )";
-
-            c16.Add();
 
             c16.GetData().Evaluate();
 
@@ -344,11 +320,9 @@ namespace Test
             // Define a derived column with a definition
             //
 
-            DcColumn link = schema.CreateColumn("Column Link", t2, t1, false);
+            DcColumn link = space.CreateColumn("Column Link", t2, t1, false);
 
             link.GetData().Formula = "(( [Integer] [Column 11] = this.[Column 22], [Double] [Column 14] = 20.0 ))"; // Tuple structure corresponds to output table
-
-            link.Add();
 
             // Evaluate column
             link.GetData().Evaluate();
@@ -399,11 +373,9 @@ namespace Test
             //
             // Aggregation via a syntactic formula
             //
-            DcColumn c16 = schema.CreateColumn("Agg2 of Column 23", t1, schema.GetPrimitive("Double"), false);
+            DcColumn c16 = space.CreateColumn("Agg2 of Column 23", t1, schema.GetPrimitive("Double"), false);
 
             c16.GetData().Formula = "AGGREGATE(facts=[Table 2], groups=[Table 1], measure=[Column 23]*2.0 + 1, aggregator=SUM)";
-
-            c16.Add();
 
             c16.GetData().SetValue(0.0);
             c16.GetData().Evaluate(); // {40, 140, 0}
@@ -424,13 +396,10 @@ namespace Test
             //
             // Define a new product-set
             //
-            DcTable t3 = schema.CreateTable("Table 3");
-            schema.AddTable(t3, null, null);
+            DcTable t3 = space.CreateTable("Table 3", schema.Root);
 
-            DcColumn c31 = schema.CreateColumn(t1.Name, t3, t1, true); // {*20, 10, *30}
-            c31.Add();
-            DcColumn c32 = schema.CreateColumn(t2.Name, t3, t2, true); // {40, 40, *50, *50}
-            c32.Add();
+            DcColumn c31 = space.CreateColumn(t1.Name, t3, t1, true); // {*20, 10, *30}
+            DcColumn c32 = space.CreateColumn(t2.Name, t3, t2, true); // {40, 40, *50, *50}
 
             t3.GetData().Populate();
             Assert.AreEqual(12, t3.GetData().Length);
@@ -461,9 +430,8 @@ namespace Test
             //
             // Define a new filter-set
             //
-            DcTable t3 = schema.CreateTable("Table 3");
+            DcTable t3 = space.CreateTable("Table 3", t2);
             t3.GetData().WhereFormula = "[Column 22] > 20.0 && this.Super.[Column 23] < 50";
-            schema.AddTable(t3, t2, null);
 
             t3.GetData().Populate();
             Assert.AreEqual(1, t3.GetData().Length);
@@ -484,17 +452,14 @@ namespace Test
             //
             // Project "Table 2" along "Column 21" and get 2 unique records in a new set "Value A" (3 references) and "Value B" (1 reference)
             //
-            DcTable t3 = schema.CreateTable("Table 3");
-            schema.AddTable(t3, null, null);
+            DcTable t3 = space.CreateTable("Table 3", schema.Root);
 
-            DcColumn c31 = schema.CreateColumn(c21.Name, t3, c21.Output, true);
-            c31.Add();
+            DcColumn c31 = space.CreateColumn(c21.Name, t3, c21.Output, true);
 
             // Create a generating column
-            DcColumn c24 = schema.CreateColumn("Project", t2, t3, false);
+            DcColumn c24 = space.CreateColumn("Project", t2, t3, false);
             c24.GetData().Formula = "(( [String] [Column 21] = [Column 21] ))";
             c24.GetData().IsAppendData = true;
-            c24.Add();
 
             t3.GetData().Populate();
 
@@ -508,18 +473,14 @@ namespace Test
             //
             // Defining a combination of "Column 21" and "Column 22" and project with 3 unique records in a new set
             //
-            DcTable t4 = schema.CreateTable("Table 4");
-            schema.AddTable(t4, null, null);
+            DcTable t4 = space.CreateTable("Table 4", schema.Root);
 
-            DcColumn c41 = schema.CreateColumn(c21.Name, t4, c21.Output, true);
-            c41.Add();
-            DcColumn c42 = schema.CreateColumn(c22.Name, t4, c22.Output, true);
-            c42.Add();
+            DcColumn c41 = space.CreateColumn(c21.Name, t4, c21.Output, true);
+            DcColumn c42 = space.CreateColumn(c22.Name, t4, c22.Output, true);
 
-            DcColumn c25 = schema.CreateColumn("Project", t2, t4, false);
+            DcColumn c25 = space.CreateColumn("Project", t2, t4, false);
             c25.GetData().Formula = "(( [String] [Column 21] = [Column 21], [Integer] [Column 22] = [Column 22] ))";
             c25.GetData().IsAppendData = true;
-            c25.Add();
 
             t4.GetData().Populate();
 
@@ -531,258 +492,6 @@ namespace Test
             Assert.AreEqual(2, c25.GetData().GetValue(3));
         }
 
-        [TestMethod]
-        public void OledbTest() // Load Oledb schema and data
-        {
-            // Important: this test uses Oledb engine which is architecture dependent (32 or 64) and hence the test can fail depending on what kind of Oledb engine is present (installed)
-            // The test executable has to have the same architecture as the installed Oledb engine (and it can depend on, say, the MS Office architecture)
-            // In VS, this can be set in: Menu | Test | Test Settings | Default Processor Architecture 
-
-            // Connection object
-            ConnectionOledb conn = new ConnectionOledb();
-            conn.ConnectionString = Northwind;
-            conn.Open();
-            List<string> tables = conn.ReadTables();
-            conn.Close();
-
-            Assert.AreEqual(20, tables.Count);
-
-            DcSpace space = new Space();
-
-            // Db
-            
-            SchemaOledb top = (SchemaOledb)space.CreateSchema("", DcSchemaKind.Oledb);
-            top.connection = conn;
-
-            //
-            // Load schema
-            //
-            top.LoadSchema();
-
-            Assert.AreEqual(20, top.Root.SubTables.Count);
-            Assert.AreEqual(11, top.GetSubTable("Order Details").Columns.Count);
-
-            Assert.AreEqual("Orders", top.GetSubTable("Order Details").GetColumn("Order ID").Output.Name);
-
-            // Load data manually
-            System.Data.DataTable dataTable = top.LoadTable((TableRel)top.GetSubTable("Order Details"));
-            Assert.AreEqual(58, dataTable.Rows.Count);
-            Assert.AreEqual(37, dataTable.Rows[10][2]);
-
-            //
-            // Configure import 
-            //
-            DcSchema schema = space.CreateSchema("My Schema", DcSchemaKind.Dc);
-
-            DcTable orderDetailsTable = schema.CreateTable("Order Details");
-            
-            // Create mapping
-            Mapper mapper = new Mapper();
-            Mapping map = mapper.CreatePrimitive(top.GetSubTable("Order Details"), orderDetailsTable, schema);
-            map.Matches.ForEach(m => m.TargetPath.Segments.ForEach(p => p.Add()));
-
-            // Create generating/import column
-            /*
-            DcColumn dim = schema.CreateColumn(map.SourceSet.Name, map.SourceSet, map.TargetSet, false);
-            dim.Definition.Mapping = map;
-            dim.Definition.DefinitionType = DcColumnDefinitionType.LINK;
-            dim.Definition.IsAppendData = true;
-
-            dim.Add();
-
-            schema.AddTable(orderDetailsTable, null, null);
-            orderDetailsTable.Definition.Populate();
-
-            Assert.AreEqual(58, orderDetailsTable.Data.Length);
-            */
-        }
-
-        [TestMethod]
-        public void CsvReadTest() // Load Csv schema and data as a result of evaluation
-        {
-            DcSpace space = new Space();
-
-            // Create schema for a remote db
-            SchemaCsv top = (SchemaCsv)space.CreateSchema("My Files", DcSchemaKind.Csv);
-
-            // Create a remote file description
-            TableCsv table = (TableCsv)top.CreateTable("Products");
-            table.FilePath = CsvRead;
-            var columns = top.LoadSchema(table);
-            columns.ForEach(x => x.Add());
-            top.AddTable(table, null, null);
-
-            Assert.AreEqual(1, top.Root.SubTables.Count);
-            Assert.AreEqual(15, top.GetSubTable("Products").Columns.Count);
-
-            Assert.AreEqual("String", top.GetSubTable("Products").GetColumn("Product Name").Output.Name);
-            Assert.AreEqual("3", ((ColumnCsv)top.GetSubTable("Products").GetColumn("ID")).SampleValues[1]);
-
-            //
-            // Configure import 
-            //
-            DcSchema schema = space.CreateSchema("My Schema", DcSchemaKind.Dc);
-
-            DcTable productsTable = schema.CreateTable("Products");
-            schema.AddTable(productsTable, null, null);
-
-            // Manually create column to be imported (we need an automatic mechanism for appending missing columns specified in the formula)
-            DcColumn p1 = schema.CreateColumn("ID", productsTable, schema.GetPrimitive("Integer"), true);
-            p1.Add();
-            DcColumn p2 = schema.CreateColumn("Product Code", productsTable, schema.GetPrimitive("String"), false);
-            p2.Add();
-            DcColumn p3 = schema.CreateColumn("Custom Product Name", productsTable, schema.GetPrimitive("String"), false);
-            p3.Add();
-            DcColumn p4 = schema.CreateColumn("List Price", productsTable, schema.GetPrimitive("Double"), false);
-            p4.Add();
-            DcColumn p5 = schema.CreateColumn("Constant Column", productsTable, schema.GetPrimitive("Double"), false);
-            p5.Add();
-
-            // Define import column
-            DcColumn col = schema.CreateColumn("Import", top.GetSubTable("Products"), productsTable, false);
-            col.Add();
-            col.GetData().IsAppendData = true;
-            col.GetData().Formula = "(( [Integer] [ID] = this.[ID], [String] [Product Code] = [Product Code], [String] [Custom Product Name] = [Product Name], [Double] [List Price] = [List Price], [Double] [Constant Column] = 20.02 ))"; // Tuple structure corresponds to output table
-            col.GetData().IsAppendData = true;
-            col.GetData().IsAppendSchema = true;
-
-            productsTable.GetData().Populate();
-
-            Assert.AreEqual(45, productsTable.GetData().Length);
-            Assert.AreEqual("Northwind Traders Dried Pears", p3.GetData().GetValue(5));
-            Assert.AreEqual(20.02, p5.GetData().GetValue(5));
-        }
-
-        [TestMethod]
-        public void CsvWriteTest() // Store schema and data to a CSV file as a result of evaluation
-        {
-            DcSpace space = new Space();
-            DcSchema schema = space.CreateSchema("My Schema", DcSchemaKind.Dc);
-            CreateSampleSchema(schema);
-
-            CreateSampleData(schema);
-
-            DcTable t2 = schema.GetSubTable("Table 2");
-
-            DcColumn c21 = t2.GetColumn("Column 21");
-            DcColumn c22 = t2.GetColumn("Column 22");
-            DcColumn c23 = t2.GetColumn("Column 23");
-
-            //
-            // Create schema for a remote db
-            //
-            SchemaCsv top = (SchemaCsv)space.CreateSchema("My Files", DcSchemaKind.Csv);
-
-            // Create a remote file description
-            TableCsv table = (TableCsv)top.CreateTable("Table_1");
-            top.AddTable(table, null, null);
-            table.FilePath = CsvWrite;
-
-            // Manually create column to be imported (we need an automatic mechanism for appending missing columns specified in the formula)
-            DcColumn p1 = top.CreateColumn("Column 11", table, top.GetPrimitive("String"), true);
-            p1.Add();
-            DcColumn p2 = top.CreateColumn("Column 12", table, top.GetPrimitive("String"), true);
-            p2.Add();
-            DcColumn p3 = top.CreateColumn("Custom Column 13", table, top.GetPrimitive("String"), true);
-            p3.Add();
-            DcColumn p4 = top.CreateColumn("Constant Column", table, top.GetPrimitive("String"), true);
-            p4.Add();
-
-            // Define export column
-            DcColumn col = schema.CreateColumn("Export", schema.GetSubTable("Table 1"), table, false);
-            col.Add();
-            col.GetData().IsAppendData = true;
-            col.GetData().Formula = "(( [String] [Column 11] = this.[Column 11], [String] [Column 12] = [Column 12], [String] [Custom Column 13] = [Column 13], [String] [Constant Column] = 20.02 ))"; // Tuple structure corresponds to output table
-            col.GetData().IsAppendData = true;
-            col.GetData().IsAppendSchema = true;
-
-            table.Populate();
-        }
-
-        [TestMethod]
-        public void JsonTest() // Serialize/deserialize schema elements
-        {
-            DcSpace ds = new Space();
-            DcSchema schema = ds.CreateSchema("My Schema", DcSchemaKind.Dc);
-            CreateSampleSchema(schema);
-
-            // Add table definition 
-            DcTable t = schema.GetSubTable("Table 2");
-            t.GetData().WhereFormula = "[Column 22] > 20.0 && this.Super.[Column 23] < 50";
-
-            // Add column definition 
-            DcColumn c = t.GetColumn("Column 22");
-            c.GetData().Formula = "([Column 11]+10.0) * this.[Column 13]";
-
-            JObject space = Utils.CreateJsonFromObject(ds);
-            ds.ToJson(space);
-
-            // Serialize into json string
-            string jsonDs = JsonConvert.SerializeObject(space, Newtonsoft.Json.Formatting.Indented, new Newtonsoft.Json.JsonSerializerSettings { });
-
-            // De-serialize from json string: http://weblog.west-wind.com/posts/2012/Aug/30/Using-JSONNET-for-dynamic-JSON-parsing
-            dynamic objDs = JsonConvert.DeserializeObject(jsonDs);
-            //dynamic obj = JObject/JValue/JArray.Parse(json);
-
-            //
-            // Instantiate and initialize
-            //
-            ds = (Space)Utils.CreateObjectFromJson(objDs);
-            ((Space)ds).FromJson(objDs, ds);
-
-            Assert.AreEqual(5, ds.GetSchemas()[0].GetSubTable("Table 1").Columns.Count);
-            Assert.AreEqual(5, ds.GetSchemas()[0].GetSubTable("Table 2").Columns.Count);
-
-            Assert.AreEqual("Table 1", ds.GetSchemas()[0].GetSubTable("Table 2").GetColumn("Table 1").Output.Name);
-
-            c = t.GetColumn("Column 22");
-            //Assert.AreEqual(DcColumnDefinitionType.ARITHMETIC, c.Definition.FormulaExpr.DefinitionType);
-            Assert.AreEqual(2, c.GetData().FormulaExpr.Children.Count);
-
-            //
-            // 2. Another sample schema with several schemas and inter-schema columns
-            //
-            string jsonDs2 = @"{ 
-'type': 'Space', 
-'schemas': [ 
-
-{ 
-'type': 'Schema', 
-'name': 'My Schema', 
-'tables': [
-  { 'type': 'Set', 'name': 'My Table' }
-], 
-'columns': [
-  { 'type': 'Dim', 'name': 'My Column', 'lesser_table': {schema_name:'My Schema', table_name:'My Table'}, 'greater_table': {schema_name:'My Schema', table_name:'Double'} }, 
-  { 'type': 'Dim', 'name': 'Import Column', 'lesser_table': {schema_name: 'Rel Schema', table_name:'Rel Table'}, 'greater_table': {schema_name: 'My Schema', table_name: 'My Table'} }
-] 
-}, 
-
-{ 
-'type': 'SchemaCsv', 
-'name': 'Rel Schema', 
-'tables': [
-  { 'type': 'SetRel', 'name': 'Rel Table' }
-], 
-'columns': [
-  { 'type': 'DimRel', 'name': 'My Column', 'lesser_table': {schema_name:'Rel Schema', table_name:'Rel Table'}, 'greater_table': {schema_name:'Rel Schema', table_name:'String'} }, 
-] 
-} 
-
-] 
-}";
-            /*
-            dynamic objWs2 = JsonConvert.DeserializeObject(jsonWs2);
-
-            Workspace ws2 = Utils.CreateObjectFromJson(objWs2);
-            ws2.FromJson(objWs2, ws2);
-
-            Assert.AreEqual(2, ws2.Schemas.Count);
-            Assert.AreEqual("My Schema", ws2.Mashup.Name);
-            Assert.AreEqual("My Table", ws2.Schemas[1].FindTable("Rel Table").GetGreaterDim("Import Column").Output.Name);
-            */
-        }
-    
     }
 
 }

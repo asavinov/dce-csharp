@@ -280,7 +280,7 @@ namespace Com.Utils
             Mapping newMapping = null;
             if (maxCoverage < SetCreationThreshold) // Create new target set for mapping (and its greater columns) which will be accessible only via the mapping object (not via the schema)
             {
-                DcTable ts = new Schema.Table(sourceSet.Name); // New set has the same name as the soure set
+                DcTable ts = new Schema.Table(sourceSet.Name, sourceSet.Space); // New set has the same name as the soure set
 
                 newMapping = new Mapping(sourceSet, ts);
 
@@ -289,7 +289,7 @@ namespace Com.Utils
                     Mapping gMapping = greaterMappings[sd];
                     DcTable gts = gMapping.TargetTab;
 
-                    DcColumn td = targetSchema.CreateColumn(sd.Name, ts, gts, sd.IsKey); // Create a clone for the source column
+                    DcColumn td = targetSchema.Space.CreateColumn(sd.Name, ts, gts, sd.IsKey); // Create a clone for the source column
 
                     newMapping.AddPaths(sd, td, gMapping); // Add a pair of columns as a match (with expansion using the specified greater mapping)
                 }
@@ -620,8 +620,8 @@ namespace Com.Utils
             mapping.AddTargetToSchema(targetSchema);
 
             // Define the column
-            DcColumn colImport = null; // new Column(mapping);
-            colImport.Add();
+            //DcColumn colImport = new Column(mapping);
+            //colImport.Add();
 
             // Define the table
             return mapping.TargetTab;
@@ -693,7 +693,7 @@ namespace Com.Utils
 
                     DcTable targetType = targetSchema.GetPrimitive(targetTypeName);
 
-                    td = targetSchema.CreateColumn(sd.Name, map.TargetTab, targetType, sd.IsKey);
+                    td = targetSchema.Space.CreateColumn(sd.Name, map.TargetTab, targetType, sd.IsKey);
 
                     sp = new ColumnPath(sd);
                     tp = new ColumnPath(td);

@@ -198,8 +198,7 @@ namespace Com.Data
                                 DcTable output = OutputVariable.TypeTable;
                                 string columnName = Name;
 
-                                col = input.Schema.CreateColumn(columnName, input, output, false);
-                                col.Add();
+                                col = input.Schema.Space.CreateColumn(columnName, input, output, false);
                         }
 
                         Column = col;

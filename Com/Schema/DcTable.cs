@@ -12,6 +12,8 @@ namespace Com.Schema
 {
     public interface DcTable : DcJson // One table object
     {
+        DcSpace Space { get; }
+
         /// <summary>
         /// A set name. Note that in the general case a set has an associated structure (concept, type) which may have its own name. 
         /// </summary>

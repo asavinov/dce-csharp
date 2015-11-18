@@ -29,8 +29,6 @@ namespace Com.Schema.Rel
 
         public List<DcTable> LoadTables(List<string> tableNames = null)
         {
-            List<DcTable> tables = new List<DcTable>();
-
             if (tableNames == null)
             {
                 tableNames = connection.ReadTables();
@@ -39,21 +37,14 @@ namespace Com.Schema.Rel
             //
             // Create all sets
             //
+            List<DcTable> tables = new List<DcTable>();
             foreach (string tableName in tableNames)
             {
-                TableRel tab = new TableRel(tableName); // Create a set 
+                TableRel tab = (TableRel)Space.CreateTable(tableName, Root); // Create a table
                 tab.RelationalTableName = tableName;
                 // Relational PK name will be set during column loading
 
                 tables.Add(tab);
-            }
-
-            //
-            // Add them to the schema
-            //
-            foreach (DcTable table in tables)
-            {
-                AddTable(table, null, null);
             }
 
             return tables;
@@ -79,8 +70,8 @@ namespace Com.Schema.Rel
             attributes.ForEach(a => a.ExpandAttribute(attributes, columns));
 
             // Add dims and paths to the sets
-            attributes.ForEach(a => a.Add());
-            columns.ForEach(c => c.Add());
+            //attributes.ForEach(a => a.Add());
+            //columns.ForEach(c => c.Add());
         }
 
 //
@@ -608,13 +599,14 @@ namespace Com.Schema.Rel
         #endregion
 
         #region ComSchema interface
-
+        /*
         public override DcTable CreateTable(String name)
         {
             DcTable table = new TableRel(name);
             return table;
         }
-
+        */
+        /*
         public override DcColumn CreateColumn(string name, DcTable input, DcTable output, bool isKey)
         {
             Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
@@ -623,6 +615,7 @@ namespace Com.Schema.Rel
 
             return dim;
         }
+        */
 
         #endregion
 
@@ -631,27 +624,23 @@ namespace Com.Schema.Rel
             Table tab;
             Column col;
 
-            tab = new Table("Root");
-            col = new Column("Top", tab, this, true, true);
-            col.Add();
+            Space.CreateTable("Root", this);
 
             // Either use Ole DB standard or System.Data.OleDb.OleDbType.* (or maybe they are the same). 
             // Type names must correspond to what we see in SQL queries (or other syntactic expressions expected by OleDb driver)
             foreach (OleDbType dataType in (OleDbType[])Enum.GetValues(typeof(OleDbType)))
             {
-                tab = new Table(dataType.ToString());
-                col = new Column("Top", tab, this, true, true);
-                col.Add();
+                Space.CreateTable(dataType.ToString(), this);
             }
         }
 
-        public SchemaOledb()
-            : this("")
+        public SchemaOledb(DcSpace space)
+            : this("", space)
         {
         }
 
-        public SchemaOledb(string name)
-            : base(name)
+        public SchemaOledb(string name, DcSpace space)
+            : base(name, space)
         {
             _schemaKind = DcSchemaKind.Oledb;
         }

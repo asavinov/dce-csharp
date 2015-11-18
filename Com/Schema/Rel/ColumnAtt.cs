@@ -18,6 +18,7 @@ namespace Com.Schema.Rel
     {
         #region ComColumn interface
 
+        /*
         public override void Add()
         {
             //if (Output != null) ((TableRel)Output).AddLesserPath(this);
@@ -27,7 +28,8 @@ namespace Com.Schema.Rel
             //if (Input != null) ((Table)Input).NotifyAdd(this);
             //if (Output != null) ((Table)Output).NotifyAdd(this);
         }
-
+        */
+        /*
         public override void Remove()
         {
             //if (Output != null) ((TableRel)Output).RemoveLesserPath(this);
@@ -37,6 +39,7 @@ namespace Com.Schema.Rel
             //if (Input != null) ((Table)Input).NotifyRemove(this);
             //if (Output != null) ((Table)Output).NotifyRemove(this);
         }
+        */
 
         #endregion
 

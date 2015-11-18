@@ -40,8 +40,10 @@ namespace Com.Schema
         //
         // Columns
         //
-        DcColumn CreateColumn(string name, DcTable input, DcTable output);
+        DcColumn CreateColumn(string name, DcTable input, DcTable output, bool isKey);
         void DeleteColumn(DcColumn column);
+        List<DcColumn> GetColumns(DcTable table);
+        List<DcColumn> GetInputColumns(DcTable table);
 
     }
 

@@ -182,9 +182,8 @@ namespace Com.Data.Query
 
                         // TOD: Really add a new function with this definition
                         Table typeSet = (Table) top.GetSubTable(type);
-                        Column dim = (Column)((DcSchema)top).CreateColumn(name, set, typeSet, true);
+                        Column dim = (Column)((DcSchema)top).Space.CreateColumn(name, set, typeSet, false);
                         //dim.FormulaAst = formula;
-                        dim.Add();
 
                         Result.Value = dim;
                     }
@@ -318,8 +317,8 @@ namespace Com.Data.Query
             OpType = ScriptOpType.CONTEXT;
 
             Schemas = new List<Schema.Schema>();
-            Schema.Schema top = new Schema.Schema("My Mashup");
-            Schemas.Add(top);
+            //Schema.Schema top = new Schema.Schema("My Mashup");
+            //Schemas.Add(top);
 
             Variables = new List<ContextVariable>();
         }

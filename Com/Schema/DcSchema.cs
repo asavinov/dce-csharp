@@ -11,8 +11,6 @@ namespace Com.Schema
     {
         DcSchemaKind GetSchemaKind();
 
-        DcSpace Space { get; set; }
-
         DcTable GetPrimitive(string dataType);
         DcTable Root { get; } // Convenience
 
@@ -20,18 +18,18 @@ namespace Com.Schema
         // Table factory
         //
 
-        DcTable CreateTable(string name);
-        DcTable AddTable(DcTable table, DcTable parent, string superName);
-        void DeleteTable(DcTable table);
-        void RenameTable(DcTable table, string newName);
+//DEL        DcTable CreateTable(string name);
+//DEL        DcTable AddTable(DcTable table, DcTable parent, string superName);
+//DEL        void DeleteTable(DcTable table);
+//DEL        void RenameTable(DcTable table, string newName);
 
         //
         // Column factory
         //
 
-        DcColumn CreateColumn(string name, DcTable input, DcTable output, bool isKey);
-        void DeleteColumn(DcColumn column);
-        void RenameColumn(DcColumn column, string newName);
+//DEL        DcColumn CreateColumn(string name, DcTable input, DcTable output, bool isKey);
+//DEL        void DeleteColumn(DcColumn column);
+//DEL        void RenameColumn(DcColumn column, string newName);
     }
 
     /// <summary>

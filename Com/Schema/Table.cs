@@ -35,15 +35,54 @@ namespace Com.Schema
 
         #region DcTable interface
 
+        protected DcSpace _space;
+        public DcSpace Space { get { return _space; } }
+
         public string Name { get; set; }
+        protected void TableRenamed(string newName)
+        {
+            DcSchema schema = this.Schema;
+            DcTable table = this;
+
+            //
+            // Check all elements of the schema that can store table name (tables, columns etc.)
+            // Update their definition so that it uses the new name of the specified element
+            //
+            List<DcTable> tables = Space.GetTables(schema); // schema.AllSubTables;
+            var nodes = new List<ExprNode>();
+            foreach (var tab in tables)
+            {
+                if (tab.IsPrimitive) continue;
+
+                foreach (var col in tab.Columns)
+                {
+                    if (col.GetData() == null) continue;
+                    DcColumnData data = col.GetData();
+
+                    if (data.FormulaExpr != null)
+                    {
+                        nodes = data.FormulaExpr.Find((DcTable)table);
+                        nodes.ForEach(x => x.Name = newName);
+                    }
+                }
+
+                // Update table definitions by finding the uses of the specified column
+                if (tab.GetData().WhereExpr != null)
+                {
+                    nodes = tab.GetData().WhereExpr.Find((DcTable)table);
+                    nodes.ForEach(x => x.Name = newName);
+                }
+            }
+
+            table.Name = newName;
+        }
 
         public bool IsPrimitive { get { return SuperTable is DcSchema; } } // If its super-set is Top
 
         //
         // Outputs
         //
-        protected List<DcColumn> greaterTabs;
-        public List<DcColumn> Columns { get { return greaterTabs; } } // Outgoing up arrows. Outputs
+        public List<DcColumn> Columns { get { return Space.GetColumns(this); } } // Outgoing up arrows. Outputs
 
         public DcColumn SuperColumn { get { return Columns.FirstOrDefault(x => x.IsSuper); } }
         public DcTable SuperTable { get { return SuperColumn != null ? SuperColumn.Output : null; } }
@@ -60,9 +99,7 @@ namespace Com.Schema
         //
         // Inputs
         //
-
-        protected List<DcColumn> lesserTabs;
-        public List<DcColumn> InputColumns { get { return lesserTabs; } } // Incoming arrows. Inputs
+        public List<DcColumn> InputColumns { get { return Space.GetInputColumns(this); } } // Incoming arrows. Inputs
 
         public List<DcColumn> SubColumns { get { return InputColumns.Where(x => x.IsSuper).ToList(); } }
         public List<DcTable> SubTables { get { return SubColumns.Select(x => x.Input).ToList(); } }
@@ -307,7 +344,7 @@ namespace Com.Schema
                     outputExpr.OutputVariable.TypeName = "Boolean";
                     outputExpr.OutputVariable.TypeSchema = this.Schema;
                     outputExpr.OutputVariable.TypeTable = this.Schema.GetPrimitive("Boolean");
-                    outputExpr.EvaluateAndResolveSchema(this.Schema.Space, new List<DcVariable>() { thisVariable });
+                    outputExpr.EvaluateAndResolveSchema(this.Space, new List<DcVariable>() { thisVariable });
 
                     outputExpr.EvaluateBegin();
                 }
@@ -649,19 +686,17 @@ namespace Com.Schema
 
         #region Constructors and initializers.
 
-        public Table()
-            : this("")
+        public Table(DcSpace space)
+            : this("", space)
         {
         }
 
-        public Table(string name)
+        public Table(string name, DcSpace space)
         {
             Id = Guid.NewGuid();
 
+            _space = space;
             Name = name;
-
-            greaterTabs = new List<DcColumn>(); // Up arrows
-            lesserTabs = new List<DcColumn>();
         }
 
         #endregion

@@ -57,10 +57,9 @@ namespace Com.Schema.Csv
             {
                 string columnName = names[i];
                 DcTable type = this.GetPrimitive("String");
-                ColumnCsv column = (ColumnCsv)this.CreateColumn(columnName, table, type, false);
+                ColumnCsv column = (ColumnCsv)Space.CreateColumn(columnName, table, type, false);
                 column.ColumnIndex = i;
                 columns.Add(column);
-                //column.Add();
 
                 var values = new List<string>();
                 foreach (var row in sampleRows)
@@ -82,12 +81,14 @@ namespace Com.Schema.Csv
 
         #region ComSchema interface
 
+        /*
         public override DcTable CreateTable(String name)
         {
             DcTable table = new TableCsv(name);
             return table;
         }
-
+        */
+        /*
         public override DcTable AddTable(DcTable table, DcTable parent, string superName)
         {
             if (parent == null)
@@ -105,7 +106,9 @@ namespace Com.Schema.Csv
 
             return table;
         }
+        */
 
+        /*
         public override DcColumn CreateColumn(string name, DcTable input, DcTable output, bool isKey)
         {
             Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
@@ -114,6 +117,7 @@ namespace Com.Schema.Csv
 
             return col;
         }
+        */
 
         #endregion
 
@@ -135,26 +139,17 @@ namespace Com.Schema.Csv
 
         protected override void CreateDataTypes() // Create all primitive data types from some specification like Enum, List or XML
         {
-            Table tab;
-            Column col;
-
-            tab = new Table("Root");
-            col = new Column("Top", tab, this, true, true);
-            col.Add();
-
-            // Text files have only one type - String.
-            tab = new Table("String");
-            col = new Column("Top", tab, this, true, true);
-            col.Add();
+            Space.CreateTable("Root", this);
+            Space.CreateTable("String", this);
         }
 
-        public SchemaCsv()
-            : this("")
+        public SchemaCsv(DcSpace space)
+            : this("", space)
         {
         }
 
-        public SchemaCsv(string name)
-            : base(name)
+        public SchemaCsv(string name, DcSpace space)
+            : base(name, space)
         {
             _schemaKind = DcSchemaKind.Csv;
             connection = new ConnectionCsv();

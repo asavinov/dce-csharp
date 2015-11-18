@@ -35,6 +35,44 @@ namespace Com.Schema
         /// This name is unique within the lesser set.
         /// </summary>
         public string Name { get; set; }
+        protected void ColumnRenamed(string newName)
+        {
+            DcSpace space = this.Input.Space;
+            DcSchema schema = this.Input.Schema;
+            DcColumn column = this;
+
+            //
+            // Check all elements of the schema that can store column name (tables, columns etc.)
+            // Update their definition so that it uses the new name of the specified element
+            //
+            List<DcTable> tables = space.GetTables(schema); // schema.AllSubTables;
+            var nodes = new List<ExprNode>();
+            foreach (var tab in tables)
+            {
+                if (tab.IsPrimitive) continue;
+
+                foreach (var col in tab.Columns)
+                {
+                    if (col.GetData() == null) continue;
+                    DcColumnData data = col.GetData();
+
+                    if (data.FormulaExpr != null)
+                    {
+                        nodes = data.FormulaExpr.Find((DcColumn)column);
+                        nodes.ForEach(x => x.Name = newName);
+                    }
+                }
+
+                // Update table definitions by finding the uses of the specified column
+                if (tab.GetData().WhereExpr != null)
+                {
+                    nodes = tab.GetData().WhereExpr.Find((DcColumn)column);
+                    nodes.ForEach(x => x.Name = newName);
+                }
+            }
+
+            column.Name = newName;
+        }
 
         /// <summary>
         /// Whether it is an identity dimension.
@@ -84,6 +122,7 @@ namespace Com.Schema
         /// Add (attach) to its lesser and greater sets if not added yet. 
         /// Dimension type is important because different columns are stored in different collections.
         /// </summary>
+        /*
         public virtual void Add()
         {
             if (IsSuper) // Only one super-dim per table can exist
@@ -101,10 +140,12 @@ namespace Com.Schema
             if (Input != null) ((Table)Input).NotifyAdd(this);
             if (Output != null) ((Table)Output).NotifyAdd(this);
         }
+        */
 
         /// <summary>
         /// Remove (detach) from its lesser and greater sets if it is there. Depends on the dimension type.
         /// </summary>
+        /*
         public virtual void Remove()
         {
             if (Output != null) Output.InputColumns.Remove(this);
@@ -114,6 +155,7 @@ namespace Com.Schema
             if (Input != null) ((Table)Input).NotifyRemove(this);
             if (Output != null) ((Table)Output).NotifyRemove(this);
         }
+        */
 
 
         protected DcColumnData _data;

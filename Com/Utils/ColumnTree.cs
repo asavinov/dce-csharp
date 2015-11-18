@@ -332,13 +332,13 @@ namespace Com.Utils
             {
                 if (!Set.IsSubTable(top.Root))
                 {
-                    top.AddTable(Set, null, null);
+                    //top.AddTable(Set, null, null);
                 }
             }
 
             if (Column != null && Column.Input != Column.Output)
             {
-                Column.Add();
+                //Column.Add();
             }
 
             foreach (ColumnTree node in Children)

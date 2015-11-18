@@ -190,13 +190,13 @@ namespace Com.Schema.Rel
 
         #region Constructors and initializers.
 
-        public TableRel()
-            : this("")
+        public TableRel(DcSpace space)
+            : this("", space)
         {
         }
 
-        public TableRel(string name)
-            : base(name)
+        public TableRel(string name, DcSpace space)
+            : base(name, space)
         {
             SuperPaths = new List<ColumnAtt>();
             SubPaths = new List<ColumnAtt>();

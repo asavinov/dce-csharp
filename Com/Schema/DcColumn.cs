@@ -24,8 +24,8 @@ namespace Com.Schema
         DcTable Input { get; set; }
         DcTable Output { get; set; }
 
-        void Add(); // Add to schema
-        void Remove(); // Remove from schema
+//DEL        void Add(); // Add to schema
+//DEL        void Remove(); // Remove from schema
 
         DcColumnData GetData();
     }

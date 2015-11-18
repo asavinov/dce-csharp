@@ -70,6 +70,9 @@
   </Choose>
   <ItemGroup>
     <Compile Include="CoreTest.cs" />
+    <Compile Include="CsvTest.cs" />
+    <Compile Include="JsonTest.cs" />
+    <Compile Include="OledbTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

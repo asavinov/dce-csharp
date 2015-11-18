@@ -86,13 +86,13 @@ namespace Com.Schema.Csv
 
         #region Constructors and initializers.
 
-        public TableCsv()
-            : this("")
+        public TableCsv(DcSpace space)
+            : this("", space)
         {
         }
 
-        public TableCsv(string name)
-            : base(name)
+        public TableCsv(string name, DcSpace space)
+            : base(name, space)
         {
             HasHeaderRecord = true;
             Delimiter = ",";
