@@ -16,30 +16,7 @@ namespace Com.Schema.Rel
     /// </summary>
     public class ColumnAtt : ColumnPath
     {
-        #region ComColumn interface
-
-        /*
-        public override void Add()
-        {
-            //if (Output != null) ((TableRel)Output).AddLesserPath(this);
-            if (Input != null) ((TableRel)Input).AddGreaterPath(this);
-
-            // Notify that a new child has been added
-            //if (Input != null) ((Table)Input).NotifyAdd(this);
-            //if (Output != null) ((Table)Output).NotifyAdd(this);
-        }
-        */
-        /*
-        public override void Remove()
-        {
-            //if (Output != null) ((TableRel)Output).RemoveLesserPath(this);
-            if (Input != null) ((TableRel)Input).RemoveGreaterPath(this);
-
-            // Notify that a new child has been removed
-            //if (Input != null) ((Table)Input).NotifyRemove(this);
-            //if (Output != null) ((Table)Output).NotifyRemove(this);
-        }
-        */
+        #region DcColumn interface
 
         #endregion
 

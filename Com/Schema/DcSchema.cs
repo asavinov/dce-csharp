@@ -13,24 +13,7 @@ namespace Com.Schema
 
         DcTable GetPrimitive(string dataType);
         DcTable Root { get; } // Convenience
-
-        //
-        // Table factory
-        //
-
-//DEL        DcTable CreateTable(string name);
-//DEL        DcTable AddTable(DcTable table, DcTable parent, string superName);
-//DEL        void DeleteTable(DcTable table);
-//DEL        void RenameTable(DcTable table, string newName);
-
-        //
-        // Column factory
-        //
-
-//DEL        DcColumn CreateColumn(string name, DcTable input, DcTable output, bool isKey);
-//DEL        void DeleteColumn(DcColumn column);
-//DEL        void RenameColumn(DcColumn column, string newName);
-    }
+        }
 
     /// <summary>
     /// Primitive data types used in our local database system. 

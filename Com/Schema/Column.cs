@@ -75,7 +75,7 @@ namespace Com.Schema
         }
 
         /// <summary>
-        /// Whether it is an identity dimension.
+        /// Whether it is a key columns.
         /// </summary>
         public bool IsKey { get; set; }
 
@@ -117,46 +117,6 @@ namespace Com.Schema
                 _data = CreateColumnData(value, this);
             }
         }
-
-        /// <summary>
-        /// Add (attach) to its lesser and greater sets if not added yet. 
-        /// Dimension type is important because different columns are stored in different collections.
-        /// </summary>
-        /*
-        public virtual void Add()
-        {
-            if (IsSuper) // Only one super-dim per table can exist
-            {
-                if (Input != null && Input.SuperColumn != null)
-                {
-                    Input.SuperColumn.Remove(); // Replace the existing column by the new one
-                }
-            }
-
-            if (Output != null) Output.InputColumns.Add(this);
-            if (Input != null) Input.Columns.Add(this);
-
-            // Notify that a new child has been added
-            if (Input != null) ((Table)Input).NotifyAdd(this);
-            if (Output != null) ((Table)Output).NotifyAdd(this);
-        }
-        */
-
-        /// <summary>
-        /// Remove (detach) from its lesser and greater sets if it is there. Depends on the dimension type.
-        /// </summary>
-        /*
-        public virtual void Remove()
-        {
-            if (Output != null) Output.InputColumns.Remove(this);
-            if (Input != null) Input.Columns.Remove(this);
-
-            // Notify that a new child has been removed
-            if (Input != null) ((Table)Input).NotifyRemove(this);
-            if (Output != null) ((Table)Output).NotifyRemove(this);
-        }
-        */
-
 
         protected DcColumnData _data;
         public virtual DcColumnData GetData() { return _data; }
@@ -344,13 +304,13 @@ namespace Com.Schema
         {
         }
 
-        public Column(string name, DcTable input, DcTable output, bool isIdentity, bool isSuper)
+        public Column(string name, DcTable input, DcTable output, bool isKey, bool isSuper)
         {
             Id = Guid.NewGuid();
 
             Name = name;
 
-            IsKey = isIdentity;
+            IsKey = isKey;
             IsSuper = isSuper;
 
             Input = input;

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Collections.ObjectModel;
 using System.Text;
+using System.Diagnostics;
 
 using Newtonsoft.Json.Linq;
 
@@ -17,39 +18,6 @@ namespace Com.Schema
     /// </summary>
     public class Space : DcSpace
     {
-        #region DcSpace (OLD)
-        /*
-        public ObservableCollection<DcSchema> Schemas { get; set; }
-
-        public virtual void AddSchema(DcSchema schema)
-        {
-            if(!_schemas.Contains(schema))
-            {
-                _schemas.Add(schema);
-            }
-        }
-        public void RemoveSchema(DcSchema schema)
-        {
-            // We have to ensure that inter-schema (import/export) columns are also deleted
-            List<DcTable> allTables = schema.AllSubTables;
-            foreach (DcTable t in allTables)
-            {
-                if (t.IsPrimitive) continue;
-                schema.DeleteTable(t);
-            }
-
-            Schemas.Remove(schema);
-        }
-
-        protected DcSchema _mashup;
-        public DcSchema Mashup 
-        {
-            get { return _mashup; }
-            set { _mashup = value; }
-        }
-        */
-        #endregion
-
         #region DcSpace
 
         //
@@ -90,13 +58,21 @@ namespace Com.Schema
 
         public virtual void DeleteSchema(DcSchema schema)
         {
+            // We have to ensure that inter-schema (import/export) columns are also deleted
+            List<DcTable> allTables = this.GetTables(schema); // schema.AllSubTables;
+            foreach (DcTable t in allTables)
+            {
+                if (t.IsPrimitive) continue;
+                this.DeleteTable(t);
+            }
 
+            _schemas.Remove(schema);
         }
         public virtual List<DcSchema> GetSchemas()
         {
             return new List<DcSchema>(_schemas);
         }
-        public DcSchema GetSchema(string name)
+        public virtual DcSchema GetSchema(string name)
         {
             return _schemas.FirstOrDefault(x => StringSimilarity.SameTableName(x.Name, name));
         }
@@ -157,7 +133,21 @@ namespace Com.Schema
 
         public virtual void DeleteTable(DcTable table)
         {
+            Debug.Assert(!table.IsPrimitive, "Wrong use: primitive tables can be deleted only along with the schema.");
 
+            List<DcColumn> toRemove;
+            toRemove = table.InputColumns.ToList();
+            foreach (DcColumn col in toRemove)
+            {
+                this.DeleteColumn(col);
+            }
+            toRemove = table.Columns.ToList();
+            foreach (DcColumn col in toRemove)
+            {
+                this.DeleteColumn(col);
+            }
+
+            _tables.Remove(table);
         }
         public virtual List<DcTable> GetTables(DcSchema schema)
         {
@@ -179,6 +169,9 @@ namespace Com.Schema
 
         public virtual DcColumn CreateColumn(string name, DcTable input, DcTable output, bool isKey)
         {
+            Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: column name cannot be null or empty.");
+            // TODO: Check constraints: 1. only one super-column can exist 2. no loops can appear
+
             DcSchema inSchema = input.Schema;
             DcSchemaKind inSchemaType = inSchema.GetSchemaKind();
 
@@ -210,10 +203,45 @@ namespace Com.Schema
             return column;
         }
 
+        /* TODO: Notify after adding
+        public virtual void Add()
+        {
+            if (IsSuper) // Only one super-dim per table can exist
+            {
+                if (Input != null && Input.SuperColumn != null)
+                {
+                    Input.SuperColumn.Remove(); // Replace the existing column by the new one
+                }
+            }
+
+            if (Output != null) Output.InputColumns.Add(this);
+            if (Input != null) Input.Columns.Add(this);
+
+            // Notify that a new child has been added
+            if (Input != null) ((Table)Input).NotifyAdd(this);
+            if (Output != null) ((Table)Output).NotifyAdd(this);
+        }
+        */
         public virtual void DeleteColumn(DcColumn column)
         {
+            Debug.Assert(!column.Input.IsPrimitive, "Wrong use: top columns cannot be created/deleted.");
+            // TODO: Check constraints: deleting a super-column means deleting the corresponding table (with all its columns)
 
+            ColumnDeleted(column);
+
+            _columns.Remove(column);
         }
+        /* TODO: Notify after deleting
+        public virtual void Remove()
+        {
+            if (Output != null) Output.InputColumns.Remove(this);
+            if (Input != null) Input.Columns.Remove(this);
+
+            // Notify that a new child has been removed
+            if (Input != null) ((Table)Input).NotifyRemove(this);
+            if (Output != null) ((Table)Output).NotifyRemove(this);
+        }
+        */
         protected void ColumnDeleted(DcColumn column)
         {
             DcSchema schema = column.Input.Schema;

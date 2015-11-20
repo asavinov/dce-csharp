@@ -46,6 +46,7 @@ namespace Test
         public static void CreateSampleSchema(DcSchema schema)
         {
             DcSpace space = schema.Space;
+
             // Table 1
             DcTable t1 = space.CreateTable("Table 1", schema.Root);
 

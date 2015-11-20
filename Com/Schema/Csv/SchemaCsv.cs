@@ -79,45 +79,7 @@ namespace Com.Schema.Csv
 
         #endregion
 
-        #region ComSchema interface
-
-        /*
-        public override DcTable CreateTable(String name)
-        {
-            DcTable table = new TableCsv(name);
-            return table;
-        }
-        */
-        /*
-        public override DcTable AddTable(DcTable table, DcTable parent, string superName)
-        {
-            if (parent == null)
-            {
-                parent = Root;
-            }
-            if (string.IsNullOrEmpty(superName))
-            {
-                superName = "Super";
-            }
-
-            Column col = new ColumnCsv(superName, table, parent, true, true);
-
-            col.Add();
-
-            return table;
-        }
-        */
-
-        /*
-        public override DcColumn CreateColumn(string name, DcTable input, DcTable output, bool isKey)
-        {
-            Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: dimension name cannot be null or empty.");
-
-            DcColumn col = new ColumnCsv(name, input, output, isKey, false);
-
-            return col;
-        }
-        */
+        #region DcSchema interface
 
         #endregion
 

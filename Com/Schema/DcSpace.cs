@@ -13,16 +13,6 @@ namespace Com.Schema
     public interface DcSpace : DcJson
     {
         //
-        // Schemas (OLD)
-        //
-        /*
-        ObservableCollection<DcSchema> Schemas { get; set; }
-        void AddSchema(DcSchema schema);
-        void RemoveSchema(DcSchema schema);
-        DcSchema Mashup { get; set; }
-        */
-
-        //
         // Schemas
         //
         DcSchema CreateSchema(string name, DcSchemaKind schemaType);
