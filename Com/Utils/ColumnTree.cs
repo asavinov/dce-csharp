@@ -464,8 +464,8 @@ namespace Com.Utils
 
         public void UnregisterListeners()
         {
-            if (Column.Input != null) ((Table)Column.Input).CollectionChanged -= Input_CollectionChanged;
-            if (Column.Output != null) ((Table)Column.Output).CollectionChanged -= Output_CollectionChanged;
+            if (Column.Input != null) ((Space)Column.Input.Space).CollectionChanged -= Input_CollectionChanged;
+            if (Column.Output != null) ((Space)Column.Output.Space).CollectionChanged -= Output_CollectionChanged;
         }
 
         public void NotifyAllOnPropertyChanged(string propertyName)
@@ -480,8 +480,8 @@ namespace Com.Utils
             if (parent != null) parent.AddChild(this);
             if (Column != null)
             {
-                if (Column.Input != null) ((Table)Column.Input).CollectionChanged += Input_CollectionChanged;
-                if (Column.Output != null) ((Table)Column.Output).CollectionChanged += Output_CollectionChanged;
+                if (Column.Input != null) ((Space)Column.Input.Space).CollectionChanged += Input_CollectionChanged;
+                if (Column.Output != null) ((Space)Column.Output.Space).CollectionChanged += Output_CollectionChanged;
             }
         }
 

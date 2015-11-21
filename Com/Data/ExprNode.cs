@@ -158,11 +158,6 @@ namespace Com.Data
                 //
 
                 //
-                // Resolve type table name 
-                //
-                OutputVariable.Resolve(workspace);
-
-                //
                 // Resolve Name into a column object (a function from the parent to this node)
                 //
                 ExprNode parentNode = (ExprNode)Parent;
@@ -210,6 +205,14 @@ namespace Com.Data
                 }
 
                 //
+                // Resolve type table name
+                //
+                if (string.IsNullOrEmpty(OutputVariable.SchemaName)) // Dervie from parent node 
+                {
+                }
+                OutputVariable.Resolve(workspace);
+
+                //
                 // Resolve children (important: after the tuple itself, because this node will be used)
                 //
                 foreach (TreeNode<ExprNode> childNode in Children)
@@ -227,11 +230,6 @@ namespace Com.Data
                 {
                     childNode.Item.EvaluateAndResolveSchema(workspace, variables);
                 }
-
-                //
-                // Resolve type table name
-                //
-                OutputVariable.Resolve(workspace);
 
                 //
                 // Resolve Name into a column object, variable, procedure or whatever object that will return a result (children must be resolved before)
@@ -431,6 +429,14 @@ namespace Com.Data
                     }
                 }
             }
+
+            //
+            // Resolve type table name
+            //
+            if (string.IsNullOrEmpty(OutputVariable.SchemaName)) // Derive schema from children
+            {
+            }
+            OutputVariable.Resolve(workspace);
         }
 
         public virtual void EvaluateBegin()

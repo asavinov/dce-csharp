@@ -26,7 +26,7 @@ namespace Com.Schema
     /// A set is also characterized by width and length of its members. 
     /// And a set provides methods for manipulating its structure and intances. 
     /// </summary>
-    public class Table : DcTable, DcTableData, INotifyCollectionChanged, INotifyPropertyChanged 
+    public class Table : DcTable, DcTableData, INotifyPropertyChanged 
     {
         /// <summary>
         /// Unique set id (in this database) . In C++, this Id field would be used as a reference filed
@@ -624,25 +624,6 @@ namespace Com.Schema
         #endregion
 
         #region System interfaces
-
-        public event NotifyCollectionChangedEventHandler CollectionChanged; // Operations with dimensions (of any kind)
-        protected virtual void OnCollectionChanged(NotifyCollectionChangedEventArgs e)
-        {
-            if (CollectionChanged != null)
-            {
-                CollectionChanged(this, e);
-            }
-        }
-        public virtual void NotifyAdd(Column col) // Convenience method: notifying about adding
-        {
-            if (col == null) return;
-            OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, col));
-        }
-        public virtual void NotifyRemove(Column col) // Convenience method: notifying about removing
-        {
-            if (col == null) return;
-            OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, col));
-        }
 
         //
         // INotifyPropertyChanged Members

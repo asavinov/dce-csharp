@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Collections.ObjectModel;
 using System.Text;
+using System.Collections.Specialized;
 using System.Diagnostics;
 
 using Newtonsoft.Json.Linq;
@@ -16,7 +18,7 @@ namespace Com.Schema
     /// <summary>
     /// Workspace is a number of schemas as well as parameters for their management. 
     /// </summary>
-    public class Space : DcSpace
+    public class Space : DcSpace, INotifyPropertyChanged, INotifyCollectionChanged
     {
         #region DcSpace
 
@@ -53,6 +55,8 @@ namespace Com.Schema
 
             _schemas.Add(schema);
 
+            NotifyAdd(schema);
+
             return schema;
         }
 
@@ -67,6 +71,8 @@ namespace Com.Schema
             }
 
             _schemas.Remove(schema);
+
+            NotifyRemove(schema);
         }
         public virtual List<DcSchema> GetSchemas()
         {
@@ -126,7 +132,10 @@ namespace Com.Schema
             }
 
             _tables.Add(table);
+            NotifyAdd(table);
+
             _columns.Add(column);
+            NotifyAdd(column);
 
             return table;
         }
@@ -140,14 +149,17 @@ namespace Com.Schema
             foreach (DcColumn col in toRemove)
             {
                 this.DeleteColumn(col);
+                NotifyRemove(col);
             }
             toRemove = table.Columns.ToList();
             foreach (DcColumn col in toRemove)
             {
                 this.DeleteColumn(col);
+                NotifyRemove(col);
             }
 
             _tables.Remove(table);
+            NotifyRemove(table);
         }
         public virtual List<DcTable> GetTables(DcSchema schema)
         {
@@ -200,6 +212,8 @@ namespace Com.Schema
 
             _columns.Add(column);
 
+            NotifyAdd(column);
+
             return column;
         }
 
@@ -230,6 +244,8 @@ namespace Com.Schema
             ColumnDeleted(column);
 
             _columns.Remove(column);
+
+            NotifyRemove(column);
         }
         /* TODO: Notify after deleting
         public virtual void Remove()
@@ -396,6 +412,45 @@ namespace Com.Schema
                 }
             }
 
+        }
+
+        #endregion
+
+        #region System interfaces
+
+        public event NotifyCollectionChangedEventHandler CollectionChanged; // Operations with collections (schemas, tables, columns)
+        protected virtual void OnCollectionChanged(NotifyCollectionChangedEventArgs e)
+        {
+            if (CollectionChanged != null)
+            {
+                CollectionChanged(this, e);
+            }
+        }
+        public virtual void NotifyAdd(object elem) // Convenience method: notifying about adding
+        {
+            if (elem == null) return;
+            OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, elem));
+        }
+        public virtual void NotifyRemove(object elem) // Convenience method: notifying about removing
+        {
+            if (elem == null) return;
+            OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, elem));
+        }
+
+        //
+        // INotifyPropertyChanged Members
+        //
+        public event PropertyChangedEventHandler PropertyChanged;
+        private void OnPropertyChanged(String propertyName = "")
+        {
+            if (PropertyChanged != null)
+            {
+                PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
+            }
+        }
+        public virtual void NotifyPropertyChanged(String propertyName = "") // Convenience method: notifying all about property change
+        {
+            OnPropertyChanged(propertyName);
         }
 
         #endregion
