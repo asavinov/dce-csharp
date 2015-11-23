@@ -67,11 +67,11 @@ namespace Test
             DcTable productsTable = space.CreateTable("Products", schema.Root);
 
             // Manually create column to be imported (we need an automatic mechanism for appending missing columns specified in the formula)
-            DcColumn p1 = space.CreateColumn("ID", productsTable, schema.GetPrimitive("Integer"), true);
-            DcColumn p2 = space.CreateColumn("Product Code", productsTable, schema.GetPrimitive("String"), false);
-            DcColumn p3 = space.CreateColumn("Custom Product Name", productsTable, schema.GetPrimitive("String"), false);
-            DcColumn p4 = space.CreateColumn("List Price", productsTable, schema.GetPrimitive("Double"), false);
-            DcColumn p5 = space.CreateColumn("Constant Column", productsTable, schema.GetPrimitive("Double"), false);
+            DcColumn p1 = space.CreateColumn("ID", productsTable, schema.GetPrimitiveType("Integer"), true);
+            DcColumn p2 = space.CreateColumn("Product Code", productsTable, schema.GetPrimitiveType("String"), false);
+            DcColumn p3 = space.CreateColumn("Custom Product Name", productsTable, schema.GetPrimitiveType("String"), false);
+            DcColumn p4 = space.CreateColumn("List Price", productsTable, schema.GetPrimitiveType("Double"), false);
+            DcColumn p5 = space.CreateColumn("Constant Column", productsTable, schema.GetPrimitiveType("Double"), false);
 
             // Define import column
             DcColumn col = space.CreateColumn("Import", top.GetSubTable("Products"), productsTable, false);
@@ -112,10 +112,10 @@ namespace Test
             table.FilePath = CsvWrite;
 
             // Manually create column to be imported (we need an automatic mechanism for appending missing columns specified in the formula)
-            DcColumn p1 = space.CreateColumn("Column 11", table, top.GetPrimitive("String"), true);
-            DcColumn p2 = space.CreateColumn("Column 12", table, top.GetPrimitive("String"), true);
-            DcColumn p3 = space.CreateColumn("Custom Column 13", table, top.GetPrimitive("String"), true);
-            DcColumn p4 = space.CreateColumn("Constant Column", table, top.GetPrimitive("String"), true);
+            DcColumn p1 = space.CreateColumn("Column 11", table, top.GetPrimitiveType("String"), true);
+            DcColumn p2 = space.CreateColumn("Column 12", table, top.GetPrimitiveType("String"), true);
+            DcColumn p3 = space.CreateColumn("Custom Column 13", table, top.GetPrimitiveType("String"), true);
+            DcColumn p4 = space.CreateColumn("Constant Column", table, top.GetPrimitiveType("String"), true);
 
             // Define export column
             DcColumn col = space.CreateColumn("Export", schema.GetSubTable("Table 1"), table, false);

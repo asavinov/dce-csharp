@@ -11,9 +11,10 @@ namespace Com.Schema
     {
         DcSchemaKind GetSchemaKind();
 
-        DcTable GetPrimitive(string dataType);
         DcTable Root { get; } // Convenience
-        }
+
+        DcTable GetPrimitiveType(string dataType);
+    }
 
     /// <summary>
     /// Primitive data types used in our local database system. 

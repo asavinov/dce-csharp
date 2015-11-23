@@ -28,13 +28,13 @@ namespace Com.Schema
         protected DcSchemaKind _schemaKind;
         public virtual DcSchemaKind GetSchemaKind() { return _schemaKind; }
 
-        public DcTable GetPrimitive(string name)
+        public virtual DcTable Root { get { return GetPrimitiveType("Root"); } }
+
+        public virtual DcTable GetPrimitiveType(string name)
         {
             DcColumn col = SubColumns.FirstOrDefault(x => StringSimilarity.SameTableName(x.Input.Name, name));
             return col != null ? col.Input : null;
         }
-
-        public DcTable Root { get { return GetPrimitive("Root"); } }
 
         #endregion
 

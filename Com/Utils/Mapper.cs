@@ -76,7 +76,7 @@ namespace Com.Utils
             {
                 if (targetSchema.GetType() == typeof(Schema.Schema)) // Schema -> Schema
                 {
-                    targetSet = targetSchema.GetPrimitive(sourceSet.Name);
+                    targetSet = targetSchema.GetPrimitiveType(sourceSet.Name);
                     Mapping map = new Mapping(sourceSet, targetSet);
                     map.Similarity = 1.0;
                     maps.Add(map);
@@ -171,7 +171,7 @@ namespace Com.Utils
                             break;
                     }
 
-                    targetSet = targetSchema.GetPrimitive(targetType);
+                    targetSet = targetSchema.GetPrimitiveType(targetType);
 
                     Mapping map = new Mapping(sourceSet, targetSet);
                     map.Similarity = 1.0;
@@ -179,7 +179,7 @@ namespace Com.Utils
                 }
                 else if (targetSchema.GetType() == typeof(SchemaOledb)) // SchemaOledb -> SchemaOledb
                 {
-                    targetSet = targetSchema.GetPrimitive(sourceSet.Name);
+                    targetSet = targetSchema.GetPrimitiveType(sourceSet.Name);
                     Mapping map = new Mapping(sourceSet, targetSet);
                     map.Similarity = 1.0;
                     maps.Add(map);
@@ -691,7 +691,7 @@ namespace Com.Utils
                     else if (Com.Schema.Utils.isDouble(values.ToArray())) targetTypeName = "Double";
                     else targetTypeName = "String";
 
-                    DcTable targetType = targetSchema.GetPrimitive(targetTypeName);
+                    DcTable targetType = targetSchema.GetPrimitiveType(targetTypeName);
 
                     td = targetSchema.Space.CreateColumn(sd.Name, map.TargetTab, targetType, sd.IsKey);
 

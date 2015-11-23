@@ -134,7 +134,7 @@ namespace Com.Schema.Rel
             {
                 string columnName = col["COLUMN_NAME"].ToString();
                 string columnType = ((OleDbType)col["DATA_TYPE"]).ToString();
-                DcTable typeTable = Schema.GetPrimitive(columnType);
+                DcTable typeTable = Schema.GetPrimitiveType(columnType);
 
                 //
                 // Create an attribute object representing this column

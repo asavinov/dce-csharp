@@ -50,17 +50,17 @@ namespace Test
             // Table 1
             DcTable t1 = space.CreateTable("Table 1", schema.Root);
 
-            DcColumn c11 = space.CreateColumn("Column 11", t1, schema.GetPrimitive("Integer"), true);
-            DcColumn c12 = space.CreateColumn("Column 12", t1, schema.GetPrimitive("String"), true);
-            DcColumn c13 = space.CreateColumn("Column 13", t1, schema.GetPrimitive("Double"), false);
-            DcColumn c14 = space.CreateColumn("Column 14", t1, schema.GetPrimitive("Decimal"), false);
+            DcColumn c11 = space.CreateColumn("Column 11", t1, schema.GetPrimitiveType("Integer"), true);
+            DcColumn c12 = space.CreateColumn("Column 12", t1, schema.GetPrimitiveType("String"), true);
+            DcColumn c13 = space.CreateColumn("Column 13", t1, schema.GetPrimitiveType("Double"), false);
+            DcColumn c14 = space.CreateColumn("Column 14", t1, schema.GetPrimitiveType("Decimal"), false);
 
             // Table 2
             DcTable t2 = space.CreateTable("Table 2", schema.Root);
 
-            DcColumn c21 = space.CreateColumn("Column 21", t2, schema.GetPrimitive("String"), true);
-            DcColumn c22 = space.CreateColumn("Column 22", t2, schema.GetPrimitive("Integer"), true);
-            DcColumn c23 = space.CreateColumn("Column 23", t2, schema.GetPrimitive("Double"), false);
+            DcColumn c21 = space.CreateColumn("Column 21", t2, schema.GetPrimitiveType("String"), true);
+            DcColumn c22 = space.CreateColumn("Column 22", t2, schema.GetPrimitiveType("Integer"), true);
+            DcColumn c23 = space.CreateColumn("Column 23", t2, schema.GetPrimitiveType("Double"), false);
             DcColumn c24 = space.CreateColumn("Table 1", t2, t1, false);
         }
 
@@ -146,7 +146,7 @@ namespace Test
             DcTable t2 = schema.GetSubTable("Table 2");
 
             // Finding by name and check various properties provided by the schema
-            Assert.AreEqual(schema.GetPrimitive("Decimal").Name, "Decimal");
+            Assert.AreEqual(schema.GetPrimitiveType("Decimal").Name, "Decimal");
 
             Assert.AreEqual(t1.Name, "Table 1");
             Assert.AreEqual(t2.Name, "Table 2");
@@ -254,7 +254,7 @@ namespace Test
             //
             // Define a derived column with a definition
             //
-            DcColumn c15 = space.CreateColumn("Column 15", t1, schema.GetPrimitive("Double"), false);
+            DcColumn c15 = space.CreateColumn("Column 15", t1, schema.GetPrimitiveType("Double"), false);
 
             c15.GetData().Formula = "([Column 11]+10.0) * this.[Column 13]";
 
@@ -281,7 +281,7 @@ namespace Test
             //
             // Define a derived column with a definition
             //
-            DcColumn c15 = space.CreateColumn("Column 15", t1, schema.GetPrimitive("String"), false);
+            DcColumn c15 = space.CreateColumn("Column 15", t1, schema.GetPrimitiveType("String"), false);
 
             c15.GetData().Formula = "call:System.String.Substring( [Column 12], 7, 1 )";
 
@@ -295,7 +295,7 @@ namespace Test
             //
             // Define a derived column with a definition
             //
-            DcColumn c16 = space.CreateColumn("Column 15", t1, schema.GetPrimitive("Double"), false);
+            DcColumn c16 = space.CreateColumn("Column 15", t1, schema.GetPrimitiveType("Double"), false);
 
             c16.GetData().Formula = "call:System.Math.Pow( [Column 11] / 10.0, [Column 13] / 10.0 )";
 
@@ -374,7 +374,7 @@ namespace Test
             //
             // Aggregation via a syntactic formula
             //
-            DcColumn c16 = space.CreateColumn("Agg2 of Column 23", t1, schema.GetPrimitive("Double"), false);
+            DcColumn c16 = space.CreateColumn("Agg2 of Column 23", t1, schema.GetPrimitiveType("Double"), false);
 
             c16.GetData().Formula = "AGGREGATE(facts=[Table 2], groups=[Table 1], measure=[Column 23]*2.0 + 1, aggregator=SUM)";
 

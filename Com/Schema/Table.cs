@@ -343,7 +343,7 @@ namespace Com.Schema
                     outputExpr.OutputVariable.SchemaName = this.Schema.Name;
                     outputExpr.OutputVariable.TypeName = "Boolean";
                     outputExpr.OutputVariable.TypeSchema = this.Schema;
-                    outputExpr.OutputVariable.TypeTable = this.Schema.GetPrimitive("Boolean");
+                    outputExpr.OutputVariable.TypeTable = this.Schema.GetPrimitiveType("Boolean");
                     outputExpr.EvaluateAndResolveSchema(this.Space, new List<DcVariable>() { thisVariable });
 
                     outputExpr.EvaluateBegin();
@@ -355,9 +355,16 @@ namespace Com.Schema
                 //
                 // Find all local greater dimensions to be varied (including the super-dim)
                 //
-                DcColumn[] cols = Columns.Where(x => x.IsKey).ToArray();
+                DcColumn[] cols = Columns.Where(x => x.IsKey && !x.IsPrimitive).ToArray();
                 int colCount = cols.Length; // Dimensionality - how many free dimensions
                 object[] vals = new object[colCount]; // A record with values for each free dimension being varied
+
+                // Prepare columns
+                foreach (DcColumn col in cols)
+                {
+                    col.GetData().AutoIndex = false;
+                    col.GetData().Nullify();
+                }
 
                 //
                 // The current state of the search procedure
@@ -424,7 +431,14 @@ namespace Com.Schema
                     }
                 }
 
-                if(tableWriter != null)
+                // Prepare columns
+                foreach (DcColumn col in cols)
+                {
+                    col.GetData().Reindex();
+                    col.GetData().AutoIndex = true;
+                }
+
+                if (tableWriter != null)
                 {
                     tableWriter.Close();
                 }
