@@ -188,12 +188,14 @@ namespace Com.Data
                         }
                         else // Column not found 
                         {
-                                // Append a new column (schema change, e.g., if function output structure has to be propagated)
-                                DcTable input = parentNode.OutputVariable.TypeTable;
-                                DcTable output = OutputVariable.TypeTable;
-                                string columnName = Name;
+                            OutputVariable.Resolve(workspace);
 
-                                col = input.Schema.Space.CreateColumn(columnName, input, output, false);
+                            // Append a new column (schema change, e.g., if function output structure has to be propagated)
+                            DcTable input = parentNode.OutputVariable.TypeTable;
+                            DcTable output = OutputVariable.TypeTable;
+                            string columnName = Name;
+
+                            col = input.Schema.Space.CreateColumn(columnName, input, output, false);
                         }
 
                         Column = col;
