@@ -145,13 +145,19 @@ namespace Com.Schema
         {
             Debug.Assert(!table.IsPrimitive, "Wrong use: primitive tables can be deleted only along with the schema.");
 
+            //DeleteTablePropagate(table);
+
             List<DcColumn> toRemove;
+
+            // Remove input columns (for which this table is a type)
             toRemove = table.InputColumns.ToList();
             foreach (DcColumn col in toRemove)
             {
                 this.DeleteColumn(col);
                 NotifyRemove(col);
             }
+
+            // Remove output columns
             toRemove = table.Columns.ToList();
             foreach (DcColumn col in toRemove)
             {
@@ -159,8 +165,23 @@ namespace Com.Schema
                 NotifyRemove(col);
             }
 
+            // Finally, remove the table itself
             _tables.Remove(table);
             NotifyRemove(table);
+        }
+        protected void DeleteTablePropagate(DcTable table)
+        {
+            // 
+            // Delete tables *generated* from this table (alternatively, leave them but with empty definition)
+            //
+            var paths = new PathEnumerator(new List<DcTable>(new DcTable[] { table }), new List<DcTable>(), false, ColumnType.GENERATING);
+            foreach (var path in paths)
+            {
+                for (int i = path.Segments.Count - 1; i >= 0; i--)
+                {
+                    this.DeleteTable(path.Segments[i].Output); // Delete (indirectly) generated table
+                }
+            }
         }
         public virtual List<DcTable> GetTables(DcSchema schema)
         {
