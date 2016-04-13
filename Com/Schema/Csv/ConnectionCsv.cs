@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -18,18 +19,21 @@ namespace Com.Schema.Csv
 
         public string[] CurrentRecord { get { return csvReader.CurrentRecord; } }
 
-        public void OpenReader(TableCsv table)
+        public void OpenReader(string filePath, bool hasHeaderRecord, string delimiter, string decimalSign, Encoding encoding)
         {
+            CultureInfo cultureInfo = System.Globalization.CultureInfo.CurrentCulture;
+            cultureInfo.NumberFormat.NumberDecimalSeparator = decimalSign;
+
             // Open file
-            System.IO.StreamReader textReader = File.OpenText(table.FilePath);
+            System.IO.StreamReader textReader = File.OpenText(filePath);
             //System.IO.StreamReader textReader = new StreamReader(table.FilePath, table.Encoding);
 
             csvReader = new CsvHelper.CsvReader(textReader);
 
-            csvReader.Configuration.HasHeaderRecord = table.HasHeaderRecord;
-            csvReader.Configuration.Delimiter = table.Delimiter;
-            csvReader.Configuration.CultureInfo = table.CultureInfo;
-            csvReader.Configuration.Encoding = table.Encoding;
+            csvReader.Configuration.HasHeaderRecord = hasHeaderRecord;
+            csvReader.Configuration.Delimiter = delimiter;
+            csvReader.Configuration.CultureInfo = cultureInfo;
+            csvReader.Configuration.Encoding = encoding;
 
             // If header is present (parameter is true) then it will read first line and initialize column names from the first line (independent of whether these are names or values)
             // If header is not present (parameter is false) then it will position on the first line and make valid other structures. In particular, we can learn that column names are null.
@@ -41,6 +45,10 @@ namespace Com.Schema.Csv
             catch (Exception e)
             {
             }
+        }
+        public void OpenReader(TableCsv table)
+        {
+            OpenReader(table.FilePath, table.HasHeaderRecord, table.Delimiter, table.CultureInfo.NumberFormat.NumberDecimalSeparator, table.Encoding);
         }
 
         public void CloseReader()
