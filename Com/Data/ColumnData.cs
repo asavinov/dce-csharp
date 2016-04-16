@@ -537,18 +537,45 @@ namespace Com.Data
 
             Column.GetData().Reindex();
             Column.GetData().AutoIndex = true;
+
+            isUpToDate = true;
         }
 
         //
         // Dependencies
         //
 
-        public List<Column> Dependencies { get; set; } // Other functions this function directly depends upon. Computed from the definition of this function.
-        // Find and store all outputs of this function by evaluating (executing) its definition in a loop for all input elements of the fact set (not necessarily this set)
-
-        public List<DcTable> UsesTables(bool recursive) // This element depends upon
+        protected bool isUpToDate;
+        public bool IsUpToDate
         {
+            get { return isUpToDate; }
+            set
+            {
+                // True cannot be set directly - it results from Evaluate
+                if (value == true) return;
+
+                // False (dirty) has to be propagated 
+                if(value == false)
+                {
+                    isUpToDate = value;
+                    // TODO: Mark dirty all directly dependant columns/tables which will propagate it further
+                    // Get all dependant elements
+                    // Set all these elements dirty
+                }
+            }
+        }
+
+        // Other columns this columns directly depends on. Computed from the definition of this columns.
+        public List<DcColumn> Dependencies { get; set; }
+        public List<DcTable> FindUsedTables(bool recursive) // This element depends upon
+        {
+            // Compoile formula and produce an expression (structured formula) which will be then analized
+
+
+
             List<DcTable> res = new List<DcTable>();
+
+            // 0. This input table must be up-to-date IF this table is calculated (not key)
 
             if (FormulaExpr == null)
             {
@@ -556,17 +583,19 @@ namespace Com.Data
             }
             else if (FormulaExpr.DefinitionType == ColumnDefinitionType.ANY || FormulaExpr.DefinitionType == ColumnDefinitionType.ARITHMETIC || FormulaExpr.DefinitionType == ColumnDefinitionType.LINK)
             {
-                if (FormulaExpr != null) // Dependency information is stored in expression (formula)
-                {
-                    res = FormulaExpr.Find((DcTable)null).Select(x => x.OutputVariable.TypeTable).ToList();
-                }
+                // 1. Find all references to other columns
+                res = FormulaExpr.Find((DcTable)null).Select(x => x.OutputVariable.TypeTable).ToList();
+
+                // 2. All their input tables must be up-to-date
+                // 3. NOTE: transitive dependencies: these columns can actually depend on each other
             }
             else if (FormulaExpr.DefinitionType == ColumnDefinitionType.AGGREGATION)
             {
                 /*
+                // 1. We need the fact table to be up-to-date
                 res.Add(FactTable); // This column depends on the fact table
 
-                // Grouping and measure paths are used in this column
+                // 2. All columns in the group path (actually, any group expression)
                 if (GroupPaths != null)
                 {
                     foreach (ColumnPath path in GroupPaths)
@@ -577,6 +606,8 @@ namespace Com.Data
                         }
                     }
                 }
+
+                // 2. All columns in the measure path (actually, any group expression)
                 if (MeasurePaths != null)
                 {
                     foreach (ColumnPath path in MeasurePaths)
@@ -587,11 +618,30 @@ namespace Com.Data
                         }
                     }
                 }
+
+                // 4. All columns in the update expression (aggregation function)
                 */
+
             }
 
             return res;
         }
+        protected List<DcColumn> FindUsedColumns() // This columns directly depends on
+        {
+            List<DcColumn> res = new List<DcColumn>();
+            return res;
+        }
+
+
+        public List<DcTable> UsesTables(bool recursive) // This element depends upon
+        {
+            return null;
+        }
+        public List<DcColumn> UsesColumns(bool recursive) // This element depends upon
+        {
+            return null;
+        }
+
         public List<DcTable> IsUsedInTables(bool recursive) // Dependants
         {
             List<DcTable> res = new List<DcTable>();
@@ -601,51 +651,6 @@ namespace Com.Data
             // If such a function has been found, then make the same call for it, that is find other functins where it is used.
 
             // A function can be used in Filter expression and Sort expression
-
-            return res;
-        }
-
-        public List<DcColumn> UsesColumns(bool recursive) // This element depends upon
-        {
-            List<DcColumn> res = new List<DcColumn>();
-
-            if (FormulaExpr == null)
-            {
-                ;
-            }
-            else if (FormulaExpr.DefinitionType == ColumnDefinitionType.ANY || FormulaExpr.DefinitionType == ColumnDefinitionType.ARITHMETIC || FormulaExpr.DefinitionType == ColumnDefinitionType.LINK)
-            {
-                if (FormulaExpr != null) // Dependency information is stored in expression (formula)
-                {
-                    res = FormulaExpr.Find((DcColumn)null).Select(x => x.Column).ToList();
-                }
-            }
-            else if (FormulaExpr.DefinitionType == ColumnDefinitionType.AGGREGATION)
-            {
-                /*
-                // Grouping and measure paths are used in this column
-                if (GroupPaths != null)
-                {
-                    foreach (var path in GroupPaths)
-                    {
-                        foreach (var seg in path.Segments)
-                        {
-                            if (!res.Contains(seg)) res.Add(seg);
-                        }
-                    }
-                }
-                if (MeasurePaths != null)
-                {
-                    foreach (var path in MeasurePaths)
-                    {
-                        foreach (var seg in path.Segments)
-                        {
-                            if (!res.Contains(seg)) res.Add(seg);
-                        }
-                    }
-                }
-                */
-            }
 
             return res;
         }
@@ -980,7 +985,7 @@ namespace Com.Data
                 Length = col.Input.GetData().Length;
             }
 
-            Dependencies = new List<Schema.Column>();
+            Dependencies = new List<DcColumn>();
         }
 
         #endregion

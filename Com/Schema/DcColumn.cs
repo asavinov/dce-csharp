@@ -25,6 +25,8 @@ namespace Com.Schema
         DcTable Output { get; set; }
 
         DcColumnData GetData();
+
+        bool IsUpToDate { get; set; }
     }
 
 }

@@ -121,6 +121,20 @@ namespace Com.Schema
         protected DcColumnData _data;
         public virtual DcColumnData GetData() { return _data; }
 
+        public virtual bool IsUpToDate
+        {
+            get
+            {
+                if (GetData() == null) return true;
+                else return GetData().IsUpToDate;
+            }
+            set
+            {
+                if (GetData() == null) return;
+                GetData().IsUpToDate = value;
+            }
+        }
+
         #endregion
 
         #region DcJson serialization

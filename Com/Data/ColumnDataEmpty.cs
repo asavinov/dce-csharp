@@ -92,6 +92,12 @@ namespace Com.Data
         // Dependencies. The order is important and corresponds to dependency chain
         //
 
+        public bool IsUpToDate
+        {
+            get;
+            set;
+        }
+
         public List<DcTable> UsesTables(bool recursive) { return null; } // This element depends upon
         public List<DcTable> IsUsedInTables(bool recursive) { return null; } // Dependants
 
