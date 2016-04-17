@@ -323,11 +323,13 @@ namespace Com.Schema
                     if (col.GetData() == null) continue;
                     DcColumnData data = col.GetData();
 
+                    /* REFACTOR: Here essentially we want to manually find all uses and hence have to use dependencies API
                     if (data.FormulaExpr != null)
                     {
                         nodes = data.FormulaExpr.Find(column);
                         foreach (var node in nodes) if (node.Parent != null) node.Parent.RemoveChild(node);
                     }
+                    */
 
                 }
 

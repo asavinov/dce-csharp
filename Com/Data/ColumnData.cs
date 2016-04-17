@@ -340,10 +340,10 @@ namespace Com.Data
                 ExprBuilder exprBuilder = new ExprBuilder();
                 ExprNode expr = exprBuilder.Build(formula);
 
-                FormulaExpr = expr;
+                formulaExpr = expr;
             }
         }
-        public ExprNode FormulaExpr { get; set; }
+        protected ExprNode formulaExpr { get; set; }
 
         //
         // Structured (object) representation
@@ -356,7 +356,7 @@ namespace Com.Data
 
         public void Evaluate()
         {
-            if (FormulaExpr == null || FormulaExpr.DefinitionType == ColumnDefinitionType.FREE)
+            if (formulaExpr == null || formulaExpr.DefinitionType == ColumnDefinitionType.FREE)
             {
                 return; // Nothing to evaluate
             }
@@ -365,16 +365,16 @@ namespace Com.Data
             // Aassert: if LoopSet == ThisSet then GroupCode = null, ThisFunc = MeasureCode
 
             // NOTE: This should be removed or moved to the expression. Here we store non-syntactic part of the definition in columndef and then set the expression. Maybe we should have syntactic annotation for APPEND flag (output result annotation, what to do with the output). 
-            if (FormulaExpr.DefinitionType == ColumnDefinitionType.LINK)
+            if (formulaExpr.DefinitionType == ColumnDefinitionType.LINK)
             {
                 // Adjust the expression according to other parameters of the definition
                 if (IsAppendData)
                 {
-                    FormulaExpr.Action = ActionType.APPEND;
+                    formulaExpr.Action = ActionType.APPEND;
                 }
                 else
                 {
-                    FormulaExpr.Action = ActionType.READ;
+                    formulaExpr.Action = ActionType.READ;
                 }
             }
 
@@ -384,10 +384,10 @@ namespace Com.Data
 
             // General parameters
             DcSpace Workspace = Column.Input.Schema.Space;
-            DcColumnData columnData = Column.GetData();
+            DcColumnData columnData = this;
 
-            Column.GetData().AutoIndex = false;
-            //Column.Data.Nullify();
+            AutoIndex = false;
+            //Nullify();
 
             object thisCurrent = null;
 
@@ -400,31 +400,31 @@ namespace Com.Data
                 thisVariable.TypeTable = thisTable;
 
                 // Parameterize expression and resolve it (bind names to real objects) 
-                FormulaExpr.OutputVariable.SchemaName = Column.Output.Schema.Name;
-                FormulaExpr.OutputVariable.TypeName = Column.Output.Name;
-                FormulaExpr.OutputVariable.TypeSchema = Column.Output.Schema;
-                FormulaExpr.OutputVariable.TypeTable = Column.Output;
-                FormulaExpr.EvaluateAndResolveSchema(Workspace, new List<DcVariable>() { thisVariable });
+                formulaExpr.OutputVariable.SchemaName = Column.Output.Schema.Name;
+                formulaExpr.OutputVariable.TypeName = Column.Output.Name;
+                formulaExpr.OutputVariable.TypeSchema = Column.Output.Schema;
+                formulaExpr.OutputVariable.TypeTable = Column.Output;
+                formulaExpr.EvaluateAndResolveSchema(Workspace, new List<DcVariable>() { thisVariable });
 
-                FormulaExpr.EvaluateBegin();
+                formulaExpr.EvaluateBegin();
                 DcTableReader tableReader = thisTable.GetData().GetTableReader();
                 tableReader.Open();
                 while ((thisCurrent = tableReader.Next()) != null)
                 {
                     thisVariable.SetValue(thisCurrent); // Set parameters of the expression
 
-                    FormulaExpr.Evaluate(); // Evaluate the expression
+                    formulaExpr.Evaluate(); // Evaluate the expression
 
                     if (columnData != null) // We do not store import functions (we do not need this data)
                     {
-                        object newValue = FormulaExpr.OutputVariable.GetValue();
+                        object newValue = formulaExpr.OutputVariable.GetValue();
                         //columnData.SetValue((Rowid)thisCurrent, newValue);
                     }
                 }
                 tableReader.Close();
-                FormulaExpr.EvaluateEnd();
+                formulaExpr.EvaluateEnd();
             }
-            else if (FormulaExpr.DefinitionType == ColumnDefinitionType.ARITHMETIC || FormulaExpr.DefinitionType == ColumnDefinitionType.LINK)
+            else if (formulaExpr.DefinitionType == ColumnDefinitionType.ARITHMETIC || formulaExpr.DefinitionType == ColumnDefinitionType.LINK)
             {
                 // Prepare parameter variables for the expression 
                 DcTable thisTable = Column.Input;
@@ -433,20 +433,20 @@ namespace Com.Data
                 thisVariable.TypeTable = thisTable;
 
                 // Parameterize expression and resolve it (bind names to real objects) 
-                FormulaExpr.OutputVariable.SchemaName = Column.Output.Schema.Name;
-                FormulaExpr.OutputVariable.TypeName = Column.Output.Name;
-                FormulaExpr.OutputVariable.TypeSchema = Column.Output.Schema;
-                FormulaExpr.OutputVariable.TypeTable = Column.Output;
-                FormulaExpr.EvaluateAndResolveSchema(Workspace, new List<DcVariable>() { thisVariable });
+                formulaExpr.OutputVariable.SchemaName = Column.Output.Schema.Name;
+                formulaExpr.OutputVariable.TypeName = Column.Output.Name;
+                formulaExpr.OutputVariable.TypeSchema = Column.Output.Schema;
+                formulaExpr.OutputVariable.TypeTable = Column.Output;
+                formulaExpr.EvaluateAndResolveSchema(Workspace, new List<DcVariable>() { thisVariable });
 
-                FormulaExpr.EvaluateBegin();
+                formulaExpr.EvaluateBegin();
                 DcTableReader tableReader = thisTable.GetData().GetTableReader();
                 tableReader.Open();
                 while ((thisCurrent = tableReader.Next()) != null)
                 {
                     thisVariable.SetValue(thisCurrent); // Set parameters of the expression
 
-                    FormulaExpr.Evaluate(); // Evaluate the expression
+                    formulaExpr.Evaluate(); // Evaluate the expression
 
                     // Write the result value to the function
                     // NOTE: We want to implement write operations with functions in the expression itself, particularly, because this might be done by intermediate nodes each of them having also APPEND flag
@@ -455,17 +455,17 @@ namespace Com.Data
                     // NOTE: where expression (in tables) is evaluated without writing to column
                     if (columnData != null)
                     {
-                        object newValue = FormulaExpr.OutputVariable.GetValue();
+                        object newValue = formulaExpr.OutputVariable.GetValue();
                         columnData.SetValue((Rowid)thisCurrent, newValue);
                     }
                 }
                 tableReader.Close();
-                FormulaExpr.EvaluateEnd();
+                formulaExpr.EvaluateEnd();
             }
-            else if (FormulaExpr.DefinitionType == ColumnDefinitionType.AGGREGATION)
+            else if (formulaExpr.DefinitionType == ColumnDefinitionType.AGGREGATION)
             {
                 // Facts
-                ExprNode factsNode = FormulaExpr.GetChild("facts").GetChild(0);
+                ExprNode factsNode = formulaExpr.GetChild("facts").GetChild(0);
 
                 // This table and variable
                 string thisTableName = factsNode.Name;
@@ -476,7 +476,7 @@ namespace Com.Data
 
                 // Groups
                 ExprNode groupExpr; // Returns a group this fact belongs to, is stored in the group variable
-                ExprNode groupsNode = FormulaExpr.GetChild("groups").GetChild(0);
+                ExprNode groupsNode = formulaExpr.GetChild("groups").GetChild(0);
                 groupExpr = groupsNode;
                 groupExpr.EvaluateAndResolveSchema(Workspace, new List<DcVariable>() { thisVariable });
 
@@ -487,7 +487,7 @@ namespace Com.Data
 
                 // Measure
                 ExprNode measureExpr; // Returns a new value to be aggregated with the old value, is stored in the measure variable
-                ExprNode measureNode = FormulaExpr.GetChild("measure").GetChild(0);
+                ExprNode measureNode = formulaExpr.GetChild("measure").GetChild(0);
                 measureExpr = measureNode;
                 measureExpr.EvaluateAndResolveSchema(Workspace, new List<DcVariable>() { thisVariable });
 
@@ -497,13 +497,13 @@ namespace Com.Data
                 measureVariable.TypeTable = Column.Output;
 
                 // Updater/aggregation function
-                ExprNode updaterExpr = FormulaExpr.GetChild("aggregator").GetChild(0);
+                ExprNode updaterExpr = formulaExpr.GetChild("aggregator").GetChild(0);
 
                 ExprNode outputExpr;
                 outputExpr = ExprNode.CreateUpdater(Column, updaterExpr.Name);
                 outputExpr.EvaluateAndResolveSchema(Workspace, new List<DcVariable>() { groupVariable, measureVariable });
 
-                FormulaExpr.EvaluateBegin();
+                formulaExpr.EvaluateBegin();
                 DcTableReader tableReader = thisTable.GetData().GetTableReader();
                 tableReader.Open();
                 while ((thisCurrent = tableReader.Next()) != null)
@@ -528,15 +528,15 @@ namespace Com.Data
                     }
                 }
                 tableReader.Close();
-                FormulaExpr.EvaluateEnd();
+                formulaExpr.EvaluateEnd();
             }
             else
             {
                 throw new NotImplementedException("This type of column definition is not implemented.");
             }
 
-            Column.GetData().Reindex();
-            Column.GetData().AutoIndex = true;
+            Reindex();
+            AutoIndex = true;
 
             isUpToDate = true;
         }
@@ -577,19 +577,19 @@ namespace Com.Data
 
             // 0. This input table must be up-to-date IF this table is calculated (not key)
 
-            if (FormulaExpr == null)
+            if (formulaExpr == null)
             {
                 ;
             }
-            else if (FormulaExpr.DefinitionType == ColumnDefinitionType.ANY || FormulaExpr.DefinitionType == ColumnDefinitionType.ARITHMETIC || FormulaExpr.DefinitionType == ColumnDefinitionType.LINK)
+            else if (formulaExpr.DefinitionType == ColumnDefinitionType.ANY || formulaExpr.DefinitionType == ColumnDefinitionType.ARITHMETIC || formulaExpr.DefinitionType == ColumnDefinitionType.LINK)
             {
                 // 1. Find all references to other columns
-                res = FormulaExpr.Find((DcTable)null).Select(x => x.OutputVariable.TypeTable).ToList();
+                res = formulaExpr.Find((DcTable)null).Select(x => x.OutputVariable.TypeTable).ToList();
 
                 // 2. All their input tables must be up-to-date
                 // 3. NOTE: transitive dependencies: these columns can actually depend on each other
             }
-            else if (FormulaExpr.DefinitionType == ColumnDefinitionType.AGGREGATION)
+            else if (formulaExpr.DefinitionType == ColumnDefinitionType.AGGREGATION)
             {
                 /*
                 // 1. We need the fact table to be up-to-date

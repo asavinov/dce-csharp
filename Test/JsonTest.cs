@@ -75,7 +75,7 @@ namespace Test
 
             c = t.GetColumn("Column 22");
             //Assert.AreEqual(DcColumnDefinitionType.ARITHMETIC, c.Definition.FormulaExpr.DefinitionType);
-            Assert.AreEqual(2, c.GetData().FormulaExpr.Children.Count);
+            //Assert.AreEqual(2, c.GetData().FormulaExpr.Children.Count);
 
             //
             // 2. Another sample schema with several schemas and inter-schema columns

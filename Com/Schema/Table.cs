@@ -59,11 +59,13 @@ namespace Com.Schema
                     if (col.GetData() == null) continue;
                     DcColumnData data = col.GetData();
 
+                    /* REFACTOR: Here essentially we want to manually find all uses and hence have to use dependencies API
                     if (data.FormulaExpr != null)
                     {
                         nodes = data.FormulaExpr.Find((DcTable)table);
                         nodes.ForEach(x => x.Name = newName);
                     }
+                    */
                 }
 
                 // Update table definitions by finding the uses of the specified column
