@@ -87,15 +87,26 @@ namespace Com.Data
         //ExprNode FormulaExpr { get; set; }
 
         //
-        // Compute. Data operations.
+        // Formula operations.
         //
 
+        // Compile-time/schema-level status. 
+        // Column (and all necessary columns) has been successfully translated (syntactically valid) and is ready for evaluation. 
+        bool HasValidSchema { get; set; }
+        // It is a compile-time or schema-level operation. Its goal is to parse/validate the formula, update dependencies and make sure that the formula can be evaluated. 
+        // Finally, it sets the flag (read or yellow).
+        void Translate();
+
+        // Run-time/data-level status. 
+        // Column (and all necessary columns) has been successfully evaluated and the data is up-to-date. 
+        bool HasValidData { get; set; }
+        // It is a run-time or data-level operation. Its goal is to execute the formula and make the column data up-to-date. 
+        // Finally, it sets the flag (yellow or green).
         void Evaluate();
 
         //
         // Dependencies. The order is important and corresponds to dependency chain
         //
-        bool IsUpToDate { get; set; }
 
         List<DcTable> UsesTables(bool recursive); // This element depends upon
         List<DcColumn> UsesColumns(bool recursive); // This element depends upon

@@ -26,7 +26,39 @@ namespace Com.Schema
 
         DcColumnData GetData();
 
-        bool IsUpToDate { get; set; }
+        DcColumnStatus Status { get; }
+        bool CanEvaluate { get; }
     }
 
+    public enum DcColumnStatus
+    {
+        // After column creation and after each update, it gets Unknown state for Translate -> what is Evaluate state?
+        // Then we immediately call Translate and get either success or error.
+
+        // Translate_Success -> Evaluate_Unknown, which means Dirty but CanEvaluate (yellow)
+        // Translate_Error -> Evaluate_Unknown, which means Dirty but !CanEvaluate (red)
+
+        // Evaluate_Success -> !Dirty
+        // Evaluate_Error -> Dirty but !CanEvaluate? - is this situation possible? 
+
+        // Approach 1: 
+        // - Translate is always called automatically immediately after each schema change. 
+        //   Hence, Translate is either Sucessful or Error
+        // - There is one Update button which calls Evaluate. Update buton can be either enabled or disabled: CanUpdate, !CanUpdate. 
+        //   Enabled/Disabled dependes on Tranlsate Success of Error. 
+        //   In other words, user can always Update if Translate successful (even repeatedly for non-dirty data).
+        // - There is Status flag. 
+        //   - If Translate is error then Dirty Red (because there was change but no evaluation).
+        //   - If Translate is success but no evaluate (user has not Update) then Dirty Yellow
+        //   - If Translate success & Evaluate success then Non-dirty-Green. 
+        //   - If Translate success & Evaluate error then Dirty-Yellow (or special flag).
+
+        // IsDirty() - set true by the update/edit procedure and propagates along dependencies. 
+        // set true manually by the user (explict requiest, optional)
+        // set false only by Evaluate success. does not propate. constraint: true is only if all dependencies are true.
+
+        Red,
+        Yellow,
+        Green,
+    }
 }

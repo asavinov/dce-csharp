@@ -123,17 +123,29 @@ namespace Com.Schema
         protected DcColumnData _data;
         public virtual DcColumnData GetData() { return _data; }
 
-        public virtual bool IsUpToDate
+        public virtual DcColumnStatus Status
         {
             get
             {
-                if (GetData() == null) return true;
-                else return GetData().IsUpToDate;
+                // Red - !CanUpdate (= invalid schema, = Translate error)
+                // Yellow - Dirty & CanUpdate (Translate success, = valid schema)
+                // Green - !Dirty
+                if (GetData() == null) return DcColumnStatus.Green;
+
+                if (!GetData().HasValidSchema) return DcColumnStatus.Red;
+                else if(!GetData().HasValidData) return DcColumnStatus.Yellow;
+                else return DcColumnStatus.Green;
             }
-            set
+        }
+
+        public virtual bool CanEvaluate
+        {
+            get
             {
-                if (GetData() == null) return;
-                GetData().IsUpToDate = value;
+                // CanUpdate() - true if Translate success. Otherwise false. (In particular, if Translate is Unknown). 
+                // = hasvalidschema (translate successful)
+                if (GetData() == null) return false;
+                else return GetData().HasValidSchema;
             }
         }
 

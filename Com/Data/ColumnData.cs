@@ -334,17 +334,9 @@ namespace Com.Data
             set
             {
                 formula = value;
-
-                if (string.IsNullOrWhiteSpace(formula)) return;
-
-                ExprBuilder exprBuilder = new ExprBuilder();
-                ExprNode expr = exprBuilder.Build(formula);
-
-                formulaExpr = expr;
+                Translate();
             }
         }
-        protected ExprNode formulaExpr { get; set; }
-
         //
         // Structured (object) representation
         //
@@ -354,15 +346,89 @@ namespace Com.Data
         public bool IsAppendSchema { get; set; }
 
 
-        public void Evaluate()
+        protected ExprNode formulaExpr { get; set; }
+
+
+        protected bool hasValidSchema;
+        public virtual bool HasValidSchema
         {
-            if (formulaExpr == null || formulaExpr.DefinitionType == ColumnDefinitionType.FREE)
+            get { return hasValidSchema; }
+            set
             {
-                return; // Nothing to evaluate
+                // True cannot be set directly - it results from Translate only
+                if (value == true) return;
+
+                // False (invalid) has to be propagated 
+                if (value == false)
+                {
+                    hasValidSchema = value;
+                    // TODO: Mark invalid all directly dependant columns/tables which will propagate it further
+                    // Get all dependant elements
+                    // Set all these elements invalid
+                }
+            }
+        }
+        public virtual void Translate()
+        {
+            // Some column types do not need formulas (like key columns) and hence are always valid at both schema- and data-level
+
+            // What if a formula has not been given yet but is supposed to be defined, say, for non-key column?
+            // We could assume that it is a null-function which is therefore valid
+            if (string.IsNullOrWhiteSpace(formula))
+            {
+                hasValidSchema = true;
+                ((Column)Column).NotifyPropertyChanged("");
+                return;
             }
 
-            // Aassert: FactTable.GroupFormula + ThisSet.ThisFunc = FactTable.MeasureFormula
-            // Aassert: if LoopSet == ThisSet then GroupCode = null, ThisFunc = MeasureCode
+            //
+            // Check if it is valid or not (red/yellow color). If error, then determine type of error and mark syntax elements not recognized (position in formula).
+            //
+
+            ExprBuilder exprBuilder = new ExprBuilder();
+            ExprNode expr = exprBuilder.Build(formula);
+            // If there is an exception then set invalid (red) flag (as well as type of error somewhere)
+
+            formulaExpr = expr;
+
+            //
+            // Extract schema-level (compile-time) dependencies and update the schema dependency graph. 
+            //
+            FindUsedColumns();
+
+            // Finally, we need to set the flag that indicates the result of the operation and status for the column
+            hasValidSchema = true;
+            ((Column)Column).NotifyPropertyChanged("");
+        }
+
+        protected bool hasValidData;
+        public virtual bool HasValidData
+        {
+            get { return hasValidData; }
+            set
+            {
+                // True cannot be set directly - it results from Evaluate only
+                if (value == true) return;
+
+                // False (invalid) has to be propagated 
+                if (value == false)
+                {
+                    hasValidData = value;
+                    // TODO: Mark invalid all directly dependant columns/tables which will propagate it further
+                    // Get all dependant elements
+                    // Set all these elements invalid
+                }
+            }
+        }
+        public virtual void Evaluate()
+        {
+            // Either formula is not needed or not yet provided 
+            if (formulaExpr == null || formulaExpr.DefinitionType == ColumnDefinitionType.FREE)
+            {
+                hasValidData = true;
+                ((Column)Column).NotifyPropertyChanged("");
+                return; // Nothing to evaluate
+            }
 
             // NOTE: This should be removed or moved to the expression. Here we store non-syntactic part of the definition in columndef and then set the expression. Maybe we should have syntactic annotation for APPEND flag (output result annotation, what to do with the output). 
             if (formulaExpr.DefinitionType == ColumnDefinitionType.LINK)
@@ -464,6 +530,9 @@ namespace Com.Data
             }
             else if (formulaExpr.DefinitionType == ColumnDefinitionType.AGGREGATION)
             {
+                // Aassert: FactTable.GroupFormula + ThisSet.ThisFunc = FactTable.MeasureFormula
+                // Aassert: if LoopSet == ThisSet then GroupCode = null, ThisFunc = MeasureCode
+
                 // Facts
                 ExprNode factsNode = formulaExpr.GetChild("facts").GetChild(0);
 
@@ -538,32 +607,14 @@ namespace Com.Data
             Reindex();
             AutoIndex = true;
 
-            isUpToDate = true;
+            // Finally, we need to set the flag that indicates the result of the operation and status for the column
+            hasValidData = true;
+            ((Column)Column).NotifyPropertyChanged("");
         }
 
         //
         // Dependencies
         //
-
-        protected bool isUpToDate;
-        public bool IsUpToDate
-        {
-            get { return isUpToDate; }
-            set
-            {
-                // True cannot be set directly - it results from Evaluate
-                if (value == true) return;
-
-                // False (dirty) has to be propagated 
-                if(value == false)
-                {
-                    isUpToDate = value;
-                    // TODO: Mark dirty all directly dependant columns/tables which will propagate it further
-                    // Get all dependant elements
-                    // Set all these elements dirty
-                }
-            }
-        }
 
         // Other columns this columns directly depends on. Computed from the definition of this columns.
         public List<DcColumn> Dependencies { get; set; }
