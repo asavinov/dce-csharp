@@ -21,7 +21,8 @@ namespace Com.Schema.Csv
 
         public void OpenReader(string filePath, bool hasHeaderRecord, string delimiter, string decimalSign, Encoding encoding)
         {
-            CultureInfo cultureInfo = System.Globalization.CultureInfo.CurrentCulture;
+            //CultureInfo cultureInfo = System.Globalization.CultureInfo.CurrentCulture;
+            CultureInfo cultureInfo = (CultureInfo)CultureInfo.CurrentUICulture.Clone();
             cultureInfo.NumberFormat.NumberDecimalSeparator = decimalSign;
 
             // Open file

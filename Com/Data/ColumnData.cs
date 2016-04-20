@@ -103,7 +103,7 @@ namespace Com.Data
             // Source: http://stackoverflow.com/questions/659866/is-there-c-sharp-support-for-an-index-based-sort
             // http://www.csharp-examples.net/sort-array/
             Comparer<T> comparer = Comparer<T>.Default;
-            Array.Sort(_offsets, /* 0, _count, */ (a, b) => comparer.Compare(_cells[a], _cells[b]));
+            Array.Sort(_offsets, /* 0, _length,*/ (a, b) => comparer.Compare(_cells[a], _cells[b]));
 
             _indexed = true;
         }
@@ -348,6 +348,15 @@ namespace Com.Data
 
         protected ExprNode formulaExpr { get; set; }
 
+        protected DcVariable thisVariable;
+
+        // For aggregation
+        protected ExprNode factsExpr;
+        protected ExprNode groupExpr; // Returns a group this fact belongs to, is stored in the group variable
+        protected DcVariable groupVariable; // Stores current group (input for the aggregated function)
+        protected ExprNode measureExpr; // Returns a new value to be aggregated with the old value, is stored in the measure variable
+        protected DcVariable measureVariable; // Stores new value (output for the aggregated function)
+        protected ExprNode outputExpr;
 
         protected bool hasValidSchema;
         public virtual bool HasValidSchema
@@ -371,7 +380,6 @@ namespace Com.Data
         public virtual void Translate()
         {
             // Some column types do not need formulas (like key columns) and hence are always valid at both schema- and data-level
-
             // What if a formula has not been given yet but is supposed to be defined, say, for non-key column?
             // We could assume that it is a null-function which is therefore valid
             if (string.IsNullOrWhiteSpace(formula))
@@ -381,24 +389,130 @@ namespace Com.Data
                 return;
             }
 
-            //
-            // Check if it is valid or not (red/yellow color). If error, then determine type of error and mark syntax elements not recognized (position in formula).
-            //
+            // Parse
+            Parse();
 
-            ExprBuilder exprBuilder = new ExprBuilder();
-            ExprNode expr = exprBuilder.Build(formula);
+            // Bind
+            Bind();
             // If there is an exception then set invalid (red) flag (as well as type of error somewhere)
 
-            formulaExpr = expr;
-
-            //
-            // Extract schema-level (compile-time) dependencies and update the schema dependency graph. 
-            //
+            // Find dependencies and and update the schema dependency graph. 
             FindUsedColumns();
 
             // Finally, we need to set the flag that indicates the result of the operation and status for the column
             hasValidSchema = true;
             ((Column)Column).NotifyPropertyChanged("");
+        }
+
+        // Parse and generate a syntax tree
+        protected void Parse()
+        {
+            ExprBuilder exprBuilder = new ExprBuilder();
+            ExprNode expr = exprBuilder.Build(formula);
+            // If there is an exception then set invalid (red) flag (as well as type of error somewhere)
+
+            formulaExpr = expr;
+        }
+
+        // Resolve symbols in the syntax tree (find referenced schema elements) 
+        // Create missing objects if not found (populate schema)
+        protected void Bind()
+        {
+            // NOTE: This should be removed or moved to the expression. Here we store non-syntactic part of the definition in columndef and then set the expression. Maybe we should have syntactic annotation for APPEND flag (output result annotation, what to do with the output). 
+            if (formulaExpr.DefinitionType == ColumnDefinitionType.LINK)
+            {
+                // Adjust the expression according to other parameters of the definition
+                if (IsAppendData)
+                {
+                    formulaExpr.Action = ActionType.APPEND;
+                }
+                else
+                {
+                    formulaExpr.Action = ActionType.READ;
+                }
+            }
+
+            // General parameters
+            DcSpace Workspace = Column.Input.Schema.Space;
+
+            if (Column.Input.Schema is SchemaCsv) // Import from CSV
+            {
+                // Prepare parameter variables for the expression 
+                DcTable thisTable = Column.Input;
+
+                thisVariable = new Variable(thisTable.Schema.Name, thisTable.Name, "this");
+                thisVariable.TypeSchema = thisTable.Schema;
+                thisVariable.TypeTable = thisTable;
+
+                // Parameterize expression and resolve it (bind names to real objects) 
+                formulaExpr.OutputVariable.SchemaName = Column.Output.Schema.Name;
+                formulaExpr.OutputVariable.TypeName = Column.Output.Name;
+                formulaExpr.OutputVariable.TypeSchema = Column.Output.Schema;
+                formulaExpr.OutputVariable.TypeTable = Column.Output;
+
+                formulaExpr.EvaluateAndResolveSchema(Workspace, new List<DcVariable>() { thisVariable });
+            }
+            else if (formulaExpr.DefinitionType == ColumnDefinitionType.ARITHMETIC || formulaExpr.DefinitionType == ColumnDefinitionType.LINK)
+            {
+                // Prepare parameter variables for the expression 
+                DcTable thisTable = Column.Input;
+
+                thisVariable = new Variable(thisTable.Schema.Name, thisTable.Name, "this");
+                thisVariable.TypeSchema = thisTable.Schema;
+                thisVariable.TypeTable = thisTable;
+
+                // Parameterize expression and resolve it (bind names to real objects) 
+                formulaExpr.OutputVariable.SchemaName = Column.Output.Schema.Name;
+                formulaExpr.OutputVariable.TypeName = Column.Output.Name;
+                formulaExpr.OutputVariable.TypeSchema = Column.Output.Schema;
+                formulaExpr.OutputVariable.TypeTable = Column.Output;
+
+                formulaExpr.EvaluateAndResolveSchema(Workspace, new List<DcVariable>() { thisVariable });
+            }
+            else if (formulaExpr.DefinitionType == ColumnDefinitionType.AGGREGATION)
+            {
+                // Aassert: FactTable.GroupFormula + ThisSet.ThisFunc = FactTable.MeasureFormula
+                // Aassert: if LoopSet == ThisSet then GroupCode = null, ThisFunc = MeasureCode
+
+                // Facts
+                factsExpr = formulaExpr.GetChild("facts").GetChild(0);
+
+                // This table and variable
+                string thisTableName = factsExpr.Name;
+                DcTable thisTable = Column.Input.Schema.GetSubTable(thisTableName);
+
+                thisVariable = new Variable(thisTable.Schema.Name, thisTable.Name, "this");
+                thisVariable.TypeSchema = thisTable.Schema;
+                thisVariable.TypeTable = thisTable;
+
+                // Groups
+                groupExpr = formulaExpr.GetChild("groups").GetChild(0);
+
+                groupExpr.EvaluateAndResolveSchema(Workspace, new List<DcVariable>() { thisVariable });
+
+                groupVariable = new Variable(Column.Input.Schema.Name, Column.Input.Name, "this");
+                groupVariable.TypeSchema = Column.Input.Schema;
+                groupVariable.TypeTable = Column.Input;
+
+                // Measure
+                measureExpr = formulaExpr.GetChild("measure").GetChild(0);
+
+                measureExpr.EvaluateAndResolveSchema(Workspace, new List<DcVariable>() { thisVariable });
+
+                measureVariable = new Variable(Column.Output.Schema.Name, Column.Output.Name, "value");
+                measureVariable.TypeSchema = Column.Output.Schema;
+                measureVariable.TypeTable = Column.Output;
+
+                // Updater/aggregation function
+                ExprNode updaterExpr = formulaExpr.GetChild("aggregator").GetChild(0);
+                outputExpr = ExprNode.CreateUpdater(Column, updaterExpr.Name);
+
+                outputExpr.EvaluateAndResolveSchema(Workspace, new List<DcVariable>() { groupVariable, measureVariable });
+            }
+            else
+            {
+                throw new NotImplementedException("This type of column definition is not implemented.");
+            }
         }
 
         protected bool hasValidData;
@@ -430,28 +544,9 @@ namespace Com.Data
                 return; // Nothing to evaluate
             }
 
-            // NOTE: This should be removed or moved to the expression. Here we store non-syntactic part of the definition in columndef and then set the expression. Maybe we should have syntactic annotation for APPEND flag (output result annotation, what to do with the output). 
-            if (formulaExpr.DefinitionType == ColumnDefinitionType.LINK)
-            {
-                // Adjust the expression according to other parameters of the definition
-                if (IsAppendData)
-                {
-                    formulaExpr.Action = ActionType.APPEND;
-                }
-                else
-                {
-                    formulaExpr.Action = ActionType.READ;
-                }
-            }
-
             //
-            // Evaluate loop depends on the type of definition
+            // Evaluate depends on the type of definition
             //
-
-            // General parameters
-            DcSpace Workspace = Column.Input.Schema.Space;
-            DcColumnData columnData = this;
-
             AutoIndex = false;
             //Nullify();
 
@@ -459,21 +554,8 @@ namespace Com.Data
 
             if (Column.Input.Schema is SchemaCsv) // Import from CSV
             {
-                // Prepare parameter variables for the expression 
-                DcTable thisTable = Column.Input;
-                DcVariable thisVariable = new Variable(thisTable.Schema.Name, thisTable.Name, "this");
-                thisVariable.TypeSchema = thisTable.Schema;
-                thisVariable.TypeTable = thisTable;
-
-                // Parameterize expression and resolve it (bind names to real objects) 
-                formulaExpr.OutputVariable.SchemaName = Column.Output.Schema.Name;
-                formulaExpr.OutputVariable.TypeName = Column.Output.Name;
-                formulaExpr.OutputVariable.TypeSchema = Column.Output.Schema;
-                formulaExpr.OutputVariable.TypeTable = Column.Output;
-                formulaExpr.EvaluateAndResolveSchema(Workspace, new List<DcVariable>() { thisVariable });
-
                 formulaExpr.EvaluateBegin();
-                DcTableReader tableReader = thisTable.GetData().GetTableReader();
+                DcTableReader tableReader = Column.Input.GetData().GetTableReader();
                 tableReader.Open();
                 while ((thisCurrent = tableReader.Next()) != null)
                 {
@@ -481,32 +563,17 @@ namespace Com.Data
 
                     formulaExpr.Evaluate(); // Evaluate the expression
 
-                    if (columnData != null) // We do not store import functions (we do not need this data)
-                    {
-                        object newValue = formulaExpr.OutputVariable.GetValue();
-                        //columnData.SetValue((Rowid)thisCurrent, newValue);
-                    }
+                    // We do not store import functions (we do not need this data)
+                    object newValue = formulaExpr.OutputVariable.GetValue();
+                    //columnData.SetValue((Rowid)thisCurrent, newValue);
                 }
                 tableReader.Close();
                 formulaExpr.EvaluateEnd();
             }
             else if (formulaExpr.DefinitionType == ColumnDefinitionType.ARITHMETIC || formulaExpr.DefinitionType == ColumnDefinitionType.LINK)
             {
-                // Prepare parameter variables for the expression 
-                DcTable thisTable = Column.Input;
-                DcVariable thisVariable = new Variable(thisTable.Schema.Name, thisTable.Name, "this");
-                thisVariable.TypeSchema = thisTable.Schema;
-                thisVariable.TypeTable = thisTable;
-
-                // Parameterize expression and resolve it (bind names to real objects) 
-                formulaExpr.OutputVariable.SchemaName = Column.Output.Schema.Name;
-                formulaExpr.OutputVariable.TypeName = Column.Output.Name;
-                formulaExpr.OutputVariable.TypeSchema = Column.Output.Schema;
-                formulaExpr.OutputVariable.TypeTable = Column.Output;
-                formulaExpr.EvaluateAndResolveSchema(Workspace, new List<DcVariable>() { thisVariable });
-
                 formulaExpr.EvaluateBegin();
-                DcTableReader tableReader = thisTable.GetData().GetTableReader();
+                DcTableReader tableReader = Column.Input.GetData().GetTableReader();
                 tableReader.Open();
                 while ((thisCurrent = tableReader.Next()) != null)
                 {
@@ -519,11 +586,8 @@ namespace Com.Data
                     // NOTE: when writing or find/append output to a table, an expression needs a TableWriter (or reader) object which is specific to the expression node (also intermediate)
                     // NOTE: it could be meaningful to implement separately TUPLE (DOWN, NON-PRIMITIVE) nodes and CALL (UP, PRIMITIVE) expression classes since their general logic/purpose is quite different, particularly, for table writing. 
                     // NOTE: where expression (in tables) is evaluated without writing to column
-                    if (columnData != null)
-                    {
-                        object newValue = formulaExpr.OutputVariable.GetValue();
-                        columnData.SetValue((Rowid)thisCurrent, newValue);
-                    }
+                    object newValue = formulaExpr.OutputVariable.GetValue();
+                    this.SetValue((Rowid)thisCurrent, newValue);
                 }
                 tableReader.Close();
                 formulaExpr.EvaluateEnd();
@@ -533,44 +597,7 @@ namespace Com.Data
                 // Aassert: FactTable.GroupFormula + ThisSet.ThisFunc = FactTable.MeasureFormula
                 // Aassert: if LoopSet == ThisSet then GroupCode = null, ThisFunc = MeasureCode
 
-                // Facts
-                ExprNode factsNode = formulaExpr.GetChild("facts").GetChild(0);
-
-                // This table and variable
-                string thisTableName = factsNode.Name;
-                DcTable thisTable = Column.Input.Schema.GetSubTable(thisTableName);
-                DcVariable thisVariable = new Variable(thisTable.Schema.Name, thisTable.Name, "this");
-                thisVariable.TypeSchema = thisTable.Schema;
-                thisVariable.TypeTable = thisTable;
-
-                // Groups
-                ExprNode groupExpr; // Returns a group this fact belongs to, is stored in the group variable
-                ExprNode groupsNode = formulaExpr.GetChild("groups").GetChild(0);
-                groupExpr = groupsNode;
-                groupExpr.EvaluateAndResolveSchema(Workspace, new List<DcVariable>() { thisVariable });
-
-                DcVariable groupVariable; // Stores current group (input for the aggregated function)
-                groupVariable = new Variable(Column.Input.Schema.Name, Column.Input.Name, "this");
-                groupVariable.TypeSchema = Column.Input.Schema;
-                groupVariable.TypeTable = Column.Input;
-
-                // Measure
-                ExprNode measureExpr; // Returns a new value to be aggregated with the old value, is stored in the measure variable
-                ExprNode measureNode = formulaExpr.GetChild("measure").GetChild(0);
-                measureExpr = measureNode;
-                measureExpr.EvaluateAndResolveSchema(Workspace, new List<DcVariable>() { thisVariable });
-
-                DcVariable measureVariable; // Stores new value (output for the aggregated function)
-                measureVariable = new Variable(Column.Output.Schema.Name, Column.Output.Name, "value");
-                measureVariable.TypeSchema = Column.Output.Schema;
-                measureVariable.TypeTable = Column.Output;
-
-                // Updater/aggregation function
-                ExprNode updaterExpr = formulaExpr.GetChild("aggregator").GetChild(0);
-
-                ExprNode outputExpr;
-                outputExpr = ExprNode.CreateUpdater(Column, updaterExpr.Name);
-                outputExpr.EvaluateAndResolveSchema(Workspace, new List<DcVariable>() { groupVariable, measureVariable });
+                DcTable thisTable = Column.Input.Schema.GetSubTable(factsExpr.Name);
 
                 formulaExpr.EvaluateBegin();
                 DcTableReader tableReader = thisTable.GetData().GetTableReader();
@@ -590,11 +617,8 @@ namespace Com.Data
                     outputExpr.Evaluate(); // Evaluate the expression
 
                     // Write the result value to the function
-                    if (columnData != null)
-                    {
-                        object newValue = outputExpr.OutputVariable.GetValue();
-                        columnData.SetValue(groupElement, newValue);
-                    }
+                    object newValue = outputExpr.OutputVariable.GetValue();
+                    this.SetValue(groupElement, newValue);
                 }
                 tableReader.Close();
                 formulaExpr.EvaluateEnd();
@@ -758,7 +782,7 @@ namespace Com.Data
             pos = Array.BinarySearch(_offsets, indexes.Item1, indexes.Item2 - indexes.Item1, input);
             if (pos >= indexes.Item1 && pos < indexes.Item2) return pos;
 
-            return -1; // Not found (error - all valid offset must be present in the index)
+            return -1; // Not found (error - all valid/existing offsets must be present in the index)
         }
 
         private Tuple<int, int> FindIndexes(T value)

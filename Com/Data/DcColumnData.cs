@@ -63,11 +63,6 @@ namespace Com.Data
         /// </summary>
         string Formula { get; set; }
 
-        /// <summary>
-        /// Source (user, non-executable) formula for computing this function consisting of value-operations
-        /// </summary>
-        //AstNode FormulaAst { get; set; }
-
         //
         // Structured (object) representation
         //

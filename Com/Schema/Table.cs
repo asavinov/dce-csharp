@@ -328,6 +328,7 @@ namespace Com.Schema
 
                 foreach(DcColumn inColumn in inColumns)
                 {
+                    inColumn.GetData().Translate();
                     inColumn.GetData().Evaluate(); // Delegate to column evaluation - it will add records from column expression
                 }
             }
@@ -365,7 +366,7 @@ namespace Com.Schema
                 foreach (DcColumn col in cols)
                 {
                     col.GetData().AutoIndex = false;
-                    col.GetData().Nullify();
+                    //col.GetData().Nullify();
                 }
 
                 //

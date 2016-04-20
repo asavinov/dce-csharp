@@ -379,6 +379,7 @@ namespace Test
             c16.GetData().Formula = "AGGREGATE(facts=[Table 2], groups=[Table 1], measure=[Column 23]*2.0 + 1, aggregator=SUM)";
 
             c16.GetData().SetValue(0.0);
+            c16.GetData().Translate();
             c16.GetData().Evaluate(); // {40, 140, 0}
 
             Assert.AreEqual(81.0, c16.GetData().GetValue(0));
