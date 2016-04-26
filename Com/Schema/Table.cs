@@ -365,7 +365,7 @@ namespace Com.Schema
                 // Prepare columns
                 foreach (DcColumn col in cols)
                 {
-                    col.GetData().AutoIndex = false;
+                    col.GetData().AutoIndex = true; // We need true to correctly evaluate where condition and correctly remove last element if it is wrong
                     //col.GetData().Nullify();
                 }
 

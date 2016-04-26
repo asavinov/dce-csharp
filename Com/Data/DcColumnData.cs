@@ -67,23 +67,7 @@ namespace Com.Data
         // Structured (object) representation
         //
 
-        /// <summary>
-        /// Whether output values are appended to the output set. 
-        /// </summary>
-        bool IsAppendData { get; set; }
-
         bool IsAppendSchema { get; set; }
-
-        /// <summary>
-        /// Represents a function definition in terms of other functions (select expression).
-        /// When evaluated, it computes a value of the greater set for the identity value of the lesser set.
-        /// For aggregated columns, it is an updater expression which computes a new value from the current value and a new fact (measure).
-        /// </summary>
-        //ExprNode FormulaExpr { get; set; }
-
-        //
-        // Formula operations.
-        //
 
         // Compile-time/schema-level status. 
         // Column (and all necessary columns) has been successfully translated (syntactically valid) and is ready for evaluation. 
@@ -91,6 +75,11 @@ namespace Com.Data
         // It is a compile-time or schema-level operation. Its goal is to parse/validate the formula, update dependencies and make sure that the formula can be evaluated. 
         // Finally, it sets the flag (read or yellow).
         void Translate();
+
+        /// <summary>
+        /// Whether output values are appended to the output set. 
+        /// </summary>
+        bool IsAppendData { get; set; }
 
         // Run-time/data-level status. 
         // Column (and all necessary columns) has been successfully evaluated and the data is up-to-date. 

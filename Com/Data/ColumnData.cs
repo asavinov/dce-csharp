@@ -99,14 +99,44 @@ namespace Com.Data
 
         public void Reindex()
         {
-            // Here the idea is to sort the index (that is, precisely what we need) by defining a custom comparare via cells referenced by the index elements
+            Reindex2();
+        }
+
+        public void Reindex1()
+        {
+            // Here the idea is to sort the index (that is, precisely what we need) by defining a custom comparer via cells referenced by the index elements
             // Source: http://stackoverflow.com/questions/659866/is-there-c-sharp-support-for-an-index-based-sort
             // http://www.csharp-examples.net/sort-array/
-            Comparer<T> comparer = Comparer<T>.Default;
-            Array.Sort(_offsets, /* 0, _length,*/ (a, b) => comparer.Compare(_cells[a], _cells[b]));
+
+            // Approach 1 (.Net 4.5) method Create can be used to create a delegate:
+            //Comparer<T> cellComparer = Comparer<T>.Default;
+            //IComparer<int> offsetComparer = Comparer<int>.Create( (a, b) => cellComparer.Compare(_cells[a], _cells[b]) );
+
+            // Approach 2 use a custom comparer
+            // Problem: this method does not retain the original order for equal values; intervals with the same value will not be sorted; BinarySearch will not work.
+            OffsetComparer<T> offsetComparer = new OffsetComparer<T>(_cells);
+
+            Array.Sort<int>(_offsets, 0, _length, offsetComparer);
 
             _indexed = true;
         }
+
+        class OffsetComparer<T> : IComparer<int>
+        {
+            T[] cells;
+            Comparer<T> cellComparer;
+
+            public int Compare(int x, int y)
+            {
+                return cellComparer.Compare(cells[x], cells[y]);
+            }
+            public OffsetComparer(T[] cells)
+            {
+                this.cells = cells;
+                cellComparer = Comparer<T>.Default;
+            }
+        }
+
         public void Reindex2()
         {
             // Index sort in Java: http://stackoverflow.com/questions/951848/java-array-sort-quick-way-to-get-a-sorted-list-of-indices-of-an-array
@@ -341,11 +371,6 @@ namespace Com.Data
         // Structured (object) representation
         //
 
-        public bool IsAppendData { get; set; }
-
-        public bool IsAppendSchema { get; set; }
-
-
         protected ExprNode formulaExpr { get; set; }
 
         protected DcVariable thisVariable;
@@ -357,6 +382,8 @@ namespace Com.Data
         protected ExprNode measureExpr; // Returns a new value to be aggregated with the old value, is stored in the measure variable
         protected DcVariable measureVariable; // Stores new value (output for the aggregated function)
         protected ExprNode outputExpr;
+
+        public bool IsAppendSchema { get; set; }
 
         protected bool hasValidSchema;
         public virtual bool HasValidSchema
@@ -414,8 +441,9 @@ namespace Com.Data
             formulaExpr = expr;
         }
 
-        // Resolve symbols in the syntax tree (find referenced schema elements) 
-        // Create missing objects if not found (populate schema)
+        // Resolve symbols in the syntax tree by finding referenced schema elements. 
+        // This also performes schema population by appending columns if they cannot be found. 
+        // Schema population is performed if the corresponding flag is true. 
         protected void Bind()
         {
             // NOTE: This should be removed or moved to the expression. Here we store non-syntactic part of the definition in columndef and then set the expression. Maybe we should have syntactic annotation for APPEND flag (output result annotation, what to do with the output). 
@@ -514,6 +542,8 @@ namespace Com.Data
                 throw new NotImplementedException("This type of column definition is not implemented.");
             }
         }
+
+        public bool IsAppendData { get; set; }
 
         protected bool hasValidData;
         public virtual bool HasValidData
@@ -776,9 +806,11 @@ namespace Com.Data
             // First, we try to find it in the null interval
             int pos = Array.BinarySearch(_offsets, 0, _nullCount, input);
             if (pos >= 0 && pos < _nullCount) return pos; // It is null
-            
-            // Second, try to find it as a value (find the value area and then find the offset in the value interval)
+
+            // Second, find an interval of offsets which all reference this value
             Tuple<int,int> indexes = FindIndexes(_cells[input]);
+            // Third, in this interval, find exact offset for the specified input. 
+            // In BinarySearch the array (interval) has to be sorted - it is a requirement to the index method
             pos = Array.BinarySearch(_offsets, indexes.Item1, indexes.Item2 - indexes.Item1, input);
             if (pos >= indexes.Item1 && pos < indexes.Item2) return pos;
 
