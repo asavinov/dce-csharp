@@ -6,6 +6,7 @@ using System.Text;
 using Newtonsoft.Json.Linq;
 
 using Com.Utils;
+using Com.Data;
 
 using Rowid = System.Int32;
 
@@ -170,6 +171,8 @@ namespace Com.Schema.Rel
         public ColumnAtt(string name, DcTable input, DcTable output)
             : base(name, input, output)
         {
+            _data = new ColumnDataEmpty();
+            _data.Translate();
         }
     }
 

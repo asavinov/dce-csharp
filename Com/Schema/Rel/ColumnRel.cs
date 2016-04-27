@@ -6,6 +6,7 @@ using System.Text;
 using Newtonsoft.Json.Linq;
 
 using Com.Schema;
+using Com.Data;
 
 namespace Com.Schema.Rel
 {
@@ -55,6 +56,8 @@ namespace Com.Schema.Rel
         public ColumnRel(string name, DcTable input, DcTable output, bool isIdentity, bool isSuper)
             : base(name, input, output, isIdentity, isSuper)
         {
+            _data = new ColumnDataEmpty();
+            _data.Translate();
         }
     }
 

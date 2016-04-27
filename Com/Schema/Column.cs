@@ -348,6 +348,7 @@ namespace Com.Schema
             // Creae storage for the function and its definition depending on the output set type
             //
             _data = CreateColumnData(output, this);
+            _data.Translate();
         }
 
         #endregion

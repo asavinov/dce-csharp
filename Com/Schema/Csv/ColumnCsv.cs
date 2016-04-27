@@ -61,6 +61,7 @@ namespace Com.Schema.Csv
             ColumnIndex = -1;
 
             _data = new ColumnDataEmpty();
+            _data.Translate();
         }
     }
 
