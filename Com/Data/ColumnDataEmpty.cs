@@ -18,7 +18,7 @@ namespace Com.Data
     public class ColumnDataEmpty : DcColumnData
     {
 
-        #region ComColumnData interface
+        #region DcColumnData interface
 
         protected Rowid _length;
         public Rowid Length
@@ -59,6 +59,38 @@ namespace Com.Data
 
         #endregion
 
+        #region The former DcColumnDefinition. Now part of DcColumnData
+
+        public string Formula { get; set; }
+
+        public bool IsAppendSchema { get; set; }
+        public bool HasValidSchema
+        {
+            get { return true; }
+            set {; }
+        }
+        public void Translate() { }
+
+        public bool IsAppendData { get; set; }
+        public bool HasValidData
+        {
+            get { return true; }
+            set {; }
+        }
+        public void Evaluate() { }
+
+        //
+        // Dependencies. The order is important and corresponds to dependency chain
+        //
+
+        public List<DcTable> UsesTables(bool recursive) { return null; } // This element depends upon
+        public List<DcTable> IsUsedInTables(bool recursive) { return null; } // Dependants
+
+        public List<DcColumn> UsesColumns(bool recursive) { return null; } // This element depends upon
+        public List<DcColumn> IsUsedInColumns(bool recursive) { return null; } // Dependants
+
+        #endregion
+
         #region DcJson serialization
 
         public virtual void ToJson(JObject json) // Write fields to the json object
@@ -73,42 +105,6 @@ namespace Com.Data
 
             // Column definition
         }
-
-        #endregion
-
-        #region The former DcColumnDefinition. Now part of DcColumnData
-
-        public string Formula { get; set; }
-
-        public bool IsAppendData { get; set; }
-
-        public bool IsAppendSchema { get; set; }
-
-        public ExprNode FormulaExpr { get; set; }
-
-        public bool HasValidData
-        {
-            get { return true; }
-            set { ; }
-        }
-        public void Evaluate() { }
-
-        public bool HasValidSchema
-        {
-            get { return true; }
-            set { ; }
-        }
-        public void Translate() { }
-
-        //
-        // Dependencies. The order is important and corresponds to dependency chain
-        //
-
-        public List<DcTable> UsesTables(bool recursive) { return null; } // This element depends upon
-        public List<DcTable> IsUsedInTables(bool recursive) { return null; } // Dependants
-
-        public List<DcColumn> UsesColumns(bool recursive) { return null; } // This element depends upon
-        public List<DcColumn> IsUsedInColumns(bool recursive) { return null; } // Dependants
 
         #endregion
 

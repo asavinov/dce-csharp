@@ -5,6 +5,8 @@ using System.Text;
 
 using Newtonsoft.Json.Linq;
 
+using Com.Data;
+
 namespace Com.Schema.Csv
 {
     /// <summary>
@@ -57,6 +59,8 @@ namespace Com.Schema.Csv
         {
             SampleValues = new List<string>();
             ColumnIndex = -1;
+
+            _data = new ColumnDataEmpty();
         }
     }
 

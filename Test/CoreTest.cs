@@ -165,7 +165,7 @@ namespace Test
         }
 
         [TestMethod]
-        public void ColumnDataTest() // ComColumnData. Manually read/write data
+        public void ColumnDataTest() // DcColumnData. Manually read/write data
         {
             DcTable t1 = schema.GetSubTable("Table 1");
 

@@ -206,24 +206,24 @@ namespace Com.Schema
             Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: column name cannot be null or empty.");
             // TODO: Check constraints: 1. only one super-column can exist 2. no loops can appear
 
-            DcSchema inSchema = input.Schema;
-            DcSchemaKind inSchemaType = inSchema.GetSchemaKind();
+            DcSchemaKind inSchemaType = input.Schema.GetSchemaKind();
+            DcSchemaKind outSchemaType = output.Schema.GetSchemaKind();
 
             DcColumn column;
 
-            if (inSchemaType == DcSchemaKind.Dc)
+            if (inSchemaType == DcSchemaKind.Dc || outSchemaType == DcSchemaKind.Dc) // Intra-mashup or import/export columns
             {
                 column = new Column(name, input, output, isKey, false);
             }
-            else if (inSchemaType == DcSchemaKind.Csv)
+            else if (inSchemaType == DcSchemaKind.Csv && outSchemaType == DcSchemaKind.Csv) // Intra-csv columns
             {
                 column = new ColumnCsv(name, input, output, isKey, false);
             }
-            else if (inSchemaType == DcSchemaKind.Oledb)
+            else if (inSchemaType == DcSchemaKind.Oledb && outSchemaType == DcSchemaKind.Oledb) // Intra-oledb columns
             {
                 throw new NotImplementedException("This schema type is not implemented.");
             }
-            else if (inSchemaType == DcSchemaKind.Rel)
+            else if (inSchemaType == DcSchemaKind.Rel && outSchemaType == DcSchemaKind.Rel) // Intra-rel columns
             {
                 column = new ColumnRel(name, input, output, isKey, false);
             }
