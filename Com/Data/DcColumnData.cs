@@ -64,39 +64,41 @@ namespace Com.Data
         string Formula { get; set; }
 
         //
-        // Structured (object) representation
+        // Schema and translation
         //
-
+        // Formula translation option. Whether we need to append a new column if it has not been found in the schema.
         bool IsAppendSchema { get; set; }
 
-        // Compile-time/schema-level status. 
-        // Column (and all necessary columns) has been successfully translated (syntactically valid) and is ready for evaluation. 
+        // Compile-time/schema-level status. The results of translation. 
+        // Column (and all necessary columns) has been successfully translated (syntactically valid) and can be evaluated (either evaluated or not). 
         bool HasValidSchema { get; set; }
+
         // It is a compile-time or schema-level operation. Its goal is to parse/validate the formula, update dependencies and make sure that the formula can be evaluated. 
-        // Finally, it sets the flag (read or yellow).
+        // It translates only this column by assuming that all necessary conditions are fulfilled. Finally, it sets the flag (read or yellow).
         void Translate();
 
-        /// <summary>
-        /// Whether output values are appended to the output set. 
-        /// </summary>
+        //
+        // Data and evaluation
+        //
+        // Formula evaluation option. Whether we need to append a new data element if it has not been found in the data.
         bool IsAppendData { get; set; }
 
-        // Run-time/data-level status. 
-        // Column (and all necessary columns) has been successfully evaluated and the data is up-to-date. 
+        // Run-time/data-level status. The result of evaluation. 
+        // Column (and all necessary columns) has been successfully evaluated and the data is up-to-date (non-dirty). 
         bool HasValidData { get; set; }
+
         // It is a run-time or data-level operation. Its goal is to execute the formula and make the column data up-to-date. 
-        // Finally, it sets the flag (yellow or green).
+        // It evaluates only this column and assumes all necessary columns have been evaluated. Finally, it sets the flag (yellow or green).
         void Evaluate();
 
         //
         // Dependencies. The order is important and corresponds to dependency chain
         //
+        List<DcColumn> UsesColumns(); // This element depends upon
+        List<DcTable> UsesTables(); // This element depends upon
 
-        List<DcTable> UsesTables(bool recursive); // This element depends upon
-        List<DcColumn> UsesColumns(bool recursive); // This element depends upon
-
-        List<DcTable> IsUsedInTables(bool recursive); // Dependants
-        List<DcColumn> IsUsedInColumns(bool recursive); // Dependants
+        List<DcColumn> IsUsedInColumns(); // Dependants
+        List<DcTable> IsUsedInTables(); // Dependants
     }
 
 }

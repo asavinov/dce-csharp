@@ -82,12 +82,11 @@ namespace Com.Data
         //
         // Dependencies. The order is important and corresponds to dependency chain
         //
+        public List<DcColumn> UsesColumns() { return null; } // This element depends upon
+        public List<DcTable> UsesTables() { return null; } // Dependants
 
-        public List<DcTable> UsesTables(bool recursive) { return null; } // This element depends upon
-        public List<DcTable> IsUsedInTables(bool recursive) { return null; } // Dependants
-
-        public List<DcColumn> UsesColumns(bool recursive) { return null; } // This element depends upon
-        public List<DcColumn> IsUsedInColumns(bool recursive) { return null; } // Dependants
+        public List<DcColumn> IsUsedInColumns() { return null; } // This element depends upon
+        public List<DcTable> IsUsedInTables() { return null; } // Dependants
 
         #endregion
 

@@ -26,8 +26,11 @@ namespace Com.Schema
 
         DcColumnData GetData();
 
+        // Red - !CanUpdate (= Translate error, = schema-level problem, =compile-time error)
+        // Yellow - Dirty & CanUpdate (Translate success)
+        // Green - !Dirty (all dependencies must be also green)
         DcColumnStatus Status { get; }
-        bool CanEvaluate { get; }
+
     }
 
     public enum DcColumnStatus

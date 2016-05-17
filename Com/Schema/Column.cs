@@ -125,28 +125,111 @@ namespace Com.Schema
 
         public virtual DcColumnStatus Status
         {
+            // TODO: Status implementation to take into account recirsive dependencies in both directions so that Status for all columns changes if one column is updated (formula or evaluate)
+
             get
             {
-                // Red - !CanUpdate (= invalid schema, = Translate error)
-                // Yellow - Dirty & CanUpdate (Translate success, = valid schema)
-                // Green - !Dirty
                 if (GetData() == null) return DcColumnStatus.Green;
 
+                // Problems with formula translation
                 if (!GetData().HasValidSchema) return DcColumnStatus.Red;
-                else if(!GetData().HasValidData) return DcColumnStatus.Yellow;
-                else return DcColumnStatus.Green;
+
+                // Dirty data. Evaluation can be performed. 
+                if (!GetData().HasValidData) return DcColumnStatus.Yellow;
+
+                // Formula is ok. Data has been evaluated. 
+                return DcColumnStatus.Green;
             }
         }
 
-        public virtual bool CanEvaluate
+        public void TranslateRecursive()
         {
-            get
+            // TODO: Translate recursive with status updates etc (as opposed to individual column translate)
+            // Use this method when creating/updating columns instead of (lower-level) ColumnData interface which is treated as individual formula translation
+
+            // Normally, we translate a formula automatically after each change. 
+            // However, if it fails (the column is red), and then we create/change another column which depends on it, then it also cannot be translated. 
+            // So the new formula is correct (it can be parsed and bound) but it is red recursively because the necessary column is red. 
+
+        }
+        public void EvaluateRecursive()
+        {
+            // TODO: Evaluate recursive with status updates etc (as opposed to individual column evalutate)
+            // Use this method when evaluating columns instead of (lower-level) ColumnData interface which is treated as individual formula translation
+
+            // Normally, we evaluate formulas manually (if they are not red). It is also possible to trigger evaluation automatically.
+            // All direct necessary columns must be already green (successfully evaluated). 
+            // If they are not, then we need to try to evaluate them recursively (if we have such a flag) or mark this column accordingly (either red, or a new color). 
+
+        }
+        public List<List<DcColumn>> GetDependencies()
+        {
+            // The first list has independent tables which do not have incoming columns (remote or product)
+            // Each next list has columns which can be evaluted after the previous list
+            // After the last list, this column can be evaluated. 
+
+            var res = new List<List<DcColumn>>();
+            res.Add(new List<DcColumn>(new DcColumn[] { this })); // Start from this column
+
+            while (true)
             {
-                // CanUpdate() - true if Translate success. Otherwise false. (In particular, if Translate is Unknown). 
-                // = hasvalidschema (translate successful)
-                if (GetData() == null) return false;
-                else return GetData().HasValidSchema;
+                // Compute new dependencies for each column in the previous dependencies 
+                var nextDeps = new List<DcColumn>();
+                var prevDeps = res[res.Count - 1];
+                foreach (DcColumn col in prevDeps)
+                {
+                    List<DcColumn> newDeps = GetDirectDependencies();
+                    nextDeps.AddRange(newDeps.Except(nextDeps)); // Add only new columns
+                }
+
+                if (nextDeps.Count > 0)
+                {
+                    // TODO: Here we need to check for possible cycles if a new column exists among previous columns
+                    res.Add(nextDeps);
+                }
+                else
+                {
+                    break; // No dependencies anymore
+                }
             }
+
+            return res;
+        }
+        public List<DcColumn> GetDirectDependencies()
+        {
+            DcColumnData columnData = GetData();
+            var res = new List<DcColumn>();
+
+            if (columnData == null || string.IsNullOrEmpty(columnData.Formula)) // Free columns with no formula
+            {
+                //
+                // Product column. No input column with formula (even indirectly). 
+                // There is no any lesser column which writes to this column. 
+                // 1. [product is flat - currently it is so implemented] We can assume that we depend on greater tables and hence it our task to fill them. 
+                //    The product operation works only at one level (flat) and it can work/be started only if all greater tables are green.
+                // 2. [product is hierarchical like tuple append] We can think of it as equivalent to appending *all* tuples which will simultaniously fill greater tables before. 
+                //    So the product procedure itself can recursievely fill the greater table which are not filled. 
+                //    Note that appending tuples does the same (recursive filling) but for each individual tuple
+
+                //
+                // Depends on input column with formula (also indirectly). 
+                // There is a lesser column which writes/influences this column
+                // Evaluation of lesser (append) columns can result in green status for many (covered) columns including this one
+
+            }
+            else // Formula uses/reads other (this.greater) columns and writes/fills (output.greater) columns 
+            {
+                List<DcColumn> usesColumns = columnData.UsesColumns();
+
+                // Depends on this.greater columns
+                List<DcColumn> readsColumns;
+
+
+                // Depends on this.lesser columns (aggregation)
+
+            }
+
+            return res;
         }
 
         #endregion

@@ -367,10 +367,10 @@ namespace Com.Data
                 Translate();
             }
         }
-        //
-        // Structured (object) representation
-        //
 
+        //
+        // Used for evaluation
+        //
         protected ExprNode formulaExpr { get; set; }
 
         protected DcVariable thisVariable;
@@ -383,6 +383,9 @@ namespace Com.Data
         protected DcVariable measureVariable; // Stores new value (output for the aggregated function)
         protected ExprNode outputExpr;
 
+        //
+        // Schema and translation
+        //
         public bool IsAppendSchema { get; set; }
 
         protected bool hasValidSchema;
@@ -395,7 +398,12 @@ namespace Com.Data
                 if (value == true) return;
 
                 // False (invalid) has to be propagated 
-                if (value == false)
+                if (value == true)
+                {
+                    // TODO: Check how it influences dependent columns (recursively). Some of them can change their status
+                    // Alternatively, the status is checked by all columns individually on demand. 
+                }
+                else
                 {
                     hasValidSchema = value;
                     // TODO: Mark invalid all directly dependant columns/tables which will propagate it further
@@ -422,9 +430,6 @@ namespace Com.Data
             // Bind
             Bind();
             // If there is an exception then set invalid (red) flag (as well as type of error somewhere)
-
-            // Find dependencies and and update the schema dependency graph. 
-            FindUsedColumns();
 
             // Finally, we need to set the flag that indicates the result of the operation and status for the column
             hasValidSchema = true;
@@ -543,6 +548,9 @@ namespace Com.Data
             }
         }
 
+        //
+        // Data and evaluation
+        //
         public bool IsAppendData { get; set; }
 
         protected bool hasValidData;
@@ -555,7 +563,12 @@ namespace Com.Data
                 if (value == true) return;
 
                 // False (invalid) has to be propagated 
-                if (value == false)
+                if (value == true)
+                {
+                    // TODO: Check how it influences dependent columns. Some of them can change their status
+                    // Alternatively, the status is checked by all columns individually on demand. 
+                }
+                else
                 {
                     hasValidData = value;
                     // TODO: Mark invalid all directly dependant columns/tables which will propagate it further
@@ -669,10 +682,63 @@ namespace Com.Data
         //
         // Dependencies
         //
+        public List<DcColumn> UsesColumns() // This element depends upon
+        {
+            List<DcColumn> res = new List<DcColumn>();
 
-        // Other columns this columns directly depends on. Computed from the definition of this columns.
-        public List<DcColumn> Dependencies { get; set; }
-        public List<DcTable> FindUsedTables(bool recursive) // This element depends upon
+            // 0. This input table must be up-to-date IF this table is calculated (not key)
+
+            if (formulaExpr == null)
+            {
+                ;
+            }
+            else if (formulaExpr.DefinitionType == ColumnDefinitionType.ANY || formulaExpr.DefinitionType == ColumnDefinitionType.ARITHMETIC || formulaExpr.DefinitionType == ColumnDefinitionType.LINK)
+            {
+                // 1. Find all explicit read-references to other columns excluding write-references (tuple members)
+                List<ExprNode> nodes = formulaExpr.Find((DcColumn)null);
+                // 2. Exclude write columns (tuple members)
+                List<ExprNode> readNodes = nodes.Where(x => x.Parent.Item.Operation != OperationType.TUPLE).ToList();
+                // 3. Get column references
+                res = readNodes.Select(x => x.Column).ToList();
+            }
+            else if (formulaExpr.DefinitionType == ColumnDefinitionType.AGGREGATION)
+            {
+                /*
+                // 1. We need the fact table to be up-to-date
+                res.Add(FactTable); // This column depends on the fact table
+
+                // 2. All columns in the group path (actually, any group expression)
+                if (GroupPaths != null)
+                {
+                    foreach (ColumnPath path in GroupPaths)
+                    {
+                        foreach (DcColumn seg in path.Segments)
+                        {
+                            if (!res.Contains(seg.Output)) res.Add(seg.Output);
+                        }
+                    }
+                }
+
+                // 2. All columns in the measure path (actually, any group expression)
+                if (MeasurePaths != null)
+                {
+                    foreach (ColumnPath path in MeasurePaths)
+                    {
+                        foreach (DcColumn seg in path.Segments)
+                        {
+                            if (!res.Contains(seg.Output)) res.Add(seg.Output);
+                        }
+                    }
+                }
+
+                // 4. All columns in the update expression (aggregation function)
+                */
+
+            }
+
+            return res;
+        }
+        public List<DcTable> UsesTables() // This element depends upon
         {
             // Compoile formula and produce an expression (structured formula) which will be then analized
 
@@ -731,23 +797,16 @@ namespace Com.Data
 
             return res;
         }
-        protected List<DcColumn> FindUsedColumns() // This columns directly depends on
+
+        public List<DcColumn> IsUsedInColumns() // Dependants
         {
             List<DcColumn> res = new List<DcColumn>();
+
+            // TODO: Find which other columns use this column in the definition
+
             return res;
         }
-
-
-        public List<DcTable> UsesTables(bool recursive) // This element depends upon
-        {
-            return null;
-        }
-        public List<DcColumn> UsesColumns(bool recursive) // This element depends upon
-        {
-            return null;
-        }
-
-        public List<DcTable> IsUsedInTables(bool recursive) // Dependants
+        public List<DcTable> IsUsedInTables() // Dependants
         {
             List<DcTable> res = new List<DcTable>();
 
@@ -756,14 +815,6 @@ namespace Com.Data
             // If such a function has been found, then make the same call for it, that is find other functins where it is used.
 
             // A function can be used in Filter expression and Sort expression
-
-            return res;
-        }
-        public List<DcColumn> IsUsedInColumns(bool recursive) // Dependants
-        {
-            List<DcColumn> res = new List<DcColumn>();
-
-            // TODO: Find which other columns use this column in the definition
 
             return res;
         }
@@ -1092,7 +1143,6 @@ namespace Com.Data
                 Length = col.Input.GetData().Length;
             }
 
-            Dependencies = new List<DcColumn>();
         }
 
         #endregion
