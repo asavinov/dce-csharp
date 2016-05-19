@@ -370,7 +370,8 @@ namespace Com.Data
                         }
                         else // Column not found 
                         {
-                            ; // ERROR: failed to resolve symbol 
+                            // ERROR: failed to resolve symbol 
+                            throw new Exception("Name cannot be resolved: " + Name);
                         }
                     }
                 }

@@ -414,6 +414,12 @@ namespace Com.Data
         }
         public virtual void Translate()
         {
+            hasValidSchema = true;
+
+            //
+            // Translate only this individual column formula. It will generate a new dependency graph.
+            //
+
             // Some column types do not need formulas (like key columns) and hence are always valid at both schema- and data-level
             // What if a formula has not been given yet but is supposed to be defined, say, for non-key column?
             // We could assume that it is a null-function which is therefore valid
@@ -425,14 +431,67 @@ namespace Com.Data
             }
 
             // Parse
-            Parse();
+            try
+            {
+                Parse();
+            }
+            catch(Exception e)
+            {
+                hasValidSchema = false;
+            }
 
             // Bind
-            Bind();
-            // If there is an exception then set invalid (red) flag (as well as type of error somewhere)
+            try
+            {
+                if(hasValidSchema)
+                {
+                    Bind();
+                }
+            }
+            catch (Exception e)
+            {
+                hasValidSchema = false;
+            }
 
-            // Finally, we need to set the flag that indicates the result of the operation and status for the column
-            hasValidSchema = true;
+
+            //
+            // Take into account the status of necessary (previous) columns and propagate their status to this column status.
+            //
+            if(hasValidSchema)
+            {
+                var usesColumns = UsesColumns();
+                foreach (var col in usesColumns)
+                {
+                    if (col == Column) continue;
+                    if (col.Status == DcColumnStatus.Red)
+                    {
+                        // If at least one necessary formula is invalid then this column is also invalid
+                        hasValidSchema = false;
+                        break;
+                    }
+                }
+            }
+
+            //
+            // Update the status of dependent columns by propagating our status to all next columns. This may require updating the dependency graph and re-translating next columns.
+            //
+            var isUsedInColumns = IsUsedInColumns();
+            foreach(var col in isUsedInColumns)
+            {
+                // Re-compute their status
+                col.GetData().Translate();
+            }
+
+
+            // Propagating red: if this column is red then all next columns are red
+            // Propagating yellow: if this column is yellow then all next columns are at least yellow (can be red but not green)
+            // To propagate changes, we need to retrieve all next columns and force them to re-compute status - this should trigger recursive re-computation.
+            // One problem here might be that changing this column can remove info on next columns (e.g., if we rename then we cannot find next columns)
+            // In other words, changes can influence the dependence graph and not only status
+            // The easiest way is to re-compute the full graph but it must be done using some order which has to be retrieved 
+
+            // So we need a strategy for re-computing 1. graph 2. propagation status (using the new graph) 3. own status
+
             ((Column)Column).NotifyPropertyChanged("");
         }
 
@@ -441,8 +500,6 @@ namespace Com.Data
         {
             ExprBuilder exprBuilder = new ExprBuilder();
             ExprNode expr = exprBuilder.Build(formula);
-            // If there is an exception then set invalid (red) flag (as well as type of error somewhere)
-
             formulaExpr = expr;
         }
 
@@ -682,16 +739,61 @@ namespace Com.Data
         //
         // Dependencies
         //
-        public List<DcColumn> UsesColumns() // This element depends upon
+        public List<List<DcColumn>> UsesColumnsAll()
         {
-            List<DcColumn> res = new List<DcColumn>();
+            // The first list has independent tables which do not have incoming columns (remote or product)
+            // Each next list has columns which can be evaluted after the previous list
+            // After the last list, this column can be evaluated. 
 
-            // 0. This input table must be up-to-date IF this table is calculated (not key)
+            var res = new List<List<DcColumn>>();
+            res.Add(new List<DcColumn>(new DcColumn[] { this.Column })); // Start from this column
 
-            if (formulaExpr == null)
+            while (true)
             {
-                ;
+                // Compute new dependencies for each column in the previous dependencies 
+                var nextDeps = new List<DcColumn>();
+                var prevDeps = res[res.Count - 1];
+                foreach (DcColumn col in prevDeps)
+                {
+                    List<DcColumn> newDeps = UsesColumns();
+                    nextDeps.AddRange(newDeps.Except(nextDeps)); // Add only new columns
+                }
+
+                if (nextDeps.Count > 0)
+                {
+                    res.Add(nextDeps);
+                    // TODO: Check for possible cycles if a new column exists among previous columns (or do it later)
+                }
+                else
+                {
+                    break; // No dependencies anymore
+                }
             }
+
+            return res;
+        }
+        public List<DcColumn> UsesColumns()
+        {
+            var res = new List<DcColumn>();
+
+            if (string.IsNullOrEmpty(Formula) || formulaExpr == null) // Free columns with no formula
+            {
+                //
+                // Product column. No input column with formula (even indirectly). 
+                // There is no any lesser column which writes to this column. 
+                // 1. [product is flat - currently it is so implemented] We can assume that we depend on greater tables and hence it our task to fill them. 
+                //    The product operation works only at one level (flat) and it can work/be started only if all greater tables are green.
+                // 2. [product is hierarchical like tuple append] We can think of it as equivalent to appending *all* tuples which will simultaniously fill greater tables before. 
+                //    So the product procedure itself can recursievely fill the greater table which are not filled. 
+                //    Note that appending tuples does the same (recursive filling) but for each individual tuple
+
+                //
+                // Depends on input column with formula (also indirectly). 
+                // There is a lesser column which writes/influences this column
+                // Evaluation of lesser (append) columns can result in green status for many (covered) columns including this one
+
+            }
+            // Depends on this.greater columns. Formula uses/reads other (this.greater) columns and writes/fills (output.greater) columns 
             else if (formulaExpr.DefinitionType == ColumnDefinitionType.ANY || formulaExpr.DefinitionType == ColumnDefinitionType.ARITHMETIC || formulaExpr.DefinitionType == ColumnDefinitionType.LINK)
             {
                 // 1. Find all explicit read-references to other columns excluding write-references (tuple members)
@@ -701,6 +803,7 @@ namespace Com.Data
                 // 3. Get column references
                 res = readNodes.Select(x => x.Column).ToList();
             }
+            // Depends on this.lesser columns. Formula depends on lesser table/columns
             else if (formulaExpr.DefinitionType == ColumnDefinitionType.AGGREGATION)
             {
                 /*
@@ -738,11 +841,20 @@ namespace Com.Data
 
             return res;
         }
+
+        public List<DcColumn> IsUsedInColumns() // Dependants
+        {
+            List<DcColumn> res = new List<DcColumn>();
+
+            // TODO: Find which other columns use (depend on) this column in the definition
+            // They either reference its name or are influenced indirectly
+
+            return res;
+        }
+
         public List<DcTable> UsesTables() // This element depends upon
         {
             // Compoile formula and produce an expression (structured formula) which will be then analized
-
-
 
             List<DcTable> res = new List<DcTable>();
 
@@ -794,27 +906,6 @@ namespace Com.Data
                 */
 
             }
-
-            return res;
-        }
-
-        public List<DcColumn> IsUsedInColumns() // Dependants
-        {
-            List<DcColumn> res = new List<DcColumn>();
-
-            // TODO: Find which other columns use this column in the definition
-
-            return res;
-        }
-        public List<DcTable> IsUsedInTables() // Dependants
-        {
-            List<DcTable> res = new List<DcTable>();
-
-            // TODO: Which other sets use this function for their content? Say, if it is a generating function. Or it is a group/measure function.
-            // Analyze other function definitions and check if this function is used there directly. 
-            // If such a function has been found, then make the same call for it, that is find other functins where it is used.
-
-            // A function can be used in Filter expression and Sort expression
 
             return res;
         }

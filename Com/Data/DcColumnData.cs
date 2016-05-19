@@ -95,10 +95,8 @@ namespace Com.Data
         // Dependencies. The order is important and corresponds to dependency chain
         //
         List<DcColumn> UsesColumns(); // This element depends upon
-        List<DcTable> UsesTables(); // This element depends upon
 
         List<DcColumn> IsUsedInColumns(); // Dependants
-        List<DcTable> IsUsedInTables(); // Dependants
     }
 
 }

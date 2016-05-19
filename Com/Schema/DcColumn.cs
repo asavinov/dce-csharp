@@ -30,7 +30,6 @@ namespace Com.Schema
         // Yellow - Dirty & CanUpdate (Translate success)
         // Green - !Dirty (all dependencies must be also green)
         DcColumnStatus Status { get; }
-
     }
 
     public enum DcColumnStatus
