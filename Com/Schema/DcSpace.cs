@@ -35,6 +35,10 @@ namespace Com.Schema
         List<DcColumn> GetColumns(DcTable table);
         List<DcColumn> GetInputColumns(DcTable table);
 
+        //
+        // Dependencies
+        //
+        Dependencies Dependencies { get; }
     }
 
     /// <summary>

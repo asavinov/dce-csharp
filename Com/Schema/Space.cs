@@ -364,6 +364,13 @@ namespace Com.Schema
             }
         }
 
+        //
+        // Dependencies
+        //
+
+        private Dependencies _dependencies;
+        public virtual Dependencies Dependencies { get { return _dependencies; } }
+
         #endregion
 
         #region Json serialization
@@ -509,6 +516,129 @@ namespace Com.Schema
             _schemas = new List<DcSchema>();
             _tables = new List<DcTable>();
             _columns = new List<DcColumn>();
+
+            _dependencies = new Dependencies();
+        }
+
+    }
+
+    /// <summary>
+    /// Space dependencies.
+    /// </summary>
+    public class Dependencies
+    {
+        private List<Tuple<DcColumn, DcColumn>> dependencies = new List<Tuple<DcColumn, DcColumn>>();
+
+        //
+        // Retrieving graph data
+        //
+        public List<DcColumn> GetUsed(DcColumn column)
+        {
+            return dependencies.Where(d => d.Item1 == column).Select(d => d.Item2).ToList();
+        }
+        public List<DcColumn> GetUsedIn(DcColumn column)
+        {
+            return dependencies.Where(d => d.Item2 == column).Select(d => d.Item1).ToList();
+        }
+
+
+        //
+        // Change the graph
+        //
+
+        // Add columns the specified column depends on 
+        // The specified columns uses these columns either in its formula or is influenced by them
+        // Existing dependencies are not removed but duplicates are not added
+        public void AddUsed(DcColumn column, List<DcColumn> usedColumns)
+        {
+            List<Tuple<DcColumn, DcColumn>> colDeps = dependencies.Where(d => d.Item1 == column).ToList();
+
+            // Add each individual dependency
+            foreach (DcColumn col in usedColumns)
+            {
+                // Check if it is already there
+                if (colDeps.Exists(d => d.Item2 == col)) continue;
+
+                // If not then add it
+                dependencies.Add(new Tuple<DcColumn, DcColumn>(column, col));
+
+                // Add also to the temporary list so that we can check for duplicates
+                colDeps.Add(new Tuple<DcColumn, DcColumn>(column, col));
+            }
+        }
+        public void RemoveUsed(DcColumn column)
+        {
+            dependencies.RemoveAll(d => d.Item1 == column);
+        }
+        public void Remove(DcColumn column)
+        {
+            dependencies.RemoveAll(d => d.Item1 == column || d.Item2 == column);
+        }
+
+        //
+        // Analyze and build the graph
+        //
+
+        public void Rebuild()
+        {
+            // Recompute the complete graph of columns
+
+            // One question by generating a graph is whether we have to perform translation (parse, bind)
+            // or we assume that it has been done already 
+            // Parsing is normally not needed 
+            // Binding might be needed in the case of name changes, type changes etc.
+
+            // Another question is whether we need to deal with status propagation and status change
+            // If we do translation then it will triger status change and status propagation
+
+            // Parsing and Binding are individual to each column 
+            // Status is also reflects the used columns status (it is propagated)
+            // So we might separate Parsing/Binding status and inherited status
+
+            // Generally, we can translate (parse and bind) columns individually. 
+            // However, we need to update the dependency graph which finally is used to get final status. 
+            // Public API has to provide operations which produce consistent state, that is, 
+            // either dependencies have to be dynamically computed for each request or translation has to update dependencies.
+            // The problem with updating dependencies is that this may trigger translation of other columns in the graph. 
+            // So column change leads to translation which needs to re-translate other columns which will lead to graph update again. 
+
+            // One assumption is that if we change a formula then only this column has to be re-translated (parse, bind) because it is an independent operation. 
+            // This column also changes its individual dependency graph. 
+            // All other columns ar known to have correct translation state. 
+            // Yet, this and other columns may get a different final state which is computed from (updated) dependency graph.
+            // The strategy here is to translate (parse, bind) and immediately update individual dependencies. 
+            // So we split two operations: translate (parse, bind) w. always individual dependencies update and computing final state.
+            // Computing final status involves analysis of the graph including status propagation and cyclie analysis.
+
+            // If we change name, then this formula needs not be translated at all. 
+            // Rather, other formulas might need to be re-translated (in fact, re-bound) or we could simply optimize it by propagate name change throught the space. 
+            // So either we rebuild the whole graph (translate all) or propagate name change. 
+
+            // If delete a column then we update the graph for this column only. 
+
+            // In the case of structural changes (type change, copy/paste etc.) we can rebuilt the whole graph. 
+            // Here we re-translate all individual columns and also re-compute their individual dependencies.
+
+            // So maybe translate should not be public operation because it is always called from other methods.
+            // For example, setting Formula, Name, Delete, Constructor etc. 
+            // We never call Translate from outside. 
+        }
+        public void Rebuild(DcSchema schema)
+        {
+        }
+        public void Rebuild(DcColumn column)
+        {
+            // Assume that the specified column has changed (name, formula etc.)
+            // The column has been translated (not necessarily successfully)
+            // We need to update dependencies by removing old and adding new
+
+            // If formula has been changed then it can appear, disapper, or updated
+            // We need to retrieve used columns by removing the old columns
+
+            // If name has been changed then its own deps do not change. 
+            // However, all columns which use it, have to be re-translated (and will be red which will be propagated)
+
+            // If type has been changed then we need to re-translate 
         }
 
     }

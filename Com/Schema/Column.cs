@@ -134,38 +134,30 @@ namespace Com.Schema
                 if (GetData() == null) return DcColumnStatus.Green;
 
                 // Problems with formula translation (parsing or binding)
-                if (!GetData().HasValidSchema) return DcColumnStatus.Red;
+                if (GetData().TranslateError) return DcColumnStatus.Red;
+
+                var usedColumns = this.Input.Space.Dependencies.GetUsed(this);
+
+                //
+                // All necessary (previous) columns influence this column status
+                //
+                foreach (var col in usedColumns)
+                {
+                    if (col.Status == DcColumnStatus.Red)
+                    {
+                        // If at least one necessary formula is invalid then this column is also invalid
+                        return DcColumnStatus.Red;
+                    }
+                }
 
                 // Dirty data. Evaluation can be performed. 
-                if (!GetData().HasValidData) return DcColumnStatus.Yellow;
+                if (GetData().EvaluateError) return DcColumnStatus.Yellow;
 
                 // Data has been evaluated (not dirty). 
                 return DcColumnStatus.Green;
             }
         }
 
-        public void TranslateRecursive()
-        {
-            // TODO: Translate recursive with status updates etc (as opposed to individual column translate)
-            // Use this method when creating/updating columns instead of (lower-level) ColumnData interface which is treated as individual formula translation
-
-            // This method need to store the result of translation
-
-            // Normally, we translate a formula automatically after each change. 
-            // However, if it fails (the column is red), and then we create/change another column which depends on it, then it also cannot be translated. 
-            // So the new formula is correct (it can be parsed and bound) but it is red recursively because the necessary column is red. 
-
-        }
-        public void EvaluateRecursive()
-        {
-            // TODO: Evaluate recursive with status updates etc (as opposed to individual column evalutate)
-            // Use this method when evaluating columns instead of (lower-level) ColumnData interface which is treated as individual formula translation
-
-            // Normally, we evaluate formulas manually (if they are not red). It is also possible to trigger evaluation automatically.
-            // All direct necessary columns must be already green (successfully evaluated). 
-            // If they are not, then we need to try to evaluate them recursively (if we have such a flag) or mark this column accordingly (either red, or a new color). 
-
-        }
         #endregion
 
         #region DcJson serialization
@@ -365,7 +357,6 @@ namespace Com.Schema
             // Creae storage for the function and its definition depending on the output set type
             //
             _data = CreateColumnData(output, this);
-            _data.Translate();
         }
 
         #endregion

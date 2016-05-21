@@ -69,9 +69,9 @@ namespace Com.Data
         // Formula translation option. Whether we need to append a new column if it has not been found in the schema.
         bool IsAppendSchema { get; set; }
 
-        // Compile-time/schema-level status. The results of translation. 
-        // Column (and all necessary columns) has been successfully translated (syntactically valid) and can be evaluated (either evaluated or not). 
-        bool HasValidSchema { get; set; }
+        // The result of translation. Compile-time/schema-level status.
+        // If no error then column has been successfully translated (syntactically valid). 
+        bool TranslateError { get; set; }
 
         // It is a compile-time or schema-level operation. Its goal is to parse/validate the formula, update dependencies and make sure that the formula can be evaluated. 
         // It translates only this column by assuming that all necessary conditions are fulfilled. Finally, it sets the flag (read or yellow).
@@ -83,9 +83,9 @@ namespace Com.Data
         // Formula evaluation option. Whether we need to append a new data element if it has not been found in the data.
         bool IsAppendData { get; set; }
 
-        // Run-time/data-level status. The result of evaluation. 
-        // Column (and all necessary columns) has been successfully evaluated and the data is up-to-date (non-dirty). 
-        bool HasValidData { get; set; }
+        // The result of evaluation. Run-time/data-level status.
+        // If no error then column has been successfully evaluated and the data is up-to-date (non-dirty). 
+        bool EvaluateError { get; set; }
 
         // It is a run-time or data-level operation. Its goal is to execute the formula and make the column data up-to-date. 
         // It evaluates only this column and assumes all necessary columns have been evaluated. Finally, it sets the flag (yellow or green).

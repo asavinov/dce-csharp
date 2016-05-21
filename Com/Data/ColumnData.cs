@@ -364,6 +364,8 @@ namespace Com.Data
             set
             {
                 formula = value;
+                _translateError = false;
+                _evaluateError = true;
                 Translate();
             }
         }
@@ -388,13 +390,13 @@ namespace Com.Data
         //
         public bool IsAppendSchema { get; set; }
 
-        protected bool hasValidSchema;
-        public virtual bool HasValidSchema
+        protected bool _translateError;
+        public virtual bool TranslateError
         {
-            get { return hasValidSchema; }
+            get { return _translateError; }
             set
             {
-                // True cannot be set directly - it results from Translate only
+                // True cannot be set directly  it results from Translate only
                 if (value == true) return;
 
                 // False (invalid) has to be propagated 
@@ -405,7 +407,7 @@ namespace Com.Data
                 }
                 else
                 {
-                    hasValidSchema = value;
+                    _translateError = value;
                     // TODO: Mark invalid all directly dependant columns/tables which will propagate it further
                     // Get all dependant elements
                     // Set all these elements invalid
@@ -414,7 +416,7 @@ namespace Com.Data
         }
         public virtual void Translate()
         {
-            hasValidSchema = true;
+            _translateError = false;
 
             //
             // Translate only this individual column formula. It will generate a new dependency graph.
@@ -425,74 +427,47 @@ namespace Com.Data
             // We could assume that it is a null-function which is therefore valid
             if (string.IsNullOrWhiteSpace(formula))
             {
-                hasValidSchema = true;
-                ((Column)Column).NotifyPropertyChanged("");
-                return;
+                _translateError = false;
             }
-
-            // Parse
-            try
+            else
             {
-                Parse();
-            }
-            catch(Exception e)
-            {
-                hasValidSchema = false;
-            }
-
-            // Bind
-            try
-            {
-                if(hasValidSchema)
+                // Parse
+                try
                 {
-                    Bind();
+                    Parse();
                 }
-            }
-            catch (Exception e)
-            {
-                hasValidSchema = false;
-            }
-
-
-            //
-            // Take into account the status of necessary (previous) columns and propagate their status to this column status.
-            //
-            if(hasValidSchema)
-            {
-                var usesColumns = UsesColumns();
-                foreach (var col in usesColumns)
+                catch (Exception e)
                 {
-                    if (col == Column) continue;
-                    if (col.Status == DcColumnStatus.Red)
+                    _translateError = true;
+                }
+
+                // Bind
+                if (!_translateError)
+                {
+                    try
                     {
-                        // If at least one necessary formula is invalid then this column is also invalid
-                        hasValidSchema = false;
-                        break;
+                        Bind();
+                    }
+                    catch (Exception e)
+                    {
+                        _translateError = true;
                     }
                 }
             }
 
-            //
-            // Update the status of dependent columns by propagating our status to all next columns. This may require updating the dependency graph and re-translating next columns.
-            //
-            var isUsedInColumns = IsUsedInColumns();
-            foreach(var col in isUsedInColumns)
+            // Update the graph
+            this.Column.Input.Space.Dependencies.RemoveUsed(Column);
+            if (!_translateError)
             {
-                // Re-compute their status
-                col.GetData().Translate();
+                var usesColumns = UsesColumns(); // Get columns from ast
+                this.Column.Input.Space.Dependencies.AddUsed(Column, usesColumns);
             }
 
-
-            // Propagating red: if this column is red then all next columns are red
-            // Propagating yellow: if this column is yellow then all next columns are at least yellow (can be red but not green)
-            // To propagate changes, we need to retrieve all next columns and force them to re-compute status - this should trigger recursive re-computation.
-            // One problem here might be that changing this column can remove info on next columns (e.g., if we rename then we cannot find next columns)
-            // In other words, changes can influence the dependence graph and not only status
-            // The easiest way is to re-compute the full graph but it must be done using some order which has to be retrieved 
-
-            // So we need a strategy for re-computing 1. graph 2. propagation status (using the new graph) 3. own status
-
             ((Column)Column).NotifyPropertyChanged("");
+
+            // This can influence status of any other column
+            var allColumns = Column.Input.Space.GetColumns(null);
+            allColumns.ForEach(c => ((Column)c).NotifyPropertyChanged("Status"));
         }
 
         // Parse and generate a syntax tree
@@ -610,10 +585,10 @@ namespace Com.Data
         //
         public bool IsAppendData { get; set; }
 
-        protected bool hasValidData;
-        public virtual bool HasValidData
+        protected bool _evaluateError;
+        public virtual bool EvaluateError
         {
-            get { return hasValidData; }
+            get { return _evaluateError; }
             set
             {
                 // True cannot be set directly - it results from Evaluate only
@@ -627,7 +602,7 @@ namespace Com.Data
                 }
                 else
                 {
-                    hasValidData = value;
+                    _evaluateError = value;
                     // TODO: Mark invalid all directly dependant columns/tables which will propagate it further
                     // Get all dependant elements
                     // Set all these elements invalid
@@ -639,7 +614,7 @@ namespace Com.Data
             // Either formula is not needed or not yet provided 
             if (formulaExpr == null || formulaExpr.DefinitionType == ColumnDefinitionType.FREE)
             {
-                hasValidData = true;
+                _evaluateError = false;
                 ((Column)Column).NotifyPropertyChanged("");
                 return; // Nothing to evaluate
             }
@@ -732,7 +707,7 @@ namespace Com.Data
             AutoIndex = true;
 
             // Finally, we need to set the flag that indicates the result of the operation and status for the column
-            hasValidData = true;
+            _evaluateError = false;
             ((Column)Column).NotifyPropertyChanged("");
         }
 
@@ -799,7 +774,7 @@ namespace Com.Data
                 // 1. Find all explicit read-references to other columns excluding write-references (tuple members)
                 List<ExprNode> nodes = formulaExpr.Find((DcColumn)null);
                 // 2. Exclude write columns (tuple members)
-                List<ExprNode> readNodes = nodes.Where(x => x.Parent.Item.Operation != OperationType.TUPLE).ToList();
+                List<ExprNode> readNodes = nodes.Where(x => x.Parent == null || x.Parent.Item.Operation != OperationType.TUPLE).ToList();
                 // 3. Get column references
                 res = readNodes.Select(x => x.Column).ToList();
             }
@@ -1234,6 +1209,8 @@ namespace Com.Data
                 Length = col.Input.GetData().Length;
             }
 
+            _translateError = false;
+            _evaluateError = true;
         }
 
         #endregion

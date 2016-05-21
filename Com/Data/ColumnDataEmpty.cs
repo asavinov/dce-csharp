@@ -64,18 +64,18 @@ namespace Com.Data
         public string Formula { get; set; }
 
         public bool IsAppendSchema { get; set; }
-        public bool HasValidSchema
+        public bool TranslateError
         {
-            get { return true; }
-            set {; }
+            get { return false; }
+            set { ; }
         }
         public void Translate() { }
 
         public bool IsAppendData { get; set; }
-        public bool HasValidData
+        public bool EvaluateError
         {
-            get { return true; }
-            set {; }
+            get { return false; }
+            set { ; }
         }
         public void Evaluate() { }
 
