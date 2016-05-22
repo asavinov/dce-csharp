@@ -363,10 +363,15 @@ namespace Com.Data
             get { return formula; }
             set
             {
+                if (formula == value) return;
+
                 formula = value;
-                _translateError = false;
-                _evaluateError = true;
+
+                // Immediately translate and set the status
                 Translate();
+
+                // Mark data dirty
+                _evaluateError = true; 
             }
         }
 
@@ -394,26 +399,8 @@ namespace Com.Data
         public virtual bool TranslateError
         {
             get { return _translateError; }
-            set
-            {
-                // True cannot be set directly  it results from Translate only
-                if (value == true) return;
-
-                // False (invalid) has to be propagated 
-                if (value == true)
-                {
-                    // TODO: Check how it influences dependent columns (recursively). Some of them can change their status
-                    // Alternatively, the status is checked by all columns individually on demand. 
-                }
-                else
-                {
-                    _translateError = value;
-                    // TODO: Mark invalid all directly dependant columns/tables which will propagate it further
-                    // Get all dependant elements
-                    // Set all these elements invalid
-                }
-            }
         }
+
         public virtual void Translate()
         {
             _translateError = false;
@@ -422,11 +409,9 @@ namespace Com.Data
             // Translate only this individual column formula. It will generate a new dependency graph.
             //
 
-            // Some column types do not need formulas (like key columns) and hence are always valid at both schema- and data-level
-            // What if a formula has not been given yet but is supposed to be defined, say, for non-key column?
-            // We could assume that it is a null-function which is therefore valid
             if (string.IsNullOrWhiteSpace(formula))
             {
+                // Empty formulas are supposed to be valid
                 _translateError = false;
             }
             else
@@ -455,17 +440,22 @@ namespace Com.Data
                 }
             }
 
+            //
             // Update the graph
-            this.Column.Input.Space.Dependencies.RemoveUsed(Column);
+            //
+            DcSpace space = this.Column.Input.Space;
+            space.Dependencies.RemoveUsed(Column);
             if (!_translateError)
             {
                 var usesColumns = UsesColumns(); // Get columns from ast
-                this.Column.Input.Space.Dependencies.AddUsed(Column, usesColumns);
+                space.Dependencies.AddUsed(Column, usesColumns);
             }
 
             ((Column)Column).NotifyPropertyChanged("");
 
-            // This can influence status of any other column
+            //
+            // Change of the graph and this column can change the status of other columns
+            //
             var allColumns = Column.Input.Space.GetColumns(null);
             allColumns.ForEach(c => ((Column)c).NotifyPropertyChanged("Status"));
         }
@@ -581,6 +571,180 @@ namespace Com.Data
         }
 
         //
+        // Dependencies
+        //
+        public List<DcColumn> UsesColumns()
+        {
+            var res = new List<DcColumn>();
+
+            if (string.IsNullOrEmpty(Formula) || formulaExpr == null) // Free columns with no formula
+            {
+                //
+                // Product column. No input column with formula (even indirectly). 
+                // There is no any lesser column which writes to this column. 
+                // 1. [product is flat - currently it is so implemented] We can assume that we depend on greater tables and hence it our task to fill them. 
+                //    The product operation works only at one level (flat) and it can work/be started only if all greater tables are green.
+                // 2. [product is hierarchical like tuple append] We can think of it as equivalent to appending *all* tuples which will simultaniously fill greater tables before. 
+                //    So the product procedure itself can recursievely fill the greater table which are not filled. 
+                //    Note that appending tuples does the same (recursive filling) but for each individual tuple
+
+                //
+                // Depends on input column with formula (also indirectly). 
+                // There is a lesser column which writes/influences this column
+                // Evaluation of lesser (append) columns can result in green status for many (covered) columns including this one
+
+            }
+            // Depends on this.greater columns. Formula uses/reads other (this.greater) columns and writes/fills (output.greater) columns 
+            else if (formulaExpr.DefinitionType == ColumnDefinitionType.ANY || formulaExpr.DefinitionType == ColumnDefinitionType.ARITHMETIC || formulaExpr.DefinitionType == ColumnDefinitionType.LINK)
+            {
+                // 1. Find all explicit read-references to other columns excluding write-references (tuple members)
+                List<ExprNode> nodes = formulaExpr.Find((DcColumn)null);
+                // 2. Exclude write columns (tuple members)
+                List<ExprNode> readNodes = nodes.Where(x => x.Parent == null || x.Parent.Item.Operation != OperationType.TUPLE).ToList();
+                // 3. Get column references
+                res = readNodes.Select(x => x.Column).ToList();
+            }
+            // Depends on this.lesser columns. Formula depends on lesser table/columns
+            else if (formulaExpr.DefinitionType == ColumnDefinitionType.AGGREGATION)
+            {
+                /*
+                // 1. We need the fact table to be up-to-date
+                res.Add(FactTable); // This column depends on the fact table
+
+                // 2. All columns in the group path (actually, any group expression)
+                if (GroupPaths != null)
+                {
+                    foreach (ColumnPath path in GroupPaths)
+                    {
+                        foreach (DcColumn seg in path.Segments)
+                        {
+                            if (!res.Contains(seg.Output)) res.Add(seg.Output);
+                        }
+                    }
+                }
+
+                // 2. All columns in the measure path (actually, any group expression)
+                if (MeasurePaths != null)
+                {
+                    foreach (ColumnPath path in MeasurePaths)
+                    {
+                        foreach (DcColumn seg in path.Segments)
+                        {
+                            if (!res.Contains(seg.Output)) res.Add(seg.Output);
+                        }
+                    }
+                }
+
+                // 4. All columns in the update expression (aggregation function)
+                */
+
+            }
+
+            return res;
+        }
+
+        public List<List<DcColumn>> UsesColumnsAll()
+        {
+            // The first list has independent tables which do not have incoming columns (remote or product)
+            // Each next list has columns which can be evaluted after the previous list
+            // After the last list, this column can be evaluated. 
+
+            var res = new List<List<DcColumn>>();
+            res.Add(new List<DcColumn>(new DcColumn[] { this.Column })); // Start from this column
+
+            while (true)
+            {
+                // Compute new dependencies for each column in the previous dependencies 
+                var nextDeps = new List<DcColumn>();
+                var prevDeps = res[res.Count - 1];
+                foreach (DcColumn col in prevDeps)
+                {
+                    List<DcColumn> newDeps = UsesColumns();
+                    nextDeps.AddRange(newDeps.Except(nextDeps)); // Add only new columns
+                }
+
+                if (nextDeps.Count > 0)
+                {
+                    res.Add(nextDeps);
+                    // TODO: Check for possible cycles if a new column exists among previous columns (or do it later)
+                }
+                else
+                {
+                    break; // No dependencies anymore
+                }
+            }
+
+            return res;
+        }
+        public List<DcColumn> IsUsedInColumns() // Dependants
+        {
+            List<DcColumn> res = new List<DcColumn>();
+
+            // TODO: Find which other columns use (depend on) this column in the definition
+            // They either reference its name or are influenced indirectly
+
+            return res;
+        }
+
+        public List<DcTable> UsesTables() // This element depends upon
+        {
+            // Compoile formula and produce an expression (structured formula) which will be then analized
+
+            List<DcTable> res = new List<DcTable>();
+
+            // 0. This input table must be up-to-date IF this table is calculated (not key)
+
+            if (formulaExpr == null)
+            {
+                ;
+            }
+            else if (formulaExpr.DefinitionType == ColumnDefinitionType.ANY || formulaExpr.DefinitionType == ColumnDefinitionType.ARITHMETIC || formulaExpr.DefinitionType == ColumnDefinitionType.LINK)
+            {
+                // 1. Find all references to other columns
+                res = formulaExpr.Find((DcTable)null).Select(x => x.OutputVariable.TypeTable).ToList();
+
+                // 2. All their input tables must be up-to-date
+                // 3. NOTE: transitive dependencies: these columns can actually depend on each other
+            }
+            else if (formulaExpr.DefinitionType == ColumnDefinitionType.AGGREGATION)
+            {
+                /*
+                // 1. We need the fact table to be up-to-date
+                res.Add(FactTable); // This column depends on the fact table
+
+                // 2. All columns in the group path (actually, any group expression)
+                if (GroupPaths != null)
+                {
+                    foreach (ColumnPath path in GroupPaths)
+                    {
+                        foreach (DcColumn seg in path.Segments)
+                        {
+                            if (!res.Contains(seg.Output)) res.Add(seg.Output);
+                        }
+                    }
+                }
+
+                // 2. All columns in the measure path (actually, any group expression)
+                if (MeasurePaths != null)
+                {
+                    foreach (ColumnPath path in MeasurePaths)
+                    {
+                        foreach (DcColumn seg in path.Segments)
+                        {
+                            if (!res.Contains(seg.Output)) res.Add(seg.Output);
+                        }
+                    }
+                }
+
+                // 4. All columns in the update expression (aggregation function)
+                */
+
+            }
+
+            return res;
+        }
+
+        //
         // Data and evaluation
         //
         public bool IsAppendData { get; set; }
@@ -589,25 +753,6 @@ namespace Com.Data
         public virtual bool EvaluateError
         {
             get { return _evaluateError; }
-            set
-            {
-                // True cannot be set directly - it results from Evaluate only
-                if (value == true) return;
-
-                // False (invalid) has to be propagated 
-                if (value == true)
-                {
-                    // TODO: Check how it influences dependent columns. Some of them can change their status
-                    // Alternatively, the status is checked by all columns individually on demand. 
-                }
-                else
-                {
-                    _evaluateError = value;
-                    // TODO: Mark invalid all directly dependant columns/tables which will propagate it further
-                    // Get all dependant elements
-                    // Set all these elements invalid
-                }
-            }
         }
         public virtual void Evaluate()
         {
@@ -709,180 +854,6 @@ namespace Com.Data
             // Finally, we need to set the flag that indicates the result of the operation and status for the column
             _evaluateError = false;
             ((Column)Column).NotifyPropertyChanged("");
-        }
-
-        //
-        // Dependencies
-        //
-        public List<List<DcColumn>> UsesColumnsAll()
-        {
-            // The first list has independent tables which do not have incoming columns (remote or product)
-            // Each next list has columns which can be evaluted after the previous list
-            // After the last list, this column can be evaluated. 
-
-            var res = new List<List<DcColumn>>();
-            res.Add(new List<DcColumn>(new DcColumn[] { this.Column })); // Start from this column
-
-            while (true)
-            {
-                // Compute new dependencies for each column in the previous dependencies 
-                var nextDeps = new List<DcColumn>();
-                var prevDeps = res[res.Count - 1];
-                foreach (DcColumn col in prevDeps)
-                {
-                    List<DcColumn> newDeps = UsesColumns();
-                    nextDeps.AddRange(newDeps.Except(nextDeps)); // Add only new columns
-                }
-
-                if (nextDeps.Count > 0)
-                {
-                    res.Add(nextDeps);
-                    // TODO: Check for possible cycles if a new column exists among previous columns (or do it later)
-                }
-                else
-                {
-                    break; // No dependencies anymore
-                }
-            }
-
-            return res;
-        }
-        public List<DcColumn> UsesColumns()
-        {
-            var res = new List<DcColumn>();
-
-            if (string.IsNullOrEmpty(Formula) || formulaExpr == null) // Free columns with no formula
-            {
-                //
-                // Product column. No input column with formula (even indirectly). 
-                // There is no any lesser column which writes to this column. 
-                // 1. [product is flat - currently it is so implemented] We can assume that we depend on greater tables and hence it our task to fill them. 
-                //    The product operation works only at one level (flat) and it can work/be started only if all greater tables are green.
-                // 2. [product is hierarchical like tuple append] We can think of it as equivalent to appending *all* tuples which will simultaniously fill greater tables before. 
-                //    So the product procedure itself can recursievely fill the greater table which are not filled. 
-                //    Note that appending tuples does the same (recursive filling) but for each individual tuple
-
-                //
-                // Depends on input column with formula (also indirectly). 
-                // There is a lesser column which writes/influences this column
-                // Evaluation of lesser (append) columns can result in green status for many (covered) columns including this one
-
-            }
-            // Depends on this.greater columns. Formula uses/reads other (this.greater) columns and writes/fills (output.greater) columns 
-            else if (formulaExpr.DefinitionType == ColumnDefinitionType.ANY || formulaExpr.DefinitionType == ColumnDefinitionType.ARITHMETIC || formulaExpr.DefinitionType == ColumnDefinitionType.LINK)
-            {
-                // 1. Find all explicit read-references to other columns excluding write-references (tuple members)
-                List<ExprNode> nodes = formulaExpr.Find((DcColumn)null);
-                // 2. Exclude write columns (tuple members)
-                List<ExprNode> readNodes = nodes.Where(x => x.Parent == null || x.Parent.Item.Operation != OperationType.TUPLE).ToList();
-                // 3. Get column references
-                res = readNodes.Select(x => x.Column).ToList();
-            }
-            // Depends on this.lesser columns. Formula depends on lesser table/columns
-            else if (formulaExpr.DefinitionType == ColumnDefinitionType.AGGREGATION)
-            {
-                /*
-                // 1. We need the fact table to be up-to-date
-                res.Add(FactTable); // This column depends on the fact table
-
-                // 2. All columns in the group path (actually, any group expression)
-                if (GroupPaths != null)
-                {
-                    foreach (ColumnPath path in GroupPaths)
-                    {
-                        foreach (DcColumn seg in path.Segments)
-                        {
-                            if (!res.Contains(seg.Output)) res.Add(seg.Output);
-                        }
-                    }
-                }
-
-                // 2. All columns in the measure path (actually, any group expression)
-                if (MeasurePaths != null)
-                {
-                    foreach (ColumnPath path in MeasurePaths)
-                    {
-                        foreach (DcColumn seg in path.Segments)
-                        {
-                            if (!res.Contains(seg.Output)) res.Add(seg.Output);
-                        }
-                    }
-                }
-
-                // 4. All columns in the update expression (aggregation function)
-                */
-
-            }
-
-            return res;
-        }
-
-        public List<DcColumn> IsUsedInColumns() // Dependants
-        {
-            List<DcColumn> res = new List<DcColumn>();
-
-            // TODO: Find which other columns use (depend on) this column in the definition
-            // They either reference its name or are influenced indirectly
-
-            return res;
-        }
-
-        public List<DcTable> UsesTables() // This element depends upon
-        {
-            // Compoile formula and produce an expression (structured formula) which will be then analized
-
-            List<DcTable> res = new List<DcTable>();
-
-            // 0. This input table must be up-to-date IF this table is calculated (not key)
-
-            if (formulaExpr == null)
-            {
-                ;
-            }
-            else if (formulaExpr.DefinitionType == ColumnDefinitionType.ANY || formulaExpr.DefinitionType == ColumnDefinitionType.ARITHMETIC || formulaExpr.DefinitionType == ColumnDefinitionType.LINK)
-            {
-                // 1. Find all references to other columns
-                res = formulaExpr.Find((DcTable)null).Select(x => x.OutputVariable.TypeTable).ToList();
-
-                // 2. All their input tables must be up-to-date
-                // 3. NOTE: transitive dependencies: these columns can actually depend on each other
-            }
-            else if (formulaExpr.DefinitionType == ColumnDefinitionType.AGGREGATION)
-            {
-                /*
-                // 1. We need the fact table to be up-to-date
-                res.Add(FactTable); // This column depends on the fact table
-
-                // 2. All columns in the group path (actually, any group expression)
-                if (GroupPaths != null)
-                {
-                    foreach (ColumnPath path in GroupPaths)
-                    {
-                        foreach (DcColumn seg in path.Segments)
-                        {
-                            if (!res.Contains(seg.Output)) res.Add(seg.Output);
-                        }
-                    }
-                }
-
-                // 2. All columns in the measure path (actually, any group expression)
-                if (MeasurePaths != null)
-                {
-                    foreach (ColumnPath path in MeasurePaths)
-                    {
-                        foreach (DcColumn seg in path.Segments)
-                        {
-                            if (!res.Contains(seg.Output)) res.Add(seg.Output);
-                        }
-                    }
-                }
-
-                // 4. All columns in the update expression (aggregation function)
-                */
-
-            }
-
-            return res;
         }
 
         #endregion

@@ -524,6 +524,12 @@ namespace Com.Schema
 
     /// <summary>
     /// Space dependencies.
+    /// - Manage (store, update) the graph. Re-building the graph.
+    /// - Retrieve/query the graph
+    /// - Find inconsistencies like cycles and manage them
+    /// The graph is fed from outside, i.e., the class cannot access column dependencies. 
+    /// In other words, columns have to provide their dependencies (and update them) themselves. 
+    /// The class could build the graph itself if columns provide API for getting their dependencies.
     /// </summary>
     public class Dependencies
     {
@@ -540,7 +546,6 @@ namespace Com.Schema
         {
             return dependencies.Where(d => d.Item2 == column).Select(d => d.Item1).ToList();
         }
-
 
         //
         // Change the graph
@@ -622,6 +627,11 @@ namespace Com.Schema
             // So maybe translate should not be public operation because it is always called from other methods.
             // For example, setting Formula, Name, Delete, Constructor etc. 
             // We never call Translate from outside. 
+
+            // Thus we need to separate operations on individual columns like translation (parsing, binding). 
+            // Translation is performed on individual columns but it generates the graph. 
+            // In other words, if we want to create/update the graph, we do it via translation of individual columns.
+            // Each column then stores the results of translation (error code).
         }
         public void Rebuild(DcSchema schema)
         {

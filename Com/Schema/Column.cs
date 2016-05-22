@@ -125,10 +125,6 @@ namespace Com.Schema
 
         public virtual DcColumnStatus Status
         {
-            // TODO: Status implementation to take into account recirsive dependencies in both directions so that Status for all columns changes if one column is updated (formula or evaluate)
-            // In general, status depends on the results of Translate (Parse, Bind) and Evaluate 
-            // We can use the stored result or get these results on-demand by executing the corresponding functions
-
             get
             {
                 if (GetData() == null) return DcColumnStatus.Green;
@@ -136,11 +132,12 @@ namespace Com.Schema
                 // Problems with formula translation (parsing or binding)
                 if (GetData().TranslateError) return DcColumnStatus.Red;
 
-                var usedColumns = this.Input.Space.Dependencies.GetUsed(this);
-
                 //
                 // All necessary (previous) columns influence this column status
                 //
+
+                var usedColumns = this.Input.Space.Dependencies.GetUsed(this);
+
                 foreach (var col in usedColumns)
                 {
                     if (col.Status == DcColumnStatus.Red)

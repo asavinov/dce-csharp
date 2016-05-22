@@ -564,7 +564,7 @@ namespace Com.Schema
             {
                 foreach (DcColumn col in res.ToList())
                 {
-                    var list = col.GetData().UsesColumns();
+                    List<DcColumn> list = new List<DcColumn>(); // col.GetData().UsesColumns();
                     foreach (DcColumn column in list)
                     {
                         Debug.Assert(!res.Contains(column), "Cyclic dependence in columns.");
@@ -597,7 +597,7 @@ namespace Com.Schema
             {
                 foreach (DcColumn col in res.ToList())
                 {
-                    var list = col.GetData().IsUsedInColumns(); // Recursion
+                    List<DcColumn> list = new List<DcColumn>(); // col.GetData().IsUsedInColumns(); // Recursion
                     foreach (DcColumn column in list)
                     {
                         Debug.Assert(!res.Contains(column), "Cyclic dependence in columns.");
