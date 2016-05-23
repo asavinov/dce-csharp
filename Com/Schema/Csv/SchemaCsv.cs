@@ -101,8 +101,8 @@ namespace Com.Schema.Csv
 
         protected override void CreateDataTypes() // Create all primitive data types from some specification like Enum, List or XML
         {
-            Space.CreateTable("Root", this);
-            Space.CreateTable("String", this);
+            Space.CreateTable(DcSchemaKind.Csv, "Root", this);
+            Space.CreateTable(DcSchemaKind.Csv, "String", this);
         }
 
         public SchemaCsv(DcSpace space)

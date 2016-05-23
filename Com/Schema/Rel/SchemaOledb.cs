@@ -40,7 +40,7 @@ namespace Com.Schema.Rel
             List<DcTable> tables = new List<DcTable>();
             foreach (string tableName in tableNames)
             {
-                TableRel tab = (TableRel)Space.CreateTable(tableName, Root); // Create a table
+                TableRel tab = (TableRel)Space.CreateTable(DcSchemaKind.Rel, tableName, Root); // Create a table
                 tab.RelationalTableName = tableName;
                 // Relational PK name will be set during column loading
 
@@ -624,13 +624,13 @@ namespace Com.Schema.Rel
             Table tab;
             Column col;
 
-            Space.CreateTable("Root", this);
+            Space.CreateTable(DcSchemaKind.Rel, "Root", this);
 
             // Either use Ole DB standard or System.Data.OleDb.OleDbType.* (or maybe they are the same). 
             // Type names must correspond to what we see in SQL queries (or other syntactic expressions expected by OleDb driver)
             foreach (OleDbType dataType in (OleDbType[])Enum.GetValues(typeof(OleDbType)))
             {
-                Space.CreateTable(dataType.ToString(), this);
+                Space.CreateTable(DcSchemaKind.Rel, dataType.ToString(), this);
             }
         }
 

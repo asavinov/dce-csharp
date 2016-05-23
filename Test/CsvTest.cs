@@ -50,7 +50,7 @@ namespace Test
             SchemaCsv top = (SchemaCsv)space.CreateSchema("My Files", DcSchemaKind.Csv);
 
             // Create a remote file description
-            TableCsv table = (TableCsv)space.CreateTable("Products", top.Root);
+            TableCsv table = (TableCsv)space.CreateTable(DcSchemaKind.Csv, "Products", top.Root);
             table.FilePath = CsvRead;
             var columns = top.LoadSchema(table);
 
@@ -65,7 +65,7 @@ namespace Test
             //
             DcSchema schema = space.CreateSchema("My Schema", DcSchemaKind.Dc);
 
-            DcTable productsTable = space.CreateTable("Products", schema.Root);
+            DcTable productsTable = space.CreateTable(DcSchemaKind.Dc, "Products", schema.Root);
 
             // Manually create column to be imported (we need an automatic mechanism for appending missing columns specified in the formula)
             DcColumn p1 = space.CreateColumn("ID", productsTable, schema.GetPrimitiveType("Integer"), true);
@@ -109,7 +109,7 @@ namespace Test
             SchemaCsv top = (SchemaCsv)space.CreateSchema("My Files", DcSchemaKind.Csv);
 
             // Create a remote file description
-            TableCsv table = (TableCsv)space.CreateTable("Table_1", top.Root);
+            TableCsv table = (TableCsv)space.CreateTable(DcSchemaKind.Csv, "Table_1", top.Root);
             table.FilePath = CsvWrite;
 
             // Manually create column to be imported (we need an automatic mechanism for appending missing columns specified in the formula)

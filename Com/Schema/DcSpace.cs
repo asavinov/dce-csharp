@@ -23,7 +23,7 @@ namespace Com.Schema
         //
         // Tables
         //
-        DcTable CreateTable(string name, DcTable parent);
+        DcTable CreateTable(DcSchemaKind schemaType, string name, DcTable parent);
         void DeleteTable(DcTable table);
         List<DcTable> GetTables(DcSchema schema);
 

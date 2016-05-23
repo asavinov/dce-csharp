@@ -48,7 +48,7 @@ namespace Test
             DcSpace space = schema.Space;
 
             // Table 1
-            DcTable t1 = space.CreateTable("Table 1", schema.Root);
+            DcTable t1 = space.CreateTable(DcSchemaKind.Dc, "Table 1", schema.Root);
 
             DcColumn c11 = space.CreateColumn("Column 11", t1, schema.GetPrimitiveType("Integer"), true);
             DcColumn c12 = space.CreateColumn("Column 12", t1, schema.GetPrimitiveType("String"), true);
@@ -56,7 +56,7 @@ namespace Test
             DcColumn c14 = space.CreateColumn("Column 14", t1, schema.GetPrimitiveType("Decimal"), false);
 
             // Table 2
-            DcTable t2 = space.CreateTable("Table 2", schema.Root);
+            DcTable t2 = space.CreateTable(DcSchemaKind.Dc, "Table 2", schema.Root);
 
             DcColumn c21 = space.CreateColumn("Column 21", t2, schema.GetPrimitiveType("String"), true);
             DcColumn c22 = space.CreateColumn("Column 22", t2, schema.GetPrimitiveType("Integer"), true);
@@ -398,7 +398,7 @@ namespace Test
             //
             // Define a new product-set
             //
-            DcTable t3 = space.CreateTable("Table 3", schema.Root);
+            DcTable t3 = space.CreateTable(DcSchemaKind.Dc, "Table 3", schema.Root);
 
             DcColumn c31 = space.CreateColumn(t1.Name, t3, t1, true); // {*20, 10, *30}
             DcColumn c32 = space.CreateColumn(t2.Name, t3, t2, true); // {40, 40, *50, *50}
@@ -432,7 +432,7 @@ namespace Test
             //
             // Define a new filter-set
             //
-            DcTable t3 = space.CreateTable("Table 3", t2);
+            DcTable t3 = space.CreateTable(DcSchemaKind.Dc, "Table 3", t2);
             t3.GetData().WhereFormula = "[Column 22] > 20.0 && this.Super.[Column 23] < 50";
 
             t3.GetData().Populate();
@@ -454,7 +454,7 @@ namespace Test
             //
             // Project "Table 2" along "Column 21" and get 2 unique records in a new set "Value A" (3 references) and "Value B" (1 reference)
             //
-            DcTable t3 = space.CreateTable("Table 3", schema.Root);
+            DcTable t3 = space.CreateTable(DcSchemaKind.Dc, "Table 3", schema.Root);
 
             DcColumn c31 = space.CreateColumn(c21.Name, t3, c21.Output, true);
 
@@ -475,7 +475,7 @@ namespace Test
             //
             // Defining a combination of "Column 21" and "Column 22" and project with 3 unique records in a new set
             //
-            DcTable t4 = space.CreateTable("Table 4", schema.Root);
+            DcTable t4 = space.CreateTable(DcSchemaKind.Dc, "Table 4", schema.Root);
 
             DcColumn c41 = space.CreateColumn(c21.Name, t4, c21.Output, true);
             DcColumn c42 = space.CreateColumn(c22.Name, t4, c22.Output, true);

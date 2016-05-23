@@ -64,13 +64,13 @@ namespace Com.Schema
 
         protected virtual void CreateDataTypes() // Create all primitive data types from some specification like Enum, List or XML
         {
-            Space.CreateTable("Root", this);
-            Space.CreateTable("Integer", this);
-            Space.CreateTable("Double", this);
-            Space.CreateTable("Decimal", this);
-            Space.CreateTable("String", this);
-            Space.CreateTable("Boolean", this);
-            Space.CreateTable("DateTime", this);
+            Space.CreateTable(DcSchemaKind.Dc, "Root", this);
+            Space.CreateTable(DcSchemaKind.Dc, "Integer", this);
+            Space.CreateTable(DcSchemaKind.Dc, "Double", this);
+            Space.CreateTable(DcSchemaKind.Dc, "Decimal", this);
+            Space.CreateTable(DcSchemaKind.Dc, "String", this);
+            Space.CreateTable(DcSchemaKind.Dc, "Boolean", this);
+            Space.CreateTable(DcSchemaKind.Dc, "DateTime", this);
         }
 
         public Schema(DcSpace space)

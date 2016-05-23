@@ -90,10 +90,10 @@ namespace Com.Schema
 
         protected List<DcTable> _tables;
 
-        public virtual DcTable CreateTable(string name, DcTable parent)
+        public virtual DcTable CreateTable(DcSchemaKind schemaType, string name, DcTable parent)
         {
             DcSchema schema = parent.Schema;
-            DcSchemaKind schemaType = schema.GetSchemaKind();
+            //DcSchemaKind schemaType = schema.GetSchemaKind();
 
             DcTable table;
             Column column;

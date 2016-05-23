@@ -34,6 +34,51 @@ namespace Com.Schema.Csv
         public CultureInfo CultureInfo { get; set; }
         public Encoding Encoding { get; set; }
 
+        #region Csv-specific methods
+
+        public ConnectionCsv connection; // Connection object for access to the native engine functions
+
+        public List<DcColumn> LoadSchema() // Table object is created to store all necessary parameters which are individual for each table
+        {
+            TableCsv table = this;
+            List<DcColumn> columns = new List<DcColumn>();
+
+            if (table.FilePath == null || !File.Exists(table.FilePath)) // File might not have been created (e.g., if it is an export file)
+            {
+                return columns;
+            }
+
+            connection.OpenReader(table);
+
+            List<string> names = connection.ReadColumns();
+            List<string[]> sampleRows = connection.ReadSampleValues();
+            for (int i = 0; i < names.Count; i++)
+            {
+                string columnName = names[i];
+                DcTable type = this.Schema.GetPrimitiveType("String");
+                //ColumnCsv column = (ColumnCsv)Space.CreateColumn(columnName, table, type, false);
+                DcColumn column = Space.CreateColumn(columnName, table, type, false);
+                columns.Add(column);
+
+                // Properties specific to this column type
+                /*
+                column.ColumnIndex = i;
+                var values = new List<string>();
+                foreach (var row in sampleRows)
+                {
+                    values.Add(row[i]);
+                }
+                column.SampleValues = values;
+                */
+            }
+
+            connection.CloseReader();
+
+            return columns;
+        }
+
+        #endregion
+
         #region DcTableData interface
 
         public override DcTableReader GetTableReader()
@@ -98,6 +143,8 @@ namespace Com.Schema.Csv
             Delimiter = ",";
             CultureInfo = System.Globalization.CultureInfo.CurrentCulture;
             Encoding = Encoding.UTF8;
+
+            connection = new ConnectionCsv();
         }
 
         #endregion
