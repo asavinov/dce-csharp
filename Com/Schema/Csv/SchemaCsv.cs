@@ -57,7 +57,7 @@ namespace Com.Schema.Csv
             {
                 string columnName = names[i];
                 DcTable type = this.GetPrimitiveType("String");
-                ColumnCsv column = (ColumnCsv)Space.CreateColumn(columnName, table, type, false);
+                ColumnCsv column = (ColumnCsv)Space.CreateColumn(DcSchemaKind.Csv, columnName, table, type, false);
                 column.ColumnIndex = i;
                 columns.Add(column);
 

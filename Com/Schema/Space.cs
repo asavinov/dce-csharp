@@ -203,6 +203,10 @@ namespace Com.Schema
 
         public virtual DcColumn CreateColumn(string name, DcTable input, DcTable output, bool isKey)
         {
+            return CreateColumn(DcSchemaKind.Dc, name, input, output, isKey);
+        }
+        public virtual DcColumn CreateColumn(DcSchemaKind schemaType, string name, DcTable input, DcTable output, bool isKey)
+        {
             Debug.Assert(!String.IsNullOrEmpty(name), "Wrong use: column name cannot be null or empty.");
             // TODO: Check constraints: 1. only one super-column can exist 2. no loops can appear
 
@@ -211,6 +215,23 @@ namespace Com.Schema
 
             DcColumn column;
 
+            //
+            // We create a column according to its table type
+            //
+            if (schemaType == DcSchemaKind.Dc) // Column belongs to a normal table
+            {
+                column = new Column(name, input, output, isKey, false);
+            }
+            else if (schemaType == DcSchemaKind.Csv) // Column belongs to a CSV table
+            {
+                column = new ColumnCsv(name, input, output, isKey, false);
+            }
+            else
+            {
+                throw new NotImplementedException("This schema type is not implemented.");
+            }
+
+            /* OLD - here we create a column according to import-export status
             if (inSchemaType == DcSchemaKind.Dc || outSchemaType == DcSchemaKind.Dc) // Intra-mashup or import/export columns
             {
                 column = new Column(name, input, output, isKey, false);
@@ -231,6 +252,7 @@ namespace Com.Schema
             {
                 throw new NotImplementedException("This schema type is not implemented.");
             }
+            */
 
             _columns.Add(column);
 

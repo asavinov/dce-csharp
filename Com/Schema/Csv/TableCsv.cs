@@ -56,12 +56,11 @@ namespace Com.Schema.Csv
             {
                 string columnName = names[i];
                 DcTable type = this.Schema.GetPrimitiveType("String");
-                //ColumnCsv column = (ColumnCsv)Space.CreateColumn(columnName, table, type, false);
-                DcColumn column = Space.CreateColumn(columnName, table, type, false);
+                ColumnCsv column = (ColumnCsv)Space.CreateColumn(DcSchemaKind.Csv, columnName, table, type, false);
+                //DcColumn column = Space.CreateColumn(columnName, table, type, false);
                 columns.Add(column);
 
                 // Properties specific to this column type
-                /*
                 column.ColumnIndex = i;
                 var values = new List<string>();
                 foreach (var row in sampleRows)
@@ -69,7 +68,6 @@ namespace Com.Schema.Csv
                     values.Add(row[i]);
                 }
                 column.SampleValues = values;
-                */
             }
 
             connection.CloseReader();

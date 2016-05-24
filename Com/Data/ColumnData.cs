@@ -772,7 +772,7 @@ namespace Com.Data
 
             object thisCurrent = null;
 
-            if (Column.Input.Schema is SchemaCsv) // Import from CSV
+            if (Column.Input is TableCsv) // Import from CSV
             {
                 formulaExpr.EvaluateBegin();
                 DcTableReader tableReader = Column.Input.GetData().GetTableReader();
