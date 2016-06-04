@@ -505,7 +505,7 @@ namespace Com.Data
                 formulaExpr.OutputVariable.TypeSchema = Column.Output.Schema;
                 formulaExpr.OutputVariable.TypeTable = Column.Output;
 
-                formulaExpr.EvaluateAndResolveSchema(Workspace, new List<DcVariable>() { thisVariable });
+                formulaExpr.Resolve(Workspace, new List<DcVariable>() { thisVariable });
             }
             else if (formulaExpr.DefinitionType == ColumnDefinitionType.ARITHMETIC || formulaExpr.DefinitionType == ColumnDefinitionType.LINK)
             {
@@ -522,7 +522,7 @@ namespace Com.Data
                 formulaExpr.OutputVariable.TypeSchema = Column.Output.Schema;
                 formulaExpr.OutputVariable.TypeTable = Column.Output;
 
-                formulaExpr.EvaluateAndResolveSchema(Workspace, new List<DcVariable>() { thisVariable });
+                formulaExpr.Resolve(Workspace, new List<DcVariable>() { thisVariable });
             }
             else if (formulaExpr.DefinitionType == ColumnDefinitionType.AGGREGATION)
             {
@@ -543,7 +543,7 @@ namespace Com.Data
                 // Groups
                 groupExpr = formulaExpr.GetChild("groups").GetChild(0);
 
-                groupExpr.EvaluateAndResolveSchema(Workspace, new List<DcVariable>() { thisVariable });
+                groupExpr.Resolve(Workspace, new List<DcVariable>() { thisVariable });
 
                 groupVariable = new Variable(Column.Input.Schema.Name, Column.Input.Name, "this");
                 groupVariable.TypeSchema = Column.Input.Schema;
@@ -552,7 +552,7 @@ namespace Com.Data
                 // Measure
                 measureExpr = formulaExpr.GetChild("measure").GetChild(0);
 
-                measureExpr.EvaluateAndResolveSchema(Workspace, new List<DcVariable>() { thisVariable });
+                measureExpr.Resolve(Workspace, new List<DcVariable>() { thisVariable });
 
                 measureVariable = new Variable(Column.Output.Schema.Name, Column.Output.Name, "value");
                 measureVariable.TypeSchema = Column.Output.Schema;
@@ -562,7 +562,7 @@ namespace Com.Data
                 ExprNode updaterExpr = formulaExpr.GetChild("aggregator").GetChild(0);
                 outputExpr = ExprNode.CreateUpdater(Column, updaterExpr.Name);
 
-                outputExpr.EvaluateAndResolveSchema(Workspace, new List<DcVariable>() { groupVariable, measureVariable });
+                outputExpr.Resolve(Workspace, new List<DcVariable>() { groupVariable, measureVariable });
             }
             else
             {
@@ -777,6 +777,7 @@ namespace Com.Data
                 formulaExpr.EvaluateBegin();
                 DcTableReader tableReader = Column.Input.GetData().GetTableReader();
                 tableReader.Open();
+
                 while ((thisCurrent = tableReader.Next()) != null)
                 {
                     thisVariable.SetValue(thisCurrent); // Set parameters of the expression

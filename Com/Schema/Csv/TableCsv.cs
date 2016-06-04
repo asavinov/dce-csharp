@@ -36,8 +36,6 @@ namespace Com.Schema.Csv
 
         #region Csv-specific methods
 
-        public ConnectionCsv connection; // Connection object for access to the native engine functions
-
         public List<DcColumn> LoadSchema() // Table object is created to store all necessary parameters which are individual for each table
         {
             TableCsv table = this;
@@ -48,6 +46,8 @@ namespace Com.Schema.Csv
                 return columns;
             }
 
+            // TODO: We should not use connection - use TableReader/TableWriter where necessary (connection is hidden within them)
+            ConnectionCsv connection = new ConnectionCsv();
             connection.OpenReader(table);
 
             List<string> names = connection.ReadColumns();
@@ -141,8 +141,6 @@ namespace Com.Schema.Csv
             Delimiter = ",";
             CultureInfo = System.Globalization.CultureInfo.CurrentCulture;
             Encoding = Encoding.UTF8;
-
-            connection = new ConnectionCsv();
         }
 
         #endregion

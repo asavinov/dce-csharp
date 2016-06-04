@@ -21,6 +21,12 @@ namespace Com.Schema.Csv
         protected string[] currentRecord;
         protected ConnectionCsv connectionCsv;
 
+        // It stores integer positions of each columns. 
+        // Should be initialized by from outside before the data is really written.
+        // The system will determine position for each attribute of written records using this structure. 
+        // If indexes are absent then some defaults will be used and the index will be accordingly updated. 
+        public Dictionary<string, int> ColumnIndexes = new Dictionary<string, int>();
+
         public void Open()
         {
             rowid = -1;

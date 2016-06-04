@@ -103,17 +103,19 @@ namespace Com.Data
         public DcVariable OutputVariable { get; set; }
 
         /// <summary>
-        /// Create or update all the schema elements that are used in this expression. 
-        /// Store direct object references to these named elements so that they can be directly accessed during data evaluation without name resolution. 
-        /// Element that needs to be created/updated or resolved: tables (types), columns (functions), variables, procedures, operators. 
+        /// Expression is created by parsing a formula and initially it involves only syntactic constructs (names).
+        /// This method has to find or create the objects that correspond to the names referenced in the expression. 
+        /// If some name cannot be resolved then this means an error. 
+        /// In particular, the following names are resolved: tables (types), columns (functions), variables, procedures, operators, constants.
+        /// 
         /// Notes:
-        /// - Schema elements are created only if they are used in tuples which is treated as a table structure specification 
+        /// - Columns are created if an output tuple uses them (and the corresponding option is on)
         /// - Resolution starts from some well-known point and then propagates along the structure. For example, it is specified for 'this' (input) variable read by CALL nodes by propagating to parent nodes, and 'result' (output) in TUPLE nodes which is then propagated to its child nodes. 
         /// - An expression can be resolved against two schemas (not one) because it connects two sets (input and output) that can belong to different schemas. Particularly, it happens for import/export dimensions. 
         ///   - Types in tuples depend on the parent type. Columns (variables, procedures etc.) depend on the children. 
         /// - Types can be already resolved during expression creation. Particularly, in the case if it is created from a mapping object. 
         /// </summary>
-        public virtual void EvaluateAndResolveSchema(DcSpace workspace, List<DcVariable> variables)
+        public virtual void Resolve(DcSpace workspace, List<DcVariable> variables)
         {
             // PROBLEM: tables in formula might have no direct indication of their schema which is needed to resolve table names
             // Schema for nodes has to be derived from other nodes (before resovling the corresponding tables)
@@ -219,7 +221,7 @@ namespace Com.Data
                 //
                 foreach (TreeNode<ExprNode> childNode in Children)
                 {
-                    childNode.Item.EvaluateAndResolveSchema(workspace, variables);
+                    childNode.Item.Resolve(workspace, variables);
                 }
             }
             else if (Operation == OperationType.CALL)
@@ -230,7 +232,7 @@ namespace Com.Data
                 //
                 foreach (TreeNode<ExprNode> childNode in Children)
                 {
-                    childNode.Item.EvaluateAndResolveSchema(workspace, variables);
+                    childNode.Item.Resolve(workspace, variables);
                 }
 
                 //
@@ -324,6 +326,10 @@ namespace Com.Data
                             {
                                 break;
                             }
+                            else if (contextTable.GetType().IsSubclassOf(typeof(Table))) // It is a remote table
+                            {
+                                break; // Nothin to do - we will use this expr Name as an attribute to access value from remote record
+                            }
 
                             //
                             // Iterator. Find super-column in the current context (where we have just failed to resolve the name)
@@ -368,6 +374,11 @@ namespace Com.Data
 
                             AddChild(path);
                         }
+                        else if (contextTable.GetType().IsSubclassOf(typeof(Table))) // It is a remote table
+                        {
+                            AddChild(path); // Add a node for 'this' variable
+                            ; // Nothin to do - we will use this expr Name as an attribute to access value from remote record
+                        }
                         else // Column not found 
                         {
                             // ERROR: failed to resolve symbol 
@@ -387,6 +398,7 @@ namespace Com.Data
                     {
                         outputChild = GetChild(0);
                     }
+                    DcTable outputTable = outputChild.OutputVariable.TypeTable;
 
                     DcColumn col = outputChild.OutputVariable.TypeTable.GetColumn(methodName);
 
@@ -406,6 +418,10 @@ namespace Com.Data
                         {
                             ; // ERROR: Output type of the column must be the same as this node result type
                         }
+                    }
+                    else if (outputTable.GetType().IsSubclassOf(typeof(Table))) // It is a remote table
+                    {
+                        ; // Nothin to do - we will use this expr Name as an attribute to access value from remote record
                     }
                     else // Column not found 
                     {
@@ -448,7 +464,7 @@ namespace Com.Data
             {
 
             }
-            else if (Operation == OperationType.TUPLE) // SET, TABLE, NON-PRIMITIVE, ...
+            else if (Operation == OperationType.TUPLE) // WRITE, SET, TABLE, NON-PRIMITIVE, ...
             {
                 //
                 // Open files/databases used from within expressions.
@@ -500,7 +516,7 @@ namespace Com.Data
                     childNode.Item.EvaluateBegin();
                 }
             }
-            else if (Operation == OperationType.CALL) // FUNCTION, COLUMN, PRIMITIVE, ...
+            else if (Operation == OperationType.CALL) // READ, FUNCTION, COLUMN, PRIMITIVE, ...
             {
                 //
                 // Evaluate children
@@ -519,7 +535,7 @@ namespace Com.Data
             {
 
             }
-            else if (Operation == OperationType.TUPLE) // SET, TABLE, NON-PRIMITIVE, ...
+            else if (Operation == OperationType.TUPLE) // WRITE, SET, TABLE, NON-PRIMITIVE, ...
             {
                 //
                 // Close files/databases
@@ -544,7 +560,7 @@ namespace Com.Data
                     childNode.Item.EvaluateEnd();
                 }
             }
-            else if (Operation == OperationType.CALL) // FUNCTION, COLUMN, PRIMITIVE, ...
+            else if (Operation == OperationType.CALL) // READ, FUNCTION, COLUMN, PRIMITIVE, ...
             {
                 //
                 // Evaluate children
@@ -570,7 +586,7 @@ namespace Com.Data
             {
 
             }
-            else if (Operation == OperationType.TUPLE) // SET, TABLE, NON-PRIMITIVE, ...
+            else if (Operation == OperationType.TUPLE) // WRTIE, SET, TABLE, NON-PRIMITIVE, ...
             {
                 //
                 // Evaluate children
@@ -665,7 +681,7 @@ namespace Com.Data
                     }
                 }
             }
-            else if (Operation == OperationType.CALL) // FUNCTION, COLUMN, PRIMITIVE, ...
+            else if (Operation == OperationType.CALL) // READ, FUNCTION, COLUMN, PRIMITIVE, ...
             {
                 //
                 // Evaluate children
@@ -677,7 +693,13 @@ namespace Com.Data
 
                 ExprNode child1 = Children.Count > 0 ? (ExprNode) Children[0] : null;
                 ExprNode child2 = Children.Count > 1 ? (ExprNode)Children[1] : null;
-                
+                ExprNode thisNode = GetChild("this");
+                DcTable thisTable = null;
+                if (thisNode != null)
+                {
+                    thisTable = thisNode.OutputVariable.TypeTable;
+                }
+
                 int intRes;
                 double doubleRes;
                 bool boolRes = false;
@@ -687,21 +709,24 @@ namespace Com.Data
 
                 if (Action == ActionType.READ)
                 {
-                    if (Column is ColumnCsv) // Access using Csv columnd in a Csv table
+                    if (thisTable != null && thisTable.GetType().IsSubclassOf(typeof(Table))) // It is a remote table
                     {
-                        // Find current Row object
-                        ExprNode thisNode = GetChild("this");
-                        string[] input = (string[])thisNode.OutputVariable.GetValue();
+                        if (/*Column is ColumnCsv || */thisTable is TableCsv) // Access using Csv columnd in a Csv table
+                        {
+                            // Find current Row object
+                            Dictionary<string, string> input = (Dictionary<string, string>)thisNode.OutputVariable.GetValue();
 
-                        // Use attribute name or number by applying it to the current Row object (offset is not used)
-                        int attributeIndex = ((ColumnCsv)Column).ColumnIndex;
-                        object output = input[attributeIndex];
-                        OutputVariable.SetValue(output);
+                            // Use attribute name or number by applying it to the current Row object (offset is not used)
+                            //int attributeIndex = ((ColumnCsv)Column).ColumnIndex;
+                            //object output = input[attributeIndex];
+
+                            object output = input[Name];
+                            OutputVariable.SetValue(output);
+                        }
                     }
                     else if (false /* this is ExprNodeOledb */) // It is easier to do it here rather than (correctly) in the extension
                     {
                         // Find current Row object
-                        ExprNode thisNode = GetChild("this");
                         DataRow input = (DataRow)thisNode.OutputVariable.GetValue();
 
                         // Use attribute name or number by applying it to the current Row object (offset is not used)
@@ -709,7 +734,7 @@ namespace Com.Data
                         object output = input[attributeName];
                         OutputVariable.SetValue(output);
                     }
-                    else if (Column != null) 
+                    else if (Column != null)
                     {
                         ExprNode prevOutput = child1;
                         Rowid input = (Rowid)prevOutput.OutputVariable.GetValue();

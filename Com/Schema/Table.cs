@@ -347,7 +347,7 @@ namespace Com.Schema
                     outputExpr.OutputVariable.TypeName = "Boolean";
                     outputExpr.OutputVariable.TypeSchema = this.Schema;
                     outputExpr.OutputVariable.TypeTable = this.Schema.GetPrimitiveType("Boolean");
-                    outputExpr.EvaluateAndResolveSchema(this.Space, new List<DcVariable>() { thisVariable });
+                    outputExpr.Resolve(this.Space, new List<DcVariable>() { thisVariable });
 
                     outputExpr.EvaluateBegin();
                 }
