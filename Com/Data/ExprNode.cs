@@ -169,9 +169,15 @@ namespace Com.Data
                 }
                 else if (parentNode.Operation == OperationType.TUPLE) // This tuple in another tuple
                 {
-                    if (parentNode.OutputVariable.TypeTable != null && !string.IsNullOrEmpty(Name))
+                    DcTable typeTable = parentNode.OutputVariable.TypeTable;
+
+                    if (typeTable.GetType().IsSubclassOf(typeof(Table))) // It is a remote table
                     {
-                        DcColumn col = parentNode.OutputVariable.TypeTable.GetColumn(Name);
+                        ; // Nothin to do - we will use this expr Name as an attribute to access value from remote record
+                    }
+                    else if (typeTable != null && !string.IsNullOrEmpty(Name))
+                    {
+                        DcColumn col = typeTable.GetColumn(Name);
 
                         if (col != null) // Column resolved 
                         {
@@ -400,7 +406,7 @@ namespace Com.Data
                     }
                     DcTable outputTable = outputChild.OutputVariable.TypeTable;
 
-                    DcColumn col = outputChild.OutputVariable.TypeTable.GetColumn(methodName);
+                    DcColumn col = outputTable.GetColumn(methodName);
 
                     if (col != null) // Column resolved
                     {
@@ -469,42 +475,41 @@ namespace Com.Data
                 //
                 // Open files/databases used from within expressions.
                 //
-                if (OutputVariable.TypeTable != null && !OutputVariable.TypeTable.IsPrimitive && OutputVariable.TypeTable.Schema is SchemaCsv) // Prepare to writing to a csv file during evaluation
-                {
-                    SchemaCsv csvSchema = (SchemaCsv)OutputVariable.TypeTable.Schema;
-                    TableCsv csvOutput = (TableCsv)OutputVariable.TypeTable;
 
-                    // Ensure that all parameters are correct
-                    // Set index for all columns that have to written to the file
-                    int index = 0;
-                    for (int i = 0; i < csvOutput.Columns.Count; i++)
-                    {
-                        if (!(csvOutput.Columns[i] is ColumnCsv)) continue;
-
-                        ColumnCsv col = (ColumnCsv)csvOutput.Columns[i];
-                        if (col.IsSuper)
-                        {
-                            col.ColumnIndex = -1; // Will not be written 
-                        }
-                        else if (col.Output.Schema != col.Input.Schema) // Import/export columns do not store data
-                        {
-                            col.ColumnIndex = -1;
-                        }
-                        else
-                        {
-                            col.ColumnIndex = index;
-                            index++;
-                        }
-                    }
-                }
-                else if (OutputVariable.TypeTable != null && !OutputVariable.TypeTable.IsPrimitive && OutputVariable.TypeTable.Schema is SchemaOledb) // Prepare to writing to a database during evaluation
-                {
-                }
-
-                // Open file for writing
                 if (OutputVariable.TypeTable != null && !OutputVariable.TypeTable.IsPrimitive)
                 {
                     TableWriter = OutputVariable.TypeTable.GetData().GetTableWriter();
+
+                    if (OutputVariable.TypeTable is TableCsv) // Prepare to writing to a csv file during evaluation
+                    {
+                        TableCsv csvOutput = (TableCsv)OutputVariable.TypeTable;
+
+                        // Set index for all columns that have to written to the file
+                        ((TableWriterCsv)TableWriter).SetColumns(this);
+
+                        int index = 0;
+                        for (int i = 0; i < csvOutput.Columns.Count; i++)
+                        {
+                            if (!(csvOutput.Columns[i] is ColumnCsv)) continue;
+
+                            ColumnCsv col = (ColumnCsv)csvOutput.Columns[i];
+                            if (col.IsSuper)
+                            {
+                                col.ColumnIndex = -1; // Will not be written 
+                            }
+                            else if (col.Output.Schema != col.Input.Schema) // Import/export columns do not store data
+                            {
+                                col.ColumnIndex = -1;
+                            }
+                            else
+                            {
+                                col.ColumnIndex = index;
+                                index++;
+                            }
+                        }
+                    }
+
+                    // Open file
                     TableWriter.Open();
                 }
 
@@ -540,13 +545,15 @@ namespace Com.Data
                 //
                 // Close files/databases
                 //
-                if (OutputVariable.TypeTable != null && !OutputVariable.TypeTable.IsPrimitive && OutputVariable.TypeTable.Schema is SchemaCsv)
+                if (OutputVariable.TypeTable != null && !OutputVariable.TypeTable.IsPrimitive)
                 {
-                    SchemaCsv csvSchema = (SchemaCsv)OutputVariable.TypeTable.Schema;
-                    TableCsv csvOutput = (TableCsv)OutputVariable.TypeTable;
-                }
-                else if (OutputVariable.TypeTable != null && !OutputVariable.TypeTable.IsPrimitive && OutputVariable.TypeTable.Schema is SchemaOledb)
-                {
+                    if (OutputVariable.TypeTable is TableCsv)
+                    {
+                        TableCsv csvOutput = (TableCsv)OutputVariable.TypeTable;
+                    }
+                    else if (OutputVariable.TypeTable.Schema is SchemaOledb)
+                    {
+                    }
                 }
 
                 // Close file

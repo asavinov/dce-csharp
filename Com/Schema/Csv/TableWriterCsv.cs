@@ -26,6 +26,22 @@ namespace Com.Schema.Csv
         // The system will determine position for each attribute of written records using this structure. 
         // If indexes are absent then some defaults will be used and the index will be accordingly updated. 
         public Dictionary<string, int> ColumnIndexes = new Dictionary<string, int>();
+        public List<string> Columns;
+        public void SetColumns(ExprNode expr)
+        {
+            Columns = new List<string>();
+            ColumnIndexes = new Dictionary<string, int>();
+
+            for(int i=0; i < expr.Children.Count; i++)
+            {
+                ExprNode child = expr.GetChild(i);
+                Columns.Add(child.Name);
+                ColumnIndexes.Add(Columns[i], i);
+            }
+        }
+        public void SetColumns(DcTable table)
+        {
+        }
 
         public void Open()
         {
@@ -36,8 +52,20 @@ namespace Com.Schema.Csv
             // Write header
             if (((TableCsv)table).HasHeaderRecord)
             {
-                var header = GetColumnNamesByIndex();
-                connectionCsv.WriteNext(header);
+                string[] header = null;
+                if(Columns != null)
+                {
+                    header = Columns.ToArray();
+                }
+                else
+                {
+                    header = GetColumnNamesByIndex();
+                }
+
+                if(header != null)
+                {
+                    connectionCsv.WriteNext(header);
+                }
             }
         }
 
@@ -64,30 +92,24 @@ namespace Com.Schema.Csv
             Debug.Assert(expr.OutputVariable.TypeTable == table, "Wrong use: expression OutputSet must be equal to the set its value is appended/found.");
             Debug.Assert(expr.Operation == OperationType.TUPLE, "Wrong use: operation type for appending has to be TUPLE. ");
 
-
-            var columns = GetColumnsByIndex();
-            string[] record = new string[columns.Length];
-
             //
             // Prepare a record with all fields. Here we choose the columns to be written
             //
+            string[] record = new string[Columns.Count];
 
-            for (int i = 0; i < columns.Length; i++) // We must append one value to ALL greater dimensions even if a child expression is absent
+            foreach (ExprNode child in expr.Children)
             {
-                DcColumn col = columns[i];
-                ExprNode childExpr = expr.GetChild(col.Name);
-                object val = null;
-                if (childExpr != null) // Found. Value is present.
+                int i = ColumnIndexes[child.Name];
+                if (i < 0 || i >= Columns.Count) continue;
+
+                object val = child.OutputVariable.GetValue();
+                if (val != null)
                 {
-                    val = childExpr.OutputVariable.GetValue();
-                    if (val != null)
-                    {
-                        record[i] = val.ToString();
-                    }
-                    else
-                    {
-                        record[i] = "";
-                    }
+                    record[i] = val.ToString();
+                }
+                else
+                {
+                    record[i] = "";
                 }
             }
 

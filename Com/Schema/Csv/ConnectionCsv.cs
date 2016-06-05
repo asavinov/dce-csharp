@@ -67,9 +67,19 @@ namespace Com.Schema.Csv
         public List<string> ReadColumns()
         {
             if (csvReader == null) return null;
-            if (csvReader.Configuration.HasHeaderRecord && csvReader.FieldHeaders != null)
+            if (csvReader.Configuration.HasHeaderRecord)
             {
-                return csvReader.FieldHeaders.ToList();
+                string[] headers = new string[0];
+                try
+                {
+                    headers = csvReader.FieldHeaders;
+                }
+                catch(Exception e)
+                {
+                    return null;
+                }
+
+                return headers.ToList();
             }
             else // No columns
             {
