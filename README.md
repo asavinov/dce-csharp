@@ -28,9 +28,9 @@ DataCommander has the following distinguishing features:
 * DataCommandr can be viewed as an analogue of classical spreadsheets where columns are defined in terms of other columns (in this or other tables) rather than cells being defined in terms of other cells. 
 
 * It is important that three types of column definitions are used: 
-  * **Calculate** columns - defining a new column depending on the values of other columns of the same table. It is a column-oriented analogue of select in SQL and map in MapReduce
-  * **Link** columns - defining a column which references records from another table. It is a column-oriented analogue of joins.
-  * **Aggregate** columns - defining a column which aggregates data from another table. It is a column-oriented analogue of group-by in SQL and reduce in MapReduce.
+    * **Calculate** columns - defining a new column depending on the values of other columns of the same table. It is a column-oriented analogue of select in SQL and map in MapReduce
+    * **Link** columns - defining a column which references records from another table. It is a column-oriented analogue of joins.
+    * **Aggregate** columns - defining a column which aggregates data from another table. It is a column-oriented analogue of group-by in SQL and reduce in MapReduce.
 
 * There is a Java implementation of DataCommandr engine: http://bitbucket.org/conceptoriented/dc-core
 
@@ -41,13 +41,13 @@ DataCommander has the following distinguishing features:
 More information about DataCommandr and the underlying data model can be found here: 
 
 * More information information on all aspects of concept-oriented paradigm including the concept-oriented model and concept-oriented programming including publications can found here: 
-  * http://www.conceptoriented.org
-  * http://www.conceptoriented.com
+    * http://www.conceptoriented.org
+    * http://www.conceptoriented.com
 
 * Alexandr Savinov is an author of DataCommander Engine Java library as well as the underlying concept-oriented model (COM): 
-  * http://conceptoriented.org/savinov
-  * https://www.researchgate.net/profile/Alexandr_Savinov
+    * http://conceptoriented.org/savinov
+    * https://www.researchgate.net/profile/Alexandr_Savinov
 
 * Some papers about this approach: 
-  * A. Savinov. DataCommandr: Column-Oriented Data Integration, Transformation and Analysis. Proc. IoTBD 2016, 339-347. https://www.researchgate.net/publication/301764506_DataCommandr_Column-Oriented_Data_Integration_Transformation_and_Analysis
-  * A. Savinov. ConceptMix: Self-Service Analytical Data Integration based on the Concept-Oriented Model. A. Savinov. 3rd International Conference on Data Technologies and Applications (DATA 2014), 78-84. https://www.researchgate.net/publication/265301356_ConceptMix_Self-Service_Analytical_Data_Integration_based_on_the_Concept-Oriented_Model
+    * A. Savinov. DataCommandr: Column-Oriented Data Integration, Transformation and Analysis. Proc. IoTBD 2016, 339-347. https://www.researchgate.net/publication/301764506_DataCommandr_Column-Oriented_Data_Integration_Transformation_and_Analysis
+    * A. Savinov. ConceptMix: Self-Service Analytical Data Integration based on the Concept-Oriented Model. A. Savinov. 3rd International Conference on Data Technologies and Applications (DATA 2014), 78-84. https://www.researchgate.net/publication/265301356_ConceptMix_Self-Service_Analytical_Data_Integration_based_on_the_Concept-Oriented_Model
